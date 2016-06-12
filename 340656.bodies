@@ -1,4 +1,57 @@
 class report_manager
+!!!614064.cpp!!!	report_manager()
+: data_source_()
+, inner_observers_()
+, outer_observers_()
+, sink_()
+{}
+!!!605744.cpp!!!	description(inout out : ostream) : void
+if ( not this->inner_observers_.empty() )
+{
+   os << core::strngs::horizontal_bar () << "\n";
+   for (auto const& obsr : this->inner_observers_)
+   {
+      obsr->description(os);
+   }
+}
+if ( not this->outer_observers_.empty() )
+{
+   os << core::strngs::horizontal_bar () << "\n";
+   for (auto const& obsr : this->outer_observers_)
+   {
+      obsr->description(os);
+   }
+}
+!!!605872.cpp!!!	enrol(inout sim : simulator) : void
+for (auto & obs : this->inner_observers_)
+{
+  obs->enrol(sim);
+}
+for (auto & obs : this->outer_observers_)
+{
+  obs->enrol(sim);
+}
+!!!605232.cpp!!!	on_inner_loop(in trial : change_set) : void
+for (auto & obs : this->inner_observers_)
+{
+  obs->on_inner_loop(trial);
+}
+
+!!!605360.cpp!!!	on_outer_loop(in sym : simulator) : void
+for (auto & obs : this->outer_observers_)
+{
+  obs->on_outer_loop(sim);
+}
+!!!607024.cpp!!!	on_report(in sim : simulator, inout out : ostream) : void
+for (auto & obs : this->inner_observers_)
+{
+  obs->on_report(sim, out, *this);
+}
+for (auto & obs : this->outer_observers_)
+{
+  obs->on_report(sim, out, *this);
+}
+
 !!!605616.cpp!!!	write_document(inout wr : input_document) : void
 std::size_t ix = wr.add_section( core::strngs::sampler_label() );
 this->do_write_document( wr, ix );

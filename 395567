@@ -1,6 +1,6 @@
 format 75
 "platform" // platform
-  revision 239
+  revision 241
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -629,36 +629,11 @@ of the simulation cell.
 	  b parent class_ref 1075759 // uuid_t
       end
 
-      class 283313 "inner_loop_signal_type"
-	visibility package stereotype "typedef" base_type class_ref 205231 // signal
-	nactuals 1
-	actual class class_ref 205231 // signal
-	  rank 0 explicit_value "void (trial::change_set const&)"
-	cpp_decl "${comment}typedef ${type} ${name};
-"
-	java_decl ""
-	php_decl ""
-	python_decl ""
-	idl_decl "${comment}typedef ${type} ${name};
-"
-	explicit_switch_type ""
-	
-	comment "Type of the inner-loop signal"
-	classrelation 420273 // <realization>
-	  relation 419761 -_-|>
-	    a public
-	      cpp default "${type}"
-	      python "${type}"
-	      classrelation_ref 420273 // <realization>
-	    b parent class_ref 205231 // signal
-	end
-      end
-
       class 283057 "sampler_signal_type"
 	visibility package stereotype "typedef" base_type class_ref 205231 // signal
 	nactuals 1
 	actual class class_ref 205231 // signal
-	  rank 0 explicit_value "void  (simulator const&)"
+	  rank 0 explicit_value ""
 	cpp_decl "${comment}typedef ${type} ${name};
 "
 	java_decl ""
@@ -675,31 +650,6 @@ of the simulation cell.
 	      cpp default "${type}"
 	      python "${type}"
 	      classrelation_ref 420401 // <realization>
-	    b parent class_ref 205231 // signal
-	end
-      end
-
-      class 283185 "report_signal_type"
-	visibility package stereotype "typedef" base_type class_ref 205231 // signal
-	nactuals 1
-	actual class class_ref 205231 // signal
-	  rank 0 explicit_value "void (simulator const&, std::ostream&)"
-	cpp_decl "${comment}typedef ${type} ${name};
-"
-	java_decl ""
-	php_decl ""
-	python_decl ""
-	idl_decl "${comment}typedef ${type} ${name};
-"
-	explicit_switch_type ""
-	
-	comment "Type of the report signal"
-	classrelation 420529 // <realization>
-	  relation 420017 -_-|>
-	    a public
-	      cpp default "${type}"
-	      python "${type}"
-	      classrelation_ref 420529 // <realization>
 	    b parent class_ref 205231 // signal
 	end
       end
@@ -782,26 +732,6 @@ distances."
 	  b parent class_ref 170160 // base_chooser
       end
 
-      attribute 360113 "data_source_"
-	private type class_ref 634799 // any
-	multiplicity "*"
-	stereotype "map"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< std::string, ${type} > ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${stereotype}()
-"
-	idl_decl ""
-	comment "dictionary of signals.
-
-(C++: mapped type is a boost::any object that
-should be converted to a pointer of a particular
-signal type. Signals are _not_ serialized and must
-be reconnected using 'do_enrol' and 'do_prepare' 
-after deserialization.)"
-      end
-
       classrelation 1330095 // evaluators_ (<directional composition>)
 	relation 1291567 *-->
 	  stereotype "ptr_vector"
@@ -813,20 +743,6 @@ after deserialization.)"
 "
 	    classrelation_ref 1330095 // evaluators_ (<directional composition>)
 	  b parent class_ref 912175 // base_evaluator
-      end
-
-      classrelation 1323567 // observers_ (<directional composition>)
-	relation 1285039 *-->
-	  stereotype "vector"
-	  a role_name "observers_" multiplicity "*" private
-	    comment "The set of directly owned sampling objects"
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< boost::shared_ptr< ${type} > > ${name}${value};
-"
-	    python "${comment}${self}${name} = ${stereotype}()
-"
-	    classrelation_ref 1323567 // observers_ (<directional composition>)
-	  b parent class_ref 1144367 // base_sampler
-	  association_explicit_type "shared_ptr"
       end
 
       classrelation 406961 // species_ (<directional composition>)
@@ -851,6 +767,19 @@ after deserialization.)"
 	idl ""
       end
 
+      classrelation 398640 // reporter_ (<directional composition>)
+	relation 398000 *-->
+	  stereotype "unique_ptr"
+	  a role_name "reporter_" multiplicity "0..1" private
+	    comment "Manage data collectors."
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+"
+	    python "${comment}${self}${name} = ${stereotype}()
+"
+	    classrelation_ref 398640 // reporter_ (<directional composition>)
+	  b parent class_ref 340656 // report_manager
+      end
+
       classrelation 162353 // ensemble_ (<directional composition>)
 	relation 162225 *-->
 	  stereotype "shared_ptr"
@@ -864,19 +793,6 @@ after deserialization.)"
 "
 	    classrelation_ref 162353 // ensemble_ (<directional composition>)
 	  b parent class_ref 134959 // ensemble
-      end
-
-      classrelation 355632 // sink_ (<directional composition>)
-	relation 355248 *-->
-	  stereotype "shared_ptr"
-	  a role_name "sink_" multiplicity "0..1" private
-	    comment "Where to save results."
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
-"
-	    python "${comment}${self}${name} = ${stereotype}()
-"
-	    classrelation_ref 355632 // sink_ (<directional composition>)
-	  b parent class_ref 313520 // base_sink
       end
 
       classrelation 378032 // checkpoint_function_ (<directional composition>)
@@ -1023,34 +939,8 @@ externally, print the value and use 'set_random_seed'."
 the rgen_ attribute as the randomness source."
       end
 
-      attribute 361649 "inner_sig_"
-	private type class_ref 283313 // inner_loop_signal_type
-	init_value "None"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "Signal source for 'inner-loop' signal [void (change_set const&)]"
-      end
-
-      attribute 361777 "outer_sig_"
-	private type class_ref 283057 // sampler_signal_type
-	init_value "None"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "Signal source for 'outer-loop' signal [void (simulator const&)]"
-      end
-
       attribute 361521 "prepare_sig_"
-	private type class_ref 283057 // sampler_signal_type
+	private explicit_type "sampler_signal_type"
 	init_value "None"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
@@ -1060,19 +950,6 @@ the rgen_ attribute as the randomness source."
 "
 	idl_decl ""
 	comment "Signal source for 'report' signal [void (simulator const&)]"
-      end
-
-      attribute 361393 "report_sig_"
-	private type class_ref 283185 // report_signal_type
-	init_value "None"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "Signal source for 'report' signal [void (simulator const&, ostream&)]"
       end
 
       attribute 297009 "output_dir_fmt_"
@@ -1305,30 +1182,6 @@ ${docstring}self.evaluators_.append( ${p0} )
 "
 	
 	comment " Transfer ownership of an energy evaluators into the evaluators list
-"
-      end
-
-      operation 2175407 "share_observer"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "obs" type class_ref 1144367 // base_sampler
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-   this->observers_.push_back ( ${p0} );
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}self.observers_.append( ${p0} )
-"
-	
-	comment " Share ownership of a data observer with our observer list.
-
- Unlike the evaluator, chooser and specie objects, observer
- objects may have shared ownership. This allows observers to
- be children of other objects, such as chooser or evaluator
- objects.
 "
       end
 
@@ -1907,28 +1760,6 @@ ${docstring}self.temperature_kelvin_ = ${p0}
 	comment "Set the temperature (in Kelvin)"
       end
 
-      operation 603057 "set_signal"
-	public explicit_return_type "void"
-	nparams 2
-	  param in name "label" explicit_type "string"
-	  param in name "sig" type class_ref 634799 // any
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, const ${t1} ${p1}${)}${const}${volatile}${throw}${staticnl}
-{
-  this->data_source_.insert( std::make_pair(${p0}, ${p1}) );
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}, ${p1}${v1}${)}:
-${docstring}self.data_source_[${p0}] = ${p1}
-"
-	
-	comment "Set signal for the given label. This
-silently overrides any previous value"
-      end
-
       operation 441264 "set_solvent_permittivity"
 	public explicit_return_type "void"
 	nparams 1
@@ -2391,40 +2222,6 @@ ${docstring}return self.species_
 	comment " Get the complete specie set"
       end
 
-      operation 602929 "get_signal"
-	public return_type class_ref 634799 // any
-	nparams 1
-	  param in name "label" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->data_source_.at(${p0});
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}return self.data_source_[${p0}]
-"
-	
-	comment " Get a signal from the dictionary"
-      end
-
-      operation 557104 "get_sink"
-	const public return_type class_ref 313520 // base_sink
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return *(this->sink_);
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
       operation 603697 "get_temperature"
 	const public explicit_return_type "double"
 	nparams 0
@@ -2460,25 +2257,6 @@ ${docstring}return name in (x.label() for x in self.species_)
 "
 	
 	comment " Do we have a specie with this label?"
-      end
-
-      operation 647345 "has_signal"
-	const public explicit_return_type "bool"
-	nparams 1
-	  param in name "label" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  return 0 < this->data_source_.count(label);
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}return label in self.data_source_.keys()
-"
-	
-	comment " Check if a signal with this name already
- exists in the signal dictionery"
       end
 
       operation 800305 "inner_loop_size"
@@ -4130,9 +3908,9 @@ ${namespace_end}
     artifact 769327 "libionch_platform"
       stereotype "library"
       associated_artifacts
+	artifact_ref 776367 // simulator
 	artifact_ref 195760 // application
 	artifact_ref 783023 // simulator_meta
-	artifact_ref 776367 // simulator
       end
       comment "Library of the fundamental components of the program
 

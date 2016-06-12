@@ -35,12 +35,10 @@ if self.outer_sig_ != None and len(self.outer_sig_) == 0:
 !!!175409.cpp!!!	simulator()
 : choices_()
 , choosers_()
-, data_source_()
 , evaluators_()
-, observers_()
 , species_()
+, reporter_( new observer::report_manager )
 , ensemble_( new particle::ensemble )
-, sink_()
 , checkpoint_function_()
 , energy_( 0.0 )
 , equilibration_interval_( 0 )
@@ -72,12 +70,10 @@ if self.outer_sig_ != None and len(self.outer_sig_) == 0:
 !!!2154159.cpp!!!	serialize(inout ar : Archive, in version : unsigned int) : void
 ar & choices_;
 ar & choosers_;
-// data_source not archived
 ar & evaluators_;
-ar & observers_;
 ar & species_;
+ar & reporter_;
 ar & ensemble_;
-ar & sink_;
 ar & report_interval_;
 ar & energy_;
 ar & equilibration_interval_;
@@ -141,14 +137,7 @@ if ( not this->choosers_.empty() )
       }
    }
 }
-if ( not this->observers_.empty() )
-{
-   os << core::strngs::horizontal_bar () << "\n";
-   for (auto const& obsr : this->observers_)
-   {
-      obsr->description(os);
-   }
-}
+this->reporter_->description(os);
 if ( not this->evaluators_.empty() )
 {
    os << core::strngs::horizontal_bar () << "\n";
@@ -807,10 +796,7 @@ for (auto &choice : this->choices_)
 // Randomize choice order
 this->ranf_.shuffle(this->choices_);
 // reset observers
-for (auto &obs : this->observers_)
-{
-   obs->prepare ( *this );
-}
+this->reporter_->prepare( *this );
 // reset the evaluators
 for (auto &evltr : this->evaluators_)
 {
@@ -907,7 +893,7 @@ for ( auto const& evaluator : this->evaluators_ )
             }
          }
       }
-      this->inner_sig_( *trial );
+      this->reporter_->on_inner_loop( *trial );
       if (not env.no_except())
       {
          if (0 != ((~env.Inexact) & env.except()))
@@ -922,7 +908,7 @@ for ( auto const& evaluator : this->evaluators_ )
    }
    // Note this->outer_loop_index_ is a 1-based count
    out << " STEP : " << this->outer_loop_index_ << "\n";
-   this->outer_sig_( *this );
+   this->reporter_->on_outer_loop( *this );
    if ((this->outer_loop_index_ % this->report_interval_) == 0)
    {
       this->do_report( out );
@@ -993,8 +979,8 @@ for d9m8h2 in range(loopcount):
 // CALLED AT EACH CHECKPOINT
 os << "SIMULATION STAGE: " << this->outer_loop_index_ << "\n";
 // recalculate total energy
-const double ent (this->energy ());
-this->total_energy ();
+const double ent(this->energy());
+this->total_energy();
 os << "  total energy of simulation    : " << this->energy() << "\n";
 if (std::abs(ent - this->energy()) > 1.E-6)
 {
@@ -1004,13 +990,14 @@ if (std::abs(ent - this->energy()) > 1.E-6)
 os << "        difference to running   : " << this->energy() - ent << "\n";
 
 const size_t trial_count = (this->outer_loop_index_ + 1) * this->inner_loop_size_;
-const static boost::format format_str (" %6s %8s %10s %10s %7s %s");
-os << boost::format(format_str) % "Trial" % "Specie" % "Success" % "Attempt" % "Rate(%)" % "Total(%)" << "\n";
+const static boost::format format_str( " %6s %8s %10s %10s %7s %s" );
+os << boost::format( format_str ) % "Trial" % "Specie" % "Success" % "Attempt" % "Rate(%)" % "Total(%)" << "\n";
 for (auto const& choice : this->choices_)
 {
-  choice.report(*this, os, trial_count);
+  choice.report( *this, os, trial_count );
 }
-this->report_sig_(*this, os);
+this->report_sig_( *this, os );
+this->reporter_->on_report( *this, os );
 os << core::strngs::horizontal_bar() << "\n";
 !!!2147119.python!!!	do_report(in self : simulator, inout os : ostream) : void
 print >>os, "SIMULATION STAGE:", self.outer_loop_index_

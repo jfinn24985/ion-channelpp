@@ -8,23 +8,13 @@ print >>os, " Sample the average particle number in the whole"
 print >>os, " cell of each specie."
 print >>os, " Provides signals:",self.type_label()+"-mean",self.type_label()+"-variance"
 pass
-!!!640689.cpp!!!	enrol(inout sim : simulator) : void
-if (not this->report_conx_.connected())
-{
-  auto sig = boost::any_cast< platform::simulator::report_signal_type* >(sim.get_signal("report"));
-  this->report_conx_ = sig->connect(boost::bind(&specie_count::on_report, this, _1, _2));
-}
-if (not this->sample_conx_.connected())
-{
-  auto sig = boost::any_cast< platform::simulator::sampler_signal_type* >(sim.get_signal("outer-loop"));
-  this->sample_conx_ = sig->connect(boost::bind(&specie_count::on_sample, this, _1));
-}
-if (not sim.has_signal(this->type_label()))
+!!!640689.cpp!!!	enrol(inout reporter : report_manager) : void
+if (not reporter.has_signal(this->type_label()))
 {
   boost::any sig = &this->mean_signal_;
-  sim.set_signal(this->type_label(), sig);
+  reporter.set_signal(this->type_label(), sig);
 }
-!!!640689.python!!!	enrol(inout sim : simulator) : void
+!!!640689.python!!!	enrol(inout reporter : report_manager) : void
 if not self.report_conx_ or not self.report_conx.connected():
   sig = sim.get_signal("report")
   self.report_conx_ = sig.connect(lambda *args: self.on_report(*args))
@@ -40,7 +30,7 @@ if not sim.has_signal(self.type_label()):
 UTILITY_INPUT( paramset.empty(), "The "+specie_count::type_label_()+" sampler takes no parameters.", core::strngs::sampler_label() );
 boost::shared_ptr< base_sampler > smplr( new specie_count );
 sim.share_observer( smplr );
-!!!594865.cpp!!!	on_report(in sim : simulator, inout out : ostream) : void
+!!!594865.cpp!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
 if (not this->count_.empty())
 {
    boost::format fmt_head(" %3s %7s %8s %8s %8s %8s");
@@ -90,10 +80,10 @@ if (not this->count_.empty())
          } ) );
       }
 
-      dset.write( filename, sim.get_sink(), sim.report_interval() == loopindex );
+      dset.write( filename, reporter.get_sink(), sim.report_interval() == loopindex );
    }
 }
-!!!594865.python!!!	on_report(in sim : simulator, inout out : ostream) : void
+!!!594865.python!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
 if self.count_ != None:
   print >>out, " %3s %7s %8s %8s %8s %8s"%("SPC","COUNT","[]","<COUNT>","<[]>","VAR")
   from constants import constants
