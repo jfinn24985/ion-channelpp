@@ -1,0 +1,222 @@
+class mpi_application
+!!!585264.cpp!!!	main(in argc : int, in argv : char) : bool
+// NOTE: The input decoders are not required to check that the final system is
+// valid.
+namespace mpi = boost::mpi;
+// temporary in memory log file until we know output location
+std::unique_ptr< std::stringstream > oslog( new std::stringstream() );
+
+mpi::environment env( argc, argv );
+mpi::communicator world;
+
+// Initialisation state we want to share
+int use_restart = 0;
+unsigned int run_number = 0;
+std::string inputpattern;
+std::string checkpoint_filename;
+std::vector< unsigned int > random_seeds;
+core::input_preprocess reader;
+
+// Use rank 0 to process command line.
+if ( world.rank() == 0 )
+{
+   if (argc > 1)
+   {
+      namespace po = boost::program_options;
+      po::options_description cmdln_opts("Allowed Options");
+      cmdln_opts.add_options()
+      ("run", po::value<unsigned int>(), "Simulation run number (positive integer).")
+      (core::strngs::inputpattern_label().c_str(), po::value<std::string>(), "Plain or printf style format string for generating input filename")
+      ("seed", po::value<unsigned int>(), "Simulation random seed value (positive integer).")
+      ("restart", po::value<std::string>(), "Check point file for simulation restart")
+      ("help", "Produce help message");
+      po::variables_map vm;
+      try
+      {
+         po::store(po::parse_command_line(argc, argv, cmdln_opts), vm);
+         po::notify(vm);
+      }
+      catch (std::exception &err)
+      {
+         *oslog << "Error : " << err.what() << "\n";
+         *oslog << cmdln_opts << "\n";
+         std::cout << oslog->rdbuf();
+         world.abort( 1 );
+         return false;
+      }
+      // After here, 'vm' will contain typed values as
+      // specified via po::value<> statement or an error
+      // would have been raised.
+      if (vm.count("help"))
+      {
+         *oslog << cmdln_opts << "\n";
+         std::cout << oslog->rdbuf();
+         world.abort( 1 );
+         return false;
+      }
+      if (vm.count("restart"))
+      {
+         checkpoint_filename = vm[ "restart" ].as<std::string>();
+         use_restart = 1;
+         if (vm.count("seed"))
+         {
+            *oslog << core::strngs::horizontal_bar() << "\n";
+            *oslog << "Random seed value on command line is ignored with restart.\n";
+         }
+         if (vm.count(core::strngs::inputpattern_label()))
+         {
+            *oslog << core::strngs::horizontal_bar() << "\n";
+            *oslog << "Input filename on command line is ignored with restart.\n";
+         }
+         if (vm.count("run"))
+         {
+            *oslog << core::strngs::horizontal_bar() << "\n";
+            *oslog << "Run number on command line is ignored with restart.\n";
+         }
+      }
+      else
+      {
+         // save input pattern and run number _AND_ set on the rank 0 sim
+         if (vm.count(core::strngs::inputpattern_label()))
+         {
+            inputpattern = vm[core::strngs::inputpattern_label()].as<std::string>();
+         }
+         if (vm.count("run"))
+         {
+            run_number = vm["run"].as<unsigned int>();
+         }
+
+         // set random generator seed
+         random_seeds.push_back( vm.count("seed") ? vm["seed"].as<unsigned int>() : mpi_application::simulator_->random_seed_value() );
+      }
+   }
+   else
+   {
+      // set random generator seed
+      random_seeds.push_back( mpi_application::simulator_->random_seed_value() );
+   }
+   if ( 0 == use_restart )
+   {
+      // generate random seeds for all ranks, each seed one larger
+      // than previous seed.
+      unsigned int seed = random_seeds[ 0 ];
+      random_seeds.resize( world.size() );
+      for( int ii = 1; ii != world.size(); ++ii )
+      {
+         ++seed;
+         random_seeds[ ii ] = seed;
+      }
+   }
+}
+
+// Broadcast state
+mpi::broadcast( world, use_restart, 0 );
+if ( use_restart == 1 )
+{
+   std::string checkpoint_content;
+   // Rank 0 reads the checkpoint file into buffer
+   if ( world.rank() == 0 )
+   {
+      UTILITY_INPUT( boost::filesystem::exists( checkpoint_filename ), "Filename \"" + checkpoint_filename + "\" does not exist.", core::strngs::simulator_label() );
+      // read file into our buffer stream
+      std::ifstream ifs( checkpoint_filename.c_str() );
+      UTILITY_INPUT( ifs, "Filename \"" + checkpoint_filename + "\" is not readable.", core::strngs::simulator_label() );
+      ifs.seekg(0, std::ios::end);
+      std::streampos length = ifs.tellg();
+      ifs.seekg(0, std::ios::beg);
+      checkpoint_content.reserve( length );
+      checkpoint_content.assign( ( std::istreambuf_iterator<char>( ifs ) ), ( std::istreambuf_iterator<char>() ) );
+   }
+   mpi::broadcast( world, checkpoint_content, 0 );
+   std::stringstream store( checkpoint_content );
+   boost::archive::text_iarchive ia( store );
+   ia >> mpi_application::simulator_;
+}
+else
+{
+   mpi::broadcast( world, run_number, 0 );
+   mpi_application::simulator_->set_run_number( run_number );
+   // DEBUG std::cerr << "RANK[" << world.rank() << "] has run number " << run_number << "\n";
+   mpi::broadcast( world, inputpattern, 0 );
+   if ( not inputpattern.empty() )
+   {
+      mpi_application::simulator_->set_filename_base( inputpattern );
+   }
+
+   mpi::broadcast( world, random_seeds, 0 );
+   *oslog << core::strngs::horizontal_bar() << "\n";
+   *oslog << "Random seed value : " << random_seeds[ world.rank() ] << ".\n";
+   mpi_application::simulator_->set_random_seed( random_seeds[ world.rank() ] );
+   // DEBUG std::cerr << "RANK[" << world.rank() << "] has random seed " << random_seeds[ world.rank() ] << "\n";
+
+   if ( world.rank() == 0 )
+   {
+      // Get input file
+      reader.add_include( mpi_application::simulator_->find_input_filename() );
+      // DEBUG std::cerr << "RANK[" << world.rank() << "] initializing input file " << reader.current_filename() << "\n";
+   }
+   mpi::broadcast( world, reader, 0 );
+
+   *oslog << core::strngs::horizontal_bar() << "\n";
+   *oslog << "Reading input file '"<< reader.current_filename() <<"'\n";
+   // DEBUG std::cerr << "RANK[" << world.rank() << "] has input file " << reader.current_filename() << "\n";
+   mpi_application::simulator_->read_input( reader, *oslog );
+}
+// ----------
+// After processing input we can now set up the
+// output location.
+const std::string out_dir_fmt = mpi_application::simulator_->output_dir_fmt() + "/" + std::to_string( world.rank() );
+mpi_application::simulator_->set_output_dir_fmt( out_dir_fmt );
+boost::filesystem::path out_dir( mpi_application::simulator_->compute_output_dir() );
+UTILITY_CHECK( boost::filesystem::exists( out_dir ), "Output directory at "+out_dir.string()+" should exist" );
+UTILITY_CHECK( boost::filesystem::is_directory( out_dir ), "Object at output directory location "+out_dir.string()+" is not a directory" );
+// open log file and write existing log text to it.
+std::ofstream ofslog( ( out_dir / "log.txt" ).string() );
+ofslog << oslog->rdbuf();
+oslog.reset();
+
+// Set up output file
+boost::shared_ptr< utility::base_sink > sink( new utility::gdbm_sink( ( out_dir / "output.dbm" ).string() ) );
+mpi_application::simulator_->set_sink( sink );
+
+// Set up checkpoint file
+mpi_application::checkpoint_path = ( out_dir / "checkpoint.arc" ).string();
+
+if ( use_restart == 0 )
+{
+   // generate simulation for non-restarts
+   mpi_application::simulator_->generate_simulation( ofslog );
+}
+// Register signals.
+mpi_application::simulator_->do_enrol();
+mpi_application::simulator_->set_checkpoint_function( &mpi_application::write_checkpoint );
+
+// Output settings
+mpi_application::simulator_->description ( ofslog );
+
+// Output copy of the original input file
+{
+   ofslog << core::strngs::horizontal_bar() << "\n";
+   core::input_document wr( mpi_application::simulator_->get_max_input_version() );
+   mpi_application::simulator_->write_document( wr );
+   wr.write( ofslog );
+   ofslog << core::strngs::horizontal_bar() << "\n";
+}
+
+// Run the simulation
+mpi_application::simulator_->run( ofslog );
+
+
+return true;
+!!!584880.cpp!!!	write_checkpoint(in sim : simulator) : void
+UTILITY_REQUIRE( sim == mpi_application::simulator_.get(),
+                 "Simulator given as argument is not this mpi_application's simulator" );
+boost::filesystem::path temp { mpi_application::checkpoint_path };
+temp.replace_extension( "tmp" );
+{
+   std::ofstream store( temp.string() );
+   boost::archive::text_oarchive oa( store );
+   oa << mpi_application::simulator_;
+}
+// Rename new checkpoint file to correct name
+boost::filesystem::rename( temp, mpi_application::checkpoint_path );

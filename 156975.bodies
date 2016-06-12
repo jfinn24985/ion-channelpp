@@ -1,0 +1,47 @@
+class mathutil
+!!!374191.cpp!!!	linesegment_circle_intersect(in x1 : double, in y1 : double, in x2 : double, in y2 : double, in x0 : double, in y0 : double, in radius : double) : bool
+// First check if either point is in circle
+const double x2_0_1 = (x1-x0)*(x1-x0);
+const double y2_0_1 = (y1-y0)*(y1-y0);
+const double r2 = radius * radius;
+if (r2 > (x2_0_1 + y2_0_1))
+{
+  return false;
+}
+const double x2_0_2 = (x2-x0)*(x2-x0);
+const double y2_0_2 = (y2-y0)*(y2-y0);
+if (r2 > (x2_0_2 + y2_0_2))
+{
+  return false;
+}
+// http://local.wasp.uwa.edu.au/~pbourke/geometry/sphereline/
+// Need following between 0 and 1 then for intersect in segment
+//
+// (x0 - x1)(x2 - x1) + (y0 - y1)(y2 - y1)
+// ---------------------------------------
+// (x2 - x1)(x2 - x1) + (y2 - y1)(y2 - y1) { == a needed below }
+const double a = ((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1));
+
+const double u = ((x0 - x1)*(x2 - x1) + (y0 - y1)*(y2 - y1)) / a;
+if (0. > u)
+{
+  return true;
+}
+if (1. < u)
+{
+  return true;
+}
+
+// Now we need to check for intersection
+// b * b - 4 * a * c <= 0
+// b*b <= 4 * a * c
+// (b/2)^2 <= a * c
+// where
+// a = (x2 - x1)2 + (y2 - y1)2
+// b = 2[ (x2 - x1) (x1 - x0) + (y2 - y1) (y1 - y0) ]
+// c = x0^2 + y0^2 + x1^2 + y1^2 - 2[x0*x1 + y0*y1] - r2
+//
+const double half_b = ((x2 - x1)*(x1 - x0) + (y2 - y1)*(y1 - y0));
+const double c = x0*x0 + y0*y0 + x1*x1 + y1*y1 - 2*(x0*x1 + y0*y1) - radius*radius;
+return half_b * half_b <=  a * c;
+

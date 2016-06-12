@@ -1,0 +1,227 @@
+class geom_test_suite
+!!!1940527.cpp!!!	test_geom_help() : void
+  ionch::cell_geom::help_information(ionch::input_help::exemplar());
+  TS_ASSERT (ionch::input_help::exemplar().have_section(ionch::constants::fsgeom()));
+!!!1940655.cpp!!!	test_cube_geom_ctr() : void
+  ionch::cube_geom var1;
+  TS_ASSERT_EQUALS (var1.length(), 0.0);
+  TS_ASSERT_EQUALS (var1.volume(), 0.0);
+  ionch::cube_geom var2 (10.0);
+  TS_ASSERT_EQUALS (var2.length(), 10.0);
+  TS_ASSERT_EQUALS (var2.volume(), 1000.0);
+  ionch::cube_geom var3 (var2);
+  TS_ASSERT_EQUALS (var3.length(), 10.0);
+  TS_ASSERT_EQUALS (var3.volume(), 1000.0);
+  var1 = var3;
+  TS_ASSERT_EQUALS (var1.length(), 10.0);
+  TS_ASSERT_EQUALS (var1.volume(), 1000.0);
+!!!1940783.cpp!!!	test_cell_geom_base_ctr() : void
+  ionch::cell_geom var1;
+  TS_ASSERT_EQUALS (var1.bulk_geometry().length(), 0.0);
+  TS_ASSERT_EQUALS (var1.bulk_geometry().volume(), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(1), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(2), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(3), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(4), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(1), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(2), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(3), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(4), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(5), 0.0);
+  TS_ASSERT_EQUALS (var1.rlvest(), 0.0);
+  TS_ASSERT_EQUALS (var1.rlcurv(), 0.0);
+!!!1941167.cpp!!!	test_cell_geom_in_geometry() : void
+  ionch::cell_geom var1;
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fsgeom())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  TS_ASSERT_EQUALS (var1.bulk_geometry().length(), 0.0);
+  TS_ASSERT_EQUALS (var1.bulk_geometry().volume(), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(1), 5.0);
+  TS_ASSERT_EQUALS (var1.zl(2), 10.0);
+  TS_ASSERT_EQUALS (var1.zl(3), 8.0);
+  TS_ASSERT_EQUALS (var1.zl(4), 100.0);
+  TS_ASSERT_EQUALS (var1.rl(1), 3.3);
+  TS_ASSERT_EQUALS (var1.rl(2), 8.3);
+  TS_ASSERT_EQUALS (var1.rl(3), 13.0);
+  TS_ASSERT_EQUALS (var1.rl(4), 15.0);
+  TS_ASSERT_EQUALS (var1.rl(5), 50.0);
+  TS_ASSERT_EQUALS (var1.rlvest(), 5.0);
+  TS_ASSERT_EQUALS (var1.rlcurv(), 2.0);
+  const double rad (1.0);
+  for (size_t idx = 0; idx != 10; ++idx)
+  {
+    const double z (20.0 * idx - 100.0);
+    for (size_t jdx = 0; jdx != 10; ++jdx)
+    {
+      const double r (5.0 * jdx);
+      const bool ingeom (var1.in_geometry(rad,z,r));
+      if (ingeom)
+      {
+        TS_ASSERT_LESS_THAN_EQUALS(std::abs(z) + rad, 100.0);
+        TS_ASSERT_LESS_THAN_EQUALS(r + rad, 50.0);
+        if (std::abs(z) <= 5.0)
+        {
+          TS_ASSERT_LESS_THAN_EQUALS(r + rad, 5.0);
+        }
+        else if (std::abs(z) + rad <= 10.0)
+        {
+          TS_ASSERT_LESS_THAN_EQUALS(r + rad, 10.0);
+        }
+      }
+      else
+      {
+        if (std::abs(z) <= 5.0)
+        {
+          TS_ASSERT_LESS_THAN_EQUALS(5.0, r + rad);
+        }
+        else if (std::abs(z) + rad <= 10.0)
+        {
+          TS_ASSERT_LESS_THAN_EQUALS(5.0, r + rad);
+        }
+        else if (std::abs(z) + rad <= 100.0)
+        {
+          TS_ASSERT_LESS_THAN_EQUALS(50.0, r + rad);
+        }
+      }
+    }
+  }
+!!!1941295.cpp!!!	test_cell_geom_read_finalise() : void
+  ionch::cell_geom var1;
+  TS_ASSERT_EQUALS (var1.bulk_geometry().length(), 0.0);
+  TS_ASSERT_EQUALS (var1.bulk_geometry().volume(), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(1), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(2), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(3), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(4), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(1), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(2), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(3), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(4), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(5), 0.0);
+  TS_ASSERT_EQUALS (var1.rlvest(), 0.0);
+  TS_ASSERT_EQUALS (var1.rlcurv(), 0.0);
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fsgeom())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  TS_ASSERT_EQUALS (var1.bulk_geometry().length(), 0.0);
+  TS_ASSERT_EQUALS (var1.bulk_geometry().volume(), 0.0);
+  std::stringstream os;
+  size_t ntarg (100);
+  var1.read_finalise(os, 0.1, ntarg);
+  TS_ASSERT_DIFFERS (var1.bulk_geometry().length(), 0.0);
+  TS_ASSERT_DIFFERS (var1.bulk_geometry().volume(), 0.0);
+!!!1941423.cpp!!!	test_cell_geom_read_finalise1() : void
+  ionch::cell_geom var1;
+  TS_ASSERT_EQUALS (var1.bulk_geometry().length(), 0.0);
+  TS_ASSERT_EQUALS (var1.bulk_geometry().volume(), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(1), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(2), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(3), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(4), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(1), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(2), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(3), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(4), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(5), 0.0);
+  TS_ASSERT_EQUALS (var1.rlvest(), 0.0);
+  TS_ASSERT_EQUALS (var1.rlcurv(), 0.0);
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fsgeom())
+      {
+        TS_ASSERT_THROWS_NOTHING(var1.read_input (irdr));
+      }
+    }
+  }
+  TS_ASSERT_EQUALS (var1.bulk_geometry().length(), 0.0);
+  TS_ASSERT_EQUALS (var1.bulk_geometry().volume(), 0.0);
+  std::stringstream os;
+  size_t ntarg (0);
+  var1.read_finalise(os, 0.1, ntarg);
+  TS_ASSERT_DIFFERS (var1.bulk_geometry().length(), 0.0);
+  TS_ASSERT_DIFFERS (var1.bulk_geometry().volume(), 0.0);
+!!!1941551.cpp!!!	test_cell_geom_serialise() : void
+  ionch::cell_geom var1, var2;
+  TS_ASSERT_EQUALS (var1.bulk_geometry().length(), 0.0);
+  TS_ASSERT_EQUALS (var1.bulk_geometry().volume(), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(1), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(2), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(3), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(4), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(1), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(2), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(3), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(4), 0.0);
+  TS_ASSERT_EQUALS (var1.rl(5), 0.0);
+  TS_ASSERT_EQUALS (var1.rlvest(), 0.0);
+  TS_ASSERT_EQUALS (var1.rlcurv(), 0.0);
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fsgeom())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  TS_ASSERT_EQUALS (var1.bulk_geometry().length(), 0.0);
+  TS_ASSERT_EQUALS (var1.bulk_geometry().volume(), 0.0);
+  TS_ASSERT_EQUALS (var1.zl(1), 5.0);
+  TS_ASSERT_EQUALS (var1.zl(2), 10.0);
+  TS_ASSERT_EQUALS (var1.zl(3), 8.0);
+  TS_ASSERT_EQUALS (var1.zl(4), 100.0);
+  TS_ASSERT_EQUALS (var1.rl(1), 3.3);
+  TS_ASSERT_EQUALS (var1.rl(2), 8.3);
+  TS_ASSERT_EQUALS (var1.rl(3), 13.0);
+  TS_ASSERT_EQUALS (var1.rl(4), 15.0);
+  TS_ASSERT_EQUALS (var1.rl(5), 50.0);
+  TS_ASSERT_EQUALS (var1.rlvest(), 5.0);
+  TS_ASSERT_EQUALS (var1.rlcurv(), 2.0);
+  std::stringstream store;
+  {
+    boost::archive::text_oarchive oa(store);
+    // write class instance to archive
+    oa << var1;
+  }
+  {
+    boost::archive::text_iarchive ia(store);
+    // get class instance from archive
+    ia >> var2;
+  }
+  {
+    TS_ASSERT_EQUALS (var2.bulk_geometry().length(), 0.0);
+    TS_ASSERT_EQUALS (var2.bulk_geometry().volume(), 0.0);
+    TS_ASSERT_EQUALS (var2.zl(1), 5.0);
+    TS_ASSERT_EQUALS (var2.zl(2), 10.0);
+    TS_ASSERT_EQUALS (var2.zl(3), 8.0);
+    TS_ASSERT_EQUALS (var2.zl(4), 100.0);
+    TS_ASSERT_EQUALS (var2.rl(1), 3.3);
+    TS_ASSERT_EQUALS (var2.rl(2), 8.3);
+    TS_ASSERT_EQUALS (var2.rl(3), 13.0);
+    TS_ASSERT_EQUALS (var2.rl(4), 15.0);
+    TS_ASSERT_EQUALS (var2.rl(5), 50.0);
+    TS_ASSERT_EQUALS (var2.rlvest(), 5.0);
+    TS_ASSERT_EQUALS (var2.rlcurv(), 2.0);
+  }

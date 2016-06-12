@@ -1,0 +1,571 @@
+class icc_orig
+!!!422192.cpp!!!	icc_orig()
+: amx_()
+, c_()
+, cnew_()
+, grid_( new icc_surface_grid )
+, h_()
+, hnew_()
+, rip_()
+, ripnew_()
+, a_matrix_filename_( "amx.dat" )
+, patch_filename_( "patch.dat" )
+, sample_conx_()
+, alfa_()
+, epsw_()
+{}
+!!!422832.cpp!!!	make_evaluator(in param_set : std::map< std::string, std::string >, inout sim : simulator) : void
+// const ion_channel::channel_system *psim = nullptr;
+// psim = dynamic_cast< const ion_channel::channel_system * >( &sim );
+// UTILITY_INPUT( nullptr != psim, "Induced charge evaluator is not suitable for this simulator.", core::strngs::evaluator_label() );
+std::unique_ptr< induced_charge > cc(new induced_charge);
+
+std::string unknown_parameter;
+
+for (auto nvpair : param_set)
+{
+   if ( nvpair.first.find( core::strngs::fsdxf() ) != std::string::npos )
+   {
+      try
+      {
+         cc->set_dxf( boost::lexical_cast< double >( nvpair.second ) );
+      }
+      catch(std::bad_cast &err)
+      {
+         bool good_cast_to_double = false;
+         UTILITY_INPUT(good_cast_to_double, "Cannot convert \"" + nvpair.second
+                       + "\" to a real number as argument of parameter \"" + nvpair.first + "\""
+                       , core::strngs::evaluator_label() );
+      }
+   }
+   else if ( nvpair.first.find( core::strngs::fsdxw() ) != std::string::npos )
+   {
+      try
+      {
+         cc->set_dxw( boost::lexical_cast< double >( nvpair.second ) );
+      }
+      catch(std::bad_cast &err)
+      {
+         bool good_cast_to_double = false;
+         UTILITY_INPUT(good_cast_to_double, "Cannot convert \"" + nvpair.second
+                       + "\" to a real number as argument of parameter \"" + nvpair.first + "\""
+                       , core::strngs::evaluator_label() );
+      }
+   }
+   else if ( nvpair.first.find( core::strngs::fsnsub() ) != std::string::npos )
+   {
+      try
+      {
+         cc->set_nsub0( boost::lexical_cast< std::size_t >( nvpair.second ) );
+      }
+      catch(std::bad_cast &err)
+      {
+         bool good_cast_to_integer = false;
+         UTILITY_INPUT(good_cast_to_double, "Cannot convert \"" + nvpair.second
+                       + "\" to a positive integer as argument of parameter \"" + nvpair.first + "\""
+                       , core::strngs::evaluator_label() );
+      }
+   }
+   else
+   {
+      if ( unknown_parameter.empty() )
+      {
+         unknown_parameter = nvpair.first;
+      }
+      else
+      {
+         unknown_parameter += " " + nvpair.first;
+      }
+   }
+}
+UTILITY_INPUT( unknown_parameter.empty(),"Unknown parameter(s) [" + unknown_parameter + "] for induced charge evaluator.", core::strngs::evaluator_label());
+
+// Connect to inner-loop signal to get notification from every trial
+{
+   auto sig = boost::any_cast< platform::simulator::inner_loop_signal_type* >( sim.get_signal("inner-loop" ) );
+   cc->sample_conx_ = sig->connect(boost::bind(&induced_charge::on_inner_loop, cc.get(), _1));
+}
+
+
+sim.add_evaluator( cc.release() );
+!!!423088.cpp!!!	do_description(inout os : ostream) : void
+os << " Compute the induced charge on the dielectric boundary surface\n";
+os << " and the resulting electrostatic potential on the particles.\n\n";
+os << " Computing the induced charge is made reasonalbly efficient\n";
+os << " by fixing the position of the boundary surface during the\n";
+os << " simulation and dividing the surface. Using these surface\n";
+os << " elements allows the generation of a set of simultaneous equations\n";
+os << " that relate the external field on the surface elements to the \n";
+os << " induced charge on the elements. These equations can be \n";
+os << " presolved and the solution matrix stored. Then at each\n";
+os << " simulation step the electric field at each surface element \n";
+os << " is calculated. Back-substituion into the solved simultaneous\n";
+os << " equations then gives the induced surface charges. These are\n";
+os << " then used to calculate the screened Coulomb potential between\n";
+os << " each surface element and each particle.\n\n";
+os << " Parameters:\n";
+os << "   dxf : The approximate tile width (in Angstrom) in the direction\n";
+os << "         around the rotation axis.\n";
+os << "   dxw : The approximate tile width (in Angstrom) in the direction\n";
+os << "         parallel and radial to the rotation axis.\n";
+os << "  nsub : Integration parameter indicating how many sub-tiles a\n";
+os << "         surface element is divided into during integration.\n\n";
+os << " References for induced charge:\n";
+os << "  R. Allen and J.-P. Hansen and S. Melchionna \"Electrostatic potential\n";
+os << "    inside ionic solutions confined by dielectrics: a variational approach\"\n";
+os << "    Phys Chem Chem Physics, 2001, 3, 4177-4186\n";
+os << " This implementation based on:\n";
+os << "  Dezso Boda, Dirk Gillespie, Wolfgang Nonner, Douglas Henderson, \n";
+os << "   and Bob Eisenberg \"Computing induced charges in inhomogeneous \n";
+os << "   dielectric media: Application in a Monte Carlo simulation of \n";
+os << "   complex ionic systems\" Physical Review E, 2004, 69, 046702\n";
+
+
+!!!423216.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fsdxf(), this->grid_->get_dxf() );
+wr[ ix ].add_entry( core::strngs::fsdxw(), this->grid_->get_dxw() );
+wr[ ix ].add_entry( core::strngs::fsnsub(), this->grid_->get_nsub0() );
+!!!423344.cpp!!!	enrol(inout sim : simulator) : void
+// Connect to inner-loop signal to get notification from every trial
+if ( not this->sample_conx_.connected() )
+{
+   auto sig = boost::any_cast< platform::simulator::inner_loop_signal_type* >( sim.get_signal("inner-loop" ) );
+   this->sample_conx_ = sig->connect(boost::bind(&induced_charge::on_inner_loop, this, _1));
+}
+
+
+!!!424624.cpp!!!	surface_charge(in idx : size_t) : double
+return this->grid_->area( idx ) * this->h_[ idx ] / this->grid_->deps( idx ) / std::sqrt( core::constants::electron_charge() * this->alfa_ );
+
+!!!425264.cpp!!!	type_label_() : string
+  return core::strngs::fsptch();
+!!!425392.cpp!!!	write_data(in sim : simulator, inout os_log : ostream) : void
+const boost::filesystem::path dirpath( sim.compute_checkpoint_dir() );
+// save patch data and amx
+boost::filesystem::path pth;
+pth = dirpath / this->patch_filename_;
+std::ofstream os_pch( pth.string() );
+if ( os_pch.good() )
+{
+   this->grid_->write_grid( os_pch );
+}
+else
+{
+   os_log << "Warning : unable to write induced charge computation surface tile data to \"" << pth.string() << "\"\n";
+}
+pth = dirpath / this->a_matrix_filename_;
+std::ofstream os_amx( pth.string() );
+if ( os_amx.good() )
+{
+   this->amx_.write_a_matrix( os_amx );
+}
+else
+{
+   os_log << "Warning : unable to write induced charge computation matrix data to \"" << pth.string() << "\"\n";
+}
+
+!!!425520.cpp!!!	compute_potential(in spcs : specie, in ens : ensemble, inout changes : change_set, in start_index : size_t) : void
+//
+// Calculate the electric field at each tile. This
+//   should be the same as the previous field adjusted
+//   for the changes. We also calculate ripnew 
+//   distance arrays for any changes with new positions
+//
+// O(changes.size() * icc.size())
+std::copy( this->c_.begin(), this->c_.end(), this->cnew_.begin() );
+
+// Check size of ripnew
+if ( this->ripnew_.size() < changes.size() )
+{
+   this->ripnew_.resize( changes.size(), std::vector< double >( this->size() ) );
+}
+
+//
+//   C = (1/4.pi.eps) SUM{ (q_i dot(r_ip,u_i) / ||r_ip||^3 ) }
+//
+for (std::size_t cursor = 0; cursor != changes.size(); ++cursor)
+{
+   auto const& atom = changes[ cursor ];
+   const double q_alfa = spcs[ atom.key ].valency() * this->alfa_;
+   std::array< std::size_t, 2 > idx;
+   if ( atom.do_old )
+   {
+      // Subtract field from old position from cnew
+      idx[ 0 ] = atom.index;
+      for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
+      {
+          idx[ 1 ] = ipch;
+         const double rxki = this->grid_->x( ipch ) - atom.old_position.x;
+         const double ryki = this->grid_->y( ipch ) - atom.old_position.y;
+         const double rzki = this->grid_->z( ipch ) - atom.old_position.z;
+         const double rip  = this->rip_( idx );
+         const double rki  = rxki * this->grid_->ux( ipch ) 
+   	                     + ryki * this->grid_->uy( ipch )
+                           + rzki * this->grid_->uz( ipch );
+         this->cnew_[ ipch ] -= q_alfa * rki * this->grid_->deps( ipch ) /
+           (4 * core::constants::pi() * this->epsw_ * std::pow( rip, 3 ) );
+      }
+   }
+   if ( atom.do_new )
+   {
+      // Add field from new position to cnew 
+      idx[ 0 ] = cursor;
+      for (std::size_t ipch = 0; ipch != this->size(); ++ipch )
+      {
+          idx[ 1 ] = ipch;
+         const double rxki = this->grid_->x( ipch ) - atom.new_position.x;
+         const double ryki = this->grid_->y( ipch ) - atom.new_position.y;
+         const double rzki = this->grid_->z( ipch ) - atom.new_position.z;
+         const double rip  = std::sqrt( std::pow( rxki, 2 ) + std::pow( ryki, 2 ) + std::pow( rzki, 2 ) );
+         const double rki  = rxki * this->grid_->ux( ipch ) 
+   	                     + ryki * this->grid_->uy( ipch )
+                           + rzki * this->grid_->uz( ipch );
+         this->cnew_[ ipch ] -= q_alfa * rki * this->grid_->deps( ipch ) /
+            ( 4 * core::constants::pi() * this->epsw_ * std::pow( rip, 3 ) );
+         // Calculate and store distances between patches and particle
+         this->ripnew_[ cursor ][ ipch ] = rip;
+      }
+   }
+}
+      
+//
+// Calculate the new H
+//
+std::copy( this->cnew_.begin(), this->cnew_.end(), this->hnew_.begin() );
+
+this->amx_.back_substitute( this->hnew_ );
+//
+// Calculate new potential
+//
+//   U = (1/4.pi.eps) SUM{ q_i . icc_p . area_p / 2 ||r_ip||
+//
+// O(ens.size() * icc.size())
+//
+double old_potential = 0.0;
+double new_potential = 0.0;
+// POTENTIAL OPENMP LOOP
+for (std::size_t ii = 0; ii != ens.size(); ++ii)
+{
+   const std::size_t ispec( ens.key( ii ) );
+   if (ispec != particle::ensemble::nkey )
+   {
+      std::array< std::size_t, 2 > idx;
+      idx[ 0 ] = ii;
+      const particle::specie & spc = spcs[ ispec ];
+      const double q_alfa = spc.valency() * this->alfa_;
+      for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
+      {
+         idx[ 1 ] = ipch;
+         old_potential += q_alfa * this->h_[ ipch ] * this->grid_->area( ipch ) / ( 2 * this->rip_( idx ) );
+         new_potential += q_alfa * this->hnew_[ ipch ] * this->grid_->area( ipch ) / ( 2 * this->rip_( idx ) );
+      }
+   }
+}
+// Remove effect of changes from new_potential
+for (std::size_t cursor = 0; cursor != changes.size(); ++cursor)
+{
+   auto const& atom = changes[ cursor ];
+   const double q_alfa = spcs[ atom.key ].valency() * this->alfa_;
+   std::array< std::size_t, 2 > idx;
+   if ( atom.do_old )
+   {
+      // Subtract potential from old position
+      idx[ 0 ] = atom.index;
+      for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
+      {
+         idx[ 1 ] = ipch;
+         new_potential -= q_alfa * this->hnew_[ ipch ] * this->grid_->area( ipch ) / (2 * this->rip_( idx ) );
+      }
+   }
+   if ( atom.do_new )
+   {
+      // Add potential from new position 
+      for (std::size_t ipch = 0; ipch != this->size(); ++ipch )
+      {
+         new_potential += q_alfa * this->hnew_[ ipch ] * this->grid_->area( ipch ) / (2 * this->ripnew_[ cursor ][ ipch ] );
+      }
+   }
+}
+// Split potential energy over atoms in change set
+old_potential /= changes.size();
+new_potential /= changes.size();
+for (auto & atom : changes)
+{
+   atom.energy_old += old_potential;
+   atom.energy_new += new_potential;
+}
+!!!425648.cpp!!!	compute_initial_c_h(in spcs : specie, in ens : ensemble) : void
+//
+// Calculate the electric field at each tile.
+//
+// O(ens.size() * icc.size())
+//
+// Convert energy units
+// Check size of rip
+if (this->rip_.shape()[0] < ens.max_size() or
+      this->rip_.shape()[1] < this->size())
+{
+   this->rip_.resize( boost::extents[ens.max_size()][this->size()] );
+}
+if ( this->c_.size() < this->amx_.size() )
+{
+   this->c_.resize( this->amx_.size() );
+}
+if ( this->h_.size() < this->amx_.size() )
+{
+   this->h_.resize( this->amx_.size() );
+}
+if ( this->cnew_.size() < this->amx_.size() )
+{
+   this->cnew_.resize( this->amx_.size() );
+}
+if ( this->hnew_.size() < this->amx_.size() )
+{
+   this->hnew_.resize( this->amx_.size() );
+}
+
+std::fill( this->c_.begin(), this->c_.end(), 0.0 );
+//
+//   C = (1/4.pi.eps) SUM{ (q_i dot(r_ip,u_i) / ||r_ip||^3 ) }
+//
+for (std::size_t ii = 0; ii != ens.size(); ++ii)
+{
+   const std::size_t ispec = ens.key( ii );
+   if (ispec == particle::ensemble::nkey)
+   {
+      continue;
+   }
+   const double q_alfa = spcs[ ispec ].valency() * this->alfa_;
+   const particle::coordinate pos( ens.position( ii ) );
+   std::array< std::size_t, 2 > idx;
+   idx[ 0 ] = ii;
+   for (std::size_t ipch = 0; ipch != this->size(); ++ipch )
+   {
+      idx[ 1 ] = ipch;
+      const double rxki = this->grid_->x( ipch ) - pos.x;
+      const double ryki = this->grid_->y( ipch ) - pos.y;
+      const double rzki = this->grid_->z( ipch ) - pos.z;
+      const double rip  = std::sqrt( std::pow( rxki, 2 ) + std::pow( ryki, 2 ) + std::pow( rzki, 2 ) );
+      const double rki  = rxki * this->grid_->ux( ipch )
+                          + ryki * this->grid_->uy( ipch )
+                          + rzki * this->grid_->uz( ipch );
+      this->c_[ ipch ] += q_alfa * this->grid_->deps( ipch ) * rki / (4 * core::constants::pi() * this->epsw_ * std::pow( rip, 3 ) );
+      // Calculate and store distances between patches and particle
+      this->rip_( idx ) = rip;
+   }
+}
+
+//
+// Calculate the new H
+//
+std::copy( this->c_.begin(), this->c_.end(), this->h_.begin() );
+this->amx_.back_substitute( this->h_ );
+!!!425776.cpp!!!	compute_total_surface_charge(out charget : double, out areat : double) : void
+areat = 0.0;
+charget = 0.0;
+for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+{
+  const double area =  this->grid_->area( ipch );
+  areat += area;
+  charget += area * this->h_[ipch] / this->grid_->deps( ipch );
+}
+// Back convert to electron charges
+charget /= this->alfa_;
+!!!426032.cpp!!!	create_amx(in zl1 : double, in rl1 : double, in rl4 : double, in rlvest : double, in rlmemb : double, in epsw : double, in epspr : double, inout os_log : ostream) : void
+UTILITY_CHECK( this->grid_->empty(), "Cannot define grid twice");
+
+//       |theta1 = pi/2
+// theta2|     theta0 = 0.0
+//  ---- z ----- theta4 = 2pi
+// = pi  |
+//       | theta3 = 3/2 pi
+// d_theta = pi/2
+const double theta0( 0.0);
+const double theta1( core::constants::pi() / 2);
+const double theta2( core::constants::pi() );
+const double theta3( core::constants::pi() * 3.0/2.0 );
+const double theta4( 2 * core::constants::pi() );
+
+// Get geometry data
+const double geom_zl1( zl1 );
+const double geom_rl1( rl1 );
+const double geom_rl2( rl1 + rlvest );
+const double geom_rlvest( rlvest );
+const double geom_zl2( zl1 + rlvest );
+const double geom_rl3( rl4 - rlmemb );
+const double geom_zl3( zl1 + rlvest - rlmemb );
+const double geom_rl4( rl4 );
+const double geom_rlcurv( rlmemb );
+
+// Delta permittivity in channel and elsewhere
+const double channel_d_eps( 2 * (epspr - epsw) / (epspr + epsw ) );
+const double outer_d_eps( channel_d_eps );
+
+// Minimum number of tiles along a dimension
+const int channel_min_z_tiles (10);
+const int outer_min_z_tiles (4);
+const int min_r_tiles (16);
+
+// Channel pore cylinder
+this->grid_->add_line( -geom_zl1, geom_zl1, geom_rl1, channel_d_eps, channel_min_z_tiles, min_r_tiles, true, os_log );
+
+// Hi-z inner arc
+this->grid_->add_arc( geom_zl1, geom_rl2, geom_rlvest, theta3, theta4, channel_d_eps, outer_min_z_tiles, min_r_tiles, true, os_log );
+
+// hi-z wall
+this->grid_->add_wall( geom_zl2, geom_rl2, geom_rl3, outer_d_eps, 0, 0, true, os_log );
+
+// Hi-z outer arc
+this->grid_->add_arc( geom_zl3, geom_rl3, geom_rlcurv, theta0, theta1, outer_d_eps, outer_min_z_tiles, min_r_tiles, true, os_log );
+
+// Channel protein outer cylinder
+this->grid_->add_line( -geom_zl3, geom_zl3, geom_rl4, outer_d_eps, outer_min_z_tiles, min_r_tiles, false, os_log );
+
+// lo-z outer arc
+this->grid_->add_arc( -geom_zl3, geom_rl3, geom_rlcurv, theta1, theta2, outer_d_eps, outer_min_z_tiles, min_r_tiles, true, os_log );
+
+// lo-z wall
+this->grid_->add_wall( -geom_zl2, geom_rl2, geom_rl3, outer_d_eps, 0, 0, false, os_log );
+
+// lo-z inner arc
+this->grid_->add_arc( -geom_zl1, geom_rl2, geom_rlvest, theta2, theta3, channel_d_eps, outer_min_z_tiles, min_r_tiles, true, os_log );
+
+os_log << "Grid builder complete\n";
+
+this->amx_.compute_amx( *this->grid_, os_log );
+this->amx_.lu_decompose_amx( os_log );
+!!!426160.cpp!!!	create_amx(inout grid : icc_surface_grid, inout os_log : ostream) : void
+UTILITY_CHECK( this->grid_->empty(), "Cannot define grid twice");
+
+std::swap( this->grid_, grid );
+
+this->amx_.compute_amx( *this->grid_, os_log );
+this->amx_.lu_decompose_amx( os_log );
+!!!426288.cpp!!!	on_inner_loop(in changes : change_set) : void
+if (changes.accept())
+{
+   std::swap(this->h_, this->hnew_);
+   std::swap(this->c_, this->cnew_);
+   for (std::size_t cursor = 0; cursor != changes.size(); ++cursor)
+   {
+      auto const& atom = changes[ cursor ];
+      std::array< std::size_t, 2 > idx;
+      idx[ 0 ] = atom.index;
+      for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+      {
+         idx[ 1 ] = ipch;
+         this->rip_( idx ) = this->ripnew_[ cursor ][ ipch ];
+      }
+   }
+}
+!!!426416.cpp!!!	prepare(in sim : simulator) : void
+if (this->size() == 0)
+{
+   this->set_alfa( sim.get_temperature() );
+
+   this->epsw_ = sim.get_permittivity();
+
+   // Evaluator needs to be initialized
+   //
+   std::ostream& os_log( std::cout );
+
+   // No patch/amx files or not for this sim
+   if ( not this->read_data( sim, os_log ) )
+   {
+      os_log << "Unable to read patch data and A matrix from file.\n";
+
+      const ion_channel::channel_system *psim = nullptr;
+      psim = dynamic_cast< const ion_channel::channel_system * >( &sim );
+      UTILITY_ALWAYS( nullptr != psim, "Simulator is not suitable for this evaluator" );
+      const ion_channel::channel_system & cellsim( *psim );
+
+      // create A matrix.  Need to down cast simulator to be
+      // able to get protein geometry.
+      this->create_amx( cellsim, os_log );
+
+      this->write_data( sim, os_log );
+   }
+}
+// (Re)Generate the initial rip, c and h vectors
+this->compute_initial_c_h( sim.get_species(), sim.get_ensemble() );
+
+!!!426544.cpp!!!	read_data(in sim : simulator, inout os_log : ostream) : bool
+UTILITY_REQUIRE(this->size() == 0, "Attempt to overwrite existing A matrix data.");
+
+const boost::filesystem::path dirpath( sim.compute_checkpoint_dir() );
+// Check for available patch/amx files.
+bool amx_read = false;
+{
+   boost::filesystem::path pth;
+   pth = dirpath / this->patch_filename_;
+   if ( boost::filesystem::exists( pth ) )
+   {
+      std::ifstream is_pch( pth.string() );
+      if ( is_pch.good() and this->grid_->read_grid( is_pch ) )
+      {
+         os_log << "Read patch data file " << pth.string() << "\n";
+         pth = dirpath / this->a_matrix_filename_;
+         if( boost::filesystem::exists( pth ) )
+         {
+            std::ifstream is_amx( pth.string() );
+            amx_read = is_amx.good() and this->amx_.read_a_matrix( is_amx );
+            if (amx_read)
+            {
+               os_log << "Read A matrix file " << pth.string() << "\n";
+            }
+            else
+            {
+               os_log << "Unable to read file \"" << pth.string() << "\"\n";
+            }
+         }
+         else
+         {
+            os_log << "File \"" << pth.string() << "\" does not exist\n";
+         }
+      }
+      else
+      {
+         os_log << "Unable to read file \"" << pth.string() << "\"\n";
+      }
+   }
+   else
+   {
+      os_log << "File \"" << pth.string() << "\" does not exist\n";
+   }
+}
+return amx_read;
+
+!!!426800.cpp!!!	set_alfa(in temperature : double) : void
+this->alfa_ = core::constants::electron_charge() / std::sqrt(4 * core::constants::pi() * core::constants::epsilon_0() * core::constants::boltzmann_constant() * temperature * core::constants::angstrom() );
+
+!!!427568.cpp!!!	dump(in fname : string) : void
+std::ofstream dos( fname );
+
+dos << "# alfa : " << this->alfa_ << "\n";
+dos << "# patch name : " << this->patch_filename_ << "\n";
+dos << "# amx name : " << this->a_matrix_filename_ << "\n";
+dos << "# connection : " << (this->sample_conx_.connected() ? " true" : "false" ) << "\n";
+dos << "#  C  CNEW H HNEW RIPNEW\n";
+for ( std::size_t ii = 0; ii != this->size(); ++ii )
+{
+   dos << c_[ ii ] << " " << cnew_[ ii ] << " " 
+      << h_[ ii ] << " " << hnew_[ ii ] << " "
+      << ripnew_[ 0 ][ ii ] << "\n";
+}
+
+dos << "# RIP\n";
+std::array< std::size_t, 2 > idx;
+for ( std::size_t ii = 0; ii != this->rip_.shape()[0]; ++ii)
+{
+   idx[ 0 ] = ii;
+   for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+   {
+      idx[ 1 ] = ipch;
+      dos << ii << " " << ipch << " " << this->rip_( idx ) << "\n";
+   }
+}
+dos << "# A MATRIX\n";
+this->amx_.write_a_matrix( dos );
+dos << "# GRID\n";
+this->grid_->write_grid( dos );
+

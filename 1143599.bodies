@@ -1,0 +1,67 @@
+class evaluator_meta
+!!!2165679.cpp!!!	evaluator_meta()
+if (0 == counter_)
+{
+   const std::string seclabel( core::strngs::evaluator_label() );
+   // ----------------------------------------
+   // add section
+   // ----------------------------------------
+
+   //   Specie input section definition
+   core::input_help::exemplar().add_section( seclabel,
+         "Evaluator input section definition.  In addition to the listed options, each individual"
+         "evaluator subtype may have its own specific options.");
+
+   // ----------------------------------------
+   // add parameters
+   // ----------------------------------------
+
+   //  type : [required] trial subtype
+   {
+      const std::string description( "[required, string] trial subtype (see documentation for valid subtypes)." );
+      core::input_help::exemplar().add_option( seclabel, core::strngs::fstype(), description );
+   }
+   //  simulator : [optional] simulator subtype
+   {
+      const std::string description("[optional, string] specific simulator subtype to add the evaluator to (see documentation for valid subtypes).");
+      core::input_help::exemplar().add_option( seclabel, core::strngs::simulator_label(), description );
+   }
+
+}
+++counter_;
+!!!203824.cpp!!!	do_read_entry(inout reader : input_reader) : bool
+if (reader.name().find(core::strngs::fstype()) == 0)
+{
+   // --------------------
+   // Evaluator type
+   UTILITY_INPUT(not reader.value().empty(), "Evaluator type must have a value.", this->section_label());
+   std::string val (reader.dequote(reader.value()));
+   UTILITY_INPUT(type_to_object_.count(val) != 0, "Evaluator type must be one of allowed values for this program (see documentation).", this->section_label());
+   this->type_ = val;
+   missing_required_tags_.reset(EVALUATOR_TYPE);
+}
+else
+{
+   // --------------------
+   // Choice specific parameters
+   UTILITY_INPUT (0 == this->parameter_set_.count (reader.name()), ("keyword \""+reader.name()+"\" appears more than once in a single in specie section"), this->section_label());
+   this->parameter_set_.insert (std::make_pair(reader.name(), reader.value()));
+}
+return true;
+!!!203952.cpp!!!	do_read_end(inout sim : simulator) : void
+UTILITY_INPUT (not this->missing_required_tags_.any(), "Not all required tags were present.", this->section_label());
+// Add to all simulator types!
+//
+// Give the generator functional the simulator type in
+// in case the evaluator is not valid for a particular
+// simulator type or there are different evaluator types
+// for different simulators.
+this->type_to_object_[ this->type_ ]( this->parameter_set_, sim );
+
+// Reset the meta data
+this->missing_required_tags_ = std::bitset< EVALUATOR_TAG_COUNT >( true );
+this->parameter_set_.clear();
+this->type_.clear();
+!!!268208.cpp!!!	do_reset() : void
+this->parameter_set_.clear();
+this->missing_required_tags_.reset();

@@ -1,0 +1,142 @@
+class MergeSubspeciesApplication
+!!!1493807.python!!!	main(in argc : int, in argv : char) : void
+# Initialise argument parsing system to handle:
+#
+result = None
+import simdict
+try:
+  import argparse
+  parser = argparse.ArgumentParser(description="Combine several data files into an averaged output file")
+  parser.add_argument('-i','--input',dest='inputsource',metavar='filename',nargs='+',help='The list of filenames/directory of the data set definitions')
+  parser.add_argument('-m','--merge',dest='to_merge',metavar='AA:BB:CC',help='Set of ion names in the form AA:BB:CC where BB and CC are merged to AA')
+  simdict.SummaryReader.commandline_add(parser)
+  # process sys.argv
+  result = parser.parse_args ()
+except ImportError:
+  from optparse import OptionParser
+  parser = OptionParser(description="Combine several data files into an averaged output file")
+  parser.add_option('-i','--input',dest='inputsource',metavar='filename',help='The list of filenames/directory of the data set definitions',action='append',type='string')
+  parser.add_option('-m','--merge',dest='to_merge',metavar='AA:BB:CC',help='Set of ion names in the form AA:BB:CC where BB and CC are merged to AA',type='string')
+  simdict.SummaryReader.commandline_add(parser)
+  ( result, args ) = parser.parse_args()
+  if args:
+    result.inputsource += args
+
+# Process class based args
+simdict.SummaryReader.commandline_action(result)
+
+print "input files/directories:",result.inputsource
+
+# set data set file list, if none set on command line use
+# current directory.
+import os
+if not result.inputsource:
+  result.inputsource = os.curdir
+
+print "Merge ions : ",result.to_merge
+if result.to_merge:
+  parts = result.to_merge.split(":")
+  self.merge_ions = [ ( parts[0], parts[1:]), ]
+
+for subpath in result.inputsource:
+  path = os.path.abspath(subpath)
+  if os.path.isdir(path):
+    for dirs in os.walk(path):
+      # look in directory for merge files.
+      for subfile in dirs[2]:
+        if self.source_regex.search (subfile):
+          self.process (os.path.join (dirs[0], subfile))
+  else:
+    # use filename directly
+    self.process (path)
+
+!!!1493935.python!!!	process(in self : MergeSubspeciesApplication, in path : string) : void
+print "Processing path:", path
+import os
+# Load the current simulation.
+merger = simdict.ResultSet(path)
+
+print merger.digest()
+
+# cache field type constants
+_VALUE = filedata.FieldType.VALUE
+_SERIAL = filedata.FieldType.SERIAL
+_CVALUE = filedata.FieldType.CVALUE
+_CSERIAL = filedata.FieldType.CSERIAL
+_SUM = filedata.FieldType.SUM
+
+fields_to_sum = [ _VALUE, _SERIAL, _CVALUE, _CSERIAL, _SUM ]
+if 0 == len(filedata.FileDefinition.file_definition_dict):
+  filedata.FileDefinition.generate_dictionary()
+
+merge_definition = filedata.FileDefinition.file_definition_dict["gz"]
+
+# Subspecies will contain the sum specie name and the list of
+# subspecies to merge.
+for subspecies in self.merge_ions:
+  result = None
+  init_result = False
+  # The number of sims that have the data set available
+  partcount = 0
+  columnset = None
+  inputframes = []
+  print "Combining data sets ",
+  for key in [ ( merge_definition.key, subk ) for subk in subspecies[1]]:
+    print "-".join(key),
+    if merger.available (key):
+      # Always weight by step count
+      inputframes.append (merger[key])
+      # create result base
+      if not init_result:
+        import pandas
+        result = pandas.DataFrame(index=inputframes[0].index)
+        columnset = inputframes[0].columns
+        init_result = True
+  if len(inputframes) > 1:
+    assert init_result
+    acolumn = None
+    # Function to combine the data sets
+    for collabel in columnset:
+      col_dfn = [ a for a in merge_definition.field_list if a.label == collabel ][0]
+      assert col_dfn
+      fld_type = col_dfn.type
+      first_part = True
+      for resultframe in inputframes:
+        if fld_type in fields_to_sum:
+          # Sum the entries
+          if first_part:
+            acolumn = resultframe[col_dfn.label]
+            first_part = False
+          else:
+            acolumn = acolumn.add(resultframe[col_dfn.label])
+        else:
+          # Combine the entries
+          if first_part:
+            acolumn = resultframe[col_dfn.label].copy()
+            first_part = False
+          else:
+            acolumn = acolumn.combine_first(resultframe[col_dfn.label])
+      result = result.join(acolumn)
+
+    # Add the resulting data set to merger object's dictionary
+    key = ( merge_definition.key, subspecies[0] )
+    print " into ", "-".join(key)
+    merger[key] = result
+    # Write out the data set.
+    output = None
+    if len(key) == 1:
+      output = open(os.path.join(merger.directory(),"res", merge_definition.filename_format % ( merger.run(), )),"w")
+    else:
+      output = open(os.path.join(merger.directory(),"res", merge_definition.filename_format % tuple( list(key[1:]) + [ merger.run() ] )),"w")
+      print >>output,"# UUID ",merger.uuid()
+      print >>output,"# label ",
+      for dfn in merge_definition.field_list:
+          print >>output, dfn.label,
+      print >>output
+      print >>output,"# units ",
+      for dfn in merge_definition.field_list:
+          print >>output, dfn.unit,
+      print >>output
+      result.to_string (buf=output, na_rep='NaN', sparsify=False, index_names=False, header=False)
+  else:
+    print " failed"

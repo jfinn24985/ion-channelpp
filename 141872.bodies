@@ -1,0 +1,735 @@
+class simulator_bloat
+!!!168368.python!!!	__init__(inout self : )
+from random import Random
+self.ranf_ = Random()
+from signals import signal
+self.report_sig_ = signal()
+self.prepare_sig_ = signal()
+self.inner_sig_ = signal()
+self.outer_sig_ = signal()
+# Add simulator signals to signal set
+self.set_signal("report", self.report_sig_)
+self.set_signal("prepare", self.prepare_sig_)
+self.set_signal("inner-loop", self.inner_sig_)
+self.set_signal("outer-loop", self.outer_sig_)
+# Create the ensemble
+from ensemble import ensemble
+self.ensemble_ = ensemble(self)
+
+!!!168496.python!!!	__del__(in self : )
+self.ensemble_ = None
+self.observers_ = None
+if self.report_sig_ != None and len(self.report_sig_) == 0:
+  self.report_sig_.disconnect_all_slots()
+  self.report_sig_ = None
+if self.prepare_sig_ != None and len(self.prepare_sig_) == 0:
+  self.prepare_sig_.disconnect_all_slots()
+  self.prepare_sig_ = None
+if self.inner_sig_ != None and len(self.inner_sig_) == 0:
+  self.inner_sig_.disconnect_all_slots()
+  self.inner_sig_ = None
+if self.outer_sig_ != None and len(self.outer_sig_) == 0:
+  self.outer_sig_.disconnect_all_slots()
+  self.outer_sig_ = None
+
+!!!168624.cpp!!!	simulator_bloat()
+: choices_()
+, choice_exemplars_()
+, data_source_()
+, ensemble_(new particle::ensemble(*this))
+, evaluators_()
+, observers_()
+, rates_()
+, species_()
+, cell_region_()
+, checkpoint_index_(0)
+, checkpoint_interval_(5)
+, delta(1.0)
+, energy_(0.0)
+, equilibration_interval_(0)
+, inner_loop_size_(0)
+, outer_loop_index_(0)
+, production_interval_(0)
+, target_particles_(0)
+, temperature_kelvin_(300.0)
+, rgen_(new boost::mt19937)
+, ranf_(rgen_)
+, imc_(~(std::size_t(0)))
+, inner_sig_()
+, outer_sig_()
+, prepare_sig_()
+, report_sig_()
+, checkpoint_dir_fmt_("%1$03d/dat")
+, output_dir_fmt_("%1$03d/res")
+, filename_base_("input.%1$03d.inp")
+, run_title_()
+, run_uuid_()
+, run_index_(1)
+{
+  // Add simulator signals to signal set
+  this->set_signal("report", &this->report_sig_);
+  this->set_signal("prepare", &this->prepare_sig_);
+  this->set_signal("inner-loop", &this->inner_sig_);
+  this->set_signal("outer-loop", &this->outer_sig_);
+  // Get 'real' random source and use it to seed the
+  // random number generator.
+  boost::random::random_device rdev;
+  rgen_->seed(rdev());
+  const size_t nspec { particle::ensemble::nkey };
+  // Create exemplars
+  this->choice_exemplars_.push_back( new trial::move_choice( nspec, this->delta ) );
+  this->choice_exemplars_.push_back( new trial::jump_choice( nspec ) );
+  this->choice_exemplars_.push_back( new trial::gc_choice( nspec ) );
+}
+!!!178224.cpp!!!	build_reader(inout decoder : input_delegater) : void
+{
+   // Add input decoder class to handle the base application options
+   boost::shared_ptr< core::input_base_meta > delegate( new platform::simulator_meta( *this ) );
+   decoder.add_input_delegate( delegate );
+}
+{
+   // Add input decoder class to handle the specie definition options
+   boost::shared_ptr< core::input_base_meta > delegate( new particle::specie_meta());
+   decoder.add_input_delegate( delegate );
+}
+{
+   // Add input decoder class to handle the energy evaluator options.  This
+   // handles instantiation of the requested evaluator.
+   std::unique_ptr< evaluator::evaluator_meta > tmp_( new evaluator::evaluator_meta );
+   // Add the evaluator types tha t we want this application to handle
+   tmp_->type_to_object_[ evaluator::lennard_jones::type_label_() ] = &evaluator::lennard_jones::make_evaluator;
+   tmp_->type_to_object_[ evaluator::coulomb::type_label_() ] = &evaluator::coulomb::make_evaluator;
+   boost::shared_ptr< core::input_base_meta > delegate( tmp_.release() );
+   decoder.add_input_delegate( delegate );
+}
+{
+   // Add input decoder class for the generic observer types. This handles the instantiation
+   // of the requested observers
+   std::unique_ptr< observer::sampler_meta > tmp_( new observer::sampler_meta );
+   tmp_->type_to_object_[ observer::metropolis_sampler::type_label_() ]= &observer::metropolis_sampler::make_sampler;
+   tmp_->type_to_object_[ observer::rdf_sampler::type_label_() ]= &observer::rdf_sampler::make_sampler;
+   tmp_->type_to_object_[ observer::specie_count::type_label_() ]= &observer::specie_count::make_sampler;
+   boost::shared_ptr< core::input_base_meta > delegate( tmp_.release() );
+   decoder.add_input_delegate( delegate );
+}
+!!!169392.cpp!!!	build_reader_bak(inout decoder : input_delegater) : void
+{
+   // Add input decoder class to handle the base application options
+   boost::shared_ptr< core::input_base_meta > delegate (new platform::application_meta(this));
+   decoder.add_input_delegate (delegate);
+}
+{
+   // Add input decoder class to handle the specie definition options
+   boost::shared_ptr< core::input_base_meta > delegate (new particle::specie_meta(this->species_));
+   decoder.add_input_delegate (delegate);
+}
+{
+   // Add input decoder class to handle the energy evaluator options.  This
+   // handles instantiation of the requested evaluator.
+   std::unique_ptr< evaluator::evaluator_meta > tmp_ (new evaluator::evaluator_meta);
+   // Add the evaluator types tha t we want this application to handle
+   tmp_->type_to_object_[evaluator::lennard_jones::type_label_()] = &evaluator::lennard_jones::make_evaluator;
+   tmp_->type_to_object_[evaluator::coulomb::type_label_()] = &evaluator::coulomb::make_evaluator;
+   boost::shared_ptr< core::input_base_meta > delegate (tmp_.release());
+   decoder.add_input_delegate (delegate);
+}
+{
+   // Add input decoder class for the generic observer types. This handles the instantiation
+   // of the requested observers
+   std::unique_ptr< observer::sampler_meta > tmp_ (new observer::sampler_meta);
+   tmp_->type_to_object_[observer::metropolis_sampler::type_label_()]= &observer::metropolis_sampler::make_sampler;
+   tmp_->type_to_object_[observer::rdf_sampler::type_label_()]= &observer::rdf_sampler::make_sampler;
+   tmp_->type_to_object_[observer::specie_count::type_label_()]= &observer::specie_count::make_sampler;
+   boost::shared_ptr< core::input_base_meta > delegate (tmp_.release());
+   decoder.add_input_delegate (delegate);
+}
+!!!169648.cpp!!!	description(inout os : ostream) : void
+os << "[simulation]\n- base settings\n";
+os << " beta (1/k_bT) : " << (1.0/(core::constants::boltzmann_constant()*this->temperature_kelvin_)) << " J{-1}\n";
+os << "   temperature : " << this->get_temperature() << " K\n";
+os << "  specie count : " << this->specie_count() << "\n";
+os << "- loop sizes\n";
+os << "       thermal : " << this->equilibration_interval_ << "\n";
+os << "    production : " << this->production_interval_ << "\n";
+os << "         inner : " << this->inner_loop_size_ << "\n";
+os << " current index : " << this->outer_loop_index_ << "\n";
+os << "- sample loop sizes\n";
+os << "       checkpoint : " << this->checkpoint_interval_ << "\n";
+os << " checkpoint index : " << this->checkpoint_index_ << "\n";
+os << "- other parameters\n";
+os << " starting particle count : " << this->target_number_of_particles() << "\n"; 
+os << " ionic strngth (Molar)    : " << this->ionic_strength() << "\n"; 
+os << "- Simulation Runtime Settings #\n";
+os << " run UUID                 : " << this->run_uuid_ << "\n";
+os << " run index                : " << this->run_index_ << "\n";
+os << " output directory template: " << this->output_dir_fmt_ << "\n";
+os << " shared data directory    : " << this->checkpoint_dir_fmt_ << "\n";
+if (this->cell_region_)
+{
+  this->cell_region_->description( os ); 
+}
+os << core::strngs::horizontal_bar() << "\n";
+for(auto const& spc : this->species_)
+{
+  spc.description( os );
+}
+os << "[choices] trial types and rates\n";
+static const boost::format choice_header(" %6s %4s %7s");
+os << boost::format(choice_header) % "type" % "spc." % "rate(%)" << "\n";
+static const boost::format choice_row(" %6s %4s %7.2f");
+for (auto const& choice : this->choices_)
+{
+  os << boost::format(choice_row) % choice.label() % this->species_[choice.specie_key()].label() % (choice.probability()*100.0) << "\n";
+}
+for (auto const& obsr : this->observers_)
+{
+  obsr.description(os);
+}
+for (auto const& evltr : this->evaluators_)
+{
+  evltr.description(os);
+}
+if (this->ensemble_)
+{
+  this->ensemble_->description( os );
+}
+!!!169648.python!!!	description(inout os : ostream) : void
+from constants import constants
+constants.description( os )
+print >>os, "[simulation]"
+print >>os, "        volume :", self.cell_region_.volume(-1), "Anstrom{3}"
+print >>os, "  permittivity :", self.cell_region_.permittivity()
+print >>os, " beta (1/k_BT) :", (1.0/(constants.boltzmann_constant()*self.temperature_kelvin_)), " J{-1}"
+print >>os, "  temperature :", self.temperature_kelvin_, " K"
+print >>os, " specie count :", self.specie_count()
+print >>os, " - loop sizes"
+print >>os, "       thermal :", self.equilibration_interval_
+print >>os, "    production :", self.production_interval_
+print >>os, "         inner :", self.inner_loop_size_
+print >>os, " current index :", self.outer_loop_index_
+print >>os, " - other parameters"
+print >>os, " starting particle count :", self.target_number_of_particles()
+print >>os, "          ionic strength :", self.ionic_strength()
+print >>os, "             trial rates :", self.rates_
+print >>os, "              move delta :", self.delta
+for spc in self.species_:
+  spc.description( os )
+print >>os, "[choices] trial types and rates"
+print >>os, " %6s %4s %7s" % ( "type", "spc.", "rate(%)" )
+for choice in self.choices_:
+  print >>os, " %6s %4s %7.2f" % ( choice.label(), self.species_[choice.specie_key()].label(), choice.probability()*100.0 )
+for observer in self.observers_:
+  observer.description( os )
+for potl in self.evaluators_:
+  potl.description( os )
+self.ensemble_.description( os )
+
+!!!169776.cpp!!!	do_enrol() : void
+this->ensemble_->enrol( *this );
+for (auto & obs : this->observers_)
+{
+  obs.enrol( *this );
+}
+!!!169904.cpp!!!	do_prepare() : void
+this->outer_loop_index_ = 0;
+for (auto &choice : this->choices_)
+{
+  choice.reset();
+}
+// reset observers and prepare for simulation
+for (auto &obs : this->observers_)
+{
+  obs.prepare ( *this );
+}
+// reset the evaluators in prepare for simulation
+for (auto &evltr : this->evaluators_)
+{
+  evltr.prepare ( *this );
+}
+// Raise the prepare signal.
+this->prepare_sig_( *this );
+this->total_energy();
+!!!169904.python!!!	do_prepare() : void
+self.outer_loop_index_ = 0
+for choice in self.choices_:
+  choice.reset()
+for observer in self.observers_:
+  observer.prepare( self )
+for evaluator in self.evaluators_:
+  evaluator.prepare( self )
+self.prepare_sig_( self )
+self.total_energy()
+pass
+!!!170288.cpp!!!	generate_simulation() : void
+// from constants import constants
+// Generate a list of trial types
+this->update_choices();
+const double sumconc = this->ionic_strength();
+if (not this->cell_region_)
+{
+  // Default is a PBC system
+  this->cell_region_.reset( new periodic_system(this->target_particles_ * core::constants::to_SI() / sumconc) );
+}
+// Generate initial ensemble on a grid
+auto gridder = this->cell_region_->make_grid_generator( this->target_particles_, this->get_random() );
+this->ensemble_->generate_ensemble( *gridder, this->target_particles_, this->get_random() );
+
+!!!170288.python!!!	generate_simulation() : void
+from constants import constants
+## Generate a list of trial types
+self.update_choices()
+sumconc = self.ionic_strength()
+# Use a PBC system.
+from periodic_system import periodic_system
+self.cell_region_ = periodic_system(self.target_particles_ * constants.to_SI() / sumconc)
+# Generate initial ensemble on a grid
+gridder = self.cell_region_.make_grid_generator( self.target_particles_, self.get_random() ) 
+self.ensemble_.generate_ensemble( gridder, self.target_particles_, self.get_random() )
+pass
+!!!170544.cpp!!!	main(in argc : int, in argv : char, inout oslog : ostream) : int
+// NOTE: The input decoders are not required to check that the final system is
+// valid.
+if (argc > 1)
+{
+   namespace po = boost::program_options;
+   po::options_description cmdln_opts("Allowed Options");
+   cmdln_opts.add_options()
+   ("run", po::value<unsigned int>(), "Simulation run number.")
+   (core::strngs::inputpattern_label().c_str(), po::value<std::string>(), "Plain or printf style format string for generating input filename")
+   ("seed", po::value<unsigned int>(), "Simulation random seed value.")
+   ("restart", po::value<std::string>(), "Check point file for simulation restart")
+   ("help", "Produce help message");
+   po::variables_map vm;
+   try
+   {
+      po::store(po::parse_command_line(argc, argv, cmdln_opts), vm);
+      po::notify(vm);
+   }
+   catch (std::exception &err)
+   {
+      oslog << "Error : " << err.what() << "\n";
+      oslog << cmdln_opts << "\n";
+      return 1;
+   }
+
+   if (vm.count("help"))
+   {
+      oslog << cmdln_opts << "\n";
+      return 1;
+   }
+
+   if (vm.count("restart"))
+   {
+      if (vm.count("seed"))
+      {
+         oslog << "Random seed value on command line is ignored with restart.\n";
+      }
+      if (vm.count(core::strngs::inputpattern_label()))
+      {
+         oslog << "Input filename on command line is ignored with restart.\n";
+      }
+      if (vm.count("run"))
+      {
+         oslog << "Run number on command line is ignored with restart.\n";
+      }
+
+      std::ifstream store (vm["restart"].as<std::string>());
+      boost::archive::text_iarchive ia(store);
+      ia >> *this;
+      if (not utility::fp_env::env_.no_except())
+      {
+         oslog << " Floating point exception during deserialization ignored : "
+                   << utility::fp_env::env_.error_message () << "\n";
+         utility::fp_env::env_.reset();
+      }
+      this->description (oslog);
+   }
+   else
+   {
+      if (vm.count(core::strngs::inputpattern_label()))
+      {
+         this->set_filename_base (vm[core::strngs::inputpattern_label()].as<std::string>());
+      }
+      if (vm.count("run"))
+      {
+         this->set_run_number (vm["run"].as<unsigned int>());
+      }
+
+      // initialize system having got a run number
+      this->set_uuid ();
+      this->description (oslog);
+      if (vm.count("seed"))
+      {
+         unsigned int seedval (vm["seed"].as<unsigned int>());
+         oslog << "Random seed value : " << seedval << ".\n";
+         this->set_random_seed (seedval);
+      }
+      else
+      {
+         unsigned int seedval (random_seed_value ());
+         oslog << "Random seed value : " << seedval << ".\n";
+         this->set_random_seed (seedval);
+      }
+      std::string fn (this->find_input_filename());
+      oslog << core::strngs::horizontal_bar () << "\n";
+      oslog << "Reading input file '"<<fn<<"'\n";
+      decoder.read_input_file (*this, fn);
+      oslog << core::strngs::horizontal_bar () << "\n";
+      decoder.write_input_file(oslog);
+      oslog << core::strngs::horizontal_bar () << "\n";
+   }
+}
+else
+{
+   // initialize system
+   this->set_uuid ();
+   this->description (oslog);
+   {
+      unsigned int seedval (random_seed_value ());
+      oslog << "Random seed value : " << seedval << ".\n";
+      this->set_random_seed (seedval);
+   }
+   std::string fn (this->find_input_filename());
+   oslog << core::strngs::horizontal_bar () << "\n";
+   oslog << "Reading input file '"<< fn <<"'\n";
+   decoder.read_input_file (*this, fn);
+   oslog << core::strngs::horizontal_bar () << "\n";
+   decoder.write_input_file(oslog);
+   oslog << core::strngs::horizontal_bar () << "\n";
+}
+
+this->main();
+return 0;
+}
+
+simulation builder
+!!!173488.cpp!!!	update_choices() : void
+if (this->rates_.size() < CHOICE_TYPE_COUNT)
+{
+  if (this->rates_.empty())
+  {
+    this->rates_.resize(CHOICE_TYPE_COUNT, 1.0);
+  }
+  else
+  {
+    this->rates_.resize(CHOICE_TYPE_COUNT, 0.0);
+  }
+}
+size_t specie_count = this->specie_count();
+double sumr = 0.0;
+for (double value : this->rates_)
+{
+  sumr += value;
+}
+if (utility::feq(sumr, 0.0))
+{
+  // No rates set, assume equal probabilities
+  sumr = CHOICE_TYPE_COUNT;
+  this->rates_.clear();
+  this->rates_.resize(CHOICE_TYPE_COUNT, 1.0);
+}
+const double mrate = this->rates_[DISPLACEMENT_MOVE]/(sumr*specie_count);
+const double jrate = this->rates_[JUMP_MOVE]/(sumr*specie_count);
+const double gcrate = this->rates_[INDIVIDUAL_GC]/(sumr*specie_count);
+this->choices_.clear();
+for (size_t ispec = 0; ispec != specie_count; ++ispec)
+{
+  if (mrate > 0.0)
+  {
+    this->choices_.push_back( this->choice_exemplars_[DISPLACEMENT_MOVE].clone( ispec ) );
+    this->choices_.back().set_probability( mrate );
+  }
+  if (jrate > 0.0)
+  {
+    this->choices_.push_back( this->choice_exemplars_[JUMP_MOVE].clone( ispec ) );
+    this->choices_.back().set_probability( jrate );
+  }
+  if (gcrate > 0.0)
+  {
+    this->choices_.push_back( this->choice_exemplars_[INDIVIDUAL_GC].clone( ispec ) );
+    this->choices_.back().set_probability( gcrate );
+  }
+}
+this->ranf_.shuffle(this->choices_);
+!!!173488.python!!!	update_choices() : void
+if self.rates_ == None:
+  self.rates_ = []
+while( len(self.rates_) < 3 ):
+  self.rates_.append(0.0)
+specie_count = self.specie_count()
+sumr = sum(self.rates_)
+mrate = self.rates_[0]/(sumr*specie_count)
+jrate = self.rates_[1]/(sumr*specie_count)
+gcrate = self.rates_[2]/(sumr*specie_count)
+self.choices_ = []
+import choice
+import gc_choice
+for ispec in range(specie_count):
+  if mrate > 0.0:
+    self.choices_.append( choice.move_choice( ispec, self.delta ) )
+    self.choices_[-1].set_probability( mrate )
+  if jrate > 0.0:
+    self.choices_.append( choice.jump_choice(ispec) )
+    self.choices_[-1].set_probability( jrate )
+  if gcrate > 0.0:
+    self.choices_.append( gc_choice.gc_choice(ispec) )
+    self.choices_[-1].set_probability( gcrate )
+self.ranf_.shuffle(self.choices_)
+!!!173616.cpp!!!	run(inout oslog : ostream) : void
+UTILITY_REQUIRE(not this->evaluators_.empty (), "Can not run simulation with no energy evaluators");
+UTILITY_REQUIRE(not this->observers_.empty (), "Can not run simulation with no observers");
+// do thermalization
+this->run_loop(this->equilibration_interval_, oslog);
+oslog << "\nEND OF THERMALISATION\n\n";
+if ( this->imc_ < this->observers_.size() )
+{
+  observer::igcmc *imc { dynamic_cast< observer::igcmc* >( &(this->observers_[this->imc_]) ) };
+  UTILITY_REQUIRE(imc != nullptr, "Observer at IMC index was not of expected derived type.");
+  while (not imc->at_end())
+  {
+    this->run_loop(this->production_interval_, oslog);
+    oslog << "END OF PRODUCTION PHASE " << (imc->count() + 1) << "\n";
+    imc->on_super_loop (*this, oslog);
+  }
+}
+else
+{
+  this->run_loop(this->production_interval_, oslog);
+}
+oslog << "\nEND OF PRODUCTION\n\n";
+
+!!!173616.python!!!	run(inout oslog : ostream) : void
+# do thermalization
+self.run_loop(self.equilibration_interval_, oslog)
+print >>oslog, "\nEND OF THERMALISATION\n"
+self.run_loop(self.production_interval_, oslog)
+print >>oslog, "\nEND OF PRODUCTION\n"
+!!!173744.cpp!!!	run_loop(in loopcount : size_t, inout out : ostream) : void
+// Get reference to FP environment
+utility::fp_env &env(utility::fp_env::env_);
+// Check for FP error before reporting
+if (not env.no_except())
+{
+  if (0 != ((~env.Inexact) & env.except()))
+  {
+    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except()),  " Floating point exception : "+ env.error_message ());
+  }
+  env.reset();
+}
+// Send signal to prepare other objects
+this->do_prepare();
+if (this->checkpoint_interval_ == 0)
+{
+  this->checkpoint_interval_ = std::max(1ul, loopcount / 5);
+}
+for (size_t d9m8h2 = 0; d9m8h2 != loopcount; ++d9m8h2)
+{
+  this->outer_loop_index_ += 1;
+  for (size_t t1b6b8 = 0; t1b6b8 != this->inner_loop_size_; ++t1b6b8)
+  {
+    // select a move
+    double sofar = this->ranf_.uniform( 0.0, 1.0 );
+    std::unique_ptr< trial::change_set > trial;
+    for (auto & choice: this->choices_)
+    {
+      sofar -= choice.probability();
+      if (sofar <= 0.0)
+      {
+        trial = choice.generate( *this );
+        break;
+      }
+    }
+    if ( not trial->fail() )
+    {
+      // Calculate distance vectors.
+      for (auto & atom : *trial)
+      {
+        if (atom.do_old)
+        {
+          this->cell_region_->compute_distances( atom.old_position, atom.old_rij, 0 );
+        }
+        if (atom.do_new)
+        {
+          this->cell_region_->compute_distances( atom.new_position, atom.new_rij, 0 );
+        }
+      }
+      // Calculate energy
+      for (auto const& evaluator : this->evaluators_)
+      {
+        evaluator.compute_potential( *this, *trial, 0 );
+        if ( trial->fail() ) break;
+      }
+      if ( not env.no_except() )
+      {
+        if (0 != ((~env.Inexact) & env.except()))
+        {
+          out << "Floating point exception in computation of trial\n \"" << env.error_message () << "\"\n";
+          out << "Loop [" << d9m8h2 << "][" << t1b6b8 << "]\n";
+          UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+          , " Floating point exception : "+ env.error_message ());
+        }
+        env.reset();
+      }
+
+      if ( not trial->fail() )
+      {
+        trial->set_accept( this->ranf_.uniform(0.0,1.0) <= trial->metropolis_factor() );
+        if (trial->accept())
+        {
+          this->energy_ += trial->energy();
+          this->ensemble_->commit( *trial );
+        }
+      }
+    }
+    this->inner_sig_( *trial );
+    if (not env.no_except())
+    {
+      if (0 != ((~env.Inexact) & env.except()))
+      {
+        out << "Floating point exception in inner sampling\n \"" << env.error_message () << "\"\n";
+        out << "Loop [" << d9m8h2 << "][END]\n";
+        UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+          , " Floating point exception : "+ env.error_message ());
+      }
+      env.reset();
+    }
+  }
+  // Note this->outer_loop_index_ is a 1-based count
+  out << " STEP : " << this->outer_loop_index_ << "\n";
+  this->outer_sig_( *this );
+  if ((this->outer_loop_index_ % this->checkpoint_interval_) == 0)
+  {
+    this->do_checkpoint();
+    this->checkpoint_index_ += 1;
+    this->do_report( out );
+  }
+  if (not env.no_except())
+  { 
+    if (0 != ((~env.Inexact) & env.except()))
+    {
+      out << "Floating point exception in checkpoint/outer sampling\n \"" << env.error_message () << "\"\n";
+      out << "Loop [" << d9m8h2 << "][END]\n";
+      UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+        , " Floating point exception : "+ env.error_message ());
+    }
+    env.reset();
+  }
+}
+!!!173744.python!!!	run_loop(in loopcount : size_t, inout out : ostream) : void
+# Send signal to prepare other objects
+self.do_prepare()
+if self.checkpoint_interval_ == None or self.checkpoint_interval_ == 0:
+  self.checkpoint_interval_ = max(1, loopcount // 5)
+rgen = self.ranf_
+ens = self.ensemble_
+for d9m8h2 in range(loopcount):
+  self.outer_loop_index_ += 1
+  for t1b6b8 in range(self.inner_loop_size_):
+    # select a move
+    the_choice = None
+    sofar = rgen.uniform(0.0,1.0)
+    for choice in self.choices_:
+      sofar -= choice.probability()
+      if sofar <= 0.0:
+        the_choice = choice
+        break
+    with the_choice.generate(self) as trial:
+      if not trial.fail:
+        # Calculate distance vectors.
+        for atom in trial.changes:
+          if atom.do_old:
+            atom.old_rij = self.cell_region_.compute_distances(ens, atom.old_position)
+          if atom.do_new:
+            atom.new_rij = self.cell_region_.compute_distances(ens, atom.new_position)
+        # Calculate energy
+        for evaluator in self.evaluators_:
+          evaluator.compute_potential(self, trial)
+          if trial.fail:
+            break
+        if not trial.fail:
+          trial.accept = rgen.uniform(0.0,1.0) <= trial.metropolis_factor()
+          if trial.accept:
+            self.energy_ += trial.energy()
+            ens.commit( trial )
+      self.inner_sig_( trial )
+  # Note self.outer_loop_index_ is a 1-based count
+  print >>out,"STEP ",self.outer_loop_index_
+  self.outer_sig_(self)
+  if self.outer_loop_index_ % self.checkpoint_interval_ == 0:
+    self.checkpoint_index_ += 1
+    self.do_report( out )
+!!!174000.cpp!!!	do_report(in self : simulator_bloat, inout os : ostream) : void
+// CALLED AT EACH CHECKPOINT
+os << "SIMULATION STAGE: " << this->outer_loop_index_ << "\n";
+// recalculate total energy
+const double ent (this->energy ());
+this->total_energy ();
+os << "  total energy of simulation    : " << this->energy() << "\n";
+if (std::abs(ent - this->energy()) > 1.E-6)
+{
+  os << "  ######### problems energy ################\n";
+  os << "        running energy          : " << ent << "\n";
+}
+os << "        difference to running   : " << this->energy() - ent << "\n";
+
+const size_t trial_count = (this->outer_loop_index_ + 1) * this->inner_loop_size_;
+const static boost::format format_str (" %6s %8s %10s %10s %7s %s");
+os << boost::format(format_str) % "Trial" % "Specie" % "Success" % "Attempt" % "Rate(%)" % "Total(%)" << "\n";
+for (auto const& choice : this->choices_)
+{
+  choice.report(*this, os, trial_count);
+}
+this->report_sig_(*this, os);
+os << core::strngs::horizontal_bar() << "\n";
+!!!174000.python!!!	do_report(in self : simulator_bloat, inout os : ostream) : void
+print >>os, "SIMULATION STAGE:", self.outer_loop_index_
+energy = self.get_energy()
+self.total_energy()
+print >>os, "ENERGY: Running %9.4g, Computed %9.4g, Difference %9.4g" % ( energy, self.energy_, self.energy_ - energy )
+trial_count = (self.outer_loop_index_ + 1) * self.inner_loop_size_
+format_str = " %6s %8s %10s %10s %7s %s"
+print >>os, format_str % ("Trial","Specie","Success","Attempt","Rate(%)","Total(%)")
+for choice in self.choices_:
+  choice.report(self, os, trial_count)
+self.report_sig_(self, os)
+pass
+
+!!!177712.cpp!!!	total_energy() : void
+UTILITY_REQUIRE (not this->evaluators_.empty (), "Can not calculate energy without evaluators.");
+this->energy_ = 0.0;
+for (std::size_t ii = 0; ii != this->ensemble_->size(); ++ii)
+{
+  if (particle::ensemble::nkey != this->ensemble_->key(ii))
+  {
+    trial::change_set dummy;
+    trial::change_atom atom;
+    atom.do_new = false;
+    atom.index = ii;
+    atom.old_position = this->ensemble_->position( ii );
+    atom.key = this->ensemble_->key( ii );
+    this->compute_distances( atom.old_position, atom.old_rij, ii + 1 );
+    dummy.add_atom (atom);
+    for (auto const& potl : this->evaluators_)
+    {
+      potl.compute_potential(*this, dummy, ii);
+    }
+    this->energy_ -= dummy.energy ();
+  }
+}
+!!!177712.python!!!	total_energy() : void
+self.energy_ = 0.0
+nspec = self.specie_count()
+import change_set
+for ii in range( len( self.ensemble_ ) ):
+  if nspec != self.ensemble_.key[ii]:
+    dummy = change_set.change_set( None )
+    atom = change_set.change_atom()
+    atom.do_new = False
+    atom.index = ii
+    atom.old_position = self.ensemble_.position( ii )
+    atom.key = self.ensemble_.key[ii]
+    atom.old_rij = self.cell_region_.compute_distances(self.ensemble_, atom.old_position, ii + 1)
+    dummy.changes.append( atom )
+    for potl in self.evaluators_:
+      potl.compute_potential(self, dummy, ii);
+    self.energy_ -= dummy.energy ()

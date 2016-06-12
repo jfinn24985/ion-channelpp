@@ -1,0 +1,568 @@
+class spec
+!!!275889.cpp!!!	prepare(in ionic_str : double, inout logger : ostream) : void
+UTILITY_INPUT (this->species_.size() > 0, "No species have been defined in the input", core::strngs::fsspec());
+UTILITY_REQUIRE(not utility::feq(ionic_str,0.0), "No target concentration");
+size_t nfree (0);
+size_t nflex (0);
+size_t nmob (0);
+std::vector< std::size_t > ifree;
+// Get the indices of the first defined solute anion and cation
+// for use in making salts (if needed)
+size_t first_cation = ~0ul;
+size_t first_anion = ~0ul;
+
+// Count specie types and reset target concentration
+for (size_t ispec = 0; ispec != species_.size(); ++ispec)
+{
+  // Count specie types
+  switch (species_[ispec].type ())
+  {
+    // Ions that have a localisation centre-point and restriction into channel
+  case specie::MOBILE:
+    ++nmob;
+    break;
+    // Ions that have a localisation centre-point but may be outside channel
+  case specie::FLEXIBLE:
+    ++nflex;
+    break;
+    // Ions that have no location restriction
+  case specie::SOLUTE:
+  {
+    ++nfree;
+    ifree.push_back(ispec);
+    if (species_[ispec].valency() > 0.0)
+    {
+      if (first_cation == ~0ul)
+        first_cation = ispec;
+    }
+    else if (species_[ispec].valency() < 0.0)
+    {
+      if (first_anion == ~0ul)
+        first_anion = ispec;
+    }
+    break;
+  }
+  default: // ie CHAN_ONLY
+    // do nothing
+    break;
+  }
+}
+// ASSERT either no charged species or both charge species set
+UTILITY_INPUT((first_cation == ~0ul and first_anion == ~0ul)
+              or (first_cation != ~0ul and first_anion != ~0ul),
+              "Invalid set of species with at least one solute cation or anion definition, but no solute counter ion definition.",
+              core::strngs::fsspec());
+// ----------------------------
+// map salt ions to their specie indices
+// if (not salts_.empty ())
+//{
+//  for (auto & igc : this->salts_)
+//  {
+//    igc->associate(species_.begin (), species_.end ());
+//    ++cation_counts[igc->cation_index()];
+//    ++anion_counts[igc->anion_index()];
+//  }
+//  // Either only only cations appear once in all the salts or
+//  // anions appear only once in all salts.
+//  const size_t max_cation (*std::max_element (cation_counts.begin(), cation_counts.end()));
+//  const size_t max_anion (*std::max_element (anion_counts.begin(), anion_counts.end()));
+//  IONCH_INPUT (max_cation == 1 or max_anion == 1,
+//               "Either all cations may appear in only one salt or all anions may appear in only one salt.",
+//               constants::fssalt());
+//}
+//
+// ----------------------------
+// map subspecie ions to their specie indices
+//if (not subs_.empty ())
+//{
+//  std::vector< size_t > subspecie_counts (species_.size(), 0ul);
+//  for (std::vector< subspecie >::iterator subspec = subs_.begin(); subspec != subs_.end(); ++subspec)
+//  {
+//    // Find specie for each substate of the subspecie
+//    subspec->associate(fm, species_.begin (), species_.end ());
+//    for (subspecie::const_iterator state (subspec->begin()); state != subspec->end(); ++state)
+//    {
+//      ++subspecie_counts[state->ion_index ()];
+//    }
+//  }
+//  // Any specie may appear once in only one subspecie.
+//  const size_t max_ion (*std::max_element (subspecie_counts.begin(), subspecie_counts.end()));
+//  IONCH_INPUT (max_ion == 1, "Each specie may appear in only one subspecie.",
+//               constants::fssubs());
+//}
+//
+//logger << constants::horizontal_bar() << "\n";
+//logger << "Specie, salt and subspecie data summary\n";
+//logger << constants::horizontal_bar() << "\n";
+//logger << " Number of structural ion species = " << (size() - nfree) << "\n";
+//logger << constants::horizontal_bar() << "\n";
+//logger << "       mobile within sphere (mob) = " << nmob << "\n";
+//logger << "     mobile within channel (chnl) = " << (size() - (nmob + nflex + nfree)) << "\n";
+//logger << "                  flexible (flex) = " << nflex << "\n";
+//logger << constants::horizontal_bar() << "\n";
+//
+//{
+//  const std::string horiz_bar (32, '-');
+//  logger << std::setw(6) << "ION" << " ";
+//  logger << std::setw(6) << "xq [e]"<< " ";
+//  logger << std::setw(6) << "d [A]"<< " ";
+//  logger << std::setw(6) << "type\n";
+//  logger << horiz_bar << "\n";
+//  std::vector< std::string > ftyp;
+//  ftyp.push_back ("unkn");
+//  ftyp.push_back (constants::fsmobl());
+//  ftyp.push_back (constants::fsflxd());
+//  ftyp.push_back (constants::fschnl());
+//  ftyp.push_back (constants::fsfree());
+//  for (const_iterator ispec = species_.begin(); ispec != species_.end(); ++ispec)
+//  {
+//    // default to unknown
+//    const size_t styp = (ispec->is_mobile() ? 1 :
+//                         (ispec->is_flexible() ? 2 :
+//                          (ispec->is_channel_only() ? 3 :
+//                           (ispec->is_solute() ? 4 :
+//                            0))));
+//    logger << std::setw(6) <<  ispec->code_name() << " ";
+//    logger << std::setw(6) <<  ispec->valency() << " ";
+//    logger << std::setw(6) <<  (ispec->radius() * 2) << " ";
+//    logger << std::setw(6) <<  ftyp[styp] << "\n";
+//  }
+//}
+//logger << constants::horizontal_bar() << "\n";
+//
+//// calculate individual ion concentrations from salts
+//// (specie target concentrations where reset above
+//for (size_t igc = 0; igc != nsalt (); ++igc)
+//{
+//  IONCH_CHECK (salts_[igc].is_valid (), "Salts should be set up here");
+//  IONCH_CHECK (salts_[igc].concentration () > 0.0, "Salts should have non-zero target concentration");
+//  const size_t cation = salts_[igc].cation_index (); // cation index
+//  const size_t anion = salts_[igc].anion_index (); // anion index
+//  const double concplus (-species_[anion].valency () * salts_[igc].concentration ());
+//  IONCH_CHECK (species_[anion].valency () < 0.0, "Salt anions should have negative, non-zero valency");
+//  IONCH_CHECK (concplus > 0.0, "Cations should have non-zero target concentration");
+//  IONCH_CHECK (species_[cation].is_solute(), "Cation of a salts should be a solute specie");
+//  species_[cation].set_concentration (species_[cation].concentration() + concplus);
+//  const double concmnus (species_[cation].valency () * salts_[igc].concentration ());
+//  IONCH_CHECK (species_[cation].valency () > 0.0, "Salt cations should have positive, non-zero valency");
+//  IONCH_CHECK (concmnus > 0.0, "Anions should have non-zero target concentration");
+//  IONCH_CHECK (species_[anion].is_solute(), "Anion of a salts should be a solute specie");
+//  species_[anion].set_concentration (species_[anion].concentration() + concmnus);
+//}
+//// Massage by subspecie defns
+//if (not subs_.empty ())
+//{
+//  std::vector< size_t > subspecie_counts (species_.size(), 0ul);
+//  for (std::vector< subspecie >::iterator subspec = subs_.begin(); subspec != subs_.end(); ++subspec)
+//  {
+//    // Calculate total concentration
+//    double subspecie_total_concentration = 0.0;
+//    for (subspecie::const_iterator state (subspec->begin()); state != subspec->end(); ++state)
+//    {
+//      subspecie_total_concentration += species_[state->ion_index ()].concentration();
+//    }
+//    IONCH_CHECK (subspecie_total_concentration > 0.0, "Zero concentration for a subspecie");
+//    double salt_prob = 0.0;
+//    double sum_prob = 0.0;
+//    bool do_probability_update = false;
+//    // Distribute concentration by population
+//    for (subspecie::const_iterator state (subspec->begin()); state != subspec->end(); ++state)
+//    {
+//      species_[state->ion_index ()].set_concentration (subspecie_total_concentration * state->relative_population ());
+//      sum_prob += 1.0 / state->relative_population ();
+//      // Update any salt definitions.
+//      bool not_found (true);
+//      for (size_t igc = 0; not_found and igc != nsalt (); ++igc)
+//      {
+//        if (salts_[igc].cation_index() == state->ion_index ())
+//        {
+//          not_found = false;
+//          salts_[igc].set_concentration (species_[state->ion_index ()].concentration ());
+//          if (utility::feq(salts_[igc].rate_change(), 0.0))
+//          {
+//            do_probability_update = true;
+//          }
+//          else
+//          {
+//            salt_prob += salts_[igc].rate_change();
+//          }
+//        }
+//        else if (salts_[igc].anion_index() == state->ion_index ())
+//        {
+//          not_found = false;
+//          salts_[igc].set_concentration (species_[state->ion_index ()].concentration ());
+//          if (utility::feq(salts_[igc].rate_change(), 0.0))
+//          {
+//            do_probability_update = true;
+//          }
+//          else
+//          {
+//            salt_prob += salts_[igc].rate_change();
+//          }
+//        }
+//      }
+//      if (not_found)
+//      {
+//        salt tmp;
+//        do_probability_update = true;
+//        // Need to create a new salt definition.
+//        if (species_[state->ion_index ()].valency() > 0.0)
+//        {
+//          // Subspecie is for cations. (use first solute anion)
+//          tmp = salt(species_[state->ion_index ()].code_name () + species_[first_anion].code_name (),
+//                     state->ion_index (), first_anion);
+//        }
+//        else
+//        {
+//          // Subspecie is for anions. (use first solute cation)
+//          tmp = salt (species_[first_cation].code_name () + species_[state->ion_index ()].code_name (),
+//                      first_cation, state->ion_index ());
+//        }
+//        tmp.set_concentration (species_[state->ion_index ()].concentration ());
+//        salts_.push_back (tmp);
+//      }
+//    }
+//    // Redistribute probabilities
+//    if (do_probability_update)
+//    {
+//      salt_prob = std::max(1.0, salt_prob)
+//                  ;
+//      for (subspecie::const_iterator state (subspec->begin()); state != subspec->end(); ++state)
+//      {
+//        bool not_found (true);
+//        for (size_t igc = 0; not_found and igc != nsalt (); ++igc)
+//        {
+//          if (salts_[igc].cation_index() == state->ion_index ())
+//          {
+//            not_found = false;
+//            salts_[igc].set_rate_change (salt_prob * sum_prob / state->relative_population ());
+//          }
+//          else if (salts_[igc].anion_index() == state->ion_index ())
+//          {
+//            not_found = false;
+//            salts_[igc].set_rate_change (salt_prob * sum_prob / state->relative_population ());
+//          }
+//        }
+//        IONCH_CHECK (not not_found, "Should always find salt at this point");
+//      }
+//    }
+//  }
+//}
+//for (size_t igc = 0; igc != salts_.size (); ++igc)
+//{
+//  const size_t cation = salts_[igc].cation_index (); // cation index
+//  const size_t anion = salts_[igc].anion_index (); // anion index
+//  const double ratio (-species_[cation].valency() / species_[anion].valency());
+//  IONCH_INPUT (ratio > 0, "Invalid salt defined with only anions or cations.", constants::fssalt());
+//  salts_[igc].set_chemical_potential (species_.begin (), species_.end ());
+//}
+//
+//report_chemical_potentials(logger);
+//
+//normalise_rates ();
+//
+//report_probabilities(logger);
+//
+//// Transfer data to the conformation
+//for (size_t ispec = 0; ispec != size (); ++ispec)
+//{
+//  species_[ispec].transfer_positions(ispec, cf);
+//}
+
+// if salts_.empty and subspecies_.empty
+this->prep_conc_no_salts (ionic_str, logger);
+
+logger << core::strngs::horizontal_bar() << "\n";
+logger << "TOTAL IONIC STRENGTH: " << ionic_str << "\n";
+logger << core::strngs::horizontal_bar() << "\n";
+logger << "Specie concentrations\n";
+logger << core::strngs::horizontal_bar() << "\n";
+for (auto ispec : ifree)
+{
+  logger << std::setw(4) << this->species_[ispec].label() << "  ";
+  logger << std::setw(6) << std::setprecision(4) << this->species_[ispec].concentration() << "\n";
+}
+logger << core::strngs::horizontal_bar() << "\n";
+//}
+//
+//// ------------------------------------------------------------
+//// Report the GCMC probability matrix.
+//void spec::report_probabilities (std::ostream &logger) const
+//{
+//  // Specie rate table
+//  {
+//    logger << constants::horizontal_bar() << "\n";
+//    logger << "Grand Canonical Monte Carlo probability matrix\n";
+//    logger << constants::horizontal_bar() << "\n";
+//    logger << std::setw(5) << "ION" << " | ";
+//    logger << std::setw(5) << "CHANGE" << "| ";
+//    logger << std::setw(5) << "MOVE" << " |";
+//    logger << std::setw(5) << "LCL:JMP" << "|";
+//    logger << std::setw(5) << "SPH:REG" << "| ";
+//    logger << std::setw(5) << "REG 1" << " | ";
+//    logger << std::setw(5) << "REG 2" << " | ";
+//    logger << std::setw(5) << "REG 3" << " | ";
+//    logger << std::setw(5) << "REG 4";
+//    logger << "\n";
+//    for (const_iterator ispec = species_.begin(); ispec != species_.end(); ++ispec)
+//    {
+//      if (ispec->is_solute())
+//      {
+//        logger << std::setw(5) << ispec->code_name() << " | ";
+//        logger << std::setw(5) << std::setprecision(3) << ispec->rate_change() << " | ";
+//        logger << std::setw(5) << std::setprecision(3) << ispec->rate_specie() << " | ";
+//        logger << std::setw(5) << std::setprecision(3) << ispec->rate_exchange() << " | ";
+//        logger << std::setw(5) << std::setprecision(3) << ispec->rate_move() << " | ";
+//        logger << std::setw(5) << std::setprecision(3) << ispec->rate_region(0) << " | ";
+//        logger << std::setw(5) << std::setprecision(3) << ispec->rate_region(1) << " | ";
+//        logger << std::setw(5) << std::setprecision(3) << ispec->rate_region(2) << " | ";
+//        logger << std::setw(5) << std::setprecision(3) << ispec->rate_region(3);
+//        logger << "\n";
+//      }
+//      else
+//      {
+//        logger << std::setw(5) << std::setprecision(3) << ispec->code_name() << " | ";
+//        logger << std::setw(5) << std::setprecision(3) << ispec->rate_specie () << " | ";
+//        logger << "\n";
+//      }
+//    }
+//  }
+//
+//  // Salt GCMC table
+//  {
+//    logger << std::setw(5) << "SALT" << " | ";
+//    logger << std::setw(5) << "CHANGE" << "\n";
+//    for (std::vector< salt >::const_iterator igc = salts_.begin (); igc != salts_.end (); ++igc)
+//    {
+//      logger << std::setw(5) << igc->code_name() << " | ";
+//      logger << std::setw(5) << igc->rate_change () << "\n";
+//    }
+//  }
+//}
+//
+//// ------------------------------------------------------------
+///// Report the GC chemical potential matrix.
+//void spec::report_chemical_potentials (std::ostream &logger) const
+//{
+//  const std::string horiz_bar (42, '-');
+//  // Display computed specie concentrations and GC potentials
+//  logger << horiz_bar << "\n";
+//  logger << std::setw(6) << "ION" << " "  << std::setw(10) << "[target]" << " ";
+//  logger << std::setw(10) << "Chem Pot." << " " << std::setw(10) << "Chem Ex." << "\n";
+//  logger << horiz_bar << "\n";
+//  for (const_iterator ispec = species_.begin(); ispec != species_.end(); ++ispec)
+//  {
+//    if (ispec->is_solute())
+//    {
+//      logger << std::setw(6) <<  ispec->code_name() << " ";
+//      logger << std::setw(10) << std::setprecision(6) << ispec->concentration() << " ";
+//      logger << std::setw(10) << std::setprecision(6) << ispec->chemical_potential() << " ";
+//      logger << std::setw(10) << std::setprecision(6) << ispec->chemical_excess() << "\n";
+//    }
+//  }
+//  // Display salt concentrations and GC potentials
+//  logger << horiz_bar << "\n";
+//  logger << std::setw(6) << "SALT" << " " << std::setw(10) << "[target]" << " ";
+//  logger << std::setw(10) << "Chem Pot." << " " << std::setw(10) << "Chem Ex." << "\n";
+//  logger << horiz_bar << "\n";
+//  for (std::vector< salt >::const_iterator igc = salts_.begin (); igc != salts_.end (); ++igc)
+//  {
+//    logger << std::setw(6) << igc->code_name() << " ";
+//    logger << std::setw(10) << std::setprecision(6) <<  igc->concentration() << " ";
+//    logger << std::setw(10) << std::setprecision(6) << igc->chemical_potential () << " ";
+//    logger << std::setw(10) << std::setprecision(6) << igc->chemical_excess () << " ";
+//    logger << "   " << species_[igc->cation_index()].code_name() << "(" << -species_[igc->anion_index()].valency() << ")";
+//    logger << species_[igc->anion_index()].code_name() << "(" << species_[igc->cation_index()].valency() << ")";
+//    logger << "\n";
+//  }
+//
+!!!289969.cpp!!!	prep_conc_no_salts(in ionic_str : double, inout logger : ostream) : void
+UTILITY_REQUIRE(not this->species_.empty(), "No species defined");
+// LOGIC
+//
+// Consider only solute/free species
+std::vector< std::size_t > free_specs;
+// Count of specie
+std::size_t cations {0ul}, anions {0ul}, neutrals {0ul};
+// Amount of substance
+double cat_conc {0.0}, an_conc {0.0}, neut_conc {0.0};
+for (std::size_t ispec = 0; ispec != this->species_.size(); ++ispec)
+{
+  auto const& spc (this->species_[ispec]);
+  if (spc.type() == specie::SOLUTE)
+  {
+    free_specs.push_back (ispec);
+    if (spc.valency () > 0)
+    {
+      ++cations;
+      cat_conc += spc.concentration ();
+    }
+    else if (spc.valency () < 0)
+    {
+      ++anions;
+      an_conc += spc.concentration ();
+    }
+    else
+    {
+      ++neutrals;
+      neut_conc += spc.concentration ();
+    }
+  }
+}
+UTILITY_INPUT(not free_specs.empty()
+              , "Have non-zero ionic strength but no solute species."
+              , core::strngs::fsspec());
+UTILITY_INPUT((cations == 0 and anions == 0) or (cations != 0 and anions != 0)
+              , "Have only cations or anions, but not both."
+              , core::strngs::fsspec());
+
+// CASE 1: No concentrations for species were defined.
+if (utility::feq(cat_conc + an_conc + neut_conc, 0.0))
+{
+  // ACTION: distribute concentration equally
+  // ----------------------------------------
+  if (cations == 0)
+  {
+    // Only neutrals
+    const double conc (ionic_str/free_specs.size());
+    for (auto ispec : free_specs)
+    {
+      this->species_[ispec].set_concentration (conc);
+    }
+  }
+  else
+  {
+    // calculate sum of charge
+    double cat_charge {0.0}, an_charge {0.0};
+    for (auto ispec : free_specs)
+    {
+      auto const& spc (this->species_[ispec]);
+      if (spc.valency () > 0)
+      {
+        cat_charge += spc.valency ();
+      }
+      else if (spc.valency () < 0)
+      {
+        an_charge -= spc.valency ();
+      }
+    }
+    // Ratio of cations to anions is an_charge/cat_charge
+    const double max_charge(std::max(an_charge, cat_charge));
+    const double scale_cation (max_charge / cations);
+    const double scale_anion (max_charge / anions);
+    double scale {0.0};
+    for (auto ispec : free_specs)
+    {
+      auto const& spc (this->species_[ispec]);
+      if (spc.valency () > 0)
+      {
+        scale += scale_cation * spc.valency();
+      }
+      else if (spc.valency () < 0)
+      {
+        scale -= scale_anion * spc.valency();
+      }
+      else
+      {
+        scale += 1.0;
+      }
+    }
+    const double conc (ionic_str/scale);
+    for (auto ispec : free_specs)
+    {
+      auto & spc (this->species_[ispec]);
+      if (spc.valency () > 0)
+      {
+        spc.set_concentration (conc * scale_cation * spc.valency());
+      }
+      else if (spc.valency () < 0)
+      {
+        spc.set_concentration (-conc * scale_anion * spc.valency());
+      }
+      else
+      {
+        spc.set_concentration (conc);
+      }
+    }
+  }
+}
+else
+{
+  // ----------------------------------------
+  // Have some concentrations defined.
+  //
+  // Use independent scales to handle charge balancing
+  double scale_anion {1.0};
+  double scale_cation {1.0};
+  double scale_neutral {1.0};
+
+  // ----------------------------------------
+  // Check charge balance by comparing the
+  // amount of charge (valency * conc)
+  double cat_charge {0.0}, an_charge {0.0};
+  for (auto ispec : free_specs)
+  {
+    auto const& spc (this->species_[ispec]);
+    if (spc.valency () > 0)
+    {
+      cat_charge += spc.valency () * spc.concentration ();
+    }
+    else if (spc.valency () < 0)
+    {
+      an_charge -= spc.valency () * spc.concentration ();
+    }
+  }
+  if (not utility::feq(an_charge,cat_charge))
+  {
+    // ----------------------------------------
+    // Rescale due to charge imbalance
+    //
+    // scenario : Ca Na Cl
+    // [Ca] = 10, [Na] = 20, [Cl] = 36 [tot_old] = 66
+    // cat_charge = 40, an_charge = 36
+    // [Ca] = 9, [Na] = 18, [Cl] = 36  [tot_new] = 63
+    // final rescale by old and new total concentrations
+    // cation_scale  = an_charge/cat_charge * [tot_old]/[tot_new]
+    // anion_scale  = [tot_old]/[tot_new]
+    const double total_old (an_conc + cat_conc);
+    // Arbitrarilly scaled anions first
+    scale_anion = (cat_charge/an_charge);
+    an_conc = 0.0;
+    for (auto ispec : free_specs)
+    {
+      auto const& spc (this->species_[ispec]);
+      if (spc.valency () < 0)
+      {
+        an_conc += scale_anion * spc.concentration ();
+      }
+    }
+    // final charge balancing scale factors
+    const double total_new (an_conc + cat_conc);
+    scale_cation = total_old/total_new;
+    scale_anion *= scale_cation;
+    cat_conc *= scale_cation;
+    an_conc *= scale_cation; // use scale_cation as already applied scale_anion
+  }
+  // rescale to match ionic_str
+  scale_neutral = (ionic_str/(cat_conc + an_conc + neut_conc));
+  scale_anion *= scale_neutral;
+  scale_cation *= scale_neutral;
+  for (auto ispec : free_specs)
+  {
+    auto & spc (this->species_[ispec]);
+    if (spc.valency () > 0)
+    {
+      spc.set_concentration (scale_cation * spc.concentration());
+    }
+    else if (spc.valency () < 0)
+    {
+      spc.set_concentration (scale_anion * spc.concentration());
+    }
+    else
+    {
+      spc.set_concentration (scale_neutral * spc.concentration());
+    }
+  }
+}
+
+

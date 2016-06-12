@@ -1,0 +1,1085 @@
+class particle_test
+!!!413489.cpp!!!	coordinate_test() : void
+auto test_coord = [](particle::coordinate const& p1, double x, double y, double z)
+{
+  BOOST_CHECK_EQUAL(p1.x, x);
+  BOOST_CHECK_EQUAL(p1.y, y);
+  BOOST_CHECK_EQUAL(p1.z, z);
+};
+ 
+// Constructor tests:
+std::stringstream store;
+{
+  particle::coordinate p1;
+  test_coord(p1, 0.0, 0.0, 0.0);
+
+  particle::coordinate p2 (0.1, 0.3, 0.2);
+  test_coord(p2, 0.1, 0.3, 0.2);
+
+  particle::coordinate p3 {0.3, 0.2, 0.1};
+  test_coord(p3, 0.3, 0.2, 0.1);
+
+  test_coord({0.1,0.2,0.3},0.1,0.2,0.3);
+
+  BOOST_CHECK(not p1.equivalent(p2));
+  BOOST_CHECK( p1 != p2 );
+
+  boost::archive::text_oarchive oa(store);
+  // write class instances to archive
+  oa << p1 << p2 << p3;
+
+  p1 = p2;
+  BOOST_CHECK(p1.equivalent(p2));
+  BOOST_CHECK( p1 == p2 );
+
+  {
+    std::stringstream lstore;
+    lstore << p1;
+    p3.write( lstore );
+    {
+      particle::coordinate p4, p5;
+
+      BOOST_CHECK( not p1.equivalent( p4 ) );
+      BOOST_CHECK( p3 != p5 );
+
+      lstore >> p4;
+      p5.read( lstore ); 
+  
+      BOOST_CHECK( p1.equivalent(p4) );
+      BOOST_CHECK( p3 == p5 );
+    }
+  }
+}
+{
+  particle::coordinate P1, P2, P3;
+  boost::archive::text_iarchive ia(store);
+  // read class instances from archive
+  ia >> P1 >> P2 >> P3;
+  test_coord(P1, 0.0, 0.0, 0.0);
+  test_coord(P2, 0.1, 0.3, 0.2);
+  test_coord(P3, 0.3, 0.2, 0.1);
+}
+// Test read
+{
+   particle::coordinate var;
+   const static std::string canon{"0.1 0.2 0.3\n2.0\n1.0 0.3 0.5 0.1\n1.1 " };
+   std::stringstream ss( canon );
+   var.read(ss);
+   test_coord( var, 0.1, 0.2, 0.3 );
+   ss >> var;
+   test_coord( var, 2.0, 1.0, 0.3 );
+   var.read(ss);
+   test_coord( var, 0.5, 0.1, 1.1 );
+}
+!!!297776.cpp!!!	centroid_test() : void
+auto test_coord = [](particle::centroid const& p1, double r, double x, double y, double z)
+{
+  BOOST_CHECK_EQUAL(p1.r, r);
+  BOOST_CHECK_EQUAL(p1.x, x);
+  BOOST_CHECK_EQUAL(p1.y, y);
+  BOOST_CHECK_EQUAL(p1.z, z);
+};
+ 
+// Constructor tests:
+std::stringstream store;
+{
+   // default ctor
+  particle::centroid p1;
+  test_coord(p1, 0.0, 0.0, 0.0, 0.0);
+
+  // param ctor
+  particle::centroid p2(1.0, 0.1, 0.3, 0.2);
+  test_coord(p2, 1.0, 0.1, 0.3, 0.2);
+
+  // initializer list
+  particle::centroid p3 {1.0, 0.3, 0.2, 0.1};
+  test_coord(p3, 1.0, 0.3, 0.2, 0.1);
+
+  // initializer list
+  test_coord({1.0, 0.1, 0.2, 0.3}, 1.0, 0.1, 0.2, 0.3 );
+
+  // copy
+  particle::centroid p4( p3 );
+  test_coord(p4, 1.0, 0.3, 0.2, 0.1);
+
+  // move
+  particle::centroid p5( std::move( particle::centroid( p3 ) ) );
+  test_coord(p5, 1.0, 0.3, 0.2, 0.1);
+
+  // assignment
+  p5 = p2;
+  test_coord(p5, 1.0, 0.1, 0.3, 0.2);
+
+  BOOST_CHECK( not p1.equivalent( p2 ) );
+  BOOST_CHECK( p1 != p2 );
+
+  boost::archive::text_oarchive oa(store);
+  // write class instances to archive
+  oa << p1 << p2 << p3;
+
+  p1 = p2;
+  BOOST_CHECK( p1.equivalent( p2 ) );
+  BOOST_CHECK( p1 == p2 );
+
+  {
+    std::stringstream lstore;
+    lstore << p1 << " ";
+    p3.write( lstore );
+    {
+    particle::centroid p4, p5;
+
+    BOOST_CHECK( not p1.equivalent( p4 ) );
+    BOOST_CHECK( p3 != p5 );
+
+    p4.read( lstore );
+    lstore >> p5; 
+  
+    BOOST_CHECK( p1.equivalent( p4 ) );
+    BOOST_CHECK( p3 ==  p5 );
+    }
+  }
+}
+{
+  particle::centroid P1, P2, P3;
+  boost::archive::text_iarchive ia( store );
+  // read class instances from archive
+  ia >> P1 >> P2 >> P3;
+  test_coord( P1, 0.0, 0.0, 0.0, 0.0 );
+  test_coord( P2, 1.0, 0.1, 0.3, 0.2 );
+  test_coord( P3, 1.0, 0.3, 0.2, 0.1 );
+}
+// Test read
+{
+   particle::centroid var;
+   const static std::string canon{"1.0 0.1 0.2 0.3\n2.0\n1.0 0.3 0.5 0.1\n1.1 2.0 1.0" };
+   std::stringstream ss( canon );
+   var.read(ss);
+   test_coord( var, 1.0, 0.1, 0.2, 0.3 );
+   ss >> var;
+   test_coord( var, 2.0, 1.0, 0.3, 0.5 );
+   var.read(ss);
+   test_coord( var, 0.1, 1.1, 2.0, 1.0 );
+}
+!!!413617.cpp!!!	ensemble_test() : void
+// Test framework
+std::vector< particle::specie > specie_list( 3 );
+specie_list[ 0 ].set_label( "Na" );
+specie_list[ 0 ].set_valency( 1.0 );
+specie_list[ 0 ].set_type( particle::specie::SOLUTE );
+specie_list[ 1 ].set_label( "Ka" );
+specie_list[ 1 ].set_valency( 1.0 );
+specie_list[ 1 ].set_type( particle::specie::SOLUTE );
+specie_list[ 2 ].set_label( "Cl" );
+specie_list[ 2 ].set_valency( -1.0 );
+specie_list[ 2 ].set_type( particle::specie::SOLUTE );
+const double epsw = 80.0;
+
+// for testing serialization
+std::stringstream store;
+{
+   particle::ensemble ens;
+   BOOST_CHECK_EQUAL( ens.charge (), 0.0 );
+   BOOST_CHECK_EQUAL( ens.count (), 0 );
+   BOOST_CHECK_EQUAL( ens.max_size (), 0 );
+   BOOST_CHECK_EQUAL( ens.size (), 0 );
+   BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+
+   // Resize ensemble
+   ens.resize( 64 );
+   // Max size should be multiple of 64 larger than
+   // argument given to resize
+   BOOST_CHECK_EQUAL( ens.count(), 0 );
+   BOOST_CHECK_GE( ens.max_size(), 64 );
+   BOOST_CHECK_EQUAL( ( ens.max_size() % 64 ), 0 );
+   BOOST_CHECK_EQUAL( ens.size(), 0 );
+
+   // Add a Na particle
+   std::size_t ispec( 0 );
+   {
+      const particle::coordinate pos { 1.62127193214, 9.29177995257, 5.25370757073 };
+      ens.append_position( ispec, specie_list[ ispec ].valency(), pos, epsw );
+      // size should increase by one, charge should be set but specie
+      // count should be unaltered.
+      BOOST_CHECK_EQUAL( ens.count(), 1 );
+      BOOST_CHECK_GE( ens.max_size(), 64 );
+      BOOST_CHECK_EQUAL( ens.size(), 1 );
+      BOOST_CHECK_EQUAL( ens.charge (), 1.0 );
+      BOOST_CHECK_EQUAL( specie_list[ ispec ].count(), 0 );
+      // Invariant should fail before setting count in specie_list.
+      BOOST_CHECK_THROW( ens.check_invariants( specie_list ), std::runtime_error );
+      specie_list[ ispec ].set_count( 1 );
+      // Invariant should now pass.
+      BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+      ens.check_invariants( specie_list );
+      // Check set values
+      BOOST_CHECK_EQUAL( ens.key( 0 ), ispec );
+      BOOST_CHECK_EQUAL( ens.x( 0 ), pos.x );
+      BOOST_CHECK_EQUAL( ens.y( 0 ), pos.y );
+      BOOST_CHECK_EQUAL( ens.z( 0 ), pos.z );
+      BOOST_CHECK_EQUAL( ens.position( 0 ), pos );
+      BOOST_CHECK_EQUAL( ens.eps( 0 ), epsw );
+   }
+
+   // Add some more particles
+   ispec = 1;
+   ens.append_position( 1, specie_list[ 1 ].valency(), { 0.629669015988, 9.4781017778, 0.436567124972 }, epsw );
+   ispec = 2;
+   ens.append_position( 2, specie_list[ 2 ].valency(), { 1.81235688249, 6.99878476378, 6.05346341778 }, epsw );
+   ens.append_position( 2, specie_list[ 2 ].valency(), { 9.86409500135, 8.03444072878, 6.96346891359 }, epsw );
+   ens.append_position( 0, specie_list[ 0 ].valency(), { 6.12488878987, 0.936444546808, 7.92035117147 }, epsw );
+   ens.append_position( 2, specie_list[ 2 ].valency(), { 4.02705270915, 4.9878484368, 9.33967304135 }, epsw );
+   ens.append_position( 1, specie_list[ 1 ].valency(), { 8.8153046596, 8.25296759285, 9.27222366556 }, epsw );
+   ens.append_position( 2, specie_list[ 2 ].valency(), { 3.01632820001, 3.43431356454, 0.880214873216 }, epsw );
+   ispec = 0;
+
+   specie_list[ 0 ].set_count( 2 );
+   specie_list[ 1 ].set_count( 2 );
+   specie_list[ 2 ].set_count( 4 );
+
+   BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+
+   std::size_t gidx;
+   std::size_t lidx;
+   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 0, 0 ) );
+   BOOST_CHECK_EQUAL( gidx, 0 );
+   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
+   BOOST_CHECK_EQUAL( lidx, 0 );
+   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 0, 1 ) );
+   BOOST_CHECK_EQUAL( gidx, 4 );
+   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
+   BOOST_CHECK_EQUAL( lidx, 1 );
+
+   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 1, 0 ) );
+   BOOST_CHECK_EQUAL( gidx, 1 );
+   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
+   BOOST_CHECK_EQUAL( lidx, 0 );
+   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 1, 1 ) );
+   BOOST_CHECK_EQUAL( gidx, 6 );
+   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
+   BOOST_CHECK_EQUAL( lidx, 1 );
+
+   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 2, 0 ) );
+   BOOST_CHECK_EQUAL( gidx, 2 );
+   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
+   BOOST_CHECK_EQUAL( lidx, 0 );
+   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 2, 1 ) );
+   BOOST_CHECK_EQUAL( gidx, 3 );
+   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
+   BOOST_CHECK_EQUAL( lidx, 1 );
+   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 2, 2 ) );
+   BOOST_CHECK_EQUAL( gidx, 5 );
+   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
+   BOOST_CHECK_EQUAL( lidx, 2 );
+   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 2, 3 ) );
+   BOOST_CHECK_EQUAL( gidx, 7 );
+   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
+   BOOST_CHECK_EQUAL( lidx, 3 );
+
+   BOOST_CHECK_THROW( gidx = ens.nth_specie_index( 0, 2 ), std::runtime_error );
+   BOOST_CHECK_THROW( gidx = ens.nth_specie_index( 1, 2 ), std::runtime_error );
+   BOOST_CHECK_THROW( gidx = ens.nth_specie_index( 2, 4 ), std::runtime_error );
+   BOOST_CHECK_THROW( lidx = ens.specie_index( 8 ), std::runtime_error ); 
+   // test nth_index
+   // ---------------
+   // NOTE: deletion list is empty so nth index will
+   // always be identical to n
+   BOOST_CHECK_EQUAL( ens.count(), ens.size() );
+   for (std::size_t itry = 0; itry != ens.count(); ++itry)
+   {
+      const std::size_t i1 = ens.nth_index(itry);
+      BOOST_CHECK_EQUAL(i1, itry);
+   }
+
+   // test commit
+   // Create changesets to (1) add, (2) move and (3) delete a particle
+   {
+      // ADD
+      trial::change_set trial;
+      const particle::coordinate pos { 7.45423699019, 5.14523134204, 2.44775178272 };
+      trial::change_atom at(false, true, ens.size(), {}, pos, 0, epsw, epsw);
+      trial.add_atom(at);
+
+      // Check system before change
+      BOOST_CHECK_EQUAL( ens.count(), 8 );
+      BOOST_CHECK_EQUAL( ens.size(), 8 );
+      BOOST_CHECK_EQUAL( ens.charge (), 0.0 );
+      BOOST_CHECK_EQUAL( specie_list[ 0 ].count(), 2 );
+
+      ens.commit( trial, specie_list );
+
+      // Check for changes.
+      BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+      BOOST_CHECK_EQUAL( ens.count(), 9 );
+      BOOST_CHECK_EQUAL( ens.size(), 9 );
+      BOOST_CHECK_EQUAL( ens.charge (), 1.0 );
+      BOOST_CHECK_EQUAL( specie_list[ 0 ].count(), 3 );
+      BOOST_CHECK_EQUAL( ens.position( 8 ), pos );
+      BOOST_CHECK_EQUAL( ens.key( 8 ), 0 );
+      BOOST_CHECK_EQUAL( ens.eps( 8 ), epsw );
+      BOOST_CHECK_EQUAL( ens.count(), ens.size() );
+      BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 0, 2 ) );
+      BOOST_CHECK_EQUAL( gidx, 8 );
+   }
+   {
+      // MOVE
+      trial::change_set trial;
+      const std::size_t index { 4 };
+      const particle::coordinate pos { 3.51095035114, 1.08643570153, 0.603658014653 };
+      trial::change_atom at(true, true, index, ens.position( index ), pos, ens.key( index ), ens.eps( index ), epsw );
+      trial.add_atom(at);
+
+      // Check system before change
+      BOOST_CHECK_EQUAL( ens.count(), 9 );
+      BOOST_CHECK_EQUAL( ens.size(), 9 );
+      BOOST_CHECK_EQUAL( ens.charge (), 1.0 );
+      BOOST_CHECK_EQUAL( specie_list[ 0 ].count(), 3 );
+      BOOST_CHECK_EQUAL( ens.key( index ), 0 );
+
+      ens.commit( trial, specie_list );
+
+      // Check there are no changes.
+      BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+      BOOST_CHECK_EQUAL( ens.count(), 9 );
+      BOOST_CHECK_EQUAL( ens.size(), 9 );
+      BOOST_CHECK_EQUAL( ens.charge (), 1.0 );
+      BOOST_CHECK_EQUAL( specie_list[ 0 ].count(), 3 );
+      BOOST_CHECK_EQUAL( ens.key( index ), 0 );
+      BOOST_CHECK_EQUAL( ens.position( index ), pos );
+      BOOST_CHECK_EQUAL( ens.eps( index ), epsw );
+      BOOST_CHECK_EQUAL( ens.count(), ens.size() );
+   }
+   {
+      // DELETE
+      trial::change_set trial;
+      const std::size_t index { 4 };
+      trial::change_atom at(true, false, index, ens.position( index ), {}, 0, epsw, epsw );
+      trial.add_atom(at);
+
+      // Check system before change
+      BOOST_CHECK_EQUAL( ens.count(), 9 );
+      BOOST_CHECK_EQUAL( ens.size(), 9 );
+      BOOST_CHECK_EQUAL( ens.charge (), 1.0 );
+      BOOST_CHECK_EQUAL( specie_list[ 0 ].count(), 3 );
+
+      ens.commit( trial, specie_list );
+
+      // Check for changes.
+      BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+      BOOST_CHECK_EQUAL( ens.count(), 8 );
+      BOOST_CHECK_EQUAL( ens.size(), 9 );
+      BOOST_CHECK_EQUAL( ens.charge (), 0.0 );
+      BOOST_CHECK_EQUAL( specie_list[ 0 ].count(), 2 );
+      BOOST_CHECK_EQUAL( ens.key( index ), particle::ensemble::nkey );
+      BOOST_CHECK_NE( ens.count(), ens.size() );
+      BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 0, 1 ) );
+      BOOST_CHECK_EQUAL( gidx, 8 );
+
+      // test nth_index
+      // ---------------
+      // NOTE: deletion list is not empty so nth index will
+      // not always be identical to n
+      BOOST_CHECK_NE( ens.count(), ens.size() );
+      for (std::size_t itry = 0; itry != ens.count(); ++itry)
+      {
+         const std::size_t i1 = ens.nth_index(itry);
+         if ( itry >= index )
+         {
+            BOOST_CHECK_EQUAL(i1, itry + 1);
+         }
+         else
+         {
+            BOOST_CHECK_EQUAL(i1, itry);
+         }
+
+      }
+   }
+   // conf::serialize
+   // ---------------
+   boost::archive::text_oarchive oa(store);
+   // write class instance to archive
+   oa << ens << specie_list;
+}
+{
+   particle::ensemble ens2;
+   boost::archive::text_iarchive ia( store );
+   // get class instance from archive
+   ia >> ens2 >> specie_list;
+   BOOST_CHECK_EQUAL( ens2.charge (), 0.0 );
+   BOOST_CHECK_EQUAL( ens2.count (), 8 );
+   BOOST_CHECK_EQUAL( ens2.size(), 9 );
+   BOOST_CHECK_EQUAL( ens2.max_size (), 64*2 );
+   BOOST_CHECK_EQUAL( specie_list[ 0 ].count(), 2 );
+   BOOST_CHECK_EQUAL( specie_list[ 1 ].count(), 2 );
+   BOOST_CHECK_EQUAL( specie_list[ 2 ].count(), 4 );
+   BOOST_CHECK_NE( ens2.count(), ens2.size() );
+
+   std::size_t gidx;
+   BOOST_CHECK_NO_THROW( gidx = ens2.nth_specie_index( 0, 1 ) );
+   BOOST_CHECK_EQUAL( gidx, 8 );
+   BOOST_CHECK_NO_THROW( gidx = ens2.nth_specie_index( 0, 0 ) );
+   BOOST_CHECK_EQUAL( gidx, 0 );
+
+   BOOST_CHECK_NO_THROW( ens2.check_invariants( specie_list ) );
+}
+!!!413105.cpp!!!	specie_meta_test() : void
+// TEST management of keywords
+for ( std::string kw : { core::strngs::fsname(), core::strngs::fstype(), core::strngs::fsrtsp(), core::strngs::fsd(), core::strngs::fsz(), core::strngs::fsctrg(), core::strngs::fschex(), core::strngs::fsn() } )
+{
+   BOOST_CHECK( particle::specie_meta::is_standard_keyword( kw ) );
+}
+// Matches keyword so should throw an error
+BOOST_CHECK_THROW( particle::specie_meta::add_keyword( "ratspc" ), std::runtime_error );
+
+if ( not particle::specie_meta::has_keyword( "ratexc" ) )
+{
+   particle::specie_meta::add_keyword( "ratexc" );
+}
+if ( not particle::specie_meta::has_keyword( "ratgr" ) )
+{
+   particle::specie_meta::add_keyword( "ratgr" );
+}
+if ( not particle::specie_meta::has_keyword( "ratreg" ) )
+{
+   particle::specie_meta::add_keyword( "ratreg" );
+}
+if ( not particle::specie_meta::has_keyword( "ratmov" ) )
+{
+   particle::specie_meta::add_keyword( "ratmov" );
+}
+
+// Need a dummy application
+platform::simulator_test_dummy appl;
+
+// Test read input (specie meta)
+{
+  core::input_delegater dg (1);
+  {
+    boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta() );
+    dg.add_input_delegate( m );
+  }
+
+  std::string canon_input( "specie\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\ntype free\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  dg.read_input( appl, reader );
+
+  BOOST_CHECK_EQUAL( appl.specie_count(), 1ul );
+  BOOST_CHECK_NO_THROW( appl.get_specie( 0 ) );
+  BOOST_CHECK( appl.has_specie( "Ca" ) );
+  const particle::specie &var1( appl.get_specie( appl.get_specie_key("Ca") ) );
+  BOOST_CHECK( var1.is_valid() );
+  BOOST_CHECK( var1.has_parameter( "ratreg" ) );
+  BOOST_CHECK( var1.has_parameter( "ratmov" ) );
+  BOOST_CHECK( var1.has_parameter( "ratexc" ) );
+  BOOST_CHECK( var1.has_parameter( "ratgr" ) );
+  BOOST_CHECK( var1.is_solute() );
+  BOOST_CHECK_EQUAL( var1.label(), "Ca" );
+  BOOST_CHECK_EQUAL( var1.rate(), 1.0 );
+  BOOST_CHECK_EQUAL( var1.parameter( "ratmov" ), "1.0" );
+  BOOST_CHECK_EQUAL( var1.parameter( "ratexc" ), "2.0" );
+  BOOST_CHECK_EQUAL( var1.parameter( "ratgr" ), "3.0" );
+  BOOST_CHECK_EQUAL( var1.valency(), 2.0 );
+  BOOST_CHECK_EQUAL( var1.radius(), 0.55 );
+  BOOST_CHECK_EQUAL( var1.excess_potential(), 0.792 );
+  BOOST_CHECK_EQUAL( var1.is_solute(), true );
+  BOOST_CHECK_EQUAL( var1.parameter( "ratreg" ), "0.3 0.3 0.3 0.1" );
+
+// TEST WRITE OUTPUT
+//  std::string alt_input( "specie\nname \"Ca\"\ntype free\nd 1.1\nz 2\nchex 0.792\nratexc 2.0\nratgr 3.0\nratmov 1.0\nratreg 0.3 0.3 0.3 0.1\nratspc 1.0\nend\n\n" );
+//
+//  std::stringstream os;
+//  dg.write_input_file( os );
+//  std::string actual_input( os.str() );
+//
+//  BOOST_CHECK_EQUAL(alt_input, actual_input);
+
+  // Invalid/Valid inputs
+  {
+    std::string canon_input( "specie\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 -0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\ntype freeze\nend\n\n" );
+    core::input_preprocess reader;
+    reader.add_buffer( "dummy", canon_input );
+    BOOST_CHECK_THROW( dg.read_input( appl, reader ), std::runtime_error );
+  }
+  {
+    std::string canon_input( "specie freeze\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 -0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+    core::input_preprocess reader;
+    reader.add_buffer( "dummy", canon_input );
+    BOOST_CHECK_THROW( dg.read_input( appl, reader ), std::runtime_error );
+  }
+
+  {
+    std::string canon_input( "specie\ntype \"free\"  \nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 -0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+    core::input_preprocess reader;
+    reader.add_buffer( "dummy", canon_input );
+    BOOST_CHECK_NO_THROW( dg.read_input( appl, reader ) );
+  }
+
+  {
+    std::string canon_input("specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 -0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n");
+    core::input_preprocess reader;
+    reader.add_buffer( "dummy", canon_input );
+    BOOST_CHECK_NO_THROW( dg.read_input( appl, reader ) );
+  }
+}
+
+
+!!!413361.cpp!!!	specie_test() : void
+//Lambda to test specie validity
+auto specie_validation = [](particle::specie const& aspec)
+{
+   if (not aspec.is_valid ())
+   {
+      BOOST_CHECK(not (aspec.is_localized () or aspec.is_flexible ()
+                       or aspec.is_solute () or aspec.is_channel_only ()
+                       or aspec.is_mobile ()));
+      BOOST_CHECK(aspec.label ().empty ());
+      BOOST_CHECK_EQUAL(aspec.sub_type(), particle::specie::INVALID);
+   }
+   else
+   {
+      BOOST_CHECK(aspec.is_flexible () xor aspec.is_channel_only ()
+                  xor aspec.is_mobile () xor aspec.is_solute ());
+      BOOST_CHECK(not aspec.is_localized () or (aspec.is_flexible () or aspec.is_mobile ()));
+      BOOST_CHECK_NE(aspec.sub_type(), particle::specie::INVALID);
+      BOOST_CHECK(not aspec.label ().empty ());
+      BOOST_CHECK_EQUAL(aspec.label ().size (), 2u);
+   }
+};
+
+// Test static methods
+{
+   bool ifset { false };
+   const particle::specie::specie_type orig { particle::specie::INVALID };
+   BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::MOBILE ), core::strngs::fsmobl() );
+   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsmobl(), orig, ifset ), particle::specie::MOBILE );
+   BOOST_CHECK( ifset );
+   ifset = false;
+   BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::FLEXIBLE ), core::strngs::fsflxd() );
+   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsflxd(), orig, ifset ), particle::specie::FLEXIBLE );
+   BOOST_CHECK( ifset );
+   ifset = false;
+   BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::CHANNEL_ONLY ), core::strngs::fschon() );
+   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fschon(), orig, ifset ), particle::specie::CHANNEL_ONLY );
+   BOOST_CHECK( ifset );
+   ifset = false;
+   BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::SOLUTE ), core::strngs::fsfree() );
+   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsfree(), orig, ifset ), particle::specie::SOLUTE );
+   BOOST_CHECK( ifset );
+   ifset = false;
+   // Unrecognised string value, should return orig and ifset = false
+   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsspec(), orig, ifset ), particle::specie::INVALID );
+   BOOST_CHECK( not ifset );
+   // Unrecognised string value, should return particle::specie::SOLUTE and
+   // ifset = false
+   ifset = true;
+   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsspec(), particle::specie::SOLUTE, ifset ), particle::specie::SOLUTE );
+   BOOST_CHECK( not ifset );
+
+   BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::INVALID ), "invalid" );
+   BOOST_CHECK_THROW( particle::specie::type_label( particle::specie::INVALID + 1 ), std::runtime_error );
+}
+// Test default ctor
+{
+   particle::specie var1;
+   BOOST_CHECK(not var1.is_valid ());
+   specie_validation(var1);
+}
+{
+   // store for serialize test.
+   std::stringstream store;
+   // store for description test.
+   std::stringstream desc;
+   // Test values
+   const double concentration { 0.1 };
+   const double excess_potential { 0.1 };
+   const double chem_pot { std::log( concentration/core::constants::to_SI() ) + excess_potential };
+   const double radius { 0.9 };
+   const double rate { 0.5 };
+   const double valency { -1.0 };
+   const std::size_t count { 3ul };
+   const std::string label { "Na" };
+   const std::string k1 { "key1" };
+   const std::string v1 { "value 1" };
+   const std::string k2 { "key 2" };
+   const std::string v2 { "value2" };
+   const std::string k3 { "key3" };
+   const std::string v3 { "value\n3" };
+   const std::string k4 { "key4" };
+   const std::string v4 { "value\t4" };
+   const std::string k5 { "key5" };
+   const std::string v5 { "value5" };
+   const particle::coordinate pos1( 2.0, 0.0, 0.0 );
+   const particle::coordinate pos2( 0.0, 2.0, 0.0 );
+   const particle::coordinate pos3( 0.0, 0.0, 2.0 );
+   const particle::coordinate pos4( -2.0, 0.0, 2.0 );
+   const particle::centroid ctr1( 2.4, 2.1, 0.0, 0.0 );
+   const particle::centroid ctr2( 2.4, 0.0, 2.1, 0.0 );
+   const particle::centroid ctr3( 2.4, 0.0, 0.0, 2.1 );
+   {
+      particle::specie var;
+      BOOST_CHECK(not var.is_valid ());
+
+      // Test getters/setters
+      BOOST_CHECK_EQUAL( var.concentration(), 0.0 );
+      BOOST_CHECK_NO_THROW( var.set_concentration( concentration ) );
+      BOOST_CHECK_EQUAL( var.concentration(), concentration );
+
+      BOOST_CHECK_EQUAL( var.excess_potential(), 0.0 );
+      BOOST_CHECK_NO_THROW( var.set_excess_potential( excess_potential ) );
+      BOOST_CHECK_EQUAL( var.excess_potential(), excess_potential );
+      BOOST_CHECK_EQUAL( var.chemical_potential(), chem_pot );
+
+      BOOST_CHECK_EQUAL( var.radius(), 0.0 );
+      BOOST_CHECK_NO_THROW( var.set_radius( radius ) );
+      BOOST_CHECK_EQUAL( var.radius(), radius );
+
+      BOOST_CHECK_EQUAL( var.rate(), 0.0 );
+      BOOST_CHECK_NO_THROW( var.set_rate( rate ) );
+      BOOST_CHECK_EQUAL( var.rate(), rate );
+
+      BOOST_CHECK_EQUAL( var.valency(), 0.0 );
+      BOOST_CHECK_NO_THROW( var.set_valency( valency ) );
+      BOOST_CHECK_EQUAL( var.valency(), valency );
+
+     BOOST_CHECK( var.label().empty() );
+      // NOTE : set_label assume label is valid and will not throw
+      // an error with an invalid label
+      BOOST_CHECK_NO_THROW( var.set_label( "" ) ); // Empty string is invalid
+      BOOST_CHECK_NO_THROW( var.set_label( "  " ) ); // All white space is invalid
+      BOOST_CHECK_NO_THROW( var.set_label( "N" ) ); // Single character is invalid
+      BOOST_CHECK_NO_THROW( var.set_label( "Nab" ) ); // More than two characters is invalid
+      BOOST_CHECK_NO_THROW( var.set_label( label ) );
+      BOOST_CHECK_EQUAL( var.label(), label );
+
+      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::INVALID );
+      BOOST_CHECK( not var.is_valid() );
+
+      BOOST_CHECK_NO_THROW( var.set_type( particle::specie::MOBILE ) );
+      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::MOBILE );
+      BOOST_CHECK( not var.is_channel_only() );
+      BOOST_CHECK( not var.is_flexible() );
+      BOOST_CHECK(     var.is_localized() );
+      BOOST_CHECK(     var.is_mobile() );
+      BOOST_CHECK( not var.is_solute() );
+      BOOST_CHECK(     var.is_valid() );
+
+      BOOST_CHECK_NO_THROW( var.set_type( particle::specie::FLEXIBLE ) );
+      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::FLEXIBLE );
+      BOOST_CHECK( not var.is_channel_only() );
+      BOOST_CHECK(     var.is_flexible() );
+      BOOST_CHECK(     var.is_localized() );
+      BOOST_CHECK( not var.is_mobile() );
+      BOOST_CHECK( not var.is_solute() );
+      BOOST_CHECK(     var.is_valid() );
+
+      BOOST_CHECK_NO_THROW( var.set_type( particle::specie::CHANNEL_ONLY ) );
+      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::CHANNEL_ONLY );
+      BOOST_CHECK(     var.is_channel_only() );
+      BOOST_CHECK( not var.is_flexible() );
+      BOOST_CHECK( not var.is_localized() );
+      BOOST_CHECK( not var.is_mobile() );
+      BOOST_CHECK( not var.is_solute() );
+      BOOST_CHECK(     var.is_valid() );
+
+      BOOST_CHECK_NO_THROW( var.set_type( particle::specie::INVALID ) );
+      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::INVALID );
+      BOOST_CHECK( not var.is_channel_only() );
+      BOOST_CHECK( not var.is_flexible() );
+      BOOST_CHECK( not var.is_localized() );
+      BOOST_CHECK( not var.is_mobile() );
+      BOOST_CHECK( not var.is_solute() );
+      BOOST_CHECK( not var.is_valid() );
+
+      BOOST_CHECK_NO_THROW( var.set_type( particle::specie::SOLUTE ) );
+      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::SOLUTE );
+      BOOST_CHECK( not var.is_channel_only() );
+      BOOST_CHECK( not var.is_flexible() );
+      BOOST_CHECK( not var.is_localized() );
+      BOOST_CHECK( not var.is_mobile() );
+      BOOST_CHECK(     var.is_solute() );
+      BOOST_CHECK(     var.is_valid() );
+
+      // DO these test after setting type to SOLUTE
+      var.append_position( pos1 );
+      var.append_position( pos2 );
+      var.append_position( pos3 );
+      BOOST_CHECK_EQUAL( var.count(), 0ul );
+      BOOST_CHECK_NO_THROW( var.set_count( count ) );
+      BOOST_CHECK_EQUAL( var.count(), count );
+      BOOST_CHECK_NO_THROW( var.increment() );
+      BOOST_CHECK_EQUAL( var.count(), count + 1 );
+      BOOST_CHECK_NO_THROW( var.decrement() );
+      BOOST_CHECK_EQUAL( var.count(), count );
+      BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
+      BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
+      BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
+
+       // Test parameter handling
+      BOOST_CHECK( not var.has_parameter( k1 ) );
+      BOOST_CHECK_NO_THROW( var.set_parameter( k1, v1 ) );
+      BOOST_CHECK( var.has_parameter( k1 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k1 ), v1 );
+
+      BOOST_CHECK( not var.has_parameter( k2 ) );
+      BOOST_CHECK_NO_THROW( var.set_parameter( k2, v2 ) );
+      BOOST_CHECK( var.has_parameter( k2 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k2 ), v2 );
+
+      BOOST_CHECK( not var.has_parameter( k3 ) );
+      BOOST_CHECK_NO_THROW( var.set_parameter( k3, v3 ) );
+      BOOST_CHECK( var.has_parameter( k3 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k3 ), v3 );
+
+      BOOST_CHECK( not var.has_parameter( k4 ) );
+      BOOST_CHECK_NO_THROW( var.set_parameter( k4, v4 ) );
+      BOOST_CHECK( var.has_parameter( k4 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k4 ), v4 );
+
+      BOOST_CHECK( not var.has_parameter( k5 ) );
+      BOOST_CHECK_NO_THROW( var.set_parameter( k5, v5 ) );
+      BOOST_CHECK( var.has_parameter( k5 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k5 ), v5 );
+
+      // overwrite existing value not allowed
+      BOOST_CHECK( var.has_parameter( k1 ) );
+      BOOST_CHECK_THROW( var.set_parameter( k1, v2 ), std::runtime_error );
+      BOOST_CHECK( var.has_parameter( k1 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k1 ), v1 );
+
+      specie_validation(var);
+
+      var.description( desc );
+      // Test serialization
+      boost::archive::text_oarchive oa(store);
+      // write class instance to archive
+      oa << var;
+   }
+   {
+      particle::specie var;
+      BOOST_CHECK(not var.is_valid ());
+
+      // Test centroid append_position
+      BOOST_CHECK_NO_THROW( var.set_concentration( concentration ) );
+      BOOST_CHECK_NO_THROW( var.set_excess_potential( excess_potential ) );
+      BOOST_CHECK_NO_THROW( var.set_radius( radius ) );
+      BOOST_CHECK_NO_THROW( var.set_rate( rate ) );
+      BOOST_CHECK_NO_THROW( var.set_valency( valency ) );
+      BOOST_CHECK_NO_THROW( var.set_label( label ) );
+      BOOST_CHECK_NO_THROW( var.set_parameter( k1, v1 ) );
+      BOOST_CHECK_NO_THROW( var.set_parameter( k2, v2 ) );
+      BOOST_CHECK_NO_THROW( var.set_parameter( k3, v3 ) );
+      BOOST_CHECK_NO_THROW( var.set_parameter( k4, v4 ) );
+      BOOST_CHECK_NO_THROW( var.set_parameter( k5, v5 ) );
+
+      var.append_position( pos1, ctr1 );
+      var.append_position( pos2, ctr2 );
+      var.append_position( pos3, ctr3 );
+      BOOST_CHECK_EQUAL( var.count(), 0ul );
+      BOOST_CHECK_NO_THROW( var.set_count( count ) );
+
+      BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
+      BOOST_CHECK_EQUAL( var.get_localization_data( 0 ), ctr1 );
+      BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
+      BOOST_CHECK_EQUAL( var.get_localization_data( 1 ), ctr2 );
+      BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
+      BOOST_CHECK_EQUAL( var.get_localization_data( 2 ), ctr3 );
+
+      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::MOBILE );
+
+      // Current count (3) should disallow next update
+      BOOST_CHECK_THROW( var.update_position( 3, pos4 ), std::runtime_error );
+      // Increment count (to 4) disallowed
+      BOOST_CHECK_THROW( var.increment(), std::runtime_error );
+
+      // Test serialization
+      boost::archive::text_oarchive oa(store);
+      // write class instance to archive
+      oa << var;
+   }
+   {
+      // Test (de)serialization
+      particle::specie var;
+      boost::archive::text_iarchive ia(store);
+      // get class instance from archive
+      ia >> var;
+
+      specie_validation(var);
+
+      BOOST_CHECK_EQUAL( var.concentration(), concentration );
+      BOOST_CHECK_EQUAL( var.excess_potential(), excess_potential );
+      BOOST_CHECK_EQUAL( var.chemical_potential(), chem_pot );
+      BOOST_CHECK_EQUAL( var.radius(), radius );
+      BOOST_CHECK_EQUAL( var.rate(), rate );
+      BOOST_CHECK_EQUAL( var.valency(), valency );
+      BOOST_CHECK_EQUAL( var.count(), count );
+      BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
+      BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
+      BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
+      BOOST_CHECK_EQUAL( var.label(), label );
+      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::SOLUTE );
+      BOOST_CHECK( not var.is_channel_only() );
+      BOOST_CHECK( not var.is_flexible() );
+      BOOST_CHECK( not var.is_localized() );
+      BOOST_CHECK( not var.is_mobile() );
+      BOOST_CHECK(     var.is_solute() );
+      BOOST_CHECK(     var.is_valid() );
+
+      BOOST_CHECK( var.has_parameter( k1 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k1 ), v1 );
+      BOOST_CHECK( var.has_parameter( k2 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k2 ), v2 );
+      BOOST_CHECK( var.has_parameter( k3 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k3 ), v3 );
+      BOOST_CHECK( var.has_parameter( k4 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k4 ), v4 );
+      BOOST_CHECK( var.has_parameter( k5 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k5 ), v5 );
+
+      BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
+      BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
+      BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
+
+      // Test copy ctor
+      particle::specie var2(var);
+
+      BOOST_CHECK( var.equivalent( var2 ) );
+      BOOST_CHECK( var2.equivalent( var ) );
+
+      // Test assignment
+      particle::specie var3;
+      BOOST_CHECK( not var.equivalent( var3 ) );
+      var3 = var;
+      BOOST_CHECK( var.equivalent( var3 ) );
+
+      // Test move
+      particle::specie var4( std::move( particle::specie( var ) ) );
+      BOOST_CHECK( var.equivalent( var4 ) );
+
+      // Test invalid append_position (NOT MOBILE or FLEXIBLE)
+      BOOST_CHECK_THROW( var.append_position( pos1, ctr1 ), std::runtime_error );
+      var4.set_type( particle::specie::MOBILE );
+      // Test invalid append_position (already have locations without local_data)
+      BOOST_CHECK_THROW( var4.append_position( pos1, ctr1 ), std::runtime_error );
+
+      // Test update_position.
+      var4.update_position( 0, pos2 );
+      var4.update_position( 1, pos3 );
+      var4.update_position( 2, pos1 );
+      // Current count (3) should disallow next update
+      BOOST_CHECK_THROW( var4.update_position( 3, pos4 ), std::runtime_error );
+      // Increment count (to 4) should allow next update
+      var4.set_type( particle::specie::SOLUTE );
+      var4.increment();
+      var4.update_position( 3, pos4 );
+      BOOST_CHECK_EQUAL( var4.get_position( 0 ), pos2 );
+      BOOST_CHECK_EQUAL( var4.get_position( 1 ), pos3 );
+      BOOST_CHECK_EQUAL( var4.get_position( 2 ), pos1 );
+      BOOST_CHECK_EQUAL( var4.get_position( 3 ), pos4 );
+   }
+   {
+      // Test (de)serialization (should have ctrd)
+      particle::specie var;
+      boost::archive::text_iarchive ia(store);
+      // get class instance from archive
+      ia >> var;
+      BOOST_CHECK_EQUAL( var.concentration(), concentration );
+      BOOST_CHECK_EQUAL( var.excess_potential(), excess_potential );
+      BOOST_CHECK_EQUAL( var.chemical_potential(), chem_pot );
+      BOOST_CHECK_EQUAL( var.radius(), radius );
+      BOOST_CHECK_EQUAL( var.rate(), rate );
+      BOOST_CHECK_EQUAL( var.valency(), valency );
+      BOOST_CHECK_EQUAL( var.count(), count );
+      BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
+      BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
+      BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
+      BOOST_CHECK_EQUAL( var.label(), label );
+      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::MOBILE );
+
+      BOOST_CHECK( var.has_parameter( k1 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k1 ), v1 );
+      BOOST_CHECK( var.has_parameter( k2 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k2 ), v2 );
+      BOOST_CHECK( var.has_parameter( k3 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k3 ), v3 );
+      BOOST_CHECK( var.has_parameter( k4 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k4 ), v4 );
+      BOOST_CHECK( var.has_parameter( k5 ) );
+      BOOST_CHECK_EQUAL( var.parameter( k5 ), v5 );
+
+      BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
+      BOOST_CHECK_EQUAL( var.get_localization_data( 0 ), ctr1 );
+      BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
+      BOOST_CHECK_EQUAL( var.get_localization_data( 1 ), ctr2 );
+      BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
+      BOOST_CHECK_EQUAL( var.get_localization_data( 2 ), ctr3 );
+      // Test write_document
+      core::input_document wrtr( 1 );
+      BOOST_CHECK( wrtr.empty() );
+      var.write_document( wrtr );
+      BOOST_CHECK( not wrtr.empty() );
+      BOOST_CHECK_EQUAL( wrtr.size(), 1 );
+      auto const& isec = wrtr[ 0 ];
+      // DEBUG isec.write( std::cout );
+      BOOST_CHECK_EQUAL( isec.label(), core::strngs::fsspec() );
+      // Check for all entries
+      auto quote = [](std::string s){ return '"' + s + '"'; };
+
+      BOOST_REQUIRE( isec.has_entry( core::strngs::fsctrg() ) );
+      BOOST_CHECK_EQUAL( std::stod( isec.get_entry( core::strngs::fsctrg() ) ), concentration );
+      BOOST_CHECK( isec.has_entry( core::strngs::fsname() ) );
+      BOOST_CHECK_EQUAL( isec.get_entry( core::strngs::fsname() ), quote(label) );
+      BOOST_REQUIRE( isec.has_entry( core::strngs::fsd() ) );
+      BOOST_CHECK_EQUAL( std::stod( isec.get_entry( core::strngs::fsd() ) )/2, radius );
+      BOOST_REQUIRE( isec.has_entry( core::strngs::fsz() ) );
+      BOOST_CHECK_EQUAL( std::stod( isec.get_entry( core::strngs::fsz() ) ), valency );
+      BOOST_REQUIRE( isec.has_entry( core::strngs::rate_label() ) );
+      BOOST_CHECK_EQUAL( std::stod( isec.get_entry( core::strngs::rate_label() ) ), rate );
+      BOOST_REQUIRE( isec.has_entry( core::strngs::fschex() ) );
+      BOOST_CHECK_EQUAL( std::stod( isec.get_entry( core::strngs::fschex() ) ), excess_potential );
+      BOOST_REQUIRE( isec.has_entry( core::strngs::fstype() ) );
+      BOOST_CHECK_EQUAL( isec.get_entry( core::strngs::fstype() ), core::strngs::fsmobl() );
+      BOOST_REQUIRE( isec.has_entry( quote( k1 ) ) );
+      BOOST_CHECK_EQUAL( isec.get_entry( quote( k1 ) ), quote( v1 ) );
+      BOOST_REQUIRE( isec.has_entry( quote( k2 ) ) );
+      BOOST_CHECK_EQUAL( isec.get_entry( quote( k2 ) ), quote( v2 ) );
+      BOOST_REQUIRE( isec.has_entry( quote( k3 ) ) );
+      BOOST_CHECK_EQUAL( isec.get_entry( quote( k3 ) ), quote( v3 ) );
+      BOOST_REQUIRE( isec.has_entry( quote( k4 ) ) );
+      BOOST_CHECK_EQUAL( isec.get_entry( quote( k4 ) ), quote( v4 ) );
+      BOOST_REQUIRE( isec.has_entry( quote( k5 ) ) );
+      BOOST_CHECK_EQUAL( isec.get_entry( quote( k5 ) ), quote( v5 ) );
+      BOOST_REQUIRE( isec.has_entry( core::strngs::fsn() ) );
+      const std::string value( isec.get_entry( core::strngs::fsn() ) );
+      std::stringstream iss( value );
+      std::size_t ncount;
+      iss >> ncount;
+      BOOST_CHECK_EQUAL( ncount, count );
+      particle::coordinate pos;
+      particle::centroid ctr;
+      iss >> pos >> ctr;
+      BOOST_CHECK_EQUAL( pos, pos1 );
+      BOOST_CHECK_EQUAL( ctr, ctr1 );
+      iss >> pos >> ctr;
+      BOOST_CHECK_EQUAL( pos, pos2 );
+      BOOST_CHECK_EQUAL( ctr, ctr2 );
+      iss >> pos >> ctr;
+      BOOST_CHECK_EQUAL( pos, pos3 );
+      BOOST_CHECK_EQUAL( ctr, ctr3 );
+
+   }
+   {
+      // Parse description
+      while( true )
+      {
+         std::string line;
+         std::getline( desc, line );
+         // DEBUG : std::cout << "LINE[" << line << "]\n";
+         if ( desc.eof() )
+         {
+            break;
+         }
+         if ( line.empty() )
+         {
+            continue;
+         }
+         const std::size_t split_pos { line.find(':') };
+         if ( std::string::npos != split_pos )
+         {
+            std::size_t beg( 0 ), end( 0 );
+            for (end = split_pos - 1; std::isspace(line[end]) and end != 0; --end)
+               {}
+            if (not std::isspace(line[end])) ++end;
+            BOOST_REQUIRE( end != 0 );
+
+            for (beg = 0; std::isspace( line[beg] ) and beg != end; ++beg)
+               {};
+            BOOST_REQUIRE_NE( beg, end );
+
+            const std::string name( line.substr( beg, end - beg ) );
+
+            end = line.size();
+            for ( end = line.size() - 1; std::isspace( line[end] ) and end != split_pos + 1; --end )
+               {}
+            if ( not std::isspace( line[end] ) ) ++end;
+            for ( beg = split_pos + 1; std::isspace( line[beg] ) and beg != end; ++beg )
+               {};
+            if (beg != split_pos + 1) --beg;
+            BOOST_REQUIRE_LE( beg, end );
+
+            const std::string value( line.substr( beg, end - beg ) );
+            // DEBUG std::cout << "CHECK [" << name << "][" << value << "]\n";
+            if (name == "label")
+            {
+               BOOST_CHECK_EQUAL( value, label );
+            }
+            else if (name == "radius" )
+            {
+               BOOST_CHECK( utility::feq( std::stod( value ), radius ) );
+            }
+            else if (name == "rate" )
+            {
+               BOOST_CHECK( utility::feq( std::stod( value ), rate ) );
+            }
+            else if (name == "valency" )
+            {
+               BOOST_CHECK( utility::feq( std::stod( value ), valency ) );
+            }
+            else if (name == "excess c.p." )
+            {
+               BOOST_CHECK( utility::feq( std::stod( value ), excess_potential ) );
+            }
+            else if (name == "chem. pot." )
+            {
+               const double cp { std::stod( value ) };
+               BOOST_CHECK_LT( cp, chem_pot + 0.000005 );
+               BOOST_CHECK_GT( cp, chem_pot - 0.000005 );
+            }
+            else if (name == "target conc." )
+            {
+               BOOST_CHECK( utility::feq( std::stod( value ), concentration ) );
+            }
+            else if (name == "count" )
+            {
+               BOOST_CHECK_EQUAL( std::stoul( value ), count );
+            }
+            else if (name == "type" )
+            {
+               BOOST_CHECK_EQUAL( value, particle::specie::type_label(particle::specie::SOLUTE) );
+            }
+            else if (name == "radius" )
+            {
+               BOOST_CHECK( utility::feq( std::stod( value ), radius ) );
+            }
+            else if (name == k1 )
+            {
+               BOOST_CHECK_EQUAL( v1, value );
+            }
+            else if (name == k2 )
+            {
+               BOOST_CHECK_EQUAL( v2, value );
+            }
+            else if (name == k3 )
+            {
+               std::string value2;
+               std::getline( desc, value2 );
+               value2.insert( 0, "\n" );
+               value2.insert( 0, value );
+               BOOST_CHECK_EQUAL( v3, value2 );
+            }
+            else if (name == k4 )
+            {
+               BOOST_CHECK_EQUAL( v4, value );
+            }
+            else if (name == k5 )
+            {
+               BOOST_CHECK_EQUAL( v5, value );
+            }
+            else
+            {
+               std::cout << "Unchecked [" << name << "][" << value << "]\n";
+            }
+         }
+      }
+   }
+}

@@ -1,0 +1,68 @@
+class specie_region_bounds
+!!!160688.cpp!!!	specie_region_bounds(in geom : channel_system, in ireg : size_t, in spec : specie, in ispec : size_t)
+// Definition of trial insertion subregion for this specie
+const double sphere_radius (spec.radius());
+switch(subregion_)
+{
+case izlim:
+{
+   // Filter special region insertion
+   if ( geom.use_version1_bounds() )
+   {
+      if ( spec.is_mobile() or spec.is_channel_only() )
+      {
+         // Structural ions have all of particle in filter
+         hlength_ = geom.structural_hlength() - sphere_radius;
+      }
+      else
+      {
+         hlength_ = geom.structural_hlength();
+      }
+   }
+   else
+   {
+      // Filter region insertion (all of particle in filter)
+      hlength_ = geom.structural_hlength() - sphere_radius;
+   }
+   radius_ = geom.pore_radius() - sphere_radius ;
+}
+break;
+case ifilt:
+{
+   // Centre region insertion
+   if ( geom.use_version1_bounds() )
+   {
+      hlength_ = geom.pore_hlength();
+   }
+   else
+   {
+      // Centre region insertion (any of particle in cylinder)
+      zhlength = geom.pore_hlength() + sphere_radius;
+   }
+   radius_ = geom.pore_radius() - sphere_radius;
+}
+break;
+case ichan:
+{
+   // Total channel insertion
+   if ( geom.use_version1_bounds() )
+   {
+      hlength_ = geom.pore_hlength() + geom.vestibule_arc_radius();
+   }
+   else
+   {
+      // Total channel insertion region (any part of particle close to channel)
+      hlength_ = geom.pore_hlength() + geom.vestibule_arc_radius() + 2 * sphere_radius;
+   }
+   radius_ = geom.pore_radius() + geom.vestibule_arc_radius();
+}
+break;
+default: // ibulk
+{
+   // Bulk insertion region (particle in simulation)
+   hlength_ = geom.cell_hlength() - sphere_radius;
+   radius_ = geom.cell_radius() - sphere_radius;
+}
+break;
+}
+volume_ = sqr(radius_) * core::constants::pi() * (2 * hlength_);

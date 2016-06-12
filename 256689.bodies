@@ -1,0 +1,124 @@
+class igcmc
+!!!488881.cpp!!!	description(inout os : ostream) : void
+os << " - Number of repeats : " << this->super_loop_size_ << "\n"; 
+os << " - Current loop*     : " << this->super_loop_count_ + 1 << "\n"; 
+os << " (*Will be one except after restart.)\n";
+!!!488881.python!!!	description(inout os : ostream) : void
+print >>os, " - Number of repeats : ", self.super_loop_size_ 
+print >>os, " - Current loop*     : ", self.super_loop_count_ + 1 
+print >>os, " (*Will be one except after restart.)"
+!!!458033.cpp!!!	on_super_loop(inout sys : simulator, inout out : ostream) : void
+++this->super_loop_count_;
+// Save existing chemical potentials.
+std::vector< double > old_cpx_list;
+for (auto const& spc : sys.get_species() )
+{
+  old_cpx_list.push_back(spc.excess_potential());
+}
+
+// Call derived class to update excess potentials
+this->do_on_super_loop(sys);
+
+this->write_output( sys );
+// Report chemical potentials
+bool first = true;
+boost::format fmt_head (" %3s %8s %8s %8s\n");
+boost::format fmt_row (" %3s %8.4f %8.4f %8.4f\n");
+for (std::size_t ispec = 0; ispec != sys.specie_count(); ++ispec)
+{
+  auto const& spcobj = sys.get_specie(ispec);
+  // only solute species have interesting chemical potentials
+  //if (spcobj.is_solute())
+  //{
+    if (first)
+    {
+      first = false;
+      out << core::strngs::horizontal_bar() << "\n";
+      out << " CHEMICAL POTENTIAL ESTIMATE [" << this->super_loop_count_ << "]\n";
+      out << boost::format(fmt_head) % "SPC" % "CHEM EX" % "DLTA_CPX" % "<CPX>";
+      out << core::strngs::horizontal_bar() << "\n";
+    }
+    out << boost::format(fmt_row) % spcobj.label() % spcobj.excess_potential()
+        % (spcobj.excess_potential() - old_cpx_list[ispec]) % this->chem_potential_[ispec].mean();
+    this->chem_potential_[ispec].append(spcobj.excess_potential());
+  //}
+}
+// Output horizontal bar only if at least
+// one chemical potential was changed.
+if (not first)
+{
+  out << core::strngs::horizontal_bar() << "\n";
+}
+!!!458033.python!!!	on_super_loop(inout sys : simulator, inout out : ostream) : void
+self.super_loop_count_ += 1
+old_cpx_list = [ v.excess_potential() for v in sys.get_species() ]
+
+self.do_on_super_loop(sys)
+
+fmt_head = " %3s %8s %8s %8s"
+print >>out, "CHEMICAL POTENTIAL ESTIMATE [", self.super_loop_count_, "]"
+header = ("SPC","CHEM EX","DLTA_CPX","<CPX>")
+print >>out, fmt_head % header
+fmt_row  = " %3s %8.4f %8.4f %8.4f"
+with open("chex.dat","a") as f:
+  for old_cpx, mean, spc in zip( old_cpx_list,self.chem_potential_,sys.get_species() ):
+    print >>out, fmt_row % (spc.label(),spc.excess_potential(),(spc.excess_potential()-old_cpx),mean.mean())
+    print >>f, fmt_row % (spc.label(),spc.excess_potential(),(spc.excess_potential()-old_cpx),mean.mean()),
+    mean.append(spc.excess_potential())
+  print >>f,""
+!!!457265.cpp!!!	prepare(inout sim : simulator) : void
+this->chem_potential_.clear();
+this->chem_potential_.resize( sim.specie_count() );
+this->do_prepare( sim );
+!!!457265.python!!!	prepare(inout sim : simulator) : void
+# Set up chemex estimator
+from estimater import estimater
+self.chem_potential_ = []
+for i in range( sim.specie_count() ):
+  self.chem_potential_.append( estimater() )
+!!!542897.cpp!!!	charge_correction_factor(in sim : simulator) : double
+//namespace cc = core::constants;
+//static const double csloth { ( 6*std::log( 2 + std::sqrt(3.0)) - cc::pi() )
+//  / (16 * cc::pi() * cc::eps0() * cc.dsi() ) };
+return 0.0;
+// csloth * sim.beta() * std::cbrt(sim.volume());
+//    chisp=-xz(ispec)*avchg*chcons
+!!!595249.python!!!	__init__(inout self : , in sim : simulator)
+sim.add_observer(self)
+!!!215728.cpp!!!	write_document(inout wr : input_document) : void
+std::size_t ix = wr.add_section( core::strngs::imc_label() );
+wr[ ix ].add_entry( core::strngs::fsnstp(), this->super_loop_size_);
+this->do_write_document( wr, ix );
+!!!591920.cpp!!!	write_output(inout sim : simulator) : void
+const std::string filename { "igcmc.dat" };
+
+const std::size_t loopindex { this->super_loop_count_ };
+
+core::output_series dset { sim.run_uuid() };
+dset.set_title( "Series of chemical potential estimates" );
+
+dset.push_back_entry( core::output_field( "INDEX", "ORDINAL", [loopindex](std::ostream& os, std::size_t)
+{
+   os << loopindex;
+} ) );
+
+for (std::size_t ispec = 0; ispec != this->chem_potential_.size(); ++ispec)
+{
+   auto const& spc = sim.get_specie( ispec );
+   auto const& estmt = this->chem_potential_[ ispec ];
+   dset.push_back_entry( core::output_field( spc.label() + "_CURRENT" , "COUNT", [&spc](std::ostream& os, std::size_t)
+   {
+      os << spc.excess_potential();
+   } ) );
+   dset.push_back_entry( core::output_field( spc.label() + "_MEAN" , "COUNT", [&estmt](std::ostream& os, std::size_t)
+   {
+      os << estmt.mean();
+   } ) );
+   dset.push_back_entry( core::output_field( spc.label() + "_VAR" , "COUNT", [&estmt](std::ostream& os, std::size_t)
+   {
+      os << estmt.variance();
+   } ) );
+}
+
+dset.write( filename, sim.get_sink(), 1 == loopindex );
+

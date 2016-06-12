@@ -1,0 +1,177 @@
+class archive_file
+!!!508720.cpp!!!	archive_file(in path : string)
+const std::string ext( ".zip" );
+if ( ext != this->path_.substr( this->path_.size() - ext.size() ) )
+{
+   this->path_.append( ext );
+}
+!!!509104.cpp!!!	do_append(in subpath : string, in content : string) : void
+//DEBUG std::cerr << "APPEND TO : " << subpath << "\n";
+if ( this->exists( subpath ) )
+{
+   // Reading could trigger close/open, so
+   // we only call it if path exists.
+   std::string oldcontent;
+   if (this->read( subpath, oldcontent ))
+   {
+      oldcontent += content;
+      std::swap( content, oldcontent );
+   }
+}
+this->write( subpath, content );
+this->dirty_ = true;
+!!!556848.cpp!!!	ensure_open() : void
+if (nullptr == this->arch_)
+{
+   //DEBUG std::cerr << "OPEN : " << this->path_ << "\n";
+   // Check path exits
+   boost::filesystem::path parent( boost::filesystem::path( this->path_ ).parent_path() );
+   if ( not parent.empty())
+   {
+      if (not boost::filesystem::exists( parent ) )
+      {
+         boost::filesystem::create_directories( parent );
+      }
+      UTILITY_INPUT( boost::filesystem::is_directory( parent ),
+                     "Unable to create directory "+parent.string(), core::strngs::simulator_label());
+   }
+   // open file and test for success.
+   int error;
+   this->arch_ = ::zip_open( this->path_.c_str(), ZIP_CREATE, &error);
+   if (nullptr == this->arch_)
+   {
+      throw archive_error( error, 0 );
+   }
+   this->dirty_ = false;
+}
+!!!556976.cpp!!!	ensure_close() : void
+if (nullptr != this->arch_)
+{
+   //DEBUG std::cerr << "CLOSE : " << this->path_ << "\n";
+   if (0 != ::zip_close( this->arch_ ))
+   {
+      int ze, se;
+      ::zip_error_get( this->arch_, &ze, &se );
+      throw archive_error( ze, se );
+   }
+   this->dirty_ = false;
+   this->arch_ = nullptr;
+}
+!!!509232.cpp!!!	do_exists(in subpath : string) : bool
+this->ensure_open();
+int idx = ::zip_name_locate( this->arch_, subpath.c_str(), 0 );
+// Check that -1 means noentry and not an error
+if (idx == -1)
+{
+   // file not found?
+   int ze, se;
+   ::zip_error_get( this->arch_, &ze, &se );
+   if (ZIP_ER_NOENT != ze)
+   {
+       throw archive_error( ze, se );
+   }
+   return false;
+}
+else
+{
+   return true;
+}
+!!!509360.cpp!!!	do_read(in subpath : string, inout content : string) : bool
+//DEBUG std::cerr << "READ FROM : " << subpath << "\n";
+if (this->dirty_)
+{
+   this->ensure_close();
+}
+this->ensure_open();
+int idx = ::zip_name_locate( this->arch_, subpath.c_str(), 0 );
+if (idx == -1)
+{
+   // file not found?
+   int ze, se;
+   ::zip_error_get( this->arch_, &ze, &se );
+   if (ZIP_ER_NOENT != ze)
+   {
+       throw archive_error( ze, se );
+   }
+   return false;
+}
+
+::zip_file * target = ::zip_fopen_index( this->arch_, idx, 0 );
+if (not target)
+{
+   int ze, se;
+   ::zip_error_get( this->arch_, &ze, &se );
+   throw archive_error( ze, se );
+}
+struct onexit
+{
+   ::zip_file * t_;
+   onexit( ::zip_file * t ): t_( t ) {}
+   ~onexit() {
+      if (t_)
+      {
+        int err = ::zip_fclose( t_ );
+        if (err != 0)
+        {
+           throw archive_error( err, 0 );
+        }
+      }
+   }
+} tmp( target );
+
+bool at_eof = false;
+std::vector< char > buffer;
+buffer.resize( 4096 );
+content.clear();
+while(not at_eof)
+{
+   zip_int64_t size = ::zip_fread( target, buffer.data(), 4096 );
+   if (size > 0)
+   {
+      const std::size_t sz = content.size();
+      content.resize( sz + size );
+      std::copy( buffer.begin(), buffer.begin() + size, content.begin() + sz);
+   }
+   at_eof = (size != 4096);
+}
+return true;
+!!!508976.cpp!!!	do_write(in subpath : string, in content : string) : void
+this->ensure_open();
+//DEBUG std::cerr << "WRITE TO : " << subpath << "\n";
+// Create character buffer for file content.
+char * sbuf = static_cast< char* >( ::malloc( content.size() ) );
+if (sbuf == nullptr)
+{
+   throw std::bad_alloc();
+}
+std::copy(content.begin(), content.end(), sbuf);
+::zip_source * buf = ::zip_source_buffer( this->arch_, sbuf, content.size(), 1);
+
+// check if filename already exists
+int idx = ::zip_name_locate( this->arch_, subpath.c_str(), 0 );
+if (idx == -1)
+{
+   // file not found?
+   int ze, se;
+   ::zip_error_get( this->arch_, &ze, &se );
+   if (ZIP_ER_NOENT != ze)
+   {
+       throw archive_error( ze, se );
+   }
+   idx = ::zip_add( this->arch_, subpath.c_str(), buf );
+}
+else
+{
+    // Replace existing content
+    idx = ::zip_replace( this->arch_, idx, buf );
+}
+if (idx == -1)
+{
+   // Zip operation failed, decrement count on buf.
+   ::zip_source_free( buf );
+   int ze, se;
+   ::zip_error_get( this->arch_, &ze, &se );
+   throw archive_error( ze, se );
+}
+this->dirty_ = true;
+

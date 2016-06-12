@@ -1,0 +1,1284 @@
+class evaluator_test
+!!!311600.cpp!!!	localizer_test() : void
+const double spring_factor( 2.0 );
+std::stringstream store;
+{
+   // static method test
+   BOOST_CHECK_EQUAL( core::strngs::localizer_label(), evaluator::localizer::type_label_() );
+}
+// Constructor test methods
+{
+   // default
+   evaluator::localizer ll;
+   BOOST_CHECK_EQUAL( ll.get_spring_factor(), 4.5 );
+   BOOST_CHECK_EQUAL( core::strngs::localizer_label(), ll.type_label() );
+   ll.set_spring_factor( spring_factor );
+   BOOST_CHECK_EQUAL( ll.get_spring_factor(), spring_factor );
+
+   {
+      // copy ctor
+      evaluator::localizer lcopy( ll );
+      BOOST_CHECK_EQUAL( ll.get_spring_factor(), spring_factor );
+      BOOST_CHECK_EQUAL( lcopy.get_spring_factor(), spring_factor );
+   }
+   {
+      // assignment
+      evaluator::localizer lcopy;
+      BOOST_CHECK_EQUAL( lcopy.get_spring_factor(), 4.5 );
+      lcopy = ll;
+      BOOST_CHECK_EQUAL( ll.get_spring_factor(), spring_factor );
+      BOOST_CHECK_EQUAL( lcopy.get_spring_factor(), spring_factor );
+   }
+   {
+      // move ctor
+      evaluator::localizer lcopy( std::move( evaluator::localizer( ll ) ) );
+      BOOST_CHECK_EQUAL( ll.get_spring_factor(), spring_factor );
+      BOOST_CHECK_EQUAL( lcopy.get_spring_factor(), spring_factor );
+   }
+   {
+      // swap ctor
+      evaluator::localizer lcopy( ll );
+      BOOST_CHECK_EQUAL( ll.get_spring_factor(), spring_factor );
+      evaluator::localizer lswap;
+      BOOST_CHECK_EQUAL( lswap.get_spring_factor(), 4.5 );
+      lcopy.swap( lswap );
+      BOOST_CHECK_EQUAL( lcopy.get_spring_factor(), 4.5 );
+      BOOST_CHECK_EQUAL( lswap.get_spring_factor(), spring_factor );
+      lswap.swap( lcopy );
+      BOOST_CHECK_EQUAL( lswap.get_spring_factor(), 4.5 );
+      BOOST_CHECK_EQUAL( lcopy.get_spring_factor(), spring_factor );
+      std::swap( lcopy, lswap );
+      BOOST_CHECK_EQUAL( lcopy.get_spring_factor(), 4.5 );
+      BOOST_CHECK_EQUAL( lswap.get_spring_factor(), spring_factor );
+   }
+   // serialize
+   boost::archive::text_oarchive oa( store );
+   oa << ll;
+}
+{
+   evaluator::localizer ll;
+   BOOST_CHECK_EQUAL( ll.get_spring_factor(), 4.5 );
+   // deserialize
+   boost::archive::text_iarchive ia( store );
+   ia >> ll;
+   BOOST_CHECK_EQUAL( ll.get_spring_factor(), spring_factor );
+}
+{
+   platform::simulator_fixture simfix;
+
+   std::map< std::string, std::string > params;
+   // Empty parameter list allowed
+   BOOST_CHECK_NO_THROW( evaluator::localizer::make_evaluator( params, *simfix.sim ) );
+
+   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
+   evaluator::localizer const* llp = dynamic_cast< evaluator::localizer const* >( bep );
+   BOOST_REQUIRE( nullptr != llp );
+   BOOST_CHECK_EQUAL( llp->get_spring_factor(), 4.5 );
+
+   // write_document test
+   core::input_document wr( 1 );
+   bep->write_document( wr );
+   BOOST_CHECK_EQUAL( wr.size(), 1  );
+   BOOST_CHECK_EQUAL( wr[ 0 ].label(), core::strngs::evaluator_label() );
+   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fstype() ) );
+   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fstype() ), core::strngs::localizer_label() );
+   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fskmob() ) );
+   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fskmob() ), std::to_string( 4.5 ) );
+}
+{
+   platform::simulator_fixture simfix;
+   std::map< std::string, std::string > params;
+   params.insert( std::make_pair( core::strngs::fskmob(), "1.0" ) );
+
+   // One arg list with "mobk"
+   BOOST_CHECK_NO_THROW( evaluator::localizer::make_evaluator( params, *simfix.sim ) );
+
+   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
+   evaluator::localizer const* llp = dynamic_cast< evaluator::localizer const* >( bep );
+   BOOST_REQUIRE( nullptr != llp );
+   BOOST_CHECK_EQUAL( llp->get_spring_factor(), 1.0 );
+
+   // write_document test
+   core::input_document wr( 1 );
+   bep->write_document( wr );
+   BOOST_CHECK_EQUAL( wr.size(), 1  );
+   BOOST_CHECK_EQUAL( wr[ 0 ].label(), core::strngs::evaluator_label() );
+   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fstype() ) );
+   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fstype() ), core::strngs::localizer_label() );
+   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fskmob() ) );
+   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fskmob() ), std::to_string( 1.0 ) );
+
+   // write description
+   std::stringstream desc;
+   bep->description( desc );
+   // 0 = evaluator, 1 = type, 2 = kmob, 3 = kmob value
+   std::bitset< 3 > flags;
+   flags.set();
+   // Parse description
+   while( true )
+   {
+      std::string line;
+      std::getline( desc, line );
+      // DEBUG : std::cout << "LINE[" << line << "]\n";
+      if ( desc.eof() )
+      {
+         break;
+      }
+      if ( line.empty() )
+      {
+         continue;
+      }
+      if ( line.find( core::strngs::evaluator_label() ) != std::string::npos )
+      {
+         flags.set( 0, true );
+         if ( line.find( core::strngs::localizer_label() ) != std::string::npos )
+         {
+            flags.set( 1, true );
+         }
+      }
+      if ( line.find( core::strngs::fskmob() ) != std::string::npos )
+      {
+         flags.set( 2, true );
+         if ( line.find( core::strngs::localizer_label() ) != std::string::npos )
+         {
+            const std::size_t split_pos { line.find(':') };
+            BOOST_REQUIRE( std::string::npos != split_pos );
+            std::stringstream ss( line.substr( split_pos ) );
+            double value;
+            ss >> value;
+            BOOST_CHECK_EQUAL( value, 1.0 );
+         }
+      }
+   }
+   BOOST_CHECK_MESSAGE( flags[ 0 ], core::strngs::evaluator_label() << " not found." );
+   BOOST_CHECK_MESSAGE( flags[ 1 ], core::strngs::localizer_label() << " not found." );
+   BOOST_CHECK_MESSAGE( flags[ 2 ], core::strngs::fskmob() << " not found." );
+}
+{
+   platform::simulator_fixture simfix;
+   std::map< std::string, std::string > params;
+   params.insert( std::make_pair( "rate", "1.0" ) );
+
+   // ERROR One arg list not "mobk"
+   BOOST_CHECK_THROW( evaluator::localizer::make_evaluator( params, *simfix.sim ), std::runtime_error );
+}
+{
+   platform::simulator_fixture simfix;
+   simfix.add_solute_species();
+
+   simfix.add_localized_species();
+
+   std::map< std::string, std::string > params;
+   params.insert( std::make_pair( core::strngs::fskmob(), "1.0" ) );
+
+   BOOST_CHECK_NO_THROW( evaluator::localizer::make_evaluator( params, *simfix.sim ) );
+
+   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
+   evaluator::localizer const* llp = dynamic_cast< evaluator::localizer const* >( bep );
+   BOOST_REQUIRE( nullptr != llp );
+   BOOST_CHECK_EQUAL( llp->get_spring_factor(), 1.0 );
+
+   {
+      std::stringstream dummy_log;
+      simfix.sim->generate_simulation( dummy_log );
+   }
+
+   // find first localized particle.
+   std::size_t mobidx( simfix.sim->get_ensemble().size() );
+   for (std::size_t ispec = 0; ispec != simfix.sim->specie_count(); ++ispec)
+   {
+      if ( simfix.sim->get_specie( ispec ).is_localized() and simfix.sim->get_specie( ispec ).count() > 0 )
+      {
+         mobidx = simfix.sim->get_ensemble().nth_specie_index( ispec, 0 );
+         break;
+      }
+   }
+   BOOST_REQUIRE( mobidx != simfix.sim->get_ensemble().size() );
+
+   BOOST_CHECK_EQUAL( simfix.sim->energy(), 0.0 );
+
+   {
+      // Move particle zero distance
+      trial::change_set move;
+      trial::change_atom atm( true, true, mobidx, simfix.sim->get_ensemble().position( mobidx ), simfix.sim->get_ensemble().position( mobidx ), simfix.sim->get_ensemble().key( mobidx ), simfix.sim->get_ensemble().eps( mobidx ), simfix.sim->get_ensemble().eps( mobidx ) );
+      move.add_atom( atm );
+
+      // Calculate distance vectors.
+      for ( auto & atom : move )
+      {
+        if (atom.do_old)
+        {
+          simfix.sim->compute_distances( atom.old_position, simfix.sim->get_ensemble().get_coordinates(), atom.old_rij, simfix.sim->get_ensemble().size(), 0 );
+        }
+        if (atom.do_new)
+        {
+          simfix.sim->compute_distances( atom.new_position, simfix.sim->get_ensemble().get_coordinates(), atom.new_rij, simfix.sim->get_ensemble().size(), 0 );
+        }
+      }
+      // Calculate energy
+      for ( auto const& evaluator : simfix.sim->get_evaluators() )
+      {
+        evaluator.compute_potential( simfix.sim->get_species(), simfix.sim->get_ensemble(), move, 0 );
+        if ( move.fail() ) break;
+      }
+
+      BOOST_CHECK_EQUAL( move.energy(), 0.0 );
+   }
+   {
+      // Move particle 1 angstrom distance
+      trial::change_set move;
+      const particle::coordinate pstart( simfix.sim->get_ensemble().position( mobidx ) );
+      const particle::coordinate pend( pstart.x + 0.6, pstart.y, pstart.z - 0.8 );
+      trial::change_atom atm( true, true, mobidx, pstart, pend, simfix.sim->get_ensemble().key( mobidx ), simfix.sim->get_ensemble().eps( mobidx ), simfix.sim->get_ensemble().eps( mobidx ) );
+      move.add_atom( atm );
+
+      const double distance( std::sqrt( std::pow( pstart.x - pend.x, 2 )
+               + std::pow( pstart.y - pend.y, 2 ) + std::pow( pstart.z - pend.z, 2 ) ) );
+
+      BOOST_CHECK_CLOSE_FRACTION( distance, 1.0, 0.0000000001 );
+      // U = 1/2 k x^2 : spring factor == 1/2 k
+      const double delta_energy( 1.0 );
+
+      // Calculate distance vectors.
+      for ( auto & atom : move )
+      {
+        if (atom.do_old)
+        {
+          simfix.sim->compute_distances( atom.old_position, simfix.sim->get_ensemble().get_coordinates(), atom.old_rij, simfix.sim->get_ensemble().size(), 0 );
+        }
+        if (atom.do_new)
+        {
+          simfix.sim->compute_distances( atom.new_position, simfix.sim->get_ensemble().get_coordinates(), atom.new_rij, simfix.sim->get_ensemble().size(), 0 );
+        }
+      }
+      // Calculate energy
+      for ( auto const& evaluator : simfix.sim->get_evaluators() )
+      {
+        evaluator.compute_potential( simfix.sim->get_species(), simfix.sim->get_ensemble(), move, 0 );
+        if ( move.fail() ) break;
+      }
+
+      BOOST_REQUIRE( not move.fail() );
+      BOOST_CHECK_CLOSE_FRACTION( move.energy(), delta_energy, 0.0000000001 );
+   }
+   {
+      // Move particle 0.5 angstrom distance
+      trial::change_set move;
+      const particle::coordinate pstart( simfix.sim->get_ensemble().position( mobidx ) );
+      const particle::coordinate pend( pstart.x + 0.3, pstart.y - 0.4, pstart.z );
+      trial::change_atom atm( true, true, mobidx, pstart, pend, simfix.sim->get_ensemble().key( mobidx ), simfix.sim->get_ensemble().eps( mobidx ), simfix.sim->get_ensemble().eps( mobidx ) );
+      move.add_atom( atm );
+
+      const double distance( std::sqrt( std::pow( pstart.x - pend.x, 2 )
+               + std::pow( pstart.y - pend.y, 2 ) + std::pow( pstart.z - pend.z, 2 ) ) );
+      BOOST_CHECK_CLOSE_FRACTION( distance, 0.5, 0.0000000001 );
+
+      // U = 1/2 k x^2 : spring factor == 1/2 k
+      const double delta_energy( 0.25 );
+
+      // Skip distance vectors.
+
+      // Calculate energy
+      for ( auto const& evaluator : simfix.sim->get_evaluators() )
+      {
+        evaluator.compute_potential( simfix.sim->get_species(), simfix.sim->get_ensemble(), move, 0 );
+        if ( move.fail() ) break;
+      }
+
+      BOOST_REQUIRE( not move.fail() );
+      BOOST_CHECK_CLOSE_FRACTION( move.energy(), delta_energy, 0.0000000001 );
+   }
+   {
+      // Move particle outside localization cutoff distance
+      trial::change_set move;
+      const particle::coordinate pstart( simfix.sim->get_ensemble().position( mobidx ) );
+      const particle::centroid pctr( simfix.sim->get_specie( simfix.sim->get_ensemble().key( mobidx ) ).get_localization_data( 0 ) );
+      const particle::coordinate pend( pstart.x + pctr.r * 1.1, pstart.y, pstart.z );
+      trial::change_atom atm( true, true, mobidx, pstart, pend, simfix.sim->get_ensemble().key( mobidx ), simfix.sim->get_ensemble().eps( mobidx ), simfix.sim->get_ensemble().eps( mobidx ) );
+      move.add_atom( atm );
+
+      const double distance( std::sqrt( std::pow( pstart.x - pend.x, 2 )
+               + std::pow( pstart.y - pend.y, 2 ) + std::pow( pstart.z - pend.z, 2 ) ) );
+
+      BOOST_CHECK_CLOSE_FRACTION( distance, pctr.r * 1.1, 0.0000000001 );
+
+      // Calculate distance vectors.
+      for ( auto & atom : move )
+      {
+        if (atom.do_old)
+        {
+          simfix.sim->compute_distances( atom.old_position, simfix.sim->get_ensemble().get_coordinates(), atom.old_rij, simfix.sim->get_ensemble().size(), 0 );
+        }
+        if (atom.do_new)
+        {
+          simfix.sim->compute_distances( atom.new_position, simfix.sim->get_ensemble().get_coordinates(), atom.new_rij, simfix.sim->get_ensemble().size(), 0 );
+        }
+      }
+      // Calculate energy
+      for ( auto const& evaluator : simfix.sim->get_evaluators() )
+      {
+        evaluator.compute_potential( simfix.sim->get_species(), simfix.sim->get_ensemble(), move, 0 );
+        if ( move.fail() ) break;
+      }
+
+      BOOST_REQUIRE( move.fail() );
+   }
+
+}
+!!!359216.cpp!!!	arc_integrator_test() : void
+const double za0( 5.0 );
+const double ra0( 4.0 );
+const double radius( 2.0 );
+const double theta1( 1.0 );
+const double theta2( 1.1 );
+const double phi1( 4.3 );
+const double phi2( 4.4 );
+const std::size_t nsub( 10 );
+std::size_t ndx( 57 );
+std::stringstream store;
+{
+   // constructor
+   evaluator::arc_integrator acc( nsub, ndx, za0, ra0, radius, theta1, theta2, phi1, phi2 );
+   BOOST_CHECK_EQUAL( acc.index(), ndx );
+   BOOST_CHECK_EQUAL( acc.nsub_other(), nsub );
+   BOOST_CHECK_EQUAL( acc.nsub_self(), 6 * nsub );
+   BOOST_CHECK_EQUAL( acc.za0(), za0 );
+   BOOST_CHECK_EQUAL( acc.ra0(), ra0 );
+   BOOST_CHECK_EQUAL( acc.radius(), radius );
+   BOOST_CHECK_EQUAL( acc.theta1(), theta1 );
+   BOOST_CHECK_EQUAL( acc.theta2(), theta2 );
+   BOOST_CHECK_EQUAL( acc.phi1(), phi1 );
+   BOOST_CHECK_EQUAL( acc.phi2(), phi2 );
+
+   boost::archive::text_oarchive oa( store );
+   oa << acc;
+}
+{
+   evaluator::arc_integrator acc;
+   BOOST_CHECK_EQUAL( acc.index(), 0 );
+   BOOST_CHECK_EQUAL( acc.nsub_other(), 0 );
+   BOOST_CHECK_EQUAL( acc.nsub_self(), 0 );
+   BOOST_CHECK_EQUAL( acc.za0(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.ra0(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.radius(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.theta1(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.theta2(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.phi1(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.phi2(), 0.0 );
+
+   boost::archive::text_iarchive ia( store );
+   ia >> acc;
+
+   BOOST_CHECK_EQUAL( acc.index(), ndx );
+   BOOST_CHECK_EQUAL( acc.nsub_other(), nsub );
+   BOOST_CHECK_EQUAL( acc.nsub_self(), 6 * nsub );
+   BOOST_CHECK_EQUAL( acc.za0(), za0 );
+   BOOST_CHECK_EQUAL( acc.ra0(), ra0 );
+   BOOST_CHECK_EQUAL( acc.radius(), radius );
+   BOOST_CHECK_EQUAL( acc.theta1(), theta1 );
+   BOOST_CHECK_EQUAL( acc.theta2(), theta2 );
+   BOOST_CHECK_EQUAL( acc.phi1(), phi1 );
+   BOOST_CHECK_EQUAL( acc.phi2(), phi2 );
+}
+
+!!!362160.cpp!!!	cylinder_integrator_test() : void
+const double radius( 2.0 );
+const double zmin( 1.0 );
+const double zmax( 1.1 );
+const double phi1( 4.3 );
+const double phi2( 4.4 );
+const std::size_t nsub( 10 );
+std::size_t ndx( 57 );
+std::stringstream store;
+{
+   // constructor
+   evaluator::cylinder_integrator acc( nsub, ndx, radius, zmin, zmax, phi1, phi2 );
+   BOOST_CHECK_EQUAL( acc.index(), ndx );
+   BOOST_CHECK_EQUAL( acc.nsub_other(), nsub );
+   BOOST_CHECK_EQUAL( acc.nsub_self(), 6 * nsub );
+   BOOST_CHECK_EQUAL( acc.radius(), radius );
+   BOOST_CHECK_EQUAL( acc.zmin(), zmin );
+   BOOST_CHECK_EQUAL( acc.zmax(), zmax );
+   BOOST_CHECK_EQUAL( acc.phimin(), phi1 );
+   BOOST_CHECK_EQUAL( acc.phimax(), phi2 );
+
+   boost::archive::text_oarchive oa( store );
+   oa << acc;
+}
+{
+   evaluator::cylinder_integrator acc;
+   BOOST_CHECK_EQUAL( acc.index(), 0 );
+   BOOST_CHECK_EQUAL( acc.nsub_other(), 0 );
+   BOOST_CHECK_EQUAL( acc.nsub_self(), 0 );
+   BOOST_CHECK_EQUAL( acc.radius(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.zmin(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.zmax(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.phimin(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.phimax(), 0.0 );
+
+   boost::archive::text_iarchive ia( store );
+   ia >> acc;
+
+   BOOST_CHECK_EQUAL( acc.index(), ndx );
+   BOOST_CHECK_EQUAL( acc.nsub_other(), nsub );
+   BOOST_CHECK_EQUAL( acc.nsub_self(), 6 * nsub );
+   BOOST_CHECK_EQUAL( acc.radius(), radius );
+   BOOST_CHECK_EQUAL( acc.zmin(), zmin );
+   BOOST_CHECK_EQUAL( acc.zmax(), zmax );
+   BOOST_CHECK_EQUAL( acc.phimin(), phi1 );
+   BOOST_CHECK_EQUAL( acc.phimax(), phi2 );
+
+}
+
+!!!363056.cpp!!!	wall_integrator_test() : void
+const double z( 4.0 );
+const double ra0( 1.0 );
+const double ra1( 1.1 );
+const double radius( 2.0 );
+const double phi1( 4.3 );
+const double phi2( 4.4 );
+const std::size_t nsub( 10 );
+std::size_t ndx( 57 );
+std::stringstream store;
+{
+   // constructor
+   evaluator::wall_integrator acc( nsub, ndx, z, ra0, ra1, radius, phi1, phi2 );
+   BOOST_CHECK_EQUAL( acc.index(), ndx );
+   BOOST_CHECK_EQUAL( acc.nsub_other(), nsub );
+   BOOST_CHECK_EQUAL( acc.nsub_self(), 6 * nsub );
+   BOOST_CHECK_EQUAL( acc.z(), z );
+   BOOST_CHECK_EQUAL( acc.ra0(), ra0 );
+   BOOST_CHECK_EQUAL( acc.ra1(), ra1 );
+   BOOST_CHECK_EQUAL( acc.radius(), radius );
+   BOOST_CHECK_EQUAL( acc.phi1(), phi1 );
+   BOOST_CHECK_EQUAL( acc.phi2(), phi2 );
+
+   boost::archive::text_oarchive oa( store );
+   oa << acc;
+}
+{
+   evaluator::wall_integrator acc;
+   BOOST_CHECK_EQUAL( acc.index(), 0 );
+   BOOST_CHECK_EQUAL( acc.nsub_other(), 0 );
+   BOOST_CHECK_EQUAL( acc.nsub_self(), 0 );
+   BOOST_CHECK_EQUAL( acc.z(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.ra0(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.ra1(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.radius(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.phi1(), 0.0 );
+   BOOST_CHECK_EQUAL( acc.phi2(), 0.0 );
+
+   boost::archive::text_iarchive ia( store );
+   ia >> acc;
+
+   BOOST_CHECK_EQUAL( acc.index(), ndx );
+   BOOST_CHECK_EQUAL( acc.nsub_other(), nsub );
+   BOOST_CHECK_EQUAL( acc.nsub_self(), 6 * nsub );
+   BOOST_CHECK_EQUAL( acc.z(), z );
+   BOOST_CHECK_EQUAL( acc.ra0(), ra0 );
+   BOOST_CHECK_EQUAL( acc.ra1(), ra1 );
+   BOOST_CHECK_EQUAL( acc.radius(), radius );
+   BOOST_CHECK_EQUAL( acc.phi1(), phi1 );
+   BOOST_CHECK_EQUAL( acc.phi2(), phi2 );
+}
+
+!!!369200.cpp!!!	patch_matrix_fixture_test() : void
+const double temperature( 300.0 );
+const double epsw( 80.0 );
+const double epspr( 10.0 );
+const double zl1( 5.3 );
+const double rl1( 8.8 );
+const double rl4( 30.0 );
+const double rlvest( 10.0 );
+const double rlmemb( 5.0 );
+const double dxw( 4.0 );
+const double dxf( 4.0 );
+std::size_t nsub( 10 );
+std::size_t expect( 620 );
+
+evaluator::patch_matrix_fixture var {};
+BOOST_CHECK_EQUAL( var.epsw(), epsw );
+BOOST_CHECK_EQUAL( var.epspr(), epspr );
+BOOST_CHECK_EQUAL( var.dxf(), dxf );
+BOOST_CHECK_EQUAL( var.dxw(), dxw );
+BOOST_CHECK_EQUAL( var.nsub(), nsub );
+BOOST_CHECK_EQUAL( var.expected_grid_size(), expect );
+BOOST_CHECK_EQUAL( var.zl1(), zl1 );
+BOOST_CHECK_EQUAL( var.zl2(), zl1 + rlvest );
+BOOST_CHECK_EQUAL( var.zl3(), zl1 + rlvest - rlmemb );
+BOOST_CHECK_EQUAL( var.rl1(), rl1 );
+BOOST_CHECK_EQUAL( var.rl2(), rl1 + rlvest );
+BOOST_CHECK_EQUAL( var.rl3(), rl4 - rlmemb );
+BOOST_CHECK_EQUAL( var.rl4(), rl4 );
+BOOST_CHECK_EQUAL( var.rlvest(), rlvest );
+BOOST_CHECK_EQUAL( var.rlmemb(), rlmemb );
+BOOST_CHECK_EQUAL( var.temperature(), temperature );
+!!!363184.cpp!!!	icc_surface_grid_test() : void
+const double dxf( 1.1 );
+const double dxw( 1.1 );
+const std::size_t nsub( 6 );
+evaluator::patch_matrix_fixture var;
+std::stringstream store;
+std::stringstream log;
+{
+   // constructor
+   evaluator::icc_surface_grid grid;
+   BOOST_CHECK_EQUAL( grid.size(), 0 );
+   BOOST_CHECK_EQUAL( grid.empty(), true );
+   BOOST_CHECK_EQUAL( grid.have_integrators(), false );
+   BOOST_CHECK_EQUAL( grid.get_dxf(), 1.6 );
+   BOOST_CHECK_EQUAL( grid.get_dxw(), 1.6 );
+   BOOST_CHECK_EQUAL( grid.get_nsub0(), 10 );
+
+   // setters
+   grid.set_dxf( dxf );
+   BOOST_CHECK_EQUAL( grid.get_dxf(), dxf );
+   grid.set_dxw( dxw );
+   BOOST_CHECK_EQUAL( grid.get_dxw(), dxw );
+   grid.set_nsub0( nsub );
+   BOOST_CHECK_EQUAL( grid.get_nsub0(), nsub );
+
+   var.define_grid( grid, log );
+   // Should set dxf, dxw and nsub as
+   // well as define patches.
+   BOOST_CHECK_EQUAL( grid.get_dxf(), var.dxf() );
+   BOOST_CHECK_EQUAL( grid.get_dxw(), var.dxw() );
+   BOOST_CHECK_EQUAL( grid.get_nsub0(), var.nsub() );
+
+   log << grid.size() << "\n";
+   
+   BOOST_CHECK_NE( grid.size(), 0 );
+   BOOST_CHECK_EQUAL( grid.size(), var.expected_grid_size() );
+   BOOST_CHECK_EQUAL( grid.empty(), false );
+   BOOST_CHECK_EQUAL( grid.have_integrators(), true );
+   {
+      std::ofstream os( "patch.txt" );
+      grid.write_grid( os );
+   }
+   boost::archive::text_oarchive oa( store );
+   oa << grid;
+}
+{
+   evaluator::icc_surface_grid grid;
+
+   boost::archive::text_iarchive ia( store );
+   ia >> grid;
+
+   BOOST_CHECK_EQUAL( grid.get_dxf(), var.dxf() );
+   BOOST_CHECK_EQUAL( grid.get_dxw(), var.dxw() );
+   BOOST_CHECK_EQUAL( grid.get_nsub0(), var.nsub() );
+   BOOST_CHECK_EQUAL( grid.size(), var.expected_grid_size() );
+   BOOST_CHECK_EQUAL( grid.empty(), false );
+   BOOST_CHECK_EQUAL( grid.have_integrators(), true );
+}
+!!!395312.cpp!!!	icc_matrix_test() : void
+evaluator::patch_matrix_fixture fix;
+std::stringstream store;
+std::stringstream iostore;
+std::stringstream log;
+evaluator::icc_matrix::array_type amx;
+std::vector< std::size_t > indx;
+{
+   evaluator::icc_matrix var;
+   BOOST_CHECK_EQUAL( var.size(), 0 );
+   BOOST_CHECK_EQUAL( var.empty(), true );
+
+   BOOST_CHECK_THROW( var.write_a_matrix( store ), std::runtime_error );
+
+   evaluator::icc_surface_grid gridder;
+
+   fix.define_grid( gridder, log );
+   log << gridder.size() << "\n";
+   
+   var.compute_amx( gridder, log );
+   {
+      std::ofstream os( "amx1.txt" );
+      var.write_a_matrix( os );
+   }
+   BOOST_CHECK_EQUAL( var.size(), gridder.size() );
+   BOOST_CHECK_EQUAL( var.size(), fix.expected_grid_size() );
+   var.lu_decompose_amx( log );
+   {
+      std::ofstream os( "amx.txt" );
+      var.write_a_matrix( os );
+   }
+   var.write_a_matrix( store );
+
+   boost::archive::text_oarchive oa( iostore );
+   oa << var;
+
+   amx.resize( boost::extents[ var.size() ][ var.size() ] );
+   indx.resize( var.size() );
+   for (std::size_t i = 0; i != var.size(); ++i)
+   {
+      std::array< std::size_t, 2 > idx;
+      idx[ 0 ] = i;
+      indx[ i ] = var.pivot( i );
+      for (std::size_t j = 0; j != var.size(); ++j)
+      {
+         idx[ 1 ] = j;
+         amx( idx ) = var.a( i, j );
+      }
+   }
+}
+{
+   evaluator::icc_matrix var;
+
+   BOOST_CHECK_EQUAL( var.size(), 0 );
+   BOOST_CHECK_EQUAL( var.empty(), true );
+
+   boost::archive::text_iarchive ia( iostore );
+   ia >> var;
+   BOOST_CHECK_EQUAL( var.size(), fix.expected_grid_size() );
+   BOOST_CHECK_EQUAL( var.empty(), false );
+   for (std::size_t i = 0; i != var.size(); ++i)
+   {
+      std::array< std::size_t, 2 > idx;
+      idx[ 0 ] = i;
+      BOOST_CHECK_EQUAL( indx[ i ], var.pivot( i ) );
+      for (std::size_t j = 0; j != var.size(); ++j)
+      {
+         idx[ 1 ] = j;
+         BOOST_CHECK_EQUAL( amx( idx ), var.a( i, j ) );
+      }
+   }
+}
+{
+   evaluator::icc_matrix var;
+
+   BOOST_CHECK_EQUAL( var.size(), 0 );
+   BOOST_CHECK_EQUAL( var.empty(), true );
+
+   var.read_a_matrix( store );
+   BOOST_CHECK_EQUAL( var.size(), fix.expected_grid_size() );
+   BOOST_CHECK_EQUAL( var.empty(), false );
+   for (std::size_t i = 0; i != var.size(); ++i)
+   {
+      std::array< std::size_t, 2 > idx;
+      idx[ 0 ] = i;
+      BOOST_CHECK_EQUAL( indx[ i ], var.pivot( i ) );
+      for (std::size_t j = 0; j != var.size(); ++j)
+      {
+         idx[ 1 ] = j;
+         // Allow error in the value as data was writen to only
+         // about 6 significant places (+/-0.0005 %)
+         BOOST_CHECK_CLOSE_FRACTION( amx( idx ), var.a( i, j ), 0.00051 );
+      }
+   }
+}
+!!!410032.cpp!!!	induced_charge_test() : void
+evaluator::patch_matrix_fixture fix;
+//std::map< std::string, std::string > params;
+std::stringstream store;
+std::stringstream log;
+{
+   // static method test
+   BOOST_CHECK_EQUAL( core::strngs::fsptch(), evaluator::induced_charge::type_label_() );
+}
+// Constructor test method
+{
+   // default
+   evaluator::induced_charge icceval;
+
+   BOOST_CHECK_EQUAL( icceval.size(), 0 );
+   BOOST_CHECK_EQUAL( icceval.empty(), true );
+   BOOST_CHECK_EQUAL( icceval.type_label(), core::strngs::fsptch() );
+   BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx.dat" );
+   BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch.dat" );
+   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.6 );
+   BOOST_CHECK_EQUAL( icceval.get_dxw(), 1.6 );
+   BOOST_CHECK_EQUAL( icceval.get_nsub0(), 10 );
+
+   BOOST_CHECK_NO_THROW( icceval.set_a_matrix_filename( "amx-test.txt" ) );
+   BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx-test.txt" );
+
+   BOOST_CHECK_NO_THROW( icceval.set_patch_filename( "patch-test.txt" ) );
+   BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch-test.txt" );
+
+   BOOST_CHECK_NO_THROW( icceval.set_dxf( 1.25 ) );
+   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.25 );
+
+   BOOST_CHECK_NO_THROW( icceval.set_dxw( 3.5 ) );
+   BOOST_CHECK_EQUAL( icceval.get_dxw(), 3.5 );
+
+   BOOST_CHECK_NO_THROW( icceval.set_nsub0( 11 ) );
+   BOOST_CHECK_EQUAL( icceval.get_nsub0(), 11 );
+
+   BOOST_CHECK_EQUAL( icceval.size(), 0 );
+   BOOST_CHECK_EQUAL( icceval.empty(), true );
+
+   boost::archive::text_oarchive oa( store );
+   oa << icceval;
+}
+// Serialization test method.
+{
+   evaluator::induced_charge icceval;
+
+   boost::archive::text_iarchive ia( store );
+   ia >> icceval;
+
+   BOOST_CHECK_EQUAL( icceval.size(), 0 );
+   BOOST_CHECK_EQUAL( icceval.empty(), true );
+   BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx-test.txt" );
+   BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch-test.txt" );
+   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.25 );
+   BOOST_CHECK_EQUAL( icceval.get_dxw(), 3.5 );
+   BOOST_CHECK_EQUAL( icceval.get_nsub0(), 11 );
+
+}
+// Manual build test
+{
+   // default
+   evaluator::induced_charge icceval;
+   platform::simulator_fixture simfix;
+
+   // Set parameters as per 'fix'.
+   BOOST_CHECK_NO_THROW( icceval.set_dxf( fix.dxf() ) );
+   BOOST_CHECK_NO_THROW( icceval.set_dxw( fix.dxw() ) );
+   BOOST_CHECK_NO_THROW( icceval.set_nsub0( fix.nsub() ) );
+   BOOST_CHECK_NO_THROW( icceval.set_alfa( fix.temperature() ) );
+   BOOST_CHECK_NO_THROW( icceval.set_permittivity( fix.epsw() ) );
+   BOOST_CHECK_EQUAL( icceval.get_alfa(), fix.alfa() );
+   BOOST_CHECK_EQUAL( icceval.get_permittivity(), fix.epsw() );
+
+   // Build amx from data from 'fix'. We need to
+   // do this as simfix is not derived from channel_system.
+   BOOST_CHECK_NO_THROW( icceval.create_amx( fix.zl1(), fix.rl1(), fix.rl4(), fix.rlvest(), fix.rlmemb(), fix.epsw(), fix.epspr(), log ) );
+
+   // We assume this simple size test means that the surface grid and the A
+   // matrix are correctly built because independent tests of the surface grid
+   // and A matrix classes produce the correct results.
+   BOOST_CHECK_EQUAL( icceval.size(), fix.expected_grid_size() );
+}
+{
+   // Construction as if from an input file with no parameters
+   platform::simulator_fixture simfix;
+
+   std::map< std::string, std::string > params;
+   // Empty parameter list allowed
+   BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
+
+   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
+   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
+   BOOST_REQUIRE( nullptr != llp );
+   BOOST_CHECK_EQUAL( llp->get_dxf(), 1.6);
+
+   // write_document test
+   core::input_document wr( 1 );
+   bep->write_document( wr );
+   BOOST_CHECK_EQUAL( wr.size(), 1  );
+   BOOST_CHECK_EQUAL( wr[ 0 ].label(), core::strngs::evaluator_label() );
+   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fstype() ) );
+   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fstype() ), core::strngs::fsptch() );
+   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsdxw() ) );
+   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsdxw() ), std::to_string( 1.6 ) );
+   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsdxf() ) );
+   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsdxf() ), std::to_string( 1.6 ) );
+   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsnsub() ) );
+   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsnsub() ), std::to_string( 10 ) );
+}
+{
+   // Construction as if from an input file with valid parameters
+   platform::simulator_fixture simfix;
+
+   std::map< std::string, std::string > params;
+   params[ core::strngs::fsdxf() ] = "4.0";
+   params[ core::strngs::fsdxw() ] = "6.0";
+   params[ core::strngs::fsnsub() ] = "50";
+   // Empty parameter list allowed
+   BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
+
+   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
+   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
+   BOOST_REQUIRE( nullptr != llp );
+   BOOST_CHECK_EQUAL( llp->get_dxf(), 4.0 );
+   BOOST_CHECK_EQUAL( llp->get_dxw(), 6.0 );
+   BOOST_CHECK_EQUAL( llp->get_nsub0(), 50 );
+}
+{
+   // Construction as if from an input file with valid parameters
+   platform::simulator_fixture simfix;
+
+   std::map< std::string, std::string > params;
+   params[ core::strngs::fsdxf() ] = "4";
+   // Empty parameter list allowed
+   BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
+
+   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
+   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
+   BOOST_REQUIRE( nullptr != llp );
+   BOOST_CHECK_EQUAL( llp->get_dxf(), 4.0 );
+}
+{
+   // Construction as if from an input file with invalid parameters : invalid value
+   platform::simulator_fixture simfix;
+
+   std::map< std::string, std::string > params;
+   params[ core::strngs::fsdxf() ] = "four";
+   // Empty parameter list allowed
+   BOOST_REQUIRE_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ), std::runtime_error );
+}
+{
+   // Construction as if from an input file with invalid parameters : invalid name
+   platform::simulator_fixture simfix;
+
+   std::map< std::string, std::string > params;
+   params[ core::strngs::fsiwid() ] = "4.0";
+   // Empty parameter list allowed
+   BOOST_REQUIRE_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ), std::runtime_error );
+}
+{
+   // Construction as if from an input file with invalid parameters we would
+   // like to be valid
+   platform::simulator_fixture simfix;
+
+   std::map< std::string, std::string > params;
+   params[ "amxfile" ] = "amx.txt";
+   params[ "patchfile" ] = "patch.txt";
+   // Empty parameter list allowed
+   BOOST_REQUIRE_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ), std::runtime_error );
+}
+!!!421168.cpp!!!	legendre_test() : void
+// In order to test the ICC code an analytically tractable problem
+// is a single charge near a sphere.
+//
+// CHARGE INSIDE
+//
+//std::stringstream store;
+{
+   // default
+   platform::simulator_fixture simfix;
+   std::map< std::string, std::string > params;
+   const double inside_eps{ 10.0 };
+   const double outside_eps{ 80.0 };
+   const double temperature{ 300.0 };
+   const double ion_charge{ 1.0 };
+   const double dxf{ 1.6 };
+   const double dxw{ 1.6 };
+   const std::size_t nsub{ 20 };
+   const double sphere_radius{ 10.0 };
+
+   // Empty parameter list allowed
+   BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
+
+   simfix.sim->set_solvent_permittivity( outside_eps );
+
+   particle::coordinate external_coord{ 0.0, 0.0, 0.0 };
+   // Add specie and particle to simulation
+   {
+      particle::specie spc;
+      spc.set_label( "Na" );
+      spc.set_valency( ion_charge );
+      spc.set_radius( 1.0 );
+      spc.set_rate( 1.0 );
+      spc.set_excess_potential( 0.0 );
+      spc.set_concentration( 0.055 );
+      spc.set_type( particle::specie::SOLUTE );
+      spc.append_position( external_coord );
+      spc.set_count( 1 );
+      simfix.sim->add_specie( spc );
+   }
+
+   simfix.sim->generate_simulation( std::cout );
+
+   BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().size(), 1 );
+   BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().x( 0 ), external_coord.x );
+   BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().y( 0 ), external_coord.y );
+   BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().z( 0 ), external_coord.z );
+   BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().eps( 0 ), outside_eps );
+   const_cast< particle::ensemble& >( simfix.sim->get_ensemble() ).set_eps( 0, inside_eps );
+   BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().eps( 0 ), inside_eps );
+
+   std::unique_ptr< evaluator::icc_surface_grid > gridder( new evaluator::icc_surface_grid );
+
+   // Create a sphere.
+   gridder->set_dxf( dxf );
+   gridder->set_dxw( dxw );
+   gridder->set_nsub0( nsub );
+
+   gridder->add_arc( 0.0, 0.0, sphere_radius, 0.0, core::constants::pi()/2, inside_eps, outside_eps, 10, 10, true, std::cout );
+   gridder->add_arc( 0.0, 0.0, sphere_radius,  core::constants::pi()/2, core::constants::pi(), inside_eps, outside_eps, 10, 10, true, std::cout );
+
+   {
+      std::ofstream circle( "circle.txt" );
+      gridder->write_grid( circle );
+   }
+   const std::size_t gsize = gridder->size();
+   std::cout << " Number of tiles : " << gsize << "\n";
+
+   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
+   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
+   BOOST_REQUIRE( llp != nullptr );
+
+   // Swap test grid into evaluator.
+   const_cast< evaluator::induced_charge* >(llp)->create_amx( gridder, std::cout );
+
+   BOOST_REQUIRE_EQUAL( gsize, llp->size() );
+
+   const_cast< evaluator::induced_charge* >(llp)->set_alfa( temperature );
+   const_cast< evaluator::induced_charge* >(llp)->set_permittivity( outside_eps );
+
+   // Calculate the initial induced charge
+   const_cast< evaluator::induced_charge* >(llp)->compute_initial_c_h( simfix.sim->get_species(), simfix.sim->get_ensemble() );
+
+   {
+      std::ofstream chrg( "charge_in.txt" );
+      chrg << "# tiles : " << llp->size() << "\n";
+      chrg << "# external charge : " << ion_charge << "\n";
+      chrg << "# external location : " << external_coord << "\n";
+      for( std::size_t ii = 0; ii != llp->size(); ++ii)
+      {
+         chrg << llp->surface_charge( ii ) <<  " " << llp->surface_area( ii ) <<  " "  << llp->field( ii ) <<  "\n";
+      }
+   }
+
+   {
+      double area, chrg;
+      llp->compute_total_surface_charge( chrg, area );
+
+      std::cout << "Total surface area = " << area << "\n";
+      BOOST_CHECK_CLOSE_FRACTION( area, (4*core::constants::pi()*sphere_radius*sphere_radius), 0.0001 );
+      std::cout << "Change in eps = " << (inside_eps - outside_eps) << "\n";
+      std::cout << "Average eps = " << ((inside_eps + outside_eps)/2) << "\n";
+      std::cout << "Ratio 1 delta_e' = " << (2*(inside_eps - outside_eps)/(inside_eps + outside_eps)) << "\n";
+      std::cout << "Ratio 2 (e_i.e_o)/(e_i - e_o) = " << (inside_eps * outside_eps/(inside_eps - outside_eps)) << "\n";
+      std::cout << "Total surface charge = " << chrg << "\n";
+      chrg *= inside_eps * outside_eps/(inside_eps - outside_eps);
+      std::cout << "Estimate of original charge from surface charge = " << chrg << "\n";
+      BOOST_CHECK_CLOSE_FRACTION( chrg, ion_charge, 0.01 );
+
+      //llp->compute_inner_surface_charge( chrg, area );
+      //BOOST_CHECK_CLOSE_FRACTION( chrg, ion_charge, 0.001 );
+      //std::cout << "Inner surface charge = " << chrg << "\n";
+   }
+}
+//XX  //
+//XX  //  CHARGE OUTSIDE
+//XX  //
+//XX  {
+//XX     // default
+//XX     platform::simulator_fixture simfix;
+//XX     std::map< std::string, std::string > params;
+//XX     // Empty parameter list allowed
+//XX     BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
+//XX
+//XX     particle::coordinate external_coord{ 0.0, 0.0, 15.0 };
+//XX     // Add specie and particle to simulation
+//XX     {
+//XX        particle::specie spc;
+//XX        spc.set_label( "Na" );
+//XX        spc.set_valency( 1.0 );
+//XX        spc.set_radius( 1.0 );
+//XX        spc.set_rate( 1.0 );
+//XX        spc.set_excess_potential( 0.0 );
+//XX        spc.set_concentration( 0.055 );
+//XX        spc.set_type( particle::specie::SOLUTE );
+//XX        spc.append_position( external_coord );
+//XX        spc.set_count( 1 );
+//XX        simfix.sim->add_specie( spc );
+//XX     }
+//XX
+//XX     simfix.sim->generate_simulation( std::cout );
+//XX
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().size(), 1 );
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().x( 0 ), external_coord.x );
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().y( 0 ), external_coord.y );
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().z( 0 ), external_coord.z );
+//XX
+//XX     std::unique_ptr< evaluator::icc_surface_grid > gridder( new evaluator::icc_surface_grid );
+//XX
+//XX     // Create a sphere.
+//XX     const double epsw = 80.0;
+//XX     const double temperature = 300.0;
+//XX     const double epspr = 10.0;
+//XX     const double deps =  2 * (epspr - epsw) / (epspr + epsw );
+//XX     gridder->add_arc( 0.0, 0.0, 10.0, 0.0, core::constants::pi()/2, deps, 10, 10, true, std::cout );
+//XX     gridder->add_arc( 0.0, 0.0, 10.0,  core::constants::pi()/2, core::constants::pi(), deps, 10, 10, true, std::cout );
+//XX
+//XX     const std::size_t gsize = gridder->size();
+//XX
+//XX     evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
+//XX     evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
+//XX     BOOST_REQUIRE( llp != nullptr );
+//XX
+//XX     // Swap test grid into evaluator.
+//XX     const_cast< evaluator::induced_charge* >(llp)->create_amx( gridder, std::cout );
+//XX
+//XX     BOOST_REQUIRE_EQUAL( gsize, llp->size() );
+//XX
+//XX     const_cast< evaluator::induced_charge* >(llp)->set_alfa( temperature );
+//XX     const_cast< evaluator::induced_charge* >(llp)->set_permittivity( epsw );
+//XX
+//XX     // Calculate the initial induced charge
+//XX     const_cast< evaluator::induced_charge* >(llp)->compute_initial_c_h( simfix.sim->get_species(), simfix.sim->get_ensemble() );
+//XX
+//XX     {
+//XX        std::ofstream chrg( "charge_out.txt" );
+//XX        chrg << "# tiles : " << llp->size() << "\n";
+//XX        chrg << "# external charge : +1.0\n";
+//XX        chrg << "# external location : " << external_coord << "\n";
+//XX        for( std::size_t ii = 0; ii != llp->size(); ++ii)
+//XX        {
+//XX           chrg << llp->surface_charge( ii ) <<  " " << llp->surface_area( ii ) <<  " " << llp->field( ii ) <<  "\n";
+//XX        }
+//XX     }
+//XX
+//XX     {
+//XX        double area, chrg;
+//XX        llp->compute_total_surface_charge( chrg, area );
+//XX        std::cout << "Total surface charge = " << chrg << "\n";
+//XX        std::cout << "Total surface area = " << area << "\n";
+//XX        BOOST_CHECK_CLOSE_FRACTION( chrg, 0.0, 0.0001 );
+//XX        BOOST_CHECK_CLOSE_FRACTION( area, 4*core::constants::pi()*100.0, 0.0001 );
+//XX     }
+//XX  }
+//XX  //
+//XX  //  CHARGE AT CENTRE
+//XX  //
+//XX  {
+//XX     // default
+//XX     platform::simulator_fixture simfix;
+//XX     std::map< std::string, std::string > params;
+//XX     // Empty parameter list allowed
+//XX     BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
+//XX
+//XX     particle::coordinate external_coord{ 0.0, 0.0, 0.0 };
+//XX     // Add specie and particle to simulation
+//XX     {
+//XX        particle::specie spc;
+//XX        spc.set_label( "Na" );
+//XX        spc.set_valency( 1.0 );
+//XX        spc.set_radius( 1.0 );
+//XX        spc.set_rate( 1.0 );
+//XX        spc.set_excess_potential( 0.0 );
+//XX        spc.set_concentration( 0.055 );
+//XX        spc.set_type( particle::specie::SOLUTE );
+//XX        spc.append_position( external_coord );
+//XX        spc.set_count( 1 );
+//XX        simfix.sim->add_specie( spc );
+//XX     }
+//XX
+//XX     simfix.sim->generate_simulation( std::cout );
+//XX
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().size(), 1 );
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().x( 0 ), external_coord.x );
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().y( 0 ), external_coord.y );
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().z( 0 ), external_coord.z );
+//XX
+//XX     std::unique_ptr< evaluator::icc_surface_grid > gridder( new evaluator::icc_surface_grid );
+//XX
+//XX     gridder->set_dxf( 1.0 );
+//XX     gridder->set_dxw( 1.0 );
+//XX     // Create a sphere.
+//XX     const double epsw = 80.0;
+//XX     const double temperature = 300.0;
+//XX     const double epspr = 10.0;
+//XX     const double deps =  2 * (epspr - epsw) / (epspr + epsw );
+//XX     gridder->add_arc( 0.0, 0.0, 10.0, 0.0, core::constants::pi()/2, deps, 10, 10, true, std::cout );
+//XX     gridder->add_arc( 0.0, 0.0, 10.0,  core::constants::pi()/2, core::constants::pi(), deps, 10, 10, true, std::cout );
+//XX
+//XX     const std::size_t gsize = gridder->size();
+//XX
+//XX     evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
+//XX     evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
+//XX     BOOST_REQUIRE( llp != nullptr );
+//XX
+//XX     // Swap test grid into evaluator.
+//XX     const_cast< evaluator::induced_charge* >(llp)->create_amx( gridder, std::cout );
+//XX
+//XX     BOOST_REQUIRE_EQUAL( gsize, llp->size() );
+//XX
+//XX     const_cast< evaluator::induced_charge* >(llp)->set_alfa( temperature );
+//XX     const_cast< evaluator::induced_charge* >(llp)->set_permittivity( epsw );
+//XX
+//XX     // Calculate the initial induced charge
+//XX     const_cast< evaluator::induced_charge* >(llp)->compute_initial_c_h( simfix.sim->get_species(), simfix.sim->get_ensemble() );
+//XX
+//XX     {
+//XX        std::ofstream chrg( "charge_ctr.txt" );
+//XX        chrg << "# tiles : " << llp->size() << "\n";
+//XX        chrg << "# external charge : +1.0\n";
+//XX        chrg << "# external location : " << external_coord << "\n";
+//XX        for( std::size_t ii = 0; ii != llp->size(); ++ii)
+//XX        {
+//XX           chrg << llp->surface_charge( ii ) <<  " " << llp->surface_area( ii ) <<  " " << llp->field( ii ) <<  "\n";
+//XX        }
+//XX     }
+//XX
+//XX     {
+//XX        double area, chrg;
+//XX        llp->compute_total_surface_charge( chrg, area );
+//XX        std::cout << "Total surface charge = " << chrg << "\n";
+//XX        std::cout << "Total surface area = " << area << "\n";
+//XX        BOOST_CHECK_CLOSE_FRACTION( chrg, 0.0, 0.0001 );
+//XX        BOOST_CHECK_CLOSE_FRACTION( area, 4*core::constants::pi()*100.0, 0.0001 );
+//XX     }
+//XX  }
+//XX  //
+//XX  //  CHARGE AWAY FROM WALL
+//XX  //
+//XX  {
+//XX     // default
+//XX     platform::simulator_fixture simfix;
+//XX     std::map< std::string, std::string > params;
+//XX     // Empty parameter list allowed
+//XX     BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
+//XX
+//XX     particle::coordinate external_coord{ 0.0, 0.0, 12.0 };
+//XX     // Add specie and particle to simulation
+//XX     {
+//XX        particle::specie spc;
+//XX        spc.set_label( "Na" );
+//XX        spc.set_valency( 1.0 );
+//XX        spc.set_radius( 1.0 );
+//XX        spc.set_rate( 1.0 );
+//XX        spc.set_excess_potential( 0.0 );
+//XX        spc.set_concentration( 0.055 );
+//XX        spc.set_type( particle::specie::SOLUTE );
+//XX        spc.append_position( external_coord );
+//XX        spc.set_count( 1 );
+//XX        simfix.sim->add_specie( spc );
+//XX     }
+//XX
+//XX     simfix.sim->generate_simulation( std::cout );
+//XX
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().size(), 1 );
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().x( 0 ), external_coord.x );
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().y( 0 ), external_coord.y );
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().z( 0 ), external_coord.z );
+//XX
+//XX     std::unique_ptr< evaluator::icc_surface_grid > gridder( new evaluator::icc_surface_grid );
+//XX
+//XX     // Create a sphere.
+//XX     const double epsw = 80.0;
+//XX     const double temperature = 300.0;
+//XX     const double epspr = 10.0;
+//XX     const double deps =  2 * (epspr - epsw) / (epspr + epsw );
+//XX     gridder->add_wall( 0.0, 0.0, 30.0, deps, 10, 10, true, std::cout );
+//XX
+//XX     {
+//XX        std::ofstream gridos( "wall.txt" );
+//XX        gridder->write_grid( gridos );
+//XX     }
+//XX
+//XX     const std::size_t gsize = gridder->size();
+//XX
+//XX     evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
+//XX     evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
+//XX     BOOST_REQUIRE( llp != nullptr );
+//XX
+//XX     // Swap test grid into evaluator.
+//XX     const_cast< evaluator::induced_charge* >(llp)->create_amx( gridder, std::cout );
+//XX
+//XX     BOOST_REQUIRE_EQUAL( gsize, llp->size() );
+//XX
+//XX     const_cast< evaluator::induced_charge* >(llp)->set_alfa( temperature );
+//XX     const_cast< evaluator::induced_charge* >(llp)->set_permittivity( epsw );
+//XX
+//XX     // Calculate the initial induced charge
+//XX     const_cast< evaluator::induced_charge* >(llp)->compute_initial_c_h( simfix.sim->get_species(), simfix.sim->get_ensemble() );
+//XX
+//XX     {
+//XX        std::ofstream chrg( "charge_wall.txt" );
+//XX        chrg << "# tiles : " << llp->size() << "\n";
+//XX        chrg << "# external charge : +1.0\n";
+//XX        chrg << "# external location : " << external_coord << "\n";
+//XX        for( std::size_t ii = 0; ii != llp->size(); ++ii)
+//XX        {
+//XX           chrg << llp->surface_charge( ii ) <<  " " << llp->surface_area( ii ) <<  " " << llp->field( ii ) <<  "\n";
+//XX        }
+//XX     }
+//XX
+//XX     {
+//XX        double area, chrg;
+//XX        llp->compute_total_surface_charge( chrg, area );
+//XX        std::cout << "Total surface charge = " << chrg << "\n";
+//XX        std::cout << "Total surface area = " << area << "\n";
+//XX        BOOST_CHECK_CLOSE_FRACTION( chrg, 0.0, 0.0001 );
+//XX        BOOST_CHECK_CLOSE_FRACTION( area, core::constants::pi()*900.0, 0.0001 );
+//XX     }
+//XX  }
+//XX  //
+//XX  //  CHARGE AT CENTRE OF CYLINDER
+//XX  //
+//XX  {
+//XX     // default
+//XX     platform::simulator_fixture simfix;
+//XX     std::map< std::string, std::string > params;
+//XX     // Empty parameter list allowed
+//XX     BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
+//XX
+//XX     particle::coordinate external_coord{ 0.0, 0.0, 0.0 };
+//XX     // Add specie and particle to simulation
+//XX     {
+//XX        particle::specie spc;
+//XX        spc.set_label( "Na" );
+//XX        spc.set_valency( 1.0 );
+//XX        spc.set_radius( 1.0 );
+//XX        spc.set_rate( 1.0 );
+//XX        spc.set_excess_potential( 0.0 );
+//XX        spc.set_concentration( 0.055 );
+//XX        spc.set_type( particle::specie::SOLUTE );
+//XX        spc.append_position( external_coord );
+//XX        spc.set_count( 1 );
+//XX        simfix.sim->add_specie( spc );
+//XX     }
+//XX
+//XX     simfix.sim->generate_simulation( std::cout );
+//XX
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().size(), 1 );
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().x( 0 ), external_coord.x );
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().y( 0 ), external_coord.y );
+//XX     BOOST_REQUIRE_EQUAL( simfix.sim->get_ensemble().z( 0 ), external_coord.z );
+//XX
+//XX     std::unique_ptr< evaluator::icc_surface_grid > gridder( new evaluator::icc_surface_grid );
+//XX
+//XX     // Create a sphere.
+//XX     const double epsw = 80.0;
+//XX     const double temperature = 300.0;
+//XX     const double epspr = 10.0;
+//XX     const double deps =  2 * (epspr - epsw) / (epspr + epsw );
+//XX     gridder->add_line( -20.0, 20.0, 10.0, deps, 10, 10, true, std::cout );
+//XX
+//XX     {
+//XX        std::ofstream gridos( "cylinder.txt" );
+//XX        gridder->write_grid( gridos );
+//XX     }
+//XX
+//XX     const std::size_t gsize = gridder->size();
+//XX
+//XX     evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
+//XX     evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
+//XX     BOOST_REQUIRE( llp != nullptr );
+//XX
+//XX     // Swap test grid into evaluator.
+//XX     const_cast< evaluator::induced_charge* >(llp)->create_amx( gridder, std::cout );
+//XX
+//XX     BOOST_REQUIRE_EQUAL( gsize, llp->size() );
+//XX
+//XX     const_cast< evaluator::induced_charge* >(llp)->set_alfa( temperature );
+//XX     const_cast< evaluator::induced_charge* >(llp)->set_permittivity( epsw );
+//XX
+//XX     // Calculate the initial induced charge
+//XX     const_cast< evaluator::induced_charge* >(llp)->compute_initial_c_h( simfix.sim->get_species(), simfix.sim->get_ensemble() );
+//XX
+//XX     {
+//XX        std::ofstream chrg( "charge_cyl.txt" );
+//XX        chrg << "# tiles : " << llp->size() << "\n";
+//XX        chrg << "# external charge : +1.0\n";
+//XX        chrg << "# external location : " << external_coord << "\n";
+//XX        for( std::size_t ii = 0; ii != llp->size(); ++ii)
+//XX        {
+//XX           chrg << llp->surface_charge( ii ) <<  " " << llp->surface_area( ii ) <<  " " << llp->field( ii ) <<  "\n";
+//XX        }
+//XX     }
+//XX
+//XX     {
+//XX        double area, chrg;
+//XX        llp->compute_total_surface_charge( chrg, area );
+//XX        std::cout << "Total surface charge = " << chrg << "\n";
+//XX        std::cout << "Total surface area = " << area << "\n";
+//XX        BOOST_CHECK_CLOSE_FRACTION( chrg, 0.0, 0.0001 );
+//XX        BOOST_CHECK_CLOSE_FRACTION( area, 2*core::constants::pi()*40.0*10, 0.0001 );
+//XX     }
+//XX  }

@@ -1,0 +1,348 @@
+class input_base_reader
+!!!554928.cpp!!!	trimmed_line() : string
+std::string line = decomment(this->line_, '#');
+boost::algorithm::trim( line );
+return line;
+!!!553392.python!!!	next() : bool
+if len(self.file_stack_) == 0:
+  return False
+# Keep going until we get a result or reach the end of all files.
+while True:
+  # Get the top most stream
+  node = self.file_stack_[-1]
+  self.name_ = None
+  self.line_ = None
+  self.value_ = None
+  self.line_ = node.stream_.readline()
+  if self.line_ == "":
+    self.file_stack_.pop()
+    if len(self.file_stack_) == 0:
+      self.line_ = None
+      return False
+    continue
+  # Keep track of the current line number.
+  node.line_no_ += 1
+  if self.line_ == "\n":
+    continue
+  self.line_ = input_reader.decomment(self.line_, '#')
+  if self.line_ == "\n":
+    continue
+  self.line_ = self.line_.strip()
+  if self.line_ == "":
+    continue
+  # Split line
+  # have name/value ?? (look for ' ' or '=')
+  if self.line_.find("=") >= 0:
+    arr = self.line_.split("=",1)
+    self.name_ = arr[0]
+    if len(arr) > 1:
+      self.value_ = arr[1]
+  else:
+    arr = self.line_.split(None,1)
+    self.name_ = arr[0]
+    if len(arr) > 1:
+      self.value_ = arr[1]
+  self.name_ = self.name_.strip()
+  self.value_ = None if self.value_ == None else self.value_.strip()
+  # Check for include.
+  if self.name_ == "include":
+    newnode = location_node()
+    newnode.open(self.value_)
+    self.file_stack_.append(newnode)
+    continue
+  break
+return True
+!!!555184.python!!!	next_private() : bool
+if len(self.file_stack_) == 0:
+  return False
+# Keep going until we get a result or reach the end of all files.
+while True:
+  # Get the top most stream
+  node = self.file_stack_[-1]
+  self.name_ = None
+  self.line_ = None
+  self.value_ = None
+  self.line_ = node.stream_.readline()
+  if self.line_ == "":
+    self.file_stack_.pop()
+    if len(self.file_stack_) == 0:
+      self.line_ = None
+      return False
+    continue
+  # Keep track of the current line number.
+  node.line_no_ += 1
+  if self.line_ == "\n":
+    continue
+  self.line_ = input_reader.decomment(self.line_, '#')
+  if self.line_ == "\n":
+    continue
+  self.line_ = self.line_.strip()
+  if self.line_ == "":
+    continue
+  # Split line
+  # have name/value ?? (look for ' ' or '=')
+  if self.line_.find("=") >= 0:
+    arr = self.line_.split("=",1)
+    self.name_ = arr[0]
+    if len(arr) > 1:
+      self.value_ = arr[1]
+  else:
+    arr = self.line_.split(None,1)
+    self.name_ = arr[0]
+    if len(arr) > 1:
+      self.value_ = arr[1]
+  self.name_ = self.name_.strip()
+  self.value_ = None if self.value_ == None else self.value_.strip()
+  # Check for include.
+  if self.name_ == "include":
+    newnode = location_node()
+    newnode.open(self.value_)
+    self.file_stack_.append(newnode)
+    continue
+  break
+return True
+!!!554544.cpp!!!	set_line(in line : string) : bool
+// Split line
+this->name_.clear();
+this->value_.clear();
+this->line_ = line;
+
+// Preprocess the line
+if ( line.empty () ) return false;
+line = decomment(line, '#');
+if ( line.empty () ) return false;
+boost::algorithm::trim( line );
+if ( line.empty () ) return false;
+  
+// (know that first character is non-whitespace)
+
+// have name/value ?? (look for ' ' or '=')
+std::string::size_type ipos = line.find('=');
+if ( ipos == std::string::npos )
+{
+   // No '=', try split on a space
+   for ( ipos = 0; ipos != line.size(); ++ipos )
+   {
+      if ( std::isspace( line[ipos] ) ) break;
+   }
+   if ( ipos == line.size() )
+   {
+      //     have only name
+      this->name_ = line;
+   }
+   else
+   {
+      //     name and value
+      this->name_ = line.substr( 0, ipos );
+      this->value_ = line.substr( ipos + 1 );
+   } // if
+}
+else
+{
+   //     name and value
+   this->name_ = line.substr( 0, ipos );
+   this->value_ = line.substr( ipos + 1 );
+}
+if ( not this->name_.empty() ) boost::algorithm::trim( this->name_ );
+if ( not this->value_.empty() ) boost::algorithm::trim( this->value_ );
+return true;
+!!!553008.cpp!!!	decomment(in a_val : string, in comment_start : char) : string
+enum State
+{
+  START
+  , SINGLE
+  , DOUBLE
+};
+State state = START;
+
+for (std::size_t pos = 0; pos < a_val.size(); ++pos)
+{
+  std::size_t esc = 0;
+  while (pos != a_val.size() and a_val[pos] == '\\')
+  {
+    ++pos;
+    ++esc;
+  };
+  if (pos == a_val.size())
+  {
+    return a_val;
+  }
+  if ((esc & 1) == 1) // Pointing to character after an odd escape
+  {
+    ++pos;
+    continue;
+  }
+
+  switch (state)
+  {
+  case SINGLE:
+    if (a_val[pos] == '\'') state = START;
+    break;
+
+  case DOUBLE:
+    if (a_val[pos] == '\"') state = START;
+    break;
+
+  default:
+    switch (a_val[pos])
+    {
+    case '\'':
+      state = SINGLE;
+      break;
+    case '\"':
+      state = DOUBLE;
+      break;
+    default:
+      if (a_val[pos] != comment_start) break;
+      return a_val.substr(0, pos);
+    }
+  }
+}
+return a_val;
+!!!553008.python!!!	decomment(in a_val : string, in comment_start : char) : string
+START=0
+SINGLE=1
+DOUBLE=2
+
+state = START
+pos = -1
+while pos < len(a_val):
+  pos += 1
+  esc = 0
+  while pos < len(a_val) and a_val[pos] == '\\':
+    pos += 1
+    esc += 1
+  if pos == len(a_val):
+    return a_val
+  if 1 == (esc & 1): # Pointing to character after an odd escape
+    pos += 1
+    continue
+  if state == SINGLE:
+    if a_val[pos] == '\'':
+      state = START
+  elif state == DOUBLE:
+    if a_val[pos] == '\"':
+      state = START
+  else:
+    if a_val[pos] == '\'':
+      state = SINGLE
+    elif a_val[pos] == '\"':
+      state = DOUBLE
+    else:
+      if a_val[pos] == comment_start:
+        a_val = a_val[:pos]
+        return a_val
+return a_val
+
+!!!552752.cpp!!!	dequote(in a_val : string) : string
+std::string result(a_val);
+boost::algorithm::trim(result);
+const size_t length(result.size());
+if ((length > 1) and (result[0] == result[length - 1]) and (result[0] == '\'' or result[0] == '"'))
+{
+  size_t esc = 0; // check for odd number of escapes
+  while (result[length - (2 + esc)] == '\\') ++esc;
+  if ((esc & 1) == 0) // even so last quote not escaped
+  {
+    return result.substr(1, length - 2);
+  }
+}
+return a_val;
+!!!552752.python!!!	dequote(in a_val : string) : string
+iline = line.strip()
+if (len(iline) > 1) and (iline[0] == iline[-1]) and (iline[-1] == r"'" or iline[-1] == r'"'):
+  esc = 0 # check for odd number of escapes
+  while iline[-(2 + esc)] == "\\":
+    esc += 1
+  if (esc & 1) == 0: # even so last quote not escaped
+    return iline[1:-1]
+return line
+
+!!!552624.cpp!!!	read_as_floats(in input_buffer : string, inout a_arry : std::vector< double >) : void
+// Convert any 'd's to 'e's
+std::replace(input_buffer.begin(), input_buffer.end(), 'D', 'E');
+std::replace(input_buffer.begin(), input_buffer.end(), 'd', 'E');
+a_arry.clear();
+{
+   std::stringstream is(input_buffer);
+   while( not is.eof() )
+   {
+      double val;
+      is >> val;
+      // Conversion failed so no more numbers for conversion ?
+      if (not is) break;
+      a_arry.push_back(val);
+   }
+}
+!!!552624.python!!!	read_as_floats(in input_buffer : string, inout a_arry : std::vector< double >) : void
+result = []
+try:
+  for x in input_buffer.split(None,a_max_size):
+    v = float(x)
+    result.append(v)
+except ValueError, err:
+  # ignore ValueError, just return what we have so far
+  pass
+return result
+!!!552496.cpp!!!	read_as_bool(in astr : string) : bool
+astr = dequote (astr);
+boost::trim (astr);
+boost::to_upper(astr);
+switch (astr.size())
+{
+case 4:
+  if (astr == "TRUE")
+  {
+    return true;
+  }
+  break;
+case 5:
+  if (astr == "FALSE")
+  {
+    return false;
+  }
+  break;
+case 6:
+  if (astr == ".TRUE.")
+  {
+   return true;
+  }
+  break;
+case 7:
+  if (astr == ".FALSE.")
+  {
+    return false;
+  }
+  break;
+default:
+  break;
+}
+return boost::lexical_cast< bool > (astr);
+!!!552496.python!!!	read_as_bool(in astr : string) : bool
+astr = line.upper()
+astr = input_reader.dequote (astr)
+astr = astr.strip()
+alen = len(astr)
+if alen == 4:
+  if astr == "TRUE":
+    return True
+elif alen == 5:
+  if astr == "FALSE":
+    return False
+elif alen == 6:
+  if astr == ".TRUE.":
+    return True
+elif alen == 7:
+  if astr == ".FALSE.":
+    return False
+else:
+  # Finally check if astr is 0 or 1
+  val = int(astr)
+  if val == 0:
+    return False
+  elif val == 1:
+    return True
+  else:
+    raise ValueError, "invalid literal for conversion to boolean: '"+astr+"'"
+
+

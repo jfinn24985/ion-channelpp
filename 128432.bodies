@@ -1,0 +1,133 @@
+class gc_choice_cell
+!!!142768.cpp!!!	add_success_rate() : double
+double total{ 0.0 };
+for (auto const& chc : this->adder_)
+{
+   total += chc.success_rate ();
+}
+return total;
+!!!254768.cpp!!!	gc_choice_cell(in ispec : size_t, in params : string, in geom : channel_system)
+: base_choice( ispec )
+, adder_()
+, remover_()
+{
+   // calculate region rates.
+   std::vector< double > rates( channel_system::REGION_COUNT, 1.0 );
+   std::string rateset;
+   auto const& spc = geom.get_specie( ispec );
+   if ( not params.empty() )
+   {
+      std::string bad_parameter_list;
+      for ( auto const& entry : params )
+      {
+         if ( entry.first != core::strngs::fsrtrg() and
+               entry.first != core::strngs::fsspec() )
+         {
+            if ( bad_parameter_list.empty() )
+            {
+               bad_parameter_list = entry.first;
+            }
+            else
+            {
+               bad_parameter_list += " " + entry.first;
+            }
+         }
+      }
+      UTILITY_INPUT( bad_parameter_list.empty(), "Unknown options {"+bad_parameter_list+"}. Grand Canonical choice has only \""+core::strngs::fsrtrg()
+            +"\" as non-standard parameter.", core::strngs::fstry() );
+   }
+   else
+   {
+      if ( spc.has_parameter( core::strngs::fsrtrg() ) )
+      {
+         rateset = spc.parameter( core::strngs::fsrtrg() );
+      }
+   }
+   if ( not rateset.empty() )
+   {
+      boost::tokenizer<> tok( rateset );
+      rates.clear();
+      for ( auto itr = tok.begin(); itr != tok.end(); ++itr )
+      {
+         rates.push_back( boost::lexical_cast< double >( *itr ) );
+      }
+   }
+   // normalize
+   double sum_of_rates = 0.0;
+   rates.resize( channel_system::REGION_COUNT, 0.0 );
+   for ( double v : rates ) sum_of_rates += v;
+   UTILITY_INPUT( not utility::feq(0.0, sum_of_rates), "Grand Canonical sum of proabilities must not be zero.", core::strngs::fstry() );
+   for ( double &v : rates ) v /= sum_of_rates;
+
+   // Create subchoices
+   for ( std::size_t ireg = 0; ireg != channel_system::REGION_COUNT; ++ireg )
+   {
+      cylinder reg = geom.region_geometry( ireg, ispec );
+      std::unique_ptr< add_choice_cell > adr( new add_choice_cell( ispec, *this, reg ) );
+      this->adder_.push_back( adr.get() );
+      adr.release();
+      std::unique_ptr< remove_choice_cell > rmr( new remove_choice_cell( ispec, *this, reg ) );
+      this->remover_.push_back( rmr.get() );
+      rmr.release();
+   }
+}
+!!!143536.cpp!!!	generate(inout sys : simulator) : change_set
+this->begin_trial();
+// Choose region to GC.
+double choice{ sys.get_random().uniform( 0.0, 2.0 ) };
+if (choice < 1.0)
+{
+   // Add
+   for (size_t ireg = channel_system::IZLIM; ireg < channel_system::IBULK; ++ireg)
+   {
+      choice -= this->adder_[ ireg ].probability();
+      if (choice <= 0.0)
+      {
+         return this->adder_[ ireg ].generate(sys);
+      }
+   }
+   return this->adder_[ channel_system::IBULK ].generate(sys);
+}
+else
+{
+   // Remove
+   choice -= 1.0;
+   for (size_t ireg = channel_system::IZLIM; ireg < channel_system::IBULK; ++ireg)
+   {
+      choice -= this->remover_[ ireg ].probability();
+      if (choice <= 0.0)
+      {
+         return this->remover_[ ireg ].generate(sys);
+      }
+   }
+   return this->remover_[ channel_system::IBULK ].generate(sys);
+}
+!!!143536.python!!!	generate(inout sys : simulator) : change_set
+self.begin_trial()
+if sys.get_random().randint(0,1) == 0:
+  # Do add
+  return self.adder_.generate(sys)
+else:
+  # Do delete
+  return self.remover_.generate(sys)
+!!!144048.cpp!!!	remove_success_rate() : double
+double total{ 0.0 };
+for (auto const& chc : this->remover_)
+{
+   total += chc.success_rate ();
+}
+return total;
+
+!!!144176.cpp!!!	report(in sim : simulator, inout out : ostream, in total : size_t) : void
+this->base_choice::report(sim, out, total);
+for (auto const& chc : this->adder_)
+{
+   chc.report(sim, out, total);
+}
+for (auto const& chc : this->remover_)
+{
+   chc.report(sim, out, total);
+}
+!!!144304.cpp!!!	do_reset() : void
+for (auto &chc : this->adder_) chc.reset();
+for (auto &chc : this->remover_) chc.reset();

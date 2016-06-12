@@ -1,0 +1,49 @@
+class substate
+!!!1892783.cpp!!!	swap(inout other : subspecie::substate) : void
+  std::swap(enthalpy_, other.enthalpy_);
+  std::swap(entropy_, other.entropy_);
+  std::swap(rate_swap_, other.rate_swap_);
+  std::swap(relative_population_, other.relative_population_);
+  std::swap(ion_index_, other.ion_index_);
+  std::swap(code_name_, other.code_name_);
+!!!1892911.cpp!!!	read_input(inout parser : input_reader) : void
+  IONCH_REQUIRE(parser.name() == constants::fssubn(), "Input section is not for a subspecie state");
+  IONCH_INPUT(not parser.value().empty(), "Invalid subspecie state without subspecie code", constants::fssubs());
+  code_name_ = parser.value();
+  parser.dequote(code_name_);
+  IONCH_INPUT(code_name_.size() == 2, "Bad specie code name, 2 letters required", constants::fssubs());
+  // Substate parser loop
+  while (parser.next())
+  {
+    if (parser.name() == constants::fsend())
+    {
+      break;
+    }
+    try
+    {
+      // Use fssubn to trigger start of substate definition
+      if  (parser.name() == constants::fsrtsw())
+      {
+        rate_swap_ = boost::lexical_cast< double >(parser.value());
+        IONCH_INPUT(rate_swap_ >= 0.0, "Probability rates must be greater than zero", constants::fssubs());
+      }
+      else if  (parser.name() == constants::fsenth())
+      {
+        enthalpy_ = boost::lexical_cast< double >(parser.value());
+      }
+      else if  (parser.name() == constants::fsentr())
+      {
+        entropy_ = boost::lexical_cast< double >(parser.value());
+      }
+      else
+      {
+        static const bool recognised_option (false);
+        IONCH_INPUT(recognised_option, "Option "+parser.name()+" is not valid at this point in a subspecie section", constants::fssubs());
+      }
+    }
+    catch (boost::bad_lexical_cast &e)
+    {
+      const bool convert_succeed(false);
+      IONCH_INPUT(convert_succeed, e.what(), constants::fssubs());
+    }
+  }

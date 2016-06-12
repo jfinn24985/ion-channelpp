@@ -1,0 +1,113 @@
+class accept_igcmc
+!!!129209.cpp!!!	description(inout os : ostream) : void
+os << "[sampler] " << this->type_label_() << "\n";
+os << " Super-observer: used to perform iterative GCMC simulations.\n";
+os << " Use IGCMC to estimate the excess chemical potentials required\n";
+os << " to maintain the target concentrations of solute species.\n";
+this->igcmc::description(os);
+!!!129337.cpp!!!	do_on_super_loop(inout sys : simulator) : void
+for (std::size_t ispec = 0; ispec != sys.specie_count(); ++ispec)
+{
+   auto & spcobj = sys.get_specie(ispec);
+   // only solute species in PBC simulations
+   const double p_add { this->choices_[ispec].first };
+   const double p_del { this->choices_[ispec].second };
+   // Initialise chempi to the previous value.
+   double chempi (spcobj.excess_potential());
+   const double num_of_particles(spcobj.concentration()*sys.volume(0)/core::constants::to_SI());
+
+   switch(this->variant_)
+   {
+   case 0:
+   case 1:
+      chempi = spcobj.excess_potential() + std::log(p_del/p_add)/2.0;
+      break;
+   case 5:
+      //      ac6nt=ctargi(ispec)*volblk()/tosi
+      //     ac6n=floor(ac6nt)
+      //      if (ac6nt.gt.1.D0) then
+      //        tmp=(ac6nt*ac6nt)/(ac6n*ac6n+ac6n)
+      //      else
+      //        tmp=6.D0*ac6nt
+      //      endif
+      //      write(*,*)"Multiply factor : N_t=",ac6nt," N=",ac6n," factor=",tmp
+      //      call chexi_set (ispec, chexi(ispec) + dlog((p_d/p_a) * tmp)/2.D0 + chisp)
+      //      write(unit=fidlog,fmt=*)"##### ln((P_d/P_a)*(N_t**2/N(N+1)))/2 #####"
+   {
+      double ac6n=std::floor(num_of_particles);
+      double tmp=(num_of_particles > 1 ? (num_of_particles*num_of_particles)/(ac6n*ac6n+ac6n) : (6*num_of_particles));
+      chempi = spcobj.excess_potential() + std::log(tmp*p_del/p_add)/2.0;
+   }
+   break;
+   case 13:
+      //      write(unit=fidlog,fmt=*)"#########       Variant 13      ##########"
+      //       ac6nt=ctargi(ispec)*volblk()/tosi
+      //       tmp=(1.D0-erf((0.5D0-ac6nt)/sqrt(2.D0*ac6nt)))/2.D0
+      //       write(*,*)"Multiply factor : N_t=",ac6nt," N=",ac6n," factor=",tmp
+      //       call chexi_set (ispec, chexi(ispec) + dlog(tmp*p_d/p_a)/2.D0 + chisp)
+      //       write(unit=fidlog,fmt=*)"##### ln(1-erf(1/2-N_t)/sqrt(2*N_t)) #####"
+   {
+      double tmp=(1-std::erf((0.5-num_of_particles)/std::sqrt(2*num_of_particles)))/2;
+      chempi = spcobj.excess_potential() + std::log(tmp*p_del/p_add)/2.0;
+   }
+   break;
+   default:
+   {
+      std::size_t known_variant = 0;
+      UTILITY_INPUT(this->variant_ == known_variant, "Accept IGCMC variant is unknown", core::strngs::sampler_label());
+   }
+   break;
+   }
+   spcobj.set_excess_potential(chempi);
+}
+!!!129465.cpp!!!	make_super_looper(in params : string, in sim : simulator) : void
+bool required_tags_step = false;
+bool required_tags_variant = false;
+std::unique_ptr< accept_igcmc > smplr( new accept_igcmc );
+// Check parameters for usable values
+for (auto const &item:params)
+{
+  if (item.first == core::strngs::fsnstp ())
+  {
+    smplr->set_loop_size (boost::lexical_cast < std::size_t > (item.second));
+    required_tags_step = true;
+  }
+  else if (item.first == "variant")
+  {
+    smplr->variant_ = (boost::lexical_cast < std::size_t > (item.second));
+    required_tags_variant = true;
+  }
+  else
+  {
+    const std::string known_key;
+    UTILITY_INPUT (item.first == known_key,
+                   "Parameter [" + item.first +
+                   "] unknown for sampler type [" +
+                   accept_igcmc::type_label_ () + "]",
+                   core::strngs::sampler_label ());
+  }
+}
+UTILITY_INPUT (required_tags_step,
+               "Required number of steps tag was not present.",
+               core::strngs::sampler_label ());
+if (not required_tags_variant)
+{
+  // default variant is '0'
+  smplr->variant_ = 0;
+}
+boost::shared_ptr< periodic_cube::igcmc > result( smplr.release() );
+dynamic_cast< periodic_cube::periodic_system& >( sim ).set_super_looper( result );
+
+!!!214704.cpp!!!	do_prepare(inout sim : simulator) : void
+this->igcmc::prepare( sim );
+
+// Connect to signals.
+if (not this->accept_conx_.connected())
+{
+  auto sig = boost::any_cast< periodic_cube::alternater_sampler::signal_type* >( sim.get_signal( periodic_cube::alternater_sampler::type_label() ) );
+  this->accept_conx_ = sig->connect(boost::bind(&accept_igcmc::on_update, this, _1));
+}
+
+!!!218288.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
+wr[ ix ].add_entry( "variant", this->variant_ );

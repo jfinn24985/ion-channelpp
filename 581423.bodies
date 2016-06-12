@@ -1,0 +1,145 @@
+class GeometryValidator
+!!!722863.cpp!!!	cell_hlength() : double
+return cell_hlength_;
+!!!722735.cpp!!!	cell_radius(in idx : int) : double
+return cell_radius_;
+!!!1053231.cpp!!!	GeometryValidator(in zl4 : double, in rl5 : double, in zl1 : double, in rl1 : double, in rl4 : double, in rlvest : double)
+: cell_hlength_ (zl4)
+, cell_radius_ (rl5)
+, pore_hlength_ (zl1)
+, pore_radius_ (rl1)
+, vestibule_radius_ (rlvest)
+, volume_ ()
+{}
+!!!1130927.cpp!!!	pore_radius() : double
+return pore_radius_;
+!!!1131183.cpp!!!	pore_cylinder_hlength() : double
+switch (idx)
+{
+case 1:
+  return pore_hlength_ - vestibule_radius_;
+case 2:
+  return pore_hlength_;
+case 3:
+  return pore_hlength_ - curve_radius_;
+case 4:
+  return cell_hlength_;
+default:
+  IONCH_INDEX(idx, 4,"invalid index for array zl");
+  return 0;
+}
+
+!!!1138607.cpp!!!	set_volume() : void
+IONCH_REQUIRE(bal::math::feq(volume_,0.0),"Can not set the volume twice.");
+double zl4;
+double rl5;
+// To calculate simulation cell parameters, subtract channel volume
+const double calculated_volume_of_bulk_ = a_volume
+    // inner cylinder [pi * r^2 * l]
+    - (constants::pi * std::pow (pore_radius_) * 2 * (pore_hlength_))
+    // vestibules
+    - volume_of_rotation (pore_radius_ + vestibule_radius_, vestibule_radius_);
+
+// Check volume is not negative!
+if (calculated_volume_of_bulk_ < 0.0)
+{
+  std::stringstream osmsg_;
+  osmsg_ << "Error: Channel protein extends outside the simulation box dimensions\n";
+  osmsg_ << "calculated from salt concentrations and target particle number.\n";
+  osmsg_ << "SUGGESTED SOLUTION: increase " << strngs::fsntrg << " option in 'geom' input.\n";
+  IONCH_INPUT(calculated_volume_of_bulk_ > 0.0, osmsg_.str ());
+}
+
+// Make bulk region of sim cell four times as long as diameter [h=4r so v=pi*(r^2)*(4r)]
+rl5 = std::cbrt (calculated_volume_of_bulk_ / (4*constants::pi));
+// Add zl2 to calculated h to get total zl4
+result.first = state_->pore_hlength () + 2 * rl5;
+
+// Check derived radius is larger than rl4.  We know zl4 is
+// larger than zl2 because calculated_volume_of_bulk_ is positive.
+if (rl5 <= protein_radius_)
+{
+  std::stringstream osmsg_;
+  osmsg_ << "Error: Channel protein extends outside the simulation box dimensions\n";
+  osmsg_ << "calculated from salt concentrations and target particle number.\n";
+  osmsg_ << "SUGGESTED SOLUTION: increase " << strngs::fsntrg << " option in 'geom' input.\n";
+  IONCH_INPUT(rl5 > protein_radius_, osmsg_.str ());
+}
+*(const_cast< double* >(&cell_hlength_)) = zl4;
+*(const_cast< double* >(&cell_radius_)) = rl5;
+*(const_cast< double* >(&volume_)) = a_volume;
+!!!1131311.cpp!!!	set_volume(in a_volume : double) : void
+IONCH_REQUIRE(bal::math::feq(volume_,0.0),"Can not set the volume twice.");
+double zl4;
+double rl5;
+// To calculate simulation cell parameters, subtract channel volume
+const double calculated_volume_of_bulk_ = a_volume
+    // inner cylinder [pi * r^2 * l]
+    - (constants::pi * std::pow (pore_radius_) * 2 * (pore_hlength_))
+    // vestibules
+    - volume_of_rotation (pore_radius_ + vestibule_radius_, vestibule_radius_);
+
+// Check volume is not negative!
+if (calculated_volume_of_bulk_ < 0.0)
+{
+  std::stringstream osmsg_;
+  osmsg_ << "Error: Channel protein extends outside the simulation box dimensions\n";
+  osmsg_ << "calculated from salt concentrations and target particle number.\n";
+  osmsg_ << "SUGGESTED SOLUTION: increase " << strngs::fsntrg << " option in 'geom' input.\n";
+  IONCH_INPUT(calculated_volume_of_bulk_ > 0.0, osmsg_.str ());
+}
+
+// Make bulk region of sim cell four times as long as diameter [h=4r so v=pi*(r^2)*(4r)]
+rl5 = std::cbrt (calculated_volume_of_bulk_ / (4*constants::pi));
+// Add zl2 to calculated h to get total zl4
+result.first = state_->pore_hlength () + 2 * rl5;
+
+// Check derived radius is larger than rl4.  We know zl4 is
+// larger than zl2 because calculated_volume_of_bulk_ is positive.
+if (rl5 <= protein_radius_)
+{
+  std::stringstream osmsg_;
+  osmsg_ << "Error: Channel protein extends outside the simulation box dimensions\n";
+  osmsg_ << "calculated from salt concentrations and target particle number.\n";
+  osmsg_ << "SUGGESTED SOLUTION: increase " << strngs::fsntrg << " option in 'geom' input.\n";
+  IONCH_INPUT(rl5 > protein_radius_, osmsg_.str ());
+}
+*(const_cast< double* >(&cell_hlength_)) = zl4;
+*(const_cast< double* >(&cell_radius_)) = rl5;
+*(const_cast< double* >(&volume_)) = a_volume;
+!!!1131055.cpp!!!	vestibule_radius() : double
+vestibule_radius_;
+!!!978863.cpp!!!	valid_position(in a_z : double, in a_r : double, in a_radius : double) : bool
+const double drznew = std::abs (a_z);
+  // If point is in the bulk domain, in_region is good enough
+  if (drznew >= (this->pore_hlength_ + this->vestibule_radius_ + a_radius))
+  {
+    return true;
+  }
+  // Within channel cylinder inner-radius?
+  if (a_r <= this->pore_radius_ - a_radius)
+  {
+    return true;
+  }
+  // Inside channel (and outside cylinder) OR Outside maximum vestibule
+  // radius?
+  if (drznew < this->pore_hlength_ or a_r > (this->pore_radius_ + this->vestibule_radius_))
+  {
+    return false;
+  }
+
+// calculate (sqr) of distance from arch centerpoint for particles
+// that are outside the radii of the central cylinder.
+const double rl4 = std::pow(this->vestibule_radius_ + a_radius, 2);
+const double rsq = std::pow(this->pore_radius_ + this->vestibule_radius_ - a_r, 2)
+                   + std::pow(drznew - this->pore_hlength_ + this->vestibule_radius_, 2);
+return (rsq > rl4);
+
+!!!1053615.cpp!!!	volume_of_rotation(in radial_disp : double, in arc_radius : double) : double
+return 2.0 * constants::pi * arc_radius
+       * (
+         std::pow(radial_disp,2)
+         - radial_disp * arc_radius * constants::pi / 4.0
+         + 2.0 * std::pow(arc_radius,2) / 3.0
+       );
+

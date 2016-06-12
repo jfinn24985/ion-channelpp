@@ -1,0 +1,272 @@
+class region_test_suite
+!!!1941935.cpp!!!	test_region_ctor() : void
+  const std::string name ("bulk");
+  const double z1 = 10;
+  const double z2 = 5;
+  const double r = 5;
+
+  ionch::region var1 (name, z1, r);
+  TS_ASSERT_EQUALS(var1.code_name(), name);
+
+  boost::mt19937 rngr;
+  rngr.seed(17041965);
+  boost::uniform_01< boost::mt19937, double > rng (rngr);
+  for (size_t idx = 0; idx != 1000; ++idx)
+  {
+    const double z0 = z1 * 2 * rng() - z1;
+    const double r0 = 5.0 * rng ();
+    TS_ASSERT(var1.in_region(z0,r0));
+  }
+  for (size_t idx = 0; idx != 10; ++idx)
+  {
+    const double z0 = z1 + rng();
+    const double r0 = 5.0 * rng ();
+    TS_ASSERT(not var1.in_region(z0,r0));
+  }
+
+  for (size_t idx = 0; idx != 10; ++idx)
+  {
+    const double z0 = z1 * 2 * rng() - z1;
+    const double r0 = 5.0 + rng ();
+    TS_ASSERT(not var1.in_region(z0,r0));
+  }
+!!!1942063.cpp!!!	test_region_copy_ctor() : void
+  const std::string name ("bulk");
+  const double z1 = 10;
+  const double z2 = 5;
+  const double r = 5;
+
+  ionch::region var0 (name, z1, r);
+  TS_ASSERT_EQUALS(var0.code_name(), name);
+
+  ionch::region var1 (var0);
+  TS_ASSERT_EQUALS(var1.code_name(), name);
+  TS_ASSERT_EQUALS(var0.code_name(), var1.code_name());
+  TS_ASSERT_EQUALS(var0.zlimit(), var1.zlimit());
+  TS_ASSERT_EQUALS(var0.rlimit(), var1.rlimit());
+!!!1942191.cpp!!!	test_region_copy_operator() : void
+  const std::string name ("bulk");
+  const double z1 = 10;
+  const double z2 = 5;
+  const double r = 5;
+
+  ionch::region var0 (name, z1, r);
+  TS_ASSERT_EQUALS(var0.code_name(), name);
+
+  ionch::region var1 ("other", z2, z1);
+  TS_ASSERT_EQUALS(var1.code_name(), "other");
+  TS_ASSERT_EQUALS(var1.zlimit(), z2);
+  TS_ASSERT_EQUALS(var1.rlimit(), z1);
+
+  var1 = var0;
+  TS_ASSERT_EQUALS(var1.code_name(), name);
+  TS_ASSERT_EQUALS(var0.code_name(), var1.code_name());
+  TS_ASSERT_EQUALS(var0.zlimit(), var1.zlimit());
+  TS_ASSERT_EQUALS(var0.rlimit(), var1.rlimit());
+!!!1942319.cpp!!!	test_region_serialize() : void
+  const std::string name ("bulk");
+  const double z1 = 10;
+  const double r = 5;
+
+  ionch::region var0 (name, z1, r);
+  ionch::region var1 ("other", r, z1);
+  TS_ASSERT_EQUALS(var1.code_name(), "other");
+  TS_ASSERT_EQUALS(var1.zlimit(), r);
+  TS_ASSERT_EQUALS(var1.rlimit(), z1);
+
+  std::stringstream store;
+  {
+    boost::archive::text_oarchive oa(store);
+    // write class instance to archive
+    oa << var0;
+  }
+  {
+    boost::archive::text_iarchive ia(store);
+    // get class instance from archive
+    ia >> var1;
+  }
+  TS_ASSERT_EQUALS(var0.code_name(), var1.code_name());
+  TS_ASSERT_EQUALS(var0.zlimit(), var1.zlimit());
+  TS_ASSERT_EQUALS(var0.rlimit(), var1.rlimit());
+!!!1942447.cpp!!!	test_split_region_ctor1() : void
+  const double z1 = 10;
+  const double z2 = 5;
+  const double r = 5;
+
+  ionch::split_region var1 (z1, z2, r);
+
+  boost::mt19937 rngr;
+  rngr.seed(17041965);
+  boost::uniform_01< boost::mt19937, double > rng (rngr);
+  for (size_t idx = 0; idx != 100; ++idx)
+  {
+    const double z = (z1 - z2) * (2 * rng() - 1);
+    const double z0 (z < 0.0 ? z - z2 : z + z2);
+    const double r0 = 5.0 * rng ();
+    TS_ASSERT(std::abs(z0) < z1);
+    TS_ASSERT(std::abs(z0) > z2);
+    TS_ASSERT(var1.in_region(z0, r0));
+
+  }
+  for (size_t idx = 0; idx != 10; ++idx)
+  {
+    const double z0 = (rng() > 0.5 ? z1 + rng() : z2 - rng ());
+    const double r0 = 5.0 * rng ();
+    TS_ASSERT(not var1.in_region(z0,r0));
+  }
+
+  for (size_t idx = 0; idx != 10; ++idx)
+  {
+    const double z0 = (z1 - z2) * (2 * rng() - 1);
+    const double r0 = 5.0 + rng ();
+    TS_ASSERT(not var1.in_region(z0,r0));
+  }
+!!!1942575.cpp!!!	test_split_region_ctor2() : void
+  const double z1 = 10;
+  const double z2 = 5;
+  const double r = 5;
+
+  ionch::split_region var1 (z2, z1, r);
+
+  boost::mt19937 rngr;
+  rngr.seed(17041965);
+  boost::uniform_01< boost::mt19937, double > rng (rngr);
+  for (size_t idx = 0; idx != 100; ++idx)
+  {
+    const double z = (z1 - z2) * (2 * rng() - 1);
+    const double z0 (z < 0.0 ? z - z2 : z + z2);
+    const double r0 = 5.0 * rng ();
+    TS_ASSERT(std::abs(z0) < z1);
+    TS_ASSERT(std::abs(z0) > z2);
+    TS_ASSERT(var1.in_region(z0, r0));
+
+  }
+  for (size_t idx = 0; idx != 10; ++idx)
+  {
+    const double z0 = (rng() > 0.5 ? z1 + rng() : z2 - rng ());
+    const double r0 = 5.0 * rng ();
+    TS_ASSERT(not var1.in_region(z0,r0));
+  }
+
+  for (size_t idx = 0; idx != 10; ++idx)
+  {
+    const double z0 = (z1 - z2) * (2 * rng() - 1);
+    const double r0 = 5.0 + rng ();
+    TS_ASSERT(not var1.in_region(z0,r0));
+  }
+!!!1942703.cpp!!!	test_split_region_copy_ctor() : void
+  const double z1 = 10;
+  const double z2 = 7;
+  const double r = 5;
+
+  ionch::split_region var0 (z1, z2, r);
+
+  ionch::split_region var1 (var0);
+  TS_ASSERT_EQUALS(var0.zlimit(), var1.zlimit());
+  TS_ASSERT_EQUALS(var0.rlimit(), var1.rlimit());
+  TS_ASSERT_EQUALS(var0.inner_limit(), var1.inner_limit());
+!!!1942831.cpp!!!	test_split_region_copy_operator() : void
+  const double z1 = 10;
+  const double z2 = 7;
+  const double r = 5;
+
+  ionch::split_region var0 (z1, z2, r);
+
+  ionch::split_region var1 (r, z2, z1);
+  TS_ASSERT_EQUALS(var1.zlimit(), z2);
+  TS_ASSERT_EQUALS(var1.inner_limit(), r);
+  TS_ASSERT_EQUALS(var1.rlimit(), z1);
+
+  var1 = var0;
+  TS_ASSERT_EQUALS(var0.zlimit(), var1.zlimit());
+  TS_ASSERT_EQUALS(var0.rlimit(), var1.rlimit());
+  TS_ASSERT_EQUALS(var0.inner_limit(), var1.inner_limit());
+!!!1942959.cpp!!!	test_split_region_serialize() : void
+  const double z1 = 10;
+  const double z2 = 7;
+  const double r = 5;
+
+  ionch::split_region var0 (z1, z2, r);
+  ionch::split_region var1 (r, z2, z1);
+  TS_ASSERT_DIFFERS(var0.zlimit(), var1.zlimit());
+  TS_ASSERT_DIFFERS(var1.inner_limit(), var0.inner_limit());
+  TS_ASSERT_DIFFERS(var1.rlimit(), var0.rlimit());
+
+  std::stringstream store;
+  {
+    boost::archive::text_oarchive oa(store);
+    // write class instance to archive
+    oa << var0;
+  }
+  {
+    boost::archive::text_iarchive ia(store);
+    // get class instance from archive
+    ia >> var1;
+  }
+  TS_ASSERT_EQUALS(var0.zlimit(), var1.zlimit());
+  TS_ASSERT_EQUALS(var0.rlimit(), var1.rlimit());
+  TS_ASSERT_EQUALS(var0.inner_limit(), var1.inner_limit());
+!!!1943215.cpp!!!	test_split_generate() : void
+  const std::string name ("bulk");
+  const double z1 = 10;
+  const double z2 = 5;
+  const double r1 = 5;
+
+  ionch::split_region var1 (z1, z2, r1);
+  ionch::region var2 (name, z1, r1);
+
+  boost::mt19937 rngr;
+  rngr.seed(17041965);
+  boost::uniform_01< boost::mt19937, double > rng (rngr);
+  for (size_t idx = 0; idx != 10000; ++idx)
+  {
+    double z = 0.0, r = 0.0;
+    var1.generate_in_region(z, r, 0.0, rng(), rng());
+    TS_ASSERT(std::abs(z) <= z1);
+    TS_ASSERT(std::abs(z) >= z2);
+    TS_ASSERT(r <= r1);
+    TS_ASSERT(var1.in_region(z, r, 0.0));
+    var2.generate_in_region(z, r, 0.0, rng(), rng ());
+    TS_ASSERT(std::abs(z) <= z1);
+    TS_ASSERT(r <= r1);
+    TS_ASSERT(var2.in_region(z, r, 0.0));
+  }
+  // Test extremes
+  for (size_t idx = 0; idx != 100; ++idx)
+  {
+    double z = 0.0, r = 0.0;
+    const double rad (2.49 * idx/ 100);
+    var1.generate_in_region(z, r, rad, 1, 1);
+    TS_ASSERT(std::abs(z) <= (z1 - rad) or utility::feq(std::abs(z), (z1 - rad)));
+    TS_ASSERT(std::abs(z) >= (z2 + rad));
+    TS_ASSERT(r <= (r1 - rad));
+    TS_ASSERT(r >= 0);
+    TS_ASSERT(var1.in_region(z, r, rad));
+    var2.generate_in_region(z, r, rad, 1, 1);
+    TS_ASSERT(std::abs(z) <= (z1 - rad));
+    TS_ASSERT(r <= (r1 - rad));
+    TS_ASSERT(r >= 0);
+    TS_ASSERT(var2.in_region(z, r, rad));
+    var1.generate_in_region(z, r, rad, 0, 0);
+    TS_ASSERT(std::abs(z) <= (z1 - rad) or utility::feq(std::abs(z), (z1 - rad)));
+    TS_ASSERT(std::abs(z) >= (z2 + rad));
+    TS_ASSERT(r <= (r1 - rad));
+    TS_ASSERT(r >= 0);
+    TS_ASSERT(var1.in_region(z, r, rad));
+    var2.generate_in_region(z, r, rad, 0, 0);
+    TS_ASSERT(std::abs(z) <= (z1 - rad));
+    TS_ASSERT(r <= (r1 - rad));
+    TS_ASSERT(r >= 0);
+    TS_ASSERT(var2.in_region(z, r, rad));
+    var1.generate_in_region(z, r, rad, 0.5, 0.5);
+    TS_ASSERT(std::abs(z) <= (z1 - rad));
+    TS_ASSERT(std::abs(z) >= (z2 + rad));
+    TS_ASSERT(r <= (r1 - rad));
+    TS_ASSERT(r >= 0);
+    TS_ASSERT(var1.in_region(z, r, rad));
+    var2.generate_in_region(z, r, rad, 0.5, 0.5);
+    TS_ASSERT(std::abs(z) <= (z1 - rad));
+    TS_ASSERT(r <= (r1 - rad));
+    TS_ASSERT(r >= 0);
+    TS_ASSERT(var2.in_region(z, r, rad));
+  }

@@ -1,0 +1,238 @@
+class trial_generator
+!!!1851695.cpp!!!	build(inout fm : formation, inout rgen : mersenne_twister_19937, in use_grid : bool, in do_bulk : bool) : void
+  struct spec_
+  {
+    std::vector< double > cutoff_sq; // The actual minimum inter-particle distances
+    std::unique_ptr< move_generator > adder; // The particle generator
+    double radius; // The specie radius
+    double max_sep; // The maximum inter-particle spacing
+    size_t id; // specie if in conformation
+    size_t target_count; // target particle count
+  };
+
+  // The grid to use if required.
+  boost::shared_ptr< grid > grid_;
+
+  double charge;
+
+  //size_t ispec, size_t target_particle_number_, mersenne_twister_19937 &rgen)
+  // }
+  // {
+  // - Calculate required number of particles per specie
+  // - Check existing particles in conformation
+  // - If use_grid build grid.
+  // - Create add_particle object for each specie.
+  // - Randomly select adder and try addition
+  // -- count attempts and exit if max-trys reached.
+  // -- if add successful decrement count for specie
+  // -- if specie count == 0 then remove its adder
+  std::vector < spec_ > targets(fm.specie_set().size());
+
+  // ratio of particles per molar fraction
+  const double rmolar_ ( do_bulk ?
+      fm.geometry().bulk_geometry().volume() / constants::to_SI () :
+      fm.target_particle_number() / fm.specie_set().ionic_strength() );
+
+  // ------- Calculate particle numbers --------------------
+  // (Do not handle any "structural" ions as this is bulk sim.)
+  // Use [spc] = n_spc * tosi / V_tot(spc)
+  for (size_t ispec = 0; ispec != fm.specie_set().size(); ++ispec)
+    {
+      targets [ispec].id = ispec;
+      targets [ispec].radius =  fm.specie_set().get_specie(ispec).radius();
+      if (fm.specie_set().get_specie(ispec).is_solute())
+        {
+          targets [ispec].target_count = (fm.specie_set().get_specie(ispec).concentration() * rmolar_);
+        }
+      else
+        {
+          targets [ispec].target_count = 0;
+        }
+    }
+
+
+  if (do_bulk)
+    {
+      // This method must rest 'formation' variables then reinitialise
+      // the system as PBC box with required solute ions.
+      fm.conformation().reset ();
+    }
+  else
+    {
+      // Compare structural count to target number of particles and
+      // create particles if necessary.
+      for (size_t ispec = 0; ispec != fm.specie_set().size (); ++ispec)
+        {
+          if (fm.conformation().size (ispec) == targets [ispec].target_count)
+            {
+              targets [ispec].target_count = 0;
+            }
+          else
+            {
+              // Only check cases where existing particle number is not the target number.
+
+              // Set cutoff difference to two times square-root of target. For small
+              // numbers we allow difference to be nearly as large as target
+              const size_t max_diff (std::max(8.0,2.0*std::sqrt(double(fm.conformation().size(ispec)))));
+              if (fm.conformation().size(ispec) > targets [ispec].target_count)
+                {
+                  // --------------------------------------------------
+                  // When comparing solute specie target number of particles
+                  // we allow actual number to exceed target by max_diff
+                  IONCH_INPUT ((max_diff > fm.conformation().size(ispec) - targets [ispec].target_count)
+                      , "Too many particles of type " + fm.specie_set().get_specie(ispec).code_name() + " defined in input"
+                      , constants::fsspec());
+                  targets [ispec].target_count = 0;
+                }
+              else
+                {
+                  // When too few by more than max_diff then we add some, else do nothing
+                  if (max_diff > targets [ispec].target_count - fm.conformation().size(ispec))
+                    {
+                      targets [ispec].target_count -= fm.conformation().size(ispec);
+                    }
+                  else
+                    {
+                      targets [ispec].target_count = 0;
+                    }
+                }
+            }
+        }
+    }
+
+  // Calculate total number of particles to add and charge
+  size_t new_particles = 0;
+  for (size_t ispec = 0; ispec != fm.specie_set().size(); ++ispec)
+    {
+      const double valency (fm.specie_set().get_specie(ispec).valency());
+      charge += targets [ispec].target_count * valency;
+      charge += fm.conformation().size(ispec) * valency;
+      new_particles += targets [ispec].target_count;
+    }
+
+  // Adjust to near neutral charge.
+  if (static_cast< size_t >(std::floor(std::abs(charge))) != 0)
+    {
+      if (charge > 0.0)
+        {
+          for (size_t ispec = 0; ispec != fm.specie_set().size(); ++ispec)
+            {
+              if (fm.specie_set().get_specie(ispec).is_solute()
+                  and 0.0 > fm.specie_set().get_specie(ispec).valency())
+                {
+                  const size_t delta (std::floor(charge/fm.specie_set().get_specie(ispec).valency()));
+                  targets [ispec].target_count  += delta;
+                  new_particles += delta;
+                  break;
+                }
+            }
+        }
+      else
+        {
+          for (size_t ispec = 0; ispec != fm.specie_set().size(); ++ispec)
+            {
+              if (fm.specie_set().get_specie(ispec).is_solute()
+                  and 0.0 < fm.specie_set().get_specie(ispec).valency())
+                {
+                  const size_t delta (std::floor(-charge/fm.specie_set().get_specie(ispec).valency()));
+                  targets [ispec].target_count  += delta;
+                  new_particles += delta;
+                  break;
+                }
+            }
+        }
+    }
+
+  // If no particles to add, return
+  if (new_particles == 0) { return; }
+
+  // Array of square minimum distances
+  double max_radius;
+  for (size_t ispec = 0; ispec != fm.specie_set().size(); ++ispec)
+    {
+      max_radius = std::max(max_radius, targets [ispec].radius);
+      for (int jspec = ispec; jspec != fm.specie_set().size (); ++jspec)
+      {
+        const double sep (utility::sqr (targets [ispec].radius + targets [jspec].radius));
+        targets [ispec].cutoff_sq[jspec] = sep;
+        targets [jspec].cutoff_sq[ispec] = sep;
+      }
+    }
+
+  if (use_grid)
+    {
+      if (do_bulk)
+        {
+          // Construct cubic grid
+          grid_.reset(new grid(fm.geometry().bulk_geometry().length(), 2*max_radius, gen_));
+        }
+      else
+        {
+          // Construct cylindrical grid
+          grid_.reset(new grid(fm.geometry().zl(4), fm.geometry().zl(2), fm.geometry().rl(5), fm.geometry().rl(2), 2*max_radius, gen_));
+        }
+      IONCH_INPUT (new_particles < grid_->size(), "Too few positions on grid for requested number of particles.", constants::fschnl());
+    }
+
+  std::vector< size_t > choices; // list of specie ids that have target counts
+  for (size_t ispec = 0; ispec != fm.specie_set().size(); ++ispec)
+    {
+      targets [ispec].max_sep =  targets [ispec].radius + max_radius;
+      if (targets [ispec].target_count != 0)
+        {
+          choices.push_back (ispec);
+          if (use_grid)
+            {
+              targets [ispec].adder.reset(new add_particle_grid(ispec, *grid_));
+            }
+          else
+            {
+              targets [ispec].adder.reset(static_cast< move_generator* >(do_bulk ? new add_particle_bulk(ispec)
+              : new add_particle(ispec, fm.number_of_regions() - 1)) );
+            }
+        }
+    }
+
+  size_t trys = 0; // Guard variable
+  const size_t maxtrys (100 * new_particles); // set max to average of 100 trys per particle.
+
+  // Create particles until target_particle_number_ have been created.
+  while (new_particles != 0 and trys < maxtrys)
+  {
+    ++trys;
+    trial_move t;
+    // Select specie
+    const size_t choice (choices.size() > 1 ? gen_(choices.size ()) : choices.front());
+    const size_t ispec (choices[choice]);
+    IONCH_CHECK(targets[ispec].target_count != 0, "Target choice has zero particle required");
+    targets[ispec].adder->do_generate(fm, t, rgen);
+    if (not t.is_fail())
+    {
+      IONCH_CHECK(t.size() == 1, "Problem with add-particle generator, valid move but count not one");
+      // Check inter-particle distances
+      bool no_overlap = true;
+      for (size_t idx = 0; no_overlap and idx != fm.conformation().active_size(); ++idx)
+      {
+        const double dx = std::abs(t[0].x - fm.conformation().rx(idx));
+        const double dy = std::abs(t[0].y - fm.conformation().ry(idx));
+        const double dz = std::abs(t[0].z - fm.conformation().rz(idx));
+        size_t jspec = fm.conformation().specie_index(idx);
+        if (targets[ispec].max_sep < std::max(dx,std::max(dy,dz)))
+        {
+          no_overlap = targets[ispec].cutoff_sq[jspec] < (dx*dx+dy*dy+dz*dz);
+        }
+      }
+      if (no_overlap)
+      {
+        fm.on_commit(t);
+        --new_particles;
+        --targets[ispec].target_count;
+        // Remove choice target when count reaches zero
+        if (targets[ispec].target_count == 0)
+          {
+            choices.erase(choices.begin() + choice);
+          }
+      }
+    }
+  }
+  IONCH_INPUT (new_particles == 0, "Unable to add all particles for initial configuration, try \"usegrid true\" option.", constants::fschnl());

@@ -1,0 +1,223 @@
+class PatchSet
+!!!740271.cpp!!!	genrch(in aconf : Configuration, in atrial : basic_stepper) : void
+IONCH_REQUIRE (not indx_.empty(), "patch::genrch called before processing 'A' matrix");
+IONCH_REQUIRE (atrial.get_c().size () >= size (), "trail.c vector is too small");
+IONCH_REQUIRE (atrial.get_h().size () >= size (), "trail.h vector is too small");
+atrial.set_patch_size (size ());
+
+for (std::size_t ipch = 0; ipch != size (); ++ipch)
+{
+  atrial.get_c(ipch) = 0;
+}
+for (auto prtcle = aconf.begin (); prtcle != aconf.end (); ++prtcle)
+{
+  if (prtcle->is_valid ())
+  {
+    const double rxi = prtcle->x();
+    const double ryi = prtcle->y();
+    const double rzi = prtcle->z();
+    for (auto ipch = begin (); ipch != end (); ++ipch)
+    {
+      const double rxik = ipch->x() - rxi;
+      const double ryik = ipch->y() - ryi;
+      const double rzik = ipch->z() - rzi;
+      const double ripip = bal::math::hypot (rxik, ryik, rzik);
+      atrial.set_rip (prtcle->index(), ipch->index(), ripip);
+      const double rzkj = rxik * ipch->ux() + ryik * ipch->uy() + rzik * ipch->uz();
+      atrial.get_c (ipch->index ()) -= ipch->deps() * prtcle->get_specie().q() * rzkj * prtcle->rieps()
+                                       / (4 * constants::pi * std::pow(ripip,3));
+    }
+  }
+}
+
+for (std::size_t ipch = 0; ipch != size (); ++ipch)
+{
+  atrial.get_h (ipch) = atrial.c (ipch);
+}
+
+// ------- CALCULATE INITIAL H ------------------------
+baksub (atrial.get_h ());
+// Generate sum of the initial surface charge (which should be zero)
+double areat = 0;
+double chgt = 0;
+for (auto ipch = begin (); ipch != end (); ++ipch)
+{
+  areat += ipch->area ();
+  chgt  += ipch->area () * atrial.h (ipch->index ());
+}
+chgt /= constants::qstar();
+
+constants::os_log << strngs::horizontal_bar << "\n";
+constants::os_log << "Initial ICC calculation:\n";
+constants::os_log << "   Induced charge /e " << chgt << " (~ 0.0)\n";
+constants::os_log << "  Total area / Ang^2 " << areat << "\n";
+constants::os_log << strngs::horizontal_bar << "\n";
+
+!!!739887.cpp!!!	back_substitution(inout hmat : std::vector< double >) : void
+IONCH_REQUIRE (not is_homogeneous(), "Error: patch::baksub called when system is homogeneous");
+IONCH_REQUIRE (irdamx_, "Error: patch::baksub called with no inverted A matrix");
+char trans[2] = {0};
+trans[0] = (is_row_major_ ? 'N' : 'T');
+int info = 0;
+int nrhs = 1;       // Width of 'h' matrix (1 === vector)
+int n1 = size ();   // Width of data in 'amx'
+int n2 = size ();   // Length of data in 'h' and 'amx'
+int nx = amx_.shape () [0]; // Width extent of 'amx': handles general case
+// where amx[X1][X2] is definition of matrix amx
+// of which we only use amx[Y][Z] where Y <= X1
+// and Z <= X2. n2 = Z, n1 = Y and nx = X1
+// (algorithm does not need to know X2 as long
+// as Z <= X2.)
+
+// Use a LAPACK method to back substitute the rhs (hmat)
+// from the solution matrices 'amx' and 'indx'.
+bal::lapack::dgetrs (trans, n1, nrhs, amx_.data (), nx, indx_.data (), hmat.data (), n2, &info);
+IONCH_ALWAYS (0 != info, "Matrix back-substitution failed.");
+
+!!!741039.python!!!	grid_write() : void
+fngpch = "dat/ptchgeom.%s.dat" % Constants.firun()
+gridos = open(fngpch, "w")
+
+ref = PatchReference (self)
+for ii in len(self):
+  ref.index = ii
+  print >>gridos, ref.x(), ref.y(), ref.z(), ref.area(), ref.ux(), ref.uy(), ref.uz(), ref.deps()
+
+!!!1223855.python!!!	readam(in self : ) : bool
+print >>Channel.os_log, " Reading in LU decomposed ICC matrix"
+
+is_amx = open(PatchEnvironment.default_matrix_filename % Channel.run_id (), "r")
+if not is_amx:
+  return False  
+print >>Channel.os_log, " Found matrix file"
+# Check values
+cknpch = None  # Number of patch tiles
+chnsb0 = None  # Integration subtile factor
+ckzl = None # Geometry axial parameters 
+ckrl = None # Geometry radial parameters
+ckrlvs = None # Vestibule radius
+ckrlcv = None # Outer arc radius
+ckepsw = None # Solvent eps
+ckepsp = None # Protein eps
+
+( cknpch, chnsb0 ) = is_amx.next ().split(1)
+ckzl = is_amx.next ().split(1)
+ckrl = is_amx.next ().split(2)
+( ckrlvs, ckrlcv, ckepsw, ckepsp ) = is_amx.next ().split(3)
+is_amx.next () # skip blank line
+
+scale = 16384.0
+is_match = True
+is_match = is_match and (cknpch == len(self))
+is_match = is_match and (chnsb0 == self.environment.patch_subtile_factor)
+is_match = is_match and (ckzl[0] == int(scale * self.environment.geom.zl(1)))
+is_match = is_match and (ckzl[1] == int(scale * self.environment.geom.zl(4)))
+is_match = is_match and (ckrl[0] == int(scale * self.environment.geom.rl(1)))
+is_match = is_match and (ckrl[1] == int(scale * self.environment.geom.rl(4)))
+is_match = is_match and (ckrl[2] == int(scale * self.environment.geom.rl(5)))
+is_match = is_match and (ckrlvs == int(scale * self.environment.geom.rlvest()))
+is_match = is_match and (ckrlcv == int(scale * self.environment.geom.rlcurv()))
+is_match = is_match and (ckepsw == int(scale * self.environment.eps_solvent))
+is_match = is_match and (ckepsp == int(scale * self.environment.eps_protein))
+
+if not is_match:
+  print >>Channel.os_log, " Matrix from disk does not match current parameters."
+  return is_match
+
+print >>Channel.os_log, " Matrix from disk matchs current parameters."
+  
+# Determine column order from first matrix row/column
+self.is_row_major = True
+ipch = 0
+self.icc_index[ipch] = int(is_amx.next)
+for jpch in range(len(self)):
+  arr = is_amx.next ().split()
+  if self.environment.is_row_major:
+    if int(arr[0]) != ipch or int(arr[1]) != jpch:
+      if int(arr[0]) == jpch and int(arr[1]) == ipch:
+        self.is_row_major = False
+      else:
+         print >>Channel.os_log, "Corrupt A matrix file, index mismatch reading A matrix."
+         print >>Channel.os_log, "- ICC MATRIX FILE READ ABORTED -"
+         return False
+  else:
+    # column major (fortran form)
+    arr = is_amx.next ().split()
+    self.icc_matrix[ipch][jpch] = float(arr[2])
+    self.icc_matrix[ipch][jpch]
+    if int(arr[0]) != jpch or int(arr[1]) != ipch:
+      print >>Channel.os_log, "Corrupt A matrix file, index mismatch reading A matrix."
+      print >>Channel.os_log, "- ICC MATRIX FILE READ ABORTED -"
+      return False
+  self.icc_matrix[ipch][jpch] = float(arr[2])
+
+if self.environment.is_row_major:
+  for ipch in range(1,len(self)):
+    self.icc_index[ipch] = int(is_amx.next)
+    for jpch in range(len(self)):
+      arr = is_amx.next ().split()
+      if int(arr[0]) != ipch or int(arr[1]) != jpch:
+        print >>Channel.os_log, "Corrupt A matrix file, index mismatch reading A matrix."
+        print >>Channel.os_log, "- ICC MATRIX FILE READ ABORTED -"
+        raise RuntimeError ("Corrupt A matrix file, index mismatch reading A matrix.")
+      self.icc_matrix[ipch][jpch] = float(arr[2])
+else:
+  for ipch in range(1,len(self)):
+    self.icc_index[ipch] = int(is_amx.next)
+    for jpch in range(len(self)):
+      arr = is_amx.next ().split()
+      if int(arr[0]) != jpch or int(arr[1]) != ipch:
+        print >>Channel.os_log, "Corrupt A matrix file, index mismatch reading A matrix."
+        print >>Channel.os_log, "- ICC MATRIX FILE READ ABORTED -"
+        raise RuntimeError ("Corrupt A matrix file, index mismatch reading A matrix.")
+      self.icc_matrix[ipch][jpch] = float(arr[2])
+
+return True
+
+!!!1223727.python!!!	writam(in self : ) : void
+print >>Channel.os_log, " Saving inverted 'A' matrix"
+os_amx = open(PatchEnvironment.default_matrix_filename % Channel.run_id (), "w")
+if not os_amx:
+  return False
+  
+print >>os_amx, len(self), self.environment.patch_subtile_factor
+print >>os_amx, int(16384.0 * self.environment.geom.zl(1)), int(16384.0 * self.environment.geom.zl(4))
+print >>os_amx, int(16384.0 * self.environment.geom.rl(1)), int(16384.0 * self.environment.geom.rl(4)), int(16384.0 * self.environment.geom.rl(5))
+print >>os_amx, int(16384.0 * self.environment.geom.rlvest()), int(16384.0 * self.environment.geom.rlcurv()), int(16384.0 * self.environment.eps_solvent)), int(16384.0 * self.environment.eps_protein)
+print >>os_amx,""
+for ipch in range(len(self)):
+  print >>os_amx, self.icc_index.sndx_[ipch]
+  for jpch in range(len(self)):
+    print >>os_amx, ipch, jpch, self.icc_matrix[ipch][jpch]
+
+!!!1224111.python!!!	compute_matrix(in self : , in matbuilder : )
+# Write out patch grid parameters
+self.grid_write ()
+print >>Constants.os_log, "Surface grid completed"
+if not self.readam():
+  print >>Constants.os_log, "No previous matching 'A' matrix"
+  ## -----------------------------------------------------
+  # generate the A matrix
+  map (lambda intgtor: intgtor(self), matbuilder)
+  for ipch in range(len(self)):
+    self.icc_index[ipch] = 0
+    for jpch in range(len(self)):
+      self.icc_matrix[ipch][jpch] *= self.tile_delta_eps[ipch]
+    
+  for ipch in range(len(self)):
+    self.icc_matrix[ipch][jpch] += 1.0
+
+  ## -----------------------------------------------------
+  ## Do LU decomposition of the A matrix
+  print >>Constants.os_log, "LU decomposing the 'A' matrix (using BLAS)";
+  ## const int npch2 (npchsz)
+  info = 0
+  blas.dgetrf (len(self), len(self), self.icc_matrix, len(self), self.icc_index, info)
+	
+  if __debug__:
+	print >>Constants.os_log, "# Matrix inversion info = ", info
+
+  assert 0 == info, "Matrix inversion failed, no save."
+
+  self.writam ()
+

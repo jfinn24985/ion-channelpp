@@ -1,0 +1,284 @@
+class iccgrid
+!!!1998383.cpp!!!	add_line(inout a_os : ostream, in a_zleft : double, in a_zright : double, in a_radius : double, in a_deps : double, in a_z_min : int, in is_internal : bool) : void
+    a_os << "Cylinder tiles:\n";
+    a_os << " start (z,r) = " << a_zleft << " " << a_radius << "\n";
+    a_os << "   end (z,r) = " << a_zright << " " << a_radius << "\n";
+    const int ulsign_ (is_internal ? -1 : 1);
+    // calculate number of tiles in z coordinate (minimum of 10)
+    const int nzl_ = this->line_tile_count (a_zright - a_zleft, a_z_min);
+    const double tile_zwidth_ ((a_zright - a_zleft) / double(nzl_));
+    a_os << "mesh size (z) = " << nzl_ << "\n";
+
+    // in cylinder all slices have same circumference and and so all
+    // tiles have the same angular size and area
+    const int nfil_ (this->cylindrical_tile_count (a_radius, a_z_min));
+    const double dfil_ (2 * constants::pi() / double(nfil_));
+    const double area_ (a_radius * dfil_ * tile_zwidth_);
+    
+    a_os << "mesh size (r) = " << nfil_ << "\n";
+ 
+    double zzl1, zzl2; // z-axial edges of the tiles
+    for (int j = 0; j != nzl_; ++j)
+      {
+	//   'j'th ring
+	if (0 == j)
+	  {
+	    zzl1 = a_zleft;
+	    zzl2 = a_zleft + tile_zwidth_;
+	  }
+	else if (nzl_ - 1 == j)
+	  {
+	    zzl1 = zzl2; // zzl2 from last iteration
+	    zzl2 = a_zright;
+	  }
+	else
+	  {
+	    zzl1 = zzl2; // zzl2 from last iteration
+	    zzl2 = zzl1 + tile_zwidth_;
+	  }
+
+	const double zlc_ (zzl1 + tile_zwidth_/2);
+	double phil1, phil2; // angular edges of the tiles
+	for (int k = 0; k != nfil_; ++k)
+	  {
+	    UTILITY_REQUIRE (this->npch_ < this->max_size_, "Number of patchs exceeds limit");
+	    if (0 == j) // Only need to calculate cos/sin(fik) once
+	      {
+		const double fik = (k + 0.50) * dfil_;
+		tiles_[this->npch_][iX] = a_radius * std::cos (fik);
+		tiles_[this->npch_][iY] = a_radius * std::sin (fik);
+		tiles_[this->npch_][iUX] = ulsign_ * std::cos (fik);
+		tiles_[this->npch_][iUY] = ulsign_ * std::sin (fik);
+	      }
+	    else
+	      {
+		// For j /= 0, these are the same as nfil_ tiles ago
+		tiles_[this->npch_][iX] = tiles_[this->npch_ - nfil_][0];
+		tiles_[this->npch_][iY] = tiles_[this->npch_ - nfil_][1];
+		tiles_[this->npch_][iUX] = tiles_[this->npch_ - nfil_][3];
+		tiles_[this->npch_][iUY] = tiles_[this->npch_ - nfil_][4];
+	      }
+	    tiles_[this->npch_][iZ] = zlc_;
+	    tiles_[this->npch_][iUZ] = 0.0;
+	    tiles_[this->npch_][iArea] = area_;
+	    tiles_[this->npch_][iDEps] = a_deps;
+
+	    if (k==0)
+	      {
+		phil1 = 0.0;
+		phil2 = dfil_;
+	      }
+	    else if (k + 1 == nfil_)
+	      {
+		phil1 = phil2; // phil2 from last iteration
+		phil2 = 2 * constants::pi();
+	      }
+	    else
+	      {
+		phil1 = phil2; // phil2 from last iteration
+		phil2 = phil1 + dfil_;
+	      }
+	    // Integrator wants edges of tile. For cylinder tiles this is
+	    // zlc +/- 1/2 tile_zwidth and fik +/- 1/2 dfil
+	    // (we also store radius so we don't need to recalculate it from
+	    // prx and pry.)
+	    UTILITY_CHECK (intgs_.size () >= this->npch_, "Integrator array : index mismatch");
+	    // TODO: test above should be intgs_.size == npch_ ??
+	    if (intgs_.size () > this->npch_)
+	      {
+		intgs_.replace (this->npch_, new cylinder_integrator (*this, this->npch_, a_radius, zzl1, zzl2, phil1, phil2));
+	      }
+	    else
+	      {
+		intgs_.push_back (new cylinder_integrator (*this, this->npch_, a_radius, zzl1, zzl2, phil1, phil2));
+	      }
+	    ++this->npch_;
+	  }
+      }
+!!!1998511.cpp!!!	add_arc(inout a_os : ostream, in za0 : double, in ra0 : double, in ra : double, in ta1 : double, in ta2 : double, in a_deps : double, in a_z_min : int, in is_outer : bool) : void
+    const int uasign_ (is_outer ? -1 : 1);
+    a_os << "Arch tiles:\n";
+    a_os << "  center (z,r) = " << za0 << " " << ra0 << "\n";
+    a_os << "    arc radius = " << ra << "\n";
+    a_os << " angles (begin,end) = " << ta1 << " " << ta2 << "\n";
+    const double dta = ta2 - ta1;
+    a_os << "arc sweep (phi)= " << dta << "\n";
+    UTILITY_CHECK(constants::dfeq (constants::pi(), 2*dta),"Only 1/4 circle arcs tested");
+    const double dla = ra * dta;
+    a_os << "arc length (z) = " << dla << "\n";
+    
+    // LOOP OVER THETA ANGLE 
+    //theta is measured along channel axis;
+    const int nta_ = this->arc_tile_count (ra, a_z_min);
+
+    a_os << " mesh size (z) = " << nta_ << "\n";
+
+    const double dtta = dta / double(nta_);
+    //loop over arc theta
+    double tta1, tta2;
+    for (int j = 0; j != nta_; ++j)
+      {
+	a_os << (j + 1) << "th ring\n";
+	//each section of the arc has length dtta(arcnumber,ring);
+	// if it's the first ring, set to beginning theta of
+	// the arc keep in mind it seems that we are counting
+	// arcs from right to left, since we start at theta1,
+	// hopefully this doesn't make much of a difference
+	// (i.e. doesn't matter if go ta1 to ta2 or vice
+	// versa)
+	tta1 = (0 == j ? ta1 : tta2);
+	tta2 = (nta_ == j + 1 ? ta2 : tta1 + dtta);
+
+	// find the center theta (which is not just the average of
+	// tta1,tta2)
+	const double ara ((ra0 * dtta) - (ra * (std::cos (tta2) - std::cos (tta1))));
+	UTILITY_CHECK (not std::isnan(ara) and not constants::dfeq(ara, 0.0)
+	 	     , "ara is NaN or zero");
+
+	const double szaml (0.5* ra0 * (tta2*tta2 - tta1*tta1)
+			    - ra * (tta2 * std::cos(tta2) - tta1 * std::cos(tta1))
+			    + ra * (std::sin(tta2) - std::sin(tta1)));
+
+	const double tac (szaml / ara);
+	// radius of ring centres
+	const double rc (ra0 + ra * std::sin (tac));
+	// divide circumference at ring centre
+	const int nfia_ (this->cylindrical_tile_count (rc, 16));
+	const double dfia_ (2 * constants::pi() / double(nfia_));
+
+	a_os << "theta (low,mid,high)  = " << tta1 << " " << tac << " " << tta2 << "\n";
+	a_os << "mesh size (r) = " << nfia_ << "\n";
+
+	const double tile_area_ (ra * ara * dfia_);
+	const double zlc_ (za0 + ra * std::cos (tac));
+	const double uzc_ (uasign_ * std::cos (tac));
+	const double ua_sintac_ (uasign_ * std::sin (tac));
+	double phil1, phil2;
+	// loop over all the slices of phi;
+	for (int k = 0; k != nfia_; ++k)
+	  {
+	    UTILITY_REQUIRE (this->npch_ < this->max_size_, "Number of patchs exceeds limit");
+	    const double fik = (k + 0.050) * dfia_;
+    
+	    tiles_[this->npch_][iX] = rc * std::cos (fik);
+	    tiles_[this->npch_][iY] = rc * std::sin (fik);
+	    tiles_[this->npch_][iZ] = zlc_;
+    
+	    tiles_[this->npch_][iUX] = ua_sintac_ * std::cos (fik);
+	    tiles_[this->npch_][iUY] = ua_sintac_ * std::sin (fik);
+	    tiles_[this->npch_][iUZ] = uzc_;
+    
+	    tiles_[this->npch_][iArea] = tile_area_;
+	    tiles_[this->npch_][iDEps] = a_deps;
+
+	    phil1 = (0 == k ? 0.0 : phil2);
+	    phil2 = (k + 1 == nfia_ ? 2 * constants::pi() : phil1 + dfia_);
+
+	    // Integrator wants edges of tile. For arc tiles this is
+	    // found along z-axis by za0,ra0,ra,tta1 + tta2 and fik
+	    // +/- 1/2 dfil around radial.
+	    
+ 	    UTILITY_CHECK (intgs_.size () >= this->npch_, "Integrator array : index mismatch");
+	    if (intgs_.size () > this->npch_)
+	      {
+		intgs_.replace (this->npch_, new arc_integrator (*this, this->npch_, za0, ra0, ra, tta1, tta2, phil1, phil2));
+	      }
+	    else
+	      {
+		intgs_.push_back (new arc_integrator (*this, this->npch_, za0, ra0, ra, tta1, tta2, phil1, phil2));
+	      }   
+	    ++this->npch_;
+	  }
+      }
+!!!1998639.cpp!!!	add_wall(inout a_os : ostream, in a_z : double, in a_rl1 : double, in a_rl2 : double, in a_deps : double, in min_phi : int, in min_rad : int, in is_to_positive : bool) : void
+    a_os << "Wall tiles:\n";
+    a_os << " start (z,r1,r2) = " << a_z << " " << a_rl1 << " " << a_rl2 << "\n";
+    const double dll = a_rl2 - a_rl1;
+    a_os << "  length (r) = " << dll << "\n";
+    const int ulsign (is_to_positive ? 1 : -1);
+
+    // Number of tiles around ring at centre of wall
+    const int nfiu     (this->cylindrical_tile_count ((a_rl1 + a_rl2)/2, min_phi));
+
+    // Angular extent of tiles
+    const double dfiu  (2 * constants::pi() / nfiu);
+    // Calculate radial tile number
+    const double ratio1 ((1 + dfiu/2)/(1 - dfiu/2));
+    //a_os << " Ratio old = " << ratio1 << "\n";
+    const int nrl_ (std::max< int >(std::nearbyint (std::log(a_rl2 / a_rl1) / std::log(ratio1)) + 1, min_rad));
+    const double ratio2 = std::pow(a_rl2 / a_rl1, (1 / double(nrl_)));
+    //a_os << " Ratio new = " << ratio2 << "\n";
+    a_os << "mesh size (radial) = " << nrl_ << "\n";
+
+    double rrl1, rrl2;
+    for (int j = 0; j != nrl_; ++j)
+      {
+	rrl1 = (0 == j ? a_rl1 : rrl2);
+	rrl2 = (nrl_ == j + 1 ? a_rl2 : rrl1 * ratio2);
+
+	// DIFF2FORTRAN div arr by 2 and div szaml by 3 moved to rc/parea calc
+	const double arr   (utility::sqr(rrl2) - utility::sqr(rrl1));
+	const double szaml (std::pow(rrl2,3) - std::pow(rrl1,3));
+	const double rc    ((2 * szaml) / (3 * arr));
+	const double area  (arr * dfiu / 2);
+	a_os << " r center = " << rc << "\n";
+    
+	// --- loop over phi angle --------------------;
+	a_os << " r (low,mid,high) = " << rrl1 << " " << rc << " " << rrl2 << "\n";
+	a_os << "mesh size (phi) = " << nfiu << "\n";
+	double phi1,phi2;
+	for (int k = 0; k != nfiu; ++k)
+	  {
+	    UTILITY_REQUIRE (this->npch_ < this->max_size_, "Number of patchs exceeds limit");
+	    const double fik = (k + 0.5) * dfiu;
+	    phi1 = (0 == k ? 0.0 : phi2);
+	    phi2 = (nfiu == k + 1 ? constants::pi() * 2 : phi1 + dfiu);
+
+	    this->tiles_[this->npch_][iX] = rc * std::cos (fik);
+	    this->tiles_[this->npch_][iY] = rc * std::sin (fik);
+	    this->tiles_[this->npch_][iZ] = a_z;
+
+	    this->tiles_[this->npch_][iUX] = 0;
+	    this->tiles_[this->npch_][iUY] = 0;
+	    this->tiles_[this->npch_][iUZ] = ulsign;
+
+	    // DIFF2FORTRAN div arr by 2 moved to parea calc
+	    this->tiles_[this->npch_][iArea] = area;
+	    this->tiles_[this->npch_][iDEps] = a_deps;
+
+
+ 	    UTILITY_CHECK (intgs_.size () >= this->npch_, "Integrator array : index mismatch");
+	    if (intgs_.size () > this->npch_)
+	      {
+		intgs_.replace (this->npch_, new wall_integrator (*this, this->npch_, rrl1, rrl2, rc, phi1, phi2));
+	      }
+	    else
+	      {
+		intgs_.push_back (new wall_integrator (*this, this->npch_, rrl1, rrl2, rc, phi1, phi2));
+	      }  
+	    ++this->npch_;
+	  }
+      }
+!!!1998767.cpp!!!	generate_matrix(in file_id : int, inout a_matrix : boost::multi_array< double, 2 >) : void
+    // NOTE: it is at this point that we know the required size of the A matrix!
+    UTILITY_CHECK (this->npch_ <= a_matrix.shape ()[0] and this->npch_ <= a_matrix.shape ()[1],
+		 "Attempt to calculate ICC matrix before required memory was allocated");
+
+    // ----  Fill matrix -----------------------------------
+    std::ostringstream a_os;
+    utility::write_on_exit msg_writer(a_os, file_id);
+    a_os << " Building initial ICC matrix, patience.\n";
+    const int np10 = this->npch_ / 10;
+    for (int percent = 0; percent != 10; ++percent)
+      {
+	const int begin = percent * np10;
+	const int end   = (9 == percent ? this->npch_ : begin + np10);
+	for (int ipatch = begin; ipatch != end; ++ipatch)
+	  {
+	    for  (int jpatch = 0; jpatch != this->npch_; ++jpatch)
+	      {
+		a_matrix [ipatch][jpatch] += this->intgs_[ipatch](jpatch);
+	      }
+	  }
+	a_os << (1 + percent) * 10 << " % complete.\n";
+      }

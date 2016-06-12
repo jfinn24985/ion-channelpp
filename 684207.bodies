@@ -1,0 +1,92 @@
+class InputFileReader
+!!!1188655.python!!!	next() : std::pair< string, any >
+loopcount  = 0
+while loopcount != 1:
+  loopcount = loopcount + 1
+  try:
+    line = self.file_stack[-1].next ()
+  except StopIteration:
+    if len(self.file_stack) != 1:
+      del self.file_stack[-1]
+      loopcount = loopcount - 1
+      continue
+    else:
+      raise StopIteration
+  line = self._strip (line) # remove comments and whitespace
+  if line == None:
+    loopcount = loopcount - 1
+    continue
+  result = self._split(line)
+
+  if self.in_section:
+    if result[0] == "n":
+      line_count = int(result[1])
+      # set result to a new tuple with a list as second value
+      result = ( result[0], [] )
+      # Get the next line_count non-empty lines
+      count = 0
+      while count != line_count:
+        try:
+          subline = self.file_stack[-1].next ()
+        except StopIteration:
+          raise ValueError ("Unexpected end-of-file encountered")
+        subline = self._strip (subline)
+        if subline:
+          result[1].append (subline)
+          count = count + 1
+      return result
+    elif result[0] == "end":
+      self.in_section = False
+      raise StopIteration
+    else:
+      return result
+
+  else: # not in_section
+    if result[0] == "include":
+      self.open (result[1])
+      loopcount = loopcount - 1
+      continue
+    elif result[0] == "fileversion":
+      return result
+    else:
+      self.in_section = True
+      return result
+      
+raise SyntaxError("Should never get to this point.") 
+!!!1188527.python!!!	open(in filename : string) : void
+if InputFileReader.max_depth == len(self.file_stack):
+  raise EnvironmentError("Too many nested include files (check for inclusion loops)")
+import os
+if self.base == None:
+  self.base = os.path.dirname(os.path.abspath(os.path.join(os.curdir,filename)))
+else:
+  filename = os.path.join(self.base,filename)
+self.file_stack.append (open (filename))
+!!!1189167.python!!!	_strip(in line : string) : string
+index = line.find ('#')
+if index != -1:
+  result = line[:index]
+else:
+  result = line
+if len(result) == 0 or result.isspace():
+  return None
+else:
+  return result.strip()
+!!!1189295.python!!!	_split(in line : string) : string
+result = line.split (None,1)
+if len(result) == 0:
+  return ( line, None )
+elif len(result) == 1:
+  return ( result[0].strip(), None )
+else:
+  return ( result[0].strip(), result[1].strip() )
+!!!1189935.python!!!	use(in ais : istream, in basedir : string) : void
+if InputFileReader.max_depth == len(self.file_stack):
+  raise EnvironmentError("Too many nested include files (check for inclusion loops)")
+if self.base == None:
+  if basedir != None:
+    self.base = basedir
+  else:
+    import os
+    self.base = os.curdir
+self.file_stack.append (ais)

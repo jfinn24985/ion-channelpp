@@ -1,0 +1,44 @@
+class remove_specie_pbc
+!!!383537.cpp!!!	generate(inout sys : simulator) : change_set
+std::unique_ptr< trial::change_set > result( new trial::change_set( *this ) );
+// REMOVE
+// ------
+auto specie_count = sys.get_specie( this->specie_key() ).count();
+if (specie_count == 0)
+{
+   result->set_fail(); // No particles of this specie
+   return result;
+}
+const auto& ens = sys.get_ensemble();
+trial::change_atom atom{}; // change being built
+atom.key = this->specie_key();
+atom.do_new = false;
+// Choose any particle of this specie
+atom.index = ens.nth_specie_index (atom.key, sys.get_random().randint( 0, specie_count - 1));
+// Set old position
+atom.old_position = ens.position (atom.index);
+atom.eps_old = ens.eps( atom.index );
+
+result->update_exponential_factor( -sys.get_specie( atom.key ).chemical_potential() );
+result->update_probability_factor( specie_count / sys.volume( atom.key ) );
+
+result->add_atom( atom );
+return result;
+!!!383537.python!!!	generate(inout sys : simulator) : change_set
+self.begin_trial()
+ens = sys.get_ensemble()
+
+resultset = change_set.change_set( self )
+result = change_set.change_atom()
+resultset.add_atom( result )
+result.key = self.key_ 
+result.do_new = False
+if sys.get_specie( self.key_ ).count() == 0:
+  resultset.fail = True # No particles of this specie
+  return resultset
+result.index = ens.nth_specie_index( self.key_, sys.get_random().randint( 0, sys.get_specie( self.key_ ).count() - 1) )
+result.old_position = ens.position ( result.index )
+
+resultset.update_probability_factor( sys.get_specie( self.key_ ).count() / sys.get_cell_region().volume(result.key) )
+resultset.update_exponential_factor( -sys.get_specie( self.key_ ).chemical_potential() )
+return resultset

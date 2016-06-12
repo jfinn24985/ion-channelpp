@@ -1,0 +1,95 @@
+class tubular_grid
+!!!1531311.cpp!!!	tubular_grid(in tubelength : double, in radius : double, in spacing : double)
+: spacing_( spacing )
+, zmax_( std::floor( tubelength/(2.0*spacing) ) * 2.0 )
+, circle_( radius, spacing )
+, selector_()	   
+{
+   // total number of grid points
+   std::size_t size_ = this->circle_.size() * this->zmax_;
+
+   // set up selector grid
+   this->selector_.resize( size_ );
+
+   for (std::size_t ii = 0; ii != size_; ++ii)
+   {
+      this->selector_[ii] = ii;
+   }
+}
+!!!263984.cpp!!!	tubular_grid(in tubelength : double, in radius : double, in npart : size_t)
+: spacing_( 1.0 )
+, zmax_( 0 )
+, circle_( radius, 1.0 )
+, selector_()	   
+{
+   // Need to adjust spacing until we get above npart
+   const double volume{ core::constants::pi() * radius * radius * tubelength };
+   double spacing{ std::cbrt( volume / npart ) };
+   const double scale{ 0.95 };
+   {
+      const std::size_t zmax( std::floor( (tubelength/(2.0*spacing)) ) * 2.0 );
+      const circle_grid circ( radius, spacing ); 
+      UTILITY_CHECK(circ.size() * zmax < npart, "Initial guess spacing should always be too large");
+   }
+   while(true)
+   {
+      spacing *= scale;
+      UTILITY_ALWAYS(spacing >= min_spacing, "Grid spacing below minimum spacing is probably an error");
+      std::size_t zmax( std::floor( tubelength/(2.0*spacing) ) * 2.0 );
+      circle_grid circ( radius, spacing ); 
+
+      // total number of grid points
+      std::size_t sz( circ.size() * zmax );
+      // DEBUG : std::cout << "SPC " << spacing << " PART " << sz << " TARG " << npart << "\n";
+      if ( sz >= npart )
+      {
+         this->spacing_ = spacing;
+         this->zmax_ = zmax;
+         this->circle_ = std::move( circ );
+         break;
+      }
+   }
+
+   // set up selector grid
+   this->selector_.resize (this->zmax_ * this->circle_.size());
+
+   for (std::size_t ii = 0; ii != this->selector_.size(); ++ii)
+   {
+      this->selector_[ii] = ii;
+   }
+}
+!!!263216.cpp!!!	tubular_grid(in tubelength : double, in radius : double, in spacing : double, inout shuffler : random_distribution)
+: tubular_grid( tubelength, radius, spacing )
+{
+   // Randomise the selector entries
+   shuffler.shuffle(selector_.begin(), selector_.end());
+}
+!!!264624.cpp!!!	tubular_grid(in tubelength : double, in radius : double, in npart : size_t, inout shuffler : random_distribution)
+: tubular_grid( tubelength, radius, npart )
+{
+   // Randomise the selector entries
+   shuffler.shuffle(selector_.begin(), selector_.end());
+}
+!!!1531439.cpp!!!	next(inout pnt : coordinate) : bool
+// Attempt to call next on empty grid
+if (this->selector_.empty())
+{
+   return false;
+}
+
+// Get grid index from selector
+std::size_t xyindex = this->selector_.back();
+
+// Reduce xyindex by circle grid size until we get zindex
+std::size_t zindex = 0;
+while (xyindex >= this->circle_.size())
+{
+   xyindex -= this->circle_.size();
+   ++zindex;
+}
+// create particle at current grid point
+this->circle_.set_xy(pnt, xyindex);
+pnt.z = this->spacing_ * (double(zindex) - double(this->zmax_/2) + 0.5);
+// Pop used index off selector
+this->selector_.pop_back();
+return true;

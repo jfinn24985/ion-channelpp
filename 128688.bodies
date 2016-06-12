@@ -1,0 +1,71 @@
+class jump_choice_cell
+!!!145712.cpp!!!	jump_choice_cell(in ispec : size_t, in params : string, in geom : channel_system)
+: base_choice( ispec )
+, region_( geom.cell_radius() - geom.get_specie( ispec ).radius()
+      , geom.cell_hlength() - geom.get_specie( ispec ).radius() )
+{
+   UTILITY_INPUT( params.empty() or
+         ( 1 == params.size() and 1 == params.count( core::strngs::fsspec() ) ), 
+         "Jump choice has no non-standard parameters.", 
+         core::strngs::fstry() );
+}  
+!!!146096.cpp!!!	generate(inout sys : simulator) : change_set
+std::unique_ptr< trial::change_set > resultset (new trial::change_set (*this));
+auto const& ens = sys.get_ensemble();
+trial::change_atom atom;
+atom.key = this->specie_key();
+// Select a particle at random
+switch (sys.get_specie( atom.key ).count())
+{
+case 0:
+  {
+    resultset->set_fail(); // No particles of this specie
+    return resultset;
+  }
+  break;
+case 1:
+  {
+    atom.index = ens.nth_specie_index( atom.key, 0 );
+  }
+  break;
+default:
+  {
+    atom.index = ens.nth_specie_index( atom.key, sys.get_random().randint( 0, sys.get_specie( atom.key ).count() - 1) );
+  }
+  break;
+}
+// Get old position
+atom.old_position = ens.position(atom.index);
+atom.eps_old = ens.eps( atom.index );
+// give particle a random position within subregion
+this->region_.generate( atom.new_position, sys.get_random() );
+
+if (not sys.is_valid_position( atom.new_position, atom.key ))
+{
+  resultset->set_fail ();
+}
+atom.eps_new = sys.permittivity_at( atom.new_position );
+resultset->add_atom (atom);
+return resultset;
+!!!146096.python!!!	generate(inout sys : simulator) : change_set
+self.begin_trial()
+ens = sys.get_ensemble()
+genr = sys.get_random()
+import change_set
+resultset = change_set.change_set( self )
+result = change_set.change_atom()
+resultset.add_atom( result )
+result.key = self.specie_key()
+if sys.get_specie( result.key ).count() == 0:
+  resultset.fail = True # No particles of this specie
+  return resultset
+elif sys.get_specie( result.key ).count() == 1:
+  result.index = ens.nth_specie_index( result.key, 0 )
+else:
+  result.index = ens.nth_specie_index( result.key, genr.randint( 0, sys.get_specie( result.key ).count() - 1) )
+result.old_position = ens.position ( result.index )
+sys.get_cell_region().new_position( result.new_position, result.key, genr )
+if not sys.get_cell_region().is_valid_position( result.new_position, result.key ):
+  resultset.fail = True # not a valid position
+return resultset
+

@@ -1,0 +1,71 @@
+class cylinder_integrator
+!!!396976.cpp!!!	cylinder_integrator()
+: integrator()
+, radius_()
+, zmin_()
+, zmax_()
+, phimin_()
+, phimax_()
+{}
+!!!1959599.cpp!!!	operator ()(in pchx : size_t, in pxi : double, in pyi : double, in pzi : double, in pux : double, in puy : double, in puz : double) : double
+//
+//  calculate ( r_ij . n_i ) / | r_ij |^3
+//
+//  NOTE: direction of vector r_ij is important for the
+//  dot product. The vector goes from tile i to tile j.
+//  In this method we are integrating over tile j.
+
+// our tile info
+const std::size_t nsub( pchx == this->index() ? this->nsub_self() : this->nsub_other() );
+// All radials are the same because all patches on a cylinder
+// parallel to z axis 
+const double r0 (this->radius_);
+// z2 and z1 are end and begin along z axis
+const double z1 (this->zmin_);
+const double z2 (this->zmax_);
+// fi2 and fi1 are the angles of the end and begin around
+// the rotation (z) axis
+const double fi1 (this->phimin_);
+const double fi2 (this->phimax_);
+
+// split up each ring into pieces along z
+const double dzsub = (z2 - z1) / double(nsub);
+
+// and around the phi angle
+const double dfisub = (fi2 - fi1) / double(nsub);
+
+double aij = 0.0; // RESULT
+
+// --- double loop over subtiles ------
+// each patch is going to have nsub*nsub tiny patches
+for (std::size_t i = 0; i != nsub; ++i)
+{
+   // --- loop along rotation axis ------
+   // get the centroid 
+   // (z coordinate of all patches in a ring are the same)
+   const double pzj = z1 + (i + 0.5) * dzsub;
+   // Radial from rotation axis is constant and
+   // so is area
+   const double area( r0 * dfisub * dzsub );
+
+   // --- loop around rotation axis -----
+   for (std::size_t j = 0; j != nsub; ++j)
+   {
+      // loop over tiny patches around phi angle
+      // fij is center of tiny patch around phi angle (axis of rotation)
+      const double fij = fi1 + (j+0.50) * dfisub;
+      // pxj, pyz, and pzj are centroid of tiny patch
+      const double pxj   = r0 * std::cos(fij);
+      const double pyj   = r0 * std::sin(fij);
+      // Direction is i to j
+      const double pxij  = pxj - pxi;
+      const double pyij  = pyj - pyi;
+      const double pzij  = pzj - pzi;
+      const double rijsq = std::pow( pxij, 2 ) + std::pow( pyij, 2 ) + std::pow( pzij, 2 );
+      // rij is the distance from the patch centroid to the tiny patch
+      const double rij3  = rijsq * std::sqrt(rijsq);
+      aij += (pxij * pux + pyij * puy + pzij * puz) * area / rij3;
+   }
+}
+UTILITY_CHECK (not std::isnan(aij), "Error in integrating a cylinder, result = NaN");
+return aij / (4 * core::constants::pi());

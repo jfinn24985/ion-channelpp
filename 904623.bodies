@@ -1,0 +1,60 @@
+class gin_geometry
+!!!1642927.cpp!!!	gin_geometry()
+    cylinder[0] = 0.;
+    cylinder[1] = 0.;
+!!!1643695.cpp!!!	do_readin() : void
+    nrgz = 2 * static_cast<uint16_type> (cylinder[0] / drg);
+    nrgr = static_cast<uint16_type> (cylinder[1] / drg);
+    GRS400_ALWAYS (nrgr < AccumulatorSize2, "Input 'drg' in 'gin' input is too small (radius/drg must be less than AccumulatorSize2)");
+    GRS400_ALWAYS (nrgr != 0, "Input 'drg' too large or radius too small as int(radius/drg) = 0");
+    GRS400_ALWAYS (nrgz != 0, "Input 'drg' too large or length too small as int(length/drg) = 0");
+
+    // Volume of cylinder = pi*r*r*h, of concentric cylinders pi*h*(r1*r1-r0*r0)
+    // ->(n+1)^2dr^2-n^2dr^2 -> [n^2 + 2n + 1 - n^2]dr^2
+    vjin.resize (nrgr);
+    for (uint16_type r = 0; r < nrgr; ++r)
+    {
+        vjin[r] = (2 * r + 1) * constants::pi * drg * drg * drg;
+    }
+!!!1643823.cpp!!!	do_readin(inout scnr : reader) : void
+    GRS400_REQUIRE (scnr.name () == dictionary::gin_geometry_label, "incorrect section label");
+    enum
+    {
+        Length = 1 << 1
+        , Radius = 1 << 2
+        , Divider = 1 << 3
+        , All = (Length | Radius | Divider)
+    };
+    uint8_type mask_ = 0;
+
+    while (scnr.next ())
+    {
+        if (scnr.name () == dictionary::length_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file gin." + dictionary::length_label + " tag requires value").c_str ());
+            scnr.get_content (cylinder[0]);
+            mask_ |= Length;
+        }
+        else if (scnr.name () == dictionary::radius_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file gin." + dictionary::radius_label + " tag requires value").c_str ());
+            scnr.get_content (cylinder[1]);
+            mask_ |= Radius;
+        }
+        else if (scnr.name () == dictionary::drg_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::drg_label + " tag with no content").c_str ());
+            scnr.get_content (drg);
+            mask_ |= Divider;
+        }
+        else
+        {
+            GRS400_ALWAYS (scnr.at_end (), ("unrecognised tag in input file " + scnr.name ()).c_str ());
+            break;
+        }
+    }
+
+    GRS400_ALWAYS ( (mask_ xor All) == 0, "Missing data (length, radius or drg) in 'gin' input section");

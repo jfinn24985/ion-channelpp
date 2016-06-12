@@ -1,0 +1,61 @@
+class wall_integrator
+!!!397232.cpp!!!	wall_integrator()
+: integrator()
+, z_()
+, ra0_()
+, ra1_()
+, radius_()
+, phi1_()
+, phi2_()
+{}
+!!!1960367.cpp!!!	operator ()(in pchx : size_t, in pxi : double, in pyi : double, in pzi : double, in pux : double, in puy : double, in puz : double) : double
+//
+//  calculate ( r_ij . n_i ) / | r_ij |^3
+//
+//  NOTE: direction of vector r_ij is important for the
+//  dot product. The vector goes from tile i to tile j.
+//  In this method we are integrating over tile j.
+const std::size_t nsub( pchx == this->index() ? this->nsub_self() : this->nsub_other() );
+const double z0 (this->z_);
+const double r1 (this->ra0_);
+const double r2 (this->ra1_);
+const double fi1(this->phi1_);
+const double fi2(this->phi2_);
+
+const double drsub = (r2 - r1) / double(nsub);
+const double dfisub = (fi2 - fi1) / double(nsub);
+
+double aij = 0.0; // RESULT
+// --- double loop over subtiles ------
+// --- loop over theta angle ----------
+
+for (std::size_t i = 0; i != nsub; ++i)
+{
+   const double rr1 = r1 + (i * drsub);
+   const double rr2 = rr1 + drsub;
+   const double ar = 0.50 * (std::pow( rr2, 2 ) - std::pow( rr1, 2 ));
+   const double szaml = (std::pow( rr2, 3 ) - std::pow( rr1, 3 )) / 3.0;
+
+   const double rc   = szaml / ar;
+   const double area = rc * drsub * dfisub;
+
+   const double pzj  = z0;
+
+   // --- loop over phi angle ------------
+   for (std::size_t j = 0; j != nsub; ++j)
+   {
+      const double fij = fi1 + (j + 0.5) * dfisub;
+      const double pxj = rc * std::cos(fij);
+      const double pyj = rc * std::sin(fij);
+      // Direction is i to j
+      const double pxij  = pxj - pxi;
+      const double pyij  = pyj - pyi;
+      const double pzij  = pzj - pzi;
+      const double rijsq = std::pow( pxij, 2 ) + std::pow( pyij, 2 ) + std::pow( pzij, 2 );
+      // rij is the distance from the patch centroid to the tiny patch
+      const double rij3  = rijsq * std::sqrt(rijsq);
+      aij += (pxij * pux + pyij * puy + pzij * puz) * area / rij3;
+   }
+}
+UTILITY_CHECK (not std::isnan(aij), "Error in integrating a disk/wall, result = NaN");
+return aij / (4 * core::constants::pi());

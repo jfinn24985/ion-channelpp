@@ -1,0 +1,668 @@
+class patch
+!!!1811247.cpp!!!	serialize(inout ar : Archive, in version : unsigned int) : void
+    ar & npatch;
+    ar & deps;
+    ar & epsw;
+    ar & epspr;
+
+    for (uint16_type i = 0; i < npatch; ++i) { ar & pu_xyz[i]; }
+
+    for (uint16_type i = 0; i < npatch; ++i) for (uint16_type j = 0; j < npatch; ++j) { ar & amx[amx_i (i, j)]; }
+
+    for (uint16_type i = 0; i < npatch; ++i) { ar & indx[i]; }
+!!!1811759.cpp!!!	do_readin(inout scnr : reader) : void
+    GRS400_REQUIRE (scnr.name () == dictionary::patch_label, "incorrect section label");
+    enum
+    {
+        EpsW = 1 << 1
+        , EpsPr = 1 << 2
+        , All = (EpsW | EpsPr)
+    };
+    uint8_type mask_ = 0;
+
+    while (scnr.next ())
+    {
+        if (scnr.name () == dictionary::epsw_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::epsw_label + " tag with no content").c_str ());
+            scnr.get_content (epsw);
+            mask_ |= EpsW;
+        }
+        else if (scnr.name () == dictionary::epspr_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::epspr_label + " tag with no content").c_str ());
+            scnr.get_content (epspr);
+            mask_ |= EpsPr;
+        }
+        else if (scnr.name () == dictionary::count_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::epspr_label + " tag with no content").c_str ());
+            scnr.get_content (patch_factor);
+        }
+        else if (scnr.name () == dictionary::filename_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::filename_label + " tag with no content").c_str ());
+            scnr.get_content (filename_);
+        }
+        else
+        {
+            GRS400_ALWAYS (scnr.at_end (), ("unrecognised tag in input file " + scnr.name ()).c_str ());
+            break;
+        }
+    }
+
+    GRS400_ALWAYS ( (mask_ xor All) == 0, "Require relative permittivity (epsw,epspr) of both water and protein to be defined in 'patch' section.");
+
+    /*<       if (epsw.gt.1000.0) then >*/
+    /*<         deps=-2.0 >*/
+    /*<       elseif (epspr.gt.1000.0) then >*/
+    /*<         deps=2.0 >*/
+    /*<       else >*/
+    /*<         deps=2*(epspr-epsw)/(epsw+epspr) >*/
+
+    // After reading in the solvent and protein relative permittivity we
+    // perform a sanity check then calculate the deps factor.  This factor
+    // is (probably) related to the change in permittivity when going
+    // from solvent to protein.
+    deps = (epsw > 1e3
+            ? -2.
+            : (epspr > 1e3
+               ? 2.
+               : (epspr - epsw) * 2 / (epsw + epspr)));
+
+    if (DEBUG)
+    {
+        /*<       write(*,*)epspr,epsw,deps >*/
+        std::clog << " Relative permittivity: protein = " << epspr << " water = " << epsw << " 'deps' factor = " << deps << "\n";
+    }
+!!!1811887.cpp!!!	do_readin() : void
+    if (in_use ())
+    {
+        std::cout << constants::output_divider << "\nInitialising patch configuration\n";
+
+        if (!filename_.empty () && boost::filesystem::exists (filename_))
+        {
+            // Read in data from a file
+            std::cout << " Reading patch data from " << filename_ << ". Please wait...\n";
+            std::ifstream ifs (filename_.c_str ());
+            GRS400_ALWAYS (ifs, ("open of file " + filename_ + " failed for reading.").c_str ());
+            boost::archive::text_iarchive iar (ifs);
+            iar >> *this;
+        }
+        else
+        {
+            std::cout << " Generating new patch configuration. Please wait...\n";
+            make_patches (parent_.get_environment ().protein_shape ());
+
+            if (!filename_.empty ())
+            {
+                // Save data to a file
+                std::ofstream ofs (filename_.c_str ());
+                GRS400_ALWAYS (ofs, ("open of file " + filename_ + " failed for writing.").c_str ());
+                boost::archive::text_oarchive oar (ofs);
+                oar << *this;
+            }
+            else
+            {
+                // Save data to a file
+                std::ofstream ofs ("amx.dat");
+                boost::archive::text_oarchive oar (ofs);
+                oar << *this;
+            }
+
+            std::cout << "A matrix created and saved\n";
+        }
+
+        std::cout << " Patch configuration complete with " << int (npatch) << " patches\n";
+    }
+!!!1812399.cpp!!!	initialise_buffer(inout bufer_1 : guard_letter) : void
+    /*<         do k=1,npatch >*/
+    const uint16_type npatch_ = npatch;
+
+    /*<           c(k)=0.0 >*/
+   if (npatch_ != bufer_1.size ())
+    {
+       bufer_1.resize (npatch_);
+    }
+    bufer_1.c_trial = 0.;
+     
+    const ion_specie & spec_1 = parent_.get_specie ();
+    const conf & conf_1 = parent_.get_particles ();
+
+        /*<           do jspec=1,nspec >*/
+        const uint16_type ntot_ = conf_1.max_count ();
+
+        for (uint16_type jj = 0; jj < ntot_; ++jj)
+        {
+            /*<               qj   = q(jspec) >*/
+            /*<               if (jspec.eq.1) qj = qpr(j) >*/
+            const uint8_type jspec = conf_1.specie_of (jj);
+
+            // check if particle is a 'deleted' particle.
+            if (jspec == SpecieSize) continue;
+
+            double xyzr[4];
+            /*<                  rxj=rx(jj) >*/
+            /*<                  ryj=ry(jj) >*/
+            /*<                  rzj=rz(jj) >*/
+            conf_1.particle (jj, &xyzr[0]);
+
+           patch_part< true >(bufer_1.c_trial
+	                , spec_1.charge_factor (jspec)
+                        , deps
+                        , spec_1.relative_permittivity (jspec)
+                        , xyzr[0]
+                        , xyzr[1]
+                        , xyzr[2]
+                        , &bufer_1.rip[jj][0]
+                        , &pu_xyz[0]
+                        , &pu_xyz[npatch]);
+        }
+
+        /*<           h(k)=c(k) >*/
+        bufer_1.h_trial = bufer_1.c_trial;
+
+    /* ____ CALCULATE INITIAL H ____________________ */
+    /*<         call lubksb(amx,npatch,indx,h) >*/
+    GRS400_ALWAYS (lubksb (&amx[0], npatch_, &indx[0], &bufer_1.h_trial[0])
+                   , "Error calculating initial H matrix");
+    bufer_1.commit ();
+    /*<         chgt=0.0 >*/
+    double chgt = 0.;
+    double areat = 0.;
+
+    /*<         do i=1,npatch >*/
+    for (uint16_type i_ = 0; i_ < npatch; ++i_)
+    {
+        /*<          chgt=chgt+a(i)*h(i) >*/
+        chgt += pu_xyz[i_].area * bufer_1.get_h (i_);
+        areat += pu_xyz[i_].area;
+    }
+
+    /*<         chgt=chgt/qstar >*/
+    chgt /= spec_1.get_qstar ();
+    /*<         write(*,*)" Total initial induced charge / e = ",chgt >*/
+    std::cout << " Total initial induced charge / e = " << chgt << "\n";
+    /*<         write(*,*)" Total area = ",areat >*/
+    std::cout << " Total area = " << areat << "\n";
+!!!1812527.cpp!!!	make_patches(in br : patch_ring) : void
+    static const double MinPerRing (13.);
+    {
+        if (DEBUG) { std::clog << "Saving shape point data.\n"; }
+
+        // Save data to a file
+        std::ofstream ofs ("shape.dat");
+
+        for (patch_ring::const_iterator p0 = br.begin (); p0 != br.end (); ++p0)
+        {
+            ofs << p0->x () << "\t" << p0->y () << "\n";
+        }
+    }
+    {
+        if (DEBUG) { std::clog << "Saving all shape data.\n"; }
+
+        // Save data to a file
+        std::ofstream ofs ("ring.dat");
+        br.serialise (ofs);
+    }
+    // In the first half of the function we calculate the surface area
+    // of the protein zone.  This uses standard surface of revolution
+    // methods for the three cases.  In the first cast we have two circles
+    // in the same plane, so area is difference between the area of the
+    // circles The second case is a cylinder, surface area is perimeter
+    // of circle by length.  The last case is a 'conical frustrum', this
+    // uses the formula 1 div 3 pi * h * (r0**2 + r0*r1 + r1**2).
+
+    // Once the total surface area is calculated we generate a patch
+    // target area by dividing the total by PatchSize.  Then we work over
+    // the polygon again dividing up each of the surfaces of revolution
+    // by the target area.  If possible we try to make the patches
+    // approximately square.  If we end up creating more than PatchSize
+    // patches, we restart the process with a slightly larger target area.
+
+    // Nomenclature:
+    // * h and dh refer to the line between the starting and ending points
+    // * phi and dphi refer to the revolution angle
+    // * n is number of patches in a shape
+    // * p is # patches along h, q is # patches along phi. n == p*q
+
+    // The surface area of each surface of revolution
+    std::vector< double > sa_;
+    double sa_total_ = 0;
+
+    patch_ring::const_iterator p0, p1;
+    p0 = p1 = br.begin ();
+    ++p1;
+
+    for (uint32_type i_ = 0; i_ < br.size () - 1; ++i_, ++p1, ++p0)
+    {
+        double area;
+
+        // Case 1: vertical line segment
+        if (feq (p0->x(), p1->x ()))
+        {
+            area = constants::pi * (std::abs (sqr (p0->y()) - sqr (p1->y())));
+            // std::cout << "vertical line [" << p0->x() << " = " << p1->x () << "] area = " << area << "\n";
+        }
+        // Case 2: horizontal line segment
+        else if (feq (p0->y(), p1->y()))
+        {
+            area = 2 * constants::pi * p0->y() * (std::abs (p0->x() - p1->x()));
+            // std::cout << "horizontal line [" << p0->y() << " = " << p1->y () << "] area = " << area << "\n";
+        }
+        // Case 3: angled segment
+        // Weisstein, Eric W.  "Surface of Revolution." From MathWorld--A
+        // Wolfram Web Resource.
+        // http://mathworld.wolfram.com/SurfaceofRevolution.html
+        else
+        {
+            area = constants::pi * (std::abs (p0->x() - p1->x()))
+                   * (sqr (p0->y()) +  p0->y() * p1->y() + sqr (p1->y())) / 3.;
+            // std::cout << "angled line [" << p0->x() << ":" << p0->y() << "], [" << p1->x () << ":" << p1->y() << "] area = " << area << "\n";
+        }
+
+        sa_.push_back (area);
+        sa_total_ += area;
+    }
+
+    // We need to store enough information about the geometry of each patch to be able to
+    // do integration.
+    boost::ptr_vector< integrator > patches_integrators_;
+    double area_target = sa_total_ / (2 * patch_factor);
+
+    do
+    {
+        if (DEBUG) { std::clog << "Starting to prepare patchs.\n"; }
+
+        // Target area for a patch is total on PatchSize.  As we round up when
+        // dividing the surfaces' area by the target we apply a factor of 1.2
+        // to avoid getting more than PatchSize patches.  If we get too many
+        // patches then this loop is restarted and the factor applied again.
+        area_target *= 1.2;
+        // calculate patches
+        p0 = p1 = br.begin ();
+        ++p1;
+        npatch = 0;
+
+        for (uint32_type i_ = 0; i_ < br.size () - 1; ++i_, ++p1, ++p0)
+        {
+            const double n_ = sa_[i_] / area_target;
+            // Set minimum of fifteen patches per line segment
+            const uint16_type N_ (std::ceil (n_));
+
+            if (DEBUG) {  std::clog << "For line segment [" << int (i_) << "] we have " << int (N_) << "(" << n_ << ") patches.\n"; }
+
+            // Case 1: vertical line segment
+            if (feq (p0->x(), p1->x ()))
+            {
+                GRS400_CHECK (! feq (p0->y(), p1->y()), "Two adjacent points have the same x and y values!");
+
+                if (DEBUG) { std::clog << "Case 1: vertical line segment\n"; }
+
+                // Length of line segment
+                const double h_ (p1->y() - p0->y());
+                // division of n into h and phi parts:
+                //
+                // p*q = n ; approx square patches gives: h/p ~= 2pi((r1 + r2)/2)/q
+                // -> p^2 = h*n / pi(r1 + r2)
+                const double p_ = std::sqrt (std::abs (h_) * n_ / (constants::pi * (p0->y() + p1->y())));
+                // q = n/p
+                const uint16_type Q_ (p_ < 1 ? N_ : uint16_type (std::max (MinPerRing, std::ceil (n_ / p_))));
+                const uint16_type P_ (std::max (1u, N_ / Q_));
+
+                if (npatch + (P_ * Q_) > PatchSize)
+                {
+                    // Need to restart with larger target area!
+                    npatch += (P_ * Q_);
+                    break;
+                }
+
+                // Note "dh" is divisions along line segment so it only has a 'r'
+                // component here.  The divisions along 'r' are uniform so we vary
+                // the number of patches per ring to account for increasing area.
+                const double dh = h_ / P_;
+                const double r_ = p0->y();
+
+                for (uint16_type j_ = 0; j_ < P_; ++j_)
+                {
+                    const double r0 = r_ + j_ * dh;
+                    const double r1 = r0 + dh;
+                    // Radial center is adjusted for increasing area
+                    const double rc = std::sqrt ( (sqr (r0) + sqr (r0 + dh)) / 2);
+                    //  (a + s)^2 - a^2 = 2as + s^2 = s(2a + s)
+                    const double ring_area = constants::pi * (2 * dh * r0 + sqr (dh));
+                    // Number of phi divisions in this ring
+                    const uint16_type K_ (std::max (15., std::ceil (ring_area / area_target)));
+                    const double step_angle = 2 * constants::pi / K_;
+
+                    for (uint16_type k_ = 0; k_ < K_; ++k_)
+                    {
+                        pu_xyz[npatch].pr = rc;
+                        const double angle = k_ * step_angle;
+                        pu_xyz[npatch].px = rc * std::cos (angle);
+                        pu_xyz[npatch].py = rc * std::sin (angle);
+                        pu_xyz[npatch].pz = p0->x();
+                        // Normal is along z axis, +ve if p0.z > p1.z
+                        pu_xyz[npatch].ux = 0.;
+                        pu_xyz[npatch].uy = 0.;
+                        pu_xyz[npatch].uz = (p0->y () < p1->y () ? -1. : 1.);
+                        pu_xyz[npatch].area = ring_area / double (K_);
+                        // store data for calculating A
+                        patches_integrators_.push_back (new wall_integrator (npatch, pu_xyz[npatch].pz, r0, r1, angle - step_angle / 2, angle + step_angle / 2));
+                        // Increment patch
+                        ++npatch;
+                    }
+                }
+            }
+            // Case 2: horizontal line segment
+            else if (feq (p0->y(), p1->y()))
+            {
+                if (DEBUG) { std::clog << "Case 2: horizontal line segment\n"; }
+
+                // Length of line segment
+                const double h_ = p1->x() - p0->x();
+                const double dir_ = 1.; // (p0->x() > p1->x() ? -1. : 1.);
+                // division of n into h and phi parts:
+                //
+                // p*q = n ; approx square patches gives: h/p ~= pi(r1 + r2)/q
+                // -> p^2 = h*n / pi(r1 + r2)
+                const double p_ = std::sqrt (std::abs (h_) * n_ / (constants::pi * (p0->y() + p1->y())));
+                // q = n/p
+                const uint16_type Q_ (p_ < 1 ? N_ : uint16_type (std::max (MinPerRing, std::ceil (n_ / p_))));
+                const uint16_type P_ (std::max (1u, N_ / Q_));
+
+                if (npatch + (P_ * Q_) > PatchSize)
+                {
+                    // Need to restart with larger target area!
+                    npatch += (P_ * Q_);
+                    break;
+                }
+
+                // Q_ is number of "phi" segments, P_ is number of "h" segments
+                const double step_angle = 2 * constants::pi / Q_;
+                // Note "dh" is divisions along line segment so it only has a 'z'
+                // component here. and r is constant
+                const double dh = h_ / P_;
+
+                for (uint16_type j_ = 0; j_ < P_; ++j_)
+                {
+                    const double zc = p0->x() + dir_ * (dh * j_ + (dh / 2));
+
+                    for (uint16_type k_ = 0; k_ < Q_; ++k_)
+                    {
+                        pu_xyz[npatch].pr = p0->y();
+                        const double angle = k_ * step_angle;
+                        pu_xyz[npatch].px = pu_xyz[npatch].pr * std::cos (angle);
+                        pu_xyz[npatch].py = pu_xyz[npatch].pr * std::sin (angle);
+                        pu_xyz[npatch].pz = zc;
+                        // Normal is along z axis, -ve if p0.x > p1.x
+                        pu_xyz[npatch].ux = (p0->x () < p1->x () ? 1. : -1.) * std::cos (angle);
+                        pu_xyz[npatch].uy = (p0->x () < p1->x () ? 1. : -1.) * std::sin (angle);
+                        pu_xyz[npatch].uz = 0.;
+                        pu_xyz[npatch].area = step_angle * p0->y() * dh;
+                        // store data for calculating A
+                        patches_integrators_.push_back (new line_integrator (npatch, pu_xyz[npatch].pz - (dh / 2), pu_xyz[npatch].pz + (dh / 2), pu_xyz[npatch].pr, angle - step_angle / 2, angle + step_angle / 2));
+                        ++npatch;
+                    }
+                }
+            }
+            // Case 3: angled segment
+            // Weisstein, Eric W.  "Surface of Revolution." From MathWorld--A
+            // Wolfram Web Resource.
+            // http://mathworld.wolfram.com/SurfaceofRevolution.html
+            else
+            {
+                if (DEBUG)
+                {
+                    std::clog << "Case 3: angled line segment\n"
+                              << "Line = p0(" << p0->x() << "," << p0->y() << ") p1(" << p1->x() << "," << p1->y() << ")\n";
+                }
+
+                basic_ring::arc_type const * arc_ = br.arc_at (p0, p1);
+                GRS400_CHECK (arc_ != NULL, "Have an arc segment but no arc in geometry.");
+
+                // Length of arc segment
+                //
+                // dtheta * radius; dtheta = [p1[theta] - p0[theta]]
+                //
+                const double theta0_val = theta (p0->y() - arc_->r, p0->x() - arc_->z);
+                // Handle situation when theta = 0. This may need to be changed depending on direction.
+                // const double theta0_ = (1 == arc_->direction && feq(0., theta0_val) ? constants::pi * 2 : theta0_val);
+                const double theta1_val = theta (p1->y() - arc_->r, p1->x() - arc_->z);
+                const double theta1_ = (feq (0., theta1_val) && theta0_val > constants::pi ? constants::pi * 2 : theta1_val);
+                const double theta0_ = (feq (0., theta0_val) && theta1_ > constants::pi ? constants::pi * 2 : theta0_val);
+
+                const double h_ = arc_->radius * std::abs (theta1_ - theta0_);
+                // division of n into h (h_ <-- dla) and phi parts:
+                //
+                // p*q = n ; approx square patches gives: h/p ~= pi(r1 + r2)/q
+                // -> p^2 = h*n / pi(r1 + r2)
+                const double p_ = std::sqrt (h_ * n_ / (constants::pi * (p0->y() + p1->y())));
+                // q = n/p  [P_ <-- nta] but attempt to make about 15 patches per ring
+                const uint16_type Q_ (p_ < 1 ? N_ : uint16_type (std::max (MinPerRing, std::ceil (n_ / p_))));
+                const uint16_type P_ (std::max (1u, N_ / Q_));
+
+                if (DEBUG) { std::clog << "Have arc segment: " << h_ << ", p = " << p_ << ", Q = " << int (Q_) << ", P = " << P_ << "\n"; }
+
+                if (npatch + (P_ * Q_) > PatchSize)
+                {
+                    // Need to restart with larger target area!
+                    npatch += (P_ * Q_);
+                    break;
+                }
+
+                // Q_ is number of "phi" segments, P_ is number of "h" segments
+                // Note "dh" is divisions along line segment so it has a 'z'
+                // and 'r' component here.
+                const double dtheta = (theta1_ - theta0_) / P_;
+
+                if (DEBUG) { std::clog << "dtheta = (" << dtheta << ")\n"; }
+
+                for (uint16_type j_ = 0; j_ < P_; ++j_)
+                {
+                    // Like with vertical walls, we keep the divisions along the line
+                    // segment constant but vary the number of patchs in each ring
+
+                    //!  each section of the arc has length dtta(arcnumber,ring)
+                    const double theta0 = theta0_ + j_ * dtheta;
+                    const double theta1 = theta0 + dtheta;
+                    // Area weighted center of line segment
+                    //!each section of the arc has length dtta(arcnumber,ring)
+
+                    const double ara (arc_->r * dtheta
+                                      - arc_->radius * (std::cos (theta1) - std::cos (theta0)));
+                    const double szaml (0.5 * arc_->r * (sqr (theta1) - sqr (theta0))
+                                        -  arc_->radius * (theta1 * std::cos (theta1) - theta0 * std::cos (theta0))
+                                        + arc_->radius * (std::sin (theta1) - std::sin (theta0)));
+                    const double tac = szaml / ara;
+
+                    //!  should we always add [radius * sin(tac)] seems like in some
+                    //!  cases we may want to subtract.
+                    //
+                    // JJF: I think when we want subtraction, sin(tac) will be negative
+                    const double zc = arc_->radius * std::cos (tac) + arc_->z;
+                    const double rc = arc_->radius * std::sin (tac) + arc_->r;
+                    //!circumference of this ring
+                    // const double cir = 2 * constants::pi * rc ;
+
+                    // Estimate surface area:
+                    const double ring_area = constants::pi * sqr (rc) * std::abs (dtheta);
+
+                    // Number of divisions on this ring
+                    const uint16_type K_ (std::max (15., std::ceil (ring_area / area_target)));
+
+                    if (DEBUG) { std::clog << "Have Zc = " << zc << ", Rc = " << rc << ", K = " << int (K_) << ", Area = " << ring_area << "\n"; }
+
+                    const double step_angle = 2 * constants::pi / K_;
+
+                    for (uint16_type k_ = 0; k_ < K_; ++k_)
+                    {
+                        pu_xyz[npatch].pr = rc;
+                        pu_xyz[npatch].pz = zc;
+                        const double angle = k_ * step_angle;
+                        pu_xyz[npatch].px = rc * std::cos (angle);
+                        pu_xyz[npatch].py = rc * std::sin (angle);
+                        pu_xyz[npatch].ux = (0 == arc_->direction ? 1 : -1) /* ( (1 == arc_->quadrant || 2 == arc_->quadrant) ? 1 : -1)*/ * std::sin (tac) * std::cos (angle);
+                        pu_xyz[npatch].uy = (0 == arc_->direction ? 1 : -1) /* ( (1 == arc_->quadrant || 2 == arc_->quadrant) ? 1 : -1)*/ * std::sin (tac) * std::sin (angle);
+                        pu_xyz[npatch].uz = (0 == arc_->direction ? 1 : -1) /* ( (1 == arc_->quadrant || 4 == arc_->quadrant) ? 1 : -1)*/ * std::cos (tac);
+                        GRS400_CHECK (feq (1., sqr (pu_xyz[npatch].ux) + sqr (pu_xyz[npatch].uy) + sqr (pu_xyz[npatch].uz)), "normal should have unit length");
+                        pu_xyz[npatch].area = ring_area / K_;
+                        patches_integrators_.push_back (new arcs_integrator (npatch, arc_->z, arc_->r, arc_->radius, theta0, theta1, angle - step_angle / 2, angle + step_angle / 2));
+                        ++npatch;
+                    }
+                }
+            }
+
+            if (npatch > PatchSize)
+            {
+                break;
+            }
+        }
+    }
+    while (npatch > PatchSize);
+
+    {
+        if (DEBUG) { std::clog << "Saving patchs.\n"; }
+
+        // Save data to a file
+        std::ofstream ofs ("patch.dat");
+
+        // boost::archive::text_oarchive oar (ofs);
+        for (uint16_type i_ = 0; i_ < npatch; ++i_)
+        {
+            ofs.precision (3);
+            ofs.width (6);
+            ofs.setf (std::ios::fixed);
+            pu_xyz[i_].dump (ofs);
+        }
+    }
+
+    // We calculate the A matrix as follows:
+    // for each patch-patch combination (ii,jj):
+    // - split patch area up into 10 (or 20 if ii==jj) sub patches
+
+    const double deps_4pi (deps / (4  * constants::pi));
+
+    if (DEBUG)
+    {
+        std::clog << "Permittivity factor: " << deps_4pi << "\n";
+        std::clog << "Starting to calculate 'A' matrix for patchs.\n";
+    }
+
+    for (boost::ptr_vector< integrator >::iterator iter_ = patches_integrators_.begin (); iter_ != patches_integrators_.end (); ++iter_)
+    {
+        if (DEBUG) { std::clog << "integrator index is " << iter_->jj << "\n"; }
+
+        iter_->build_table ();
+
+        for (unsigned int i = 0; i < npatch; ++i)
+        {
+            amx[amx_i (i, iter_->jj)] += (*iter_) (i, pu_xyz[i]) * deps_4pi;
+        }
+
+        iter_->clear_table ();
+    }
+
+    patches_integrators_.clear ();
+    fp_env::check ("Floating point error after integrators\n");
+
+    for (uint16_type i = 0; i < npatch; ++i)
+    {
+        amx[amx_i (i, i)] += 1.;
+    }
+
+    // Do LU solv.
+
+    if (DEBUG) { std::clog << "Starting to compute LU factorisation of A matrix.\n"; }
+
+    ludcmp (&amx[0], npatch, indx);
+!!!1812655.cpp!!!	partial_h(inout bufer_1 : add_guard, in a_salt : uint8_type, in is_create : bool) : bool
+
+    // Doing this leaves one ?: test in the inner loop that may impact
+    // performance.  If it is a problem then writing an inner loop for
+    // each case should solve the problem.
+
+    const ion_specie & spec_1 = parent_.get_specie();
+    const uint16_type npatch_ = npatch;
+
+    for (uint8_type i_ = 0; i_ < bufer_1.get_salt ().count (a_salt); ++i_)
+    {
+        /*<         ispec=ispcin(igc,icount) >*/
+        const uint8_type ispec = bufer_1.get_salt ().get_component (a_salt, i_);
+        /*<         qi=q(ispec) >*/
+        /*<         epsi=eps(ispec) >*/
+	if (is_create)
+	{
+           patch_part< true >(bufer_1.let_.c_trial
+	                , spec_1.charge_factor (ispec)
+                        , deps
+                        , spec_1.relative_permittivity (ispec)
+                        , bufer_1.new_x (i_)
+                        , bufer_1.new_y (i_)
+                        , bufer_1.new_z (i_)
+                        , &bufer_1.let_.ripnew[i_][0]
+                        , &pu_xyz[0]
+                        , &pu_xyz[npatch]);
+        }
+        else
+        {
+           patch_part< false >(bufer_1.let_.c_trial
+	                , spec_1.charge_factor (ispec)
+                        , deps
+                        , spec_1.relative_permittivity (ispec)
+                        , bufer_1.new_x (i_)
+                        , bufer_1.new_y (i_)
+                        , bufer_1.new_z (i_)
+                        , &bufer_1.let_.rip[bufer_1.out_index (i_)][0]
+                        , &pu_xyz[0]
+                        , &pu_xyz[npatch]);
+        }
+    }
+
+     bufer_1.let_.h_trial = bufer_1.let_.c_trial;
+
+    // CALCULATE VECTOR H
+    return lubksb (&amx[0], npatch_, indx, &bufer_1.let_.h_trial[0]);
+!!!1812783.cpp!!!	partial_h(inout bufer_1 : move_guard, in a_spec : uint8_type) : bool
+    // This method updates the c matrix by subtracting the effect of the
+    // particle at its old position and adding the effect from its new
+    // position. (Note that figuratively "adding" the effect is literally
+    // "subtracting" and vice versa) 
+    const ion_specie & spec_1 = parent_.get_specie();
+
+    /*<         qi=q(ispec) >*/
+    /*<         epsi=eps(ispec) >*/
+    patch_part< false >(bufer_1.let_.c_trial
+	                , spec_1.charge_factor (a_spec)
+                        , deps
+                        , spec_1.relative_permittivity (a_spec)
+                        , bufer_1.old_x ()
+                        , bufer_1.old_y ()
+                        , bufer_1.old_z ()
+                        , &bufer_1.let_.rip[bufer_1.global_index][0]
+                        , &pu_xyz[0]
+                        , &pu_xyz[npatch]);
+
+    patch_part< true >(bufer_1.let_.c_trial
+	                , spec_1.charge_factor (a_spec)
+                        , deps
+                        , spec_1.relative_permittivity (a_spec)
+                        , bufer_1.new_x ()
+                        , bufer_1.new_y ()
+                        , bufer_1.new_z ()
+                        , &bufer_1.let_.ripnew[0][0]
+                        , &pu_xyz[0]
+                        , &pu_xyz[npatch]);
+
+    bufer_1.let_.h_trial = bufer_1.let_.c_trial;
+
+    // CALCULATE VECTOR H
+    return lubksb (&amx[0], npatch, indx, &bufer_1.let_.h_trial[0]);
+!!!1812911.cpp!!!	patch(inout a_parent : evaluator)
+    std::char_traits< patch_type >::assign (&pu_xyz[0], PatchSize, patch_type());
+    std::char_traits< int32_type >::assign (&indx[0], PatchSize, 0U);
+    // std::char_traits< double >::assign (&amx[amx_i (0, 0)], PatchSize * PatchSize, 0.);

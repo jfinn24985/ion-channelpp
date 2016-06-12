@@ -1,0 +1,220 @@
+class simulator_meta
+!!!2162607.cpp!!!	do_read_entry(inout reader : input_base_reader) : bool
+// Example input section
+//
+// simulator
+// name Some title
+// outputdir somewhere/here
+// inputname some regular expression
+// nstep 100000
+// naver 1000
+// inner 1000 # Number or "auto"
+// isave 1000
+// ntarg 300
+// kelvin 300
+// end
+//
+// process entry
+if (reader.name().find(core::strngs::fsname()) == 0)
+{
+   // --------------------
+   //run title "name ##"
+   UTILITY_INPUT(not reader.value().empty(), "Run title '"+core::strngs::fsname()+"' must have a value.", this->section_label());
+   const std::string title { reader.dequote( reader.value() ) };
+   UTILITY_INPUT(not title.empty(), "Run title '"+core::strngs::fsname()+"' must have a value.", this->section_label());
+   this->sim_->set_run_title( title );
+}
+else if (reader.name().find(core::strngs::outputdir_label()) == 0)
+{
+   // --------------------
+   // Output/data directory name "outputdir 'abc/def'"
+   UTILITY_INPUT(not reader.value().empty(), "Output directory '"+core::strngs::outputdir_label()+"' must have a value.", this->section_label());
+   // Need to test for directory existance elsewhere
+   this->sim_->set_output_dir_fmt( reader.dequote( reader.value() ) );
+}
+else if (reader.name().find(core::strngs::inputpattern_label()) == 0)
+{
+   // --------------------
+   // Input file recognition pattern "inputpattern 'abc.%03d.def'"
+   UTILITY_INPUT(not reader.value().empty(), "Input file recognition pattern '"+core::strngs::inputpattern_label()+"' must have a value.", this->section_label());
+   this->sim_->set_filename_base( reader.dequote( reader.value() ) );
+}
+else if (reader.name().find(core::strngs::fsnstp()) == 0)
+{
+   // --------------------
+   // Number of production step "nstep ##"
+   UTILITY_INPUT(not reader.value().empty(), "Number of production steps '"+core::strngs::fsnstp()+"' must have a value.", this->section_label());
+   try
+   {
+      this->sim_->set_production_interval( boost::lexical_cast< std::size_t  >(reader.value()) );
+      UTILITY_INPUT(this->sim_->production_interval() > 0ul, "Number of production steps must be greater than zero.", this->section_label());
+      this->missing_required_tags_.reset(SIMULATOR_PROD);
+   }
+   catch (boost::bad_lexical_cast const& err)
+   {
+      const bool convert_succeed(false);
+      UTILITY_INPUT(convert_succeed, "Invalid value for " + core::strngs::fsnstp() + " : " + err.what(), this->section_label());
+   }
+}
+else if (reader.name().find(core::strngs::fsnavr()) == 0)
+{
+   // --------------------
+   // Number of equilibrium step "naver ##"
+   UTILITY_INPUT(not reader.value().empty(), "Number of equilibration steps '"+core::strngs::fsnavr()+"' must have a value.", this->section_label());
+   try
+   {
+      this->sim_->set_equilibration_interval( boost::lexical_cast< std::size_t  >(reader.value()) );
+      UTILITY_INPUT(this->sim_->equilibration_interval() > 0ul, "Number of equilibration steps must be greater than zero.", this->section_label());
+      this->missing_required_tags_.reset(SIMULATOR_THERM);
+   }
+   catch (boost::bad_lexical_cast const& err)
+   {
+      const bool convert_succeed(false);
+      UTILITY_INPUT(convert_succeed, "Invalid value for " + core::strngs::fsnavr() + " : " + err.what(), this->section_label());
+   }
+}
+else if (reader.name().find(core::strngs::inner_label()) == 0)
+{
+   // --------------------
+   // Number of inner loop trials per step "inner ##"
+   UTILITY_INPUT(not reader.value().empty(), "Number of production steps '"+core::strngs::inner_label()+"' must have a value.", this->section_label());
+   try
+   {
+      this->sim_->set_inner_loop_size( boost::lexical_cast< std::size_t  >(reader.value()) );
+      UTILITY_INPUT(this->sim_->inner_loop_size() > 0ul, "Number of production steps must be greater than zero.", this->section_label());
+   }
+   catch (boost::bad_lexical_cast const& err)
+   {
+      const bool convert_succeed(false);
+      UTILITY_INPUT(convert_succeed, "Invalid value for " + core::strngs::inner_label() + " : " + err.what(), this->section_label());
+   }
+}
+else if (reader.name().find(core::strngs::fsisav()) == 0)
+{
+   // --------------------
+   // Checkpoint interval "isave ##"
+   UTILITY_INPUT(not reader.value().empty(), "Checkpoint interval '"+core::strngs::fsisav()+"' must have a value.", this->section_label());
+   try
+   {
+      this->sim_->set_report_interval( boost::lexical_cast< std::size_t  >(reader.value()) );
+      UTILITY_INPUT(this->sim_->report_interval() > 0ul, "Reporting interval must be greater than zero", this->section_label());
+      this->missing_required_tags_.reset(SIMULATOR_CHECK);
+   }
+   catch (boost::bad_lexical_cast const& err)
+   {
+      const bool convert_succeed(false);
+      UTILITY_INPUT(convert_succeed, "Invalid value for " + core::strngs::fsisav() + " : " + err.what(), this->section_label());
+   }
+}
+else if (reader.name().find(core::strngs::fsntrg()) == 0)
+{
+   // --------------------
+   // Target particle number "ntarg ##"
+   UTILITY_INPUT(not reader.value().empty(), "Target particle number '"+core::strngs::fsntrg()+"' must have a value.", this->section_label());
+   try
+   {
+      this->sim_->set_target_count( boost::lexical_cast< std::size_t  >(reader.value()) );
+      UTILITY_INPUT(this->sim_->target_count() > 0ul, "Target particle number must be greater than zero", this->section_label());
+      this->missing_required_tags_.reset(SIMULATOR_NTARG);
+   }
+   catch (boost::bad_lexical_cast const& err)
+   {
+      const bool convert_succeed(false);
+      UTILITY_INPUT(convert_succeed, "Invalid value for " + core::strngs::fsntrg() + " : " + err.what(), this->section_label());
+   }
+}
+else if (reader.name().find(core::strngs::fstsi()) == 0)
+{
+   // --------------------
+   // Temperature "kelvin ##.#"
+   UTILITY_INPUT(not reader.value().empty(), "Temperature '"+core::strngs::fstsi()+"' must have a value.", this->section_label());
+   try
+   {
+      this->sim_->set_temperature( boost::lexical_cast< double >(reader.value()) );
+      if (this->sim_->get_temperature() < 273.0)
+      {
+         std::cerr << "WARNING: Requested simulation temperature is below the freezing point of water.";
+      }
+   }
+   catch (boost::bad_lexical_cast const& err)
+   {
+      const bool convert_succeed(false);
+      UTILITY_INPUT(convert_succeed, "Invalid value for " + core::strngs::fstsi() + " : " + err.what(), this->section_label());
+   }
+}
+else
+{
+   // Option not understood
+   return false;
+}
+return true;
+!!!186416.cpp!!!	do_read_end(inout sim : simulator) : void
+UTILITY_INPUT (not this->missing_required_tags_.any(), "Not all required tags were present.", this->section_label());
+!!!2163887.cpp!!!	simulator_meta(inout sim : simulator)
+if (0 == counter)
+{
+   const std::string seclabel( core::strngs::simulator_label() );
+   // ----------------------------------------
+   // add section
+   // ----------------------------------------
+
+   //   Simulator input section definition
+   core::input_help::exemplar().add_section( seclabel, "Simulator input section definition" );
+
+
+   // ----------------------------------------
+   // add parameters
+   // ----------------------------------------
+
+   // nstep : [required, number] production steps
+   {
+      const std::string description("[required, number > 0] Number of steps in production phase of simulation.");
+      core::input_help::exemplar().add_option( seclabel, core::strngs::fsnstp(), description );
+   }
+   // naver : [required, number] equilibrium steps
+   {
+      const std::string description("[required, number > 0] Number of steps in equilibration/thermalization phase of simulation.");
+      core::input_help::exemplar().add_option( seclabel, core::strngs::fsnavr(), description );
+   }
+   // isave : [required, number] steps between system checkpoints
+   {
+      const std::string description("[required, number > 0] Number of steps between checkpoints of system.");
+      core::input_help::exemplar().add_option( seclabel, core::strngs::fsisav(), description );
+   }
+   // inner : [optional, number] steps between system checkpoints
+   {
+      const std::string description("[optional, number > 0 or 'auto'] Number of trials within a step. Default is 'auto' which gives a loop size that scales with the problem size.");
+      core::input_help::exemplar().add_option( seclabel, core::strngs::inner_label(), description );
+   }
+
+   // kelvin : [optional, number] simulation temperature (in Kelvin)
+   {
+      const std::string description("[optional, number] simulation temperature (in Kelvin, default is 298K).");
+      core::input_help::exemplar().add_option( seclabel, core::strngs::fstsi(), description );
+   }
+   // name : [optional, string] simulation temperature (in Kelvin)
+   {
+      const std::string description("[optional, text] title text for the simulation.");
+      core::input_help::exemplar().add_option( seclabel, core::strngs::fsname(), description );
+   }
+   // outputdir : [optional, filename] directory for output files
+   {
+      const std::string description("[optional, directory name or template] defines a directory for result/output files (will be created if not present).");
+      core::input_help::exemplar().add_option( seclabel, core::strngs::outputdir_label(), description );
+   }
+   // inputname : [optional, filename regular expression] how to locate input.
+   {
+      const std::string description("[command line only, filename regular expression] how to recognise an input file, output in the log file as documentation.");
+      core::input_help::exemplar().add_option( seclabel, core::strngs::inputpattern_label(), description );
+   }
+   // ntarg : [required, integer] target average particle count.
+   {
+      const std::string description("[required, integer] Target average number of solute particles.");
+      core::input_help::exemplar().add_option( seclabel, core::strngs::fsntrg(), description );
+   }
+
+}
+++counter;
+
+!!!268720.cpp!!!	do_reset() : void
+this->missing_required_tags_.reset();

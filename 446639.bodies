@@ -1,0 +1,345 @@
+class geometry_factory
+!!!986031.cpp!!!	generate_region(in ireg : int, in a_radius : double, in a_use_zlimit : bool) : region
+double region_radius; // The radius of the cylinder
+double region_zhi;    // The cylinder half-length for all by ismpl
+double region_zlo (0.0); // For ismpl this is the inner z, zhi is out z
+switch (ireg)
+{
+case ionch::constants::izlim:
+  region_radius = state_->pore_radius () - a_sphere_radius;
+  region_zhi = structural_hlength_ - (not use_boda_bounds_ or a_use_zlimit ? 0.0 : a_sphere_radius);
+  return new region (ionch::constants::izlim, this->region_names (ionch::constants::izlim)
+                     , region_radius, region_zhi);
+  break;
+case ionch::constants::ifilt:
+  region_radius = state_->pore_radius () - a_sphere_radius;
+  region_zhi = state_->pore_hlength () + (use_boda_bounds_ ? 0.0 : a_sphere_radius);
+  return new region (ionch::constants::ifilt, this->region_names (ionch::constants::ifilt)
+                     , region_radius, region_zhi);
+  break;
+case ionch::constants::ichan:
+  region_radius = state_->pore_radius () + state_->vestibule_radius ();
+  region_zhi = state_->pore_hlength () + state_->vestibule_radius () + (use_boda_bounds_ ? 0.0 : 2 * a_sphere_radius);
+  return new validator_region (ionch::constants::ichan
+                               , this->region_names (ionch::constants::ichan)
+                               , region_radius, a_sphere_radius, region_zhi, this->state_);
+  break;
+case ionch::constants::ibulk:
+  region_radius = state_->cell_radius () - a_sphere_radius;
+  region_zhi = state_->cell_hlength () - a_sphere_radius;
+  return new validator_region (ionch::constants::ibulk
+                               , this->region_names (ionch::constants::ibulk)
+                               , region_radius, a_sphere_radius, region_zhi, this->state_);
+  break;
+case ionch::constants::ismpl:
+{
+  region_radius = 2*(state_->cell_radius ())/3.0;
+  const double bulkoffset ((state_->cell_hlength () - (state_->pore_hlength () + state_->vestibule_radius ()))/6);
+  region_zhi = state_->cell_length () - bulkoffset;
+  region_zlo = state_->pore_hlength () + state_->vestibule_radius () + bulkoffset;
+}
+return new split_region (ionch::constants::ismpl
+                         , this->region_names (ionch::constants::ismpl)
+                         , region_radius, region_zhi, region_zlo);
+break;
+}
+
+!!!723631.cpp!!!	interpret_input(inout os_log : ostream) : void
+IONCH_CHECK(cell_state_, "Programming error: geometry finalisation called before defining geometry");
+
+os_log << strngs::horizontal_bar << "\n";
+os_log << "Geometry data summary\n";
+os_log << strngs::horizontal_bar << "\n";
+
+// -- Compute simulation geometry parameters if required
+if (target_particle_number_ != 0)
+{
+  // Non-zero particle number means calculate the volume based on this number and
+  // the target ionic strength.
+  //
+  // Total volume
+  const double bulk_volume = target_particle_number_ * constants::to_SI () / parent_->get_configuration ().ionic_strength ();
+
+  state_->set_volume (bulk_volume);
+}
+else
+{
+  // calculate total solution volume
+  state_->set_volume (bulk_volume);
+  // calculate target_particle_number_
+  target_particle_number_ = int (spec::ionstr() * state_->volume () / constants::to_SI ());
+  if (target_particle_number_ <= 0)
+  {
+    std::stringstream osmsg_;
+    osmsg_ << "Error: Channel protein occupies too much volume for requested salt concentrations.\n";
+    osmsg_ << "SUGGESTED SOLUTION: increase " << strngs::fsgrl5 << " and/or " << strngs::fsgzl4 << " option in 'geom' input.\n";
+    IONCH_INPUT(target_particle_number_ > 0, osmsg_.str ());
+  }
+  // Calculate length for simulation of bulk.
+  bulk_length = std::cbrt (bulk_volume_);
+}
+
+//-- // ---- dimensions of region for sampling bulk conc.
+//-- // We set the bulk sampling region to be ~1/3 distance from
+//-- // the boundaries
+//-- const double bulk_width (zl(4) - zl(2));
+//-- sample_bulk_inner_ = zl(2) + 0.25 * bulk_width;
+//-- sample_bulk_outer_ = zl(4) - 0.25 * bulk_width;
+//-- sample_bulk_radial_ = 0.75 * rl(5);
+//-- sample_bulk_volume_ = constants::sqr(sample_bulk_radial_) * constants::pi * (0.5 * bulk_width) * 2;
+//-- 
+//-- // -- Definition of trial insertion regions for each specie
+//-- for (int ispec = 0; ispec != spec::spec_size (); ++ispec)
+//-- {
+//-- 
+//--   //   Volumes for ions by region, note a region is volume to which
+//--   //   ions are possibly added, even though it is greater than the
+//--   //   accessible volume.
+//--   const double radius_ (spec::xri(ispec));
+//--   if (use_boda_bounds_)
+//--   {
+//--     //  Filter region insertion
+//--     zreg_[ispec][constants::izlim] = zlimit();
+//--     if (not spec::isfree(ispec))
+//--     {
+//--       // Structural ions have all of particle in filter
+//--       zreg_[ispec][constants::izlim] -= radius_;
+//--     }
+//--     //     Centre region
+//--     zreg_[ispec][constants::ifilt]= geom::zl(1);
+//--     //     Total channel region
+//--     zreg_[ispec][constants::ichan]= geom::zl(2);
+//--   }
+//--   else
+//--   {
+//--     //  Filter region insertion all of particle in filter
+//--     zreg_[ispec][constants::izlim] = zlimit() - radius_;
+//--     //  Centre region have any part in cylinder
+//--     zreg_[ispec][constants::ifilt]= geom::zl(1) + radius_;
+//--     //  Total channel region any part in channel
+//--     zreg_[ispec][constants::ichan]= geom::zl(2) + radius_;
+//--   }
+//-- 
+//--   //     Filter region
+//--   rreg_[ispec][constants::izlim] = geom::rl(1)-radius_;
+//--   //     Centre region
+//--   rreg_[ispec][constants::ifilt] = geom::rl(1)-radius_;
+//--   //     Total channel region
+//--   rreg_[ispec][constants::ichan] = geom::rl(2);
+//-- 
+//--   //     Bulk region
+//--   zreg_[ispec][constants::ibulk] = geom::zl(4)-radius_;
+//--   rreg_[ispec][constants::ibulk] = geom::rl(5)-radius_;
+//-- 
+//--   // Insertion volumes are the volume into which particle trials are
+//--   // made.  It is _unrelated_ to the particle's accessible volume in
+//--   // a region.
+//--   for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+//--   {
+//--     vreg_[ispec][ireg] = constants::sqr(rreg_[ispec][ireg])*constants::pi*(2*zreg_[ispec][ireg]);
+//--   }
+//--   // Jump in length
+//--   zljin_[ispec] = zreg_[ispec][constants::ichan];
+//--   // Volume we attempt to add into
+//--   vin_[ispec]   = vreg_[ispec][constants::ichan];
+//--   // Available length for 'bulk' insertion
+//--   zljout_[ispec]= zreg_[ispec][constants::ibulk]-zreg_[ispec][constants::ichan];
+//--   // The volume of the bulk
+//--   vout_[ispec]  = constants::sqr(rreg_[ispec][constants::ibulk]) * constants::pi * 2 * zljout_[ispec];
+//--   // The total accessible volume
+//--   vtotal_[ispec]= vout_[ispec]
+//--                   + (2 * constants::pi * constants::sqr(rreg_[ispec][constants::ifilt]) * zreg_[ispec][constants::ifilt])
+//--                   + volrot (rl(2), rlvest() + radius_);
+//-- 
+//-- }
+// -- Wrote the regions for insertion and deletion to logfile
+os_log << strngs::horizontal_bar << "\n";
+os_log << "Interpreted geometry input\n";
+os_log << strngs::horizontal_bar << "\n";
+write_input (os_log);
+os_log << strngs::horizontal_bar << "\n";
+
+!!!723503.cpp!!!	read_input(inout fid : istream, in sname : string, in svalue : string) : void
+// Check name, if wrong this is programming error
+IONCH_REQUIRE (sname == strngs::fsgeom, "Error: incorrect section name");
+// Check value, if wrong this is an input error
+IONCH_INPUT (svalue.size () == 0, "Error: section does not require any parameters");
+// Check for a previous call to read the input
+IONCH_INPUT (not cell_state_, "Error: Multiple geometry sections are not supported.");
+
+double zl1, zl4, rl1, rl4, rl5, rlv, rlc, zlim;
+std::bitset< 9 > required_tags_missed;
+required_tags_missed.set ();
+
+target_particle_number_ = 0;
+do
+{
+  std::string name;
+  std::string value;
+  strngs::readnv(fid, name, value);
+  // exit loop on bad read or section 'end'
+  if (name.empty() or name == strngs::fsend)
+  {
+    break;
+  }
+
+  // looking for rlvest,rlcurv,zl1,zl4,rl1,rl4,rl5,zocc,epsw,epspr,epsch,target_particle_number_
+  if (name == strngs::fsgzl1)
+  {
+    zl1 = boost::lexical_cast< double >(value);
+    required_tags_missed.reset(0);
+  }
+  else if (name == strngs::fsgzl4)
+  {
+    zl4 = boost::lexical_cast< double >(value);
+    required_tags_missed.reset (1);
+  }
+  else if (name == strngs::fsgrl1)
+  {
+    rl1 = boost::lexical_cast< double >(value);
+    required_tags_missed.reset (2);
+  }
+  else if (name == strngs::fsgrl4)
+  {
+    rl4 = boost::lexical_cast< double >(value);
+    required_tags_missed.reset (3);
+  }
+  else if (name == strngs::fsgrl5)
+  {
+    rl5 = boost::lexical_cast< double >(value);
+    required_tags_missed.reset (4);
+  }
+  else if (name == strngs::fsgrlv)
+  {
+    rlv = boost::lexical_cast< double >(value);
+    required_tags_missed.reset (5);
+  }
+  else if (name == strngs::fsgrlc)
+  {
+    rlc = boost::lexical_cast< double >(value);
+    required_tags_missed.reset (6);
+  }
+  else if (name == strngs::fsgzlm)
+  {
+    zlim = boost::lexical_cast< double >(value);
+    required_tags_missed.reset (7);
+  }
+  else if (name == strngs::fsntrg)
+  {
+    target_particle_number_ = boost::lexical_cast< int >(value);
+    required_tags_missed.reset (3);
+  }
+  else if (name == strngs::fsname)
+  {
+    std::istringstream is_(value);
+    is_ >> region_names_[constants::izlim] >> region_names_[constants::ifilt] >> region_names_[constants::ichan] >> region_names_[constants::ibulk];
+  }
+  else if (name == strngs::fsdzg)
+  {
+    gzwdth_ = boost::lexical_cast< double >(value);
+    required_tags_missed.reset (8);
+  }
+  else if (name == strngs::fsnsrt)
+  {
+    strngs::read_bool(value, use_boda_bounds_);
+  }
+  else
+  {
+    const std::string known_option_name;
+    IONCH_INPUT (name != known_option_name, "Name " + name + " is not a valid option in the geometry section");
+  }
+}
+while (fid);
+// If tag 4 was missed then target_particle number must be set to
+// non-zero. ('not' is used to invert test when we set flag.)
+if (not required_tags_missed.test (4))
+{
+  required_tags_missed.set (4, not target_particle_number_ > 0);
+}
+// Now test if any other options are missing.
+IONCH_INPUT (not required_tags_missed.any (), "Not all required tags were present");
+// Input requirements
+//   ** (zlimit <= zl1) : structural ions limited to central cylinder
+//   ** (rlvest + rlcurv <= rl4 - rl1) : radial width of toroid is greater than arcs
+//   ** (rlcurv <= zl1 + rlvest) : z-width of toroid is greater  than outer arc.
+//   ** if target_particle_number_ == 0 then protein must be in defined cell boundaries
+IONCH_INPUT (target_particle_number_ >= 0
+             , "Target number of particles must be unset or greater than 0");
+IONCH_INPUT (zlim <= zl1
+             , "Invalid geometry input: structural ion z-limit is greater than zl1");
+IONCH_INPUT ((rlv + rlc <= rl4 - rl1
+             , "Invalid geometry input: rlvest + rlcurv greater than rl4 - rl1");
+IONCH_INPUT (rlc < zl2
+             , "Invalid geometry input: rlcurv greater than zl1 + rlvest");
+IONCH_INPUT (target_particle_number_ > 0 or (zl4 > zl2 and rl5 > rl4)
+             , "Invalid geometry input: channel protein extends outside simulation box boundary");
+
+// Create the cell geometry state
+cell_state_ = new cell_geometry (zl1, rl1, zlv, zlc, rl4, zl4, rl5, zlim);
+// bulk state is generated only if necessary in interpret input.
+!!!1053743.cpp!!!	volume_of_rotation(in axial_disp : double, in radial_disp : double, in arc_radius : double, in z_0 : double, in z_1 : double) : double
+IONCH_REQUIRE(arc_radius < radial_disp, "The arc radius must be smaller than the radial offset.");
+IONCH_REQUIRE(not bal::math::feq(z_0,z_1), "Z0 can not equal Z1.");
+IONCH_REQUIRE(z_0 < z_1, "Z0 must be less than Z1.");
+const double z1bar_ (z_1 - axial_disp);
+const double z0bar_ (z_0 - axial_disp);
+IONCH_REQUIRE(z0bar_ >= axial_disp - arc_radius, "Z0 must be within one arc_radius of axial_disp.");
+IONCH_REQUIRE(z1bar_ <= axial_disp + arc_radius, "Z0 must be within one arc_radius of axial_disp.");
+
+const double arc_r2 (std::pow(arc_radius,2));
+if (bal::math::feq(z0bar_, 0.0))
+{
+  // Handle case where x0 = xc --> z0bar_ = 0
+  return constants::pi
+         * (
+           (std::pow(radial_disp,2) + arc_r2) * (z_1 - z_0)
+           - std::pow(z1bar_,3)/3.0
+           - radial_disp * (z1bar_ * std::sqrt(arc_r2 - std::pow(z1bar_,2))
+                            + arc_r2 * asin(z1bar_/arc_radius))
+         );
+}
+else if (bal::math::feq(z1bar_, arc_radius))
+{
+  // handle case where x1 = xc + r --> z1bar_ = r)
+  return constants::pi
+         * (
+           (std::pow(radial_disp,2) + arc_r2) * (z_1 - z_0)
+           + (std::pow(z0bar_,3) - std::pow(z1bar_,3))/3.0
+           - radial_disp * (arc_r2 * constants::pi / 4.0)
+           + radial_disp * (z0bar_ * std::sqrt(arc_r2 - std::pow(z0bar_,2))
+                            + arc_r2 * std::asin(z0bar_/arc_radius))
+         );
+}
+else
+{
+  return constants::pi
+         * (
+           (std::pow(radial_disp,2) + arc_r2) * (z_1 - z_0)
+           + (std::pow(z0bar_,3) - std::pow(z1bar_,3))/3.0
+           - radial_disp * (z1bar_ * std::sqrt(arc_r2 - std::pow(z1bar_,2))
+                            + arc_r2 * std::asin(z1bar_/arc_radius))
+           + radial_disp * (z0bar_ * sqrt(arc_r2 - std::pow(z0bar_,2))
+                            + arc_r2 * std::asin(z0bar_/arc_radius))
+         );
+}
+}
+
+!!!723759.cpp!!!	write_input(inout a_os : ostream) : void
+os_log << ionch::strngs::fsgeom << "\n";
+os_log << ionch::strngs::fsgzl1 << state_->pore_hlength () << "\n";
+os_log << ionch::strngs::fsgzl4 << state_->cell_hlength () << "\n";
+os_log << ionch::strngs::fsgrl1 << state_->pore_radius () << "\n";
+os_log << ionch::strngs::fsgrl4 << protein_radius_ << "\n";
+os_log << ionch::strngs::fsgrl5 << state_->cell_radius () << "\n";
+os_log << ionch::strngs::fsgrlv << state_->vestibule_radius () << "\n";
+os_log << ionch::strngs::fsgrlc << curve_radius_ << "\n";
+os_log << ionch::strngs::fsgzlm << strutural_hlength_ << "\n";
+os_log << ionch::strngs::fsntrg << target_particle_number_ << "\n";
+os_log << ionch::strngs::fsname;
+for (std::size_t ireg = ionch::constants::izlim; ireg <= ionch::constants::ismpl; ++ireg)
+{
+  os_log << " \"" << region_names_[ireg] << "\"";
+}
+os_log << "\n";
+os_log << ionch::strngs::fsnsrt << ionch::strings::str (use_boda_bounds_) << "\n";
+os_log << ionch::strngs::fsend << "\n\n";

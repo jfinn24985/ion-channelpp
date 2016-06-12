@@ -1,0 +1,125 @@
+class specie_test_suite
+!!!1945007.cpp!!!	test_specie_help() : void
+  ionch::specie::help_information(ionch::input_help::exemplar());
+  TS_ASSERT (ionch::input_help::exemplar().have_section(ionch::constants::fsspec()));
+!!!1945391.cpp!!!	test_specie_set_chem_potential() : void
+  ionch::specie var1;
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fsspec())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  TS_ASSERT (var1.is_solute());
+  TS_ASSERT_EQUALS (0.0, var1.chemical_potential());
+  var1.set_concentration (0.1);
+  TS_ASSERT_EQUALS(var1.concentration(), 0.1);
+  TS_ASSERT_DIFFERS (0.0, var1.chemical_potential());
+!!!1945519.cpp!!!	test_specie_normalise() : void
+  ionch::specie var1;
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fsspec())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  TS_ASSERT (var1.is_solute());
+  const double orig_spec (var1.rate_specie());
+  const double orig_chg (var1.rate_change());
+  var1.normalise_rate_change(2);
+  TS_ASSERT_DIFFERS(var1.rate_change(), orig_chg);
+  TS_ASSERT_EQUALS(var1.rate_change(), orig_chg/2);
+  TS_ASSERT_EQUALS(var1.rate_specie(), orig_spec);
+  var1.normalise_rate_specie(2);
+  TS_ASSERT_DIFFERS(var1.rate_specie(), orig_spec);
+  TS_ASSERT_EQUALS(var1.rate_change(), orig_chg/2);
+  TS_ASSERT_EQUALS(var1.rate_specie(), orig_spec/2);
+!!!1945647.cpp!!!	test_specie_copy_ctor() : void
+  ionch::specie var1;
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fsspec())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  ionch::specie var2(var1);
+  {
+    std::stringstream os;
+    ionch::conf cf;
+    var1.echo_input (0, cf, os);
+    std::string actual_input(os.str());
+    std::pair < std::string::const_iterator, std::string::const_iterator > result = std::mismatch(canon_input.begin(), canon_input.end(), actual_input.begin());
+    TS_ASSERT_EQUALS (std::size_t(result.first - canon_input.begin()), canon_input.size());
+    TS_ASSERT_EQUALS (canon_input, actual_input);
+  }
+!!!1945775.cpp!!!	test_specie_copy_operator() : void
+  ionch::specie var1, var2;
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fsspec())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  {
+    var2 = var1;
+    std::stringstream os;
+    ionch::conf cf;
+    var1.echo_input (0, cf, os);
+    std::string actual_input(os.str());
+    std::pair < std::string::const_iterator, std::string::const_iterator > result = std::mismatch(canon_input.begin(), canon_input.end(), actual_input.begin());
+    TS_ASSERT_EQUALS (std::size_t(result.first - canon_input.begin()), canon_input.size());
+    TS_ASSERT_EQUALS (canon_input, actual_input);
+  }
+!!!1945903.cpp!!!	test_specie_serialization() : void
+  ionch::specie var1, var2;
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fsspec())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  std::stringstream store;
+  {
+    boost::archive::text_oarchive oa(store);
+    // write class instance to archive
+    oa << var1;
+  }
+  {
+    boost::archive::text_iarchive ia(store);
+    // get class instance from archive
+    ia >> var2;
+  }
+  {
+    std::stringstream os;
+    ionch::conf cf;
+    var1.echo_input (0, cf, os);
+    std::string actual_input(os.str());
+    std::pair < std::string::const_iterator, std::string::const_iterator > result = std::mismatch(canon_input.begin(), canon_input.end(), actual_input.begin());
+    TS_ASSERT_EQUALS (std::size_t(result.first - canon_input.begin()), canon_input.size());
+    TS_ASSERT_EQUALS (canon_input, actual_input);
+  }

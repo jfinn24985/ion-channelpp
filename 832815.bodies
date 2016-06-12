@@ -1,0 +1,242 @@
+class SummaryReader
+!!!1181999.python!!!	__cmp__(in other : SummaryReader) : int
+if not other:
+  return 1
+if self.ratio == other.ratio:
+  return 0
+if self.ratio > other.ratio:
+  return 1
+return -1
+
+
+!!!1437487.python!!!	get_values() : tuple
+result = []
+result.append (self.run)
+result.append (self.trys_per_step * self.steps)
+if self.ratio:
+  result.append (self.ratio)
+else:
+  result.append (999)
+
+result.append (self.uuid)
+result.append (self.directory)
+result.append (self.temperature)
+result.append (self.ionic_strength)
+
+for name in self.concentration:
+  result.append (name)
+  result.append (self.concentration[name])
+
+return tuple(result)
+!!!1437231.python!!!	process(in filename : string) : void
+import os
+fullpath = os.path.abspath (filename)
+self.directory = os.path.dirname (os.path.dirname (fullpath))
+istream = None
+if not os.path.isfile (filename):
+  if os.path.isfile (filename+'.bz2'):
+    import bz2
+    istream = bz2.BZ2File(filename+'.bz2')
+else:
+  if -1 != filename.find(".bz2"):
+    import bz2
+    istream = bz2.BZ2File(filename)
+  else:
+    istream = open(filename)
+
+# Build search set ( searchkey, onFindFn )
+search_strs = []
+for ion in self.ion_names:
+  search_strs.append ( (ion + "  ion:", lambda x, y=""+ion: self.concentration.__setitem__(y, float(x.split ()[3]))  ) )
+search_strs.append ( ( " INNER", lambda x: self.__setattr__('trys_per_step', int(x.split ("=")[1]))  ) )
+search_strs.append ( ( " STEP", lambda x: self.__setattr__('steps', int(x.split ("=")[1])) ) )
+search_strs.append ( ( " UUID", lambda x: self.__setattr__('uuid', x.split ("=")[1].strip()) ) )
+search_strs.append ( ( " RUN", lambda x: self.__setattr__('run', int(x.split ("=")[1])) ) )
+search_strs.append ( ( " TEMP", lambda x: self.__setattr__('temperature', float(x.split ("=")[1])) ) )
+
+for line in istream :
+  for term in search_strs:
+    if -1 != line.find (term[0]):
+      term[1](line)
+      search_strs.remove(term)
+      break
+
+self.ionic_strength = sum(self.concentration.values())
+
+self.ratio = 999
+if "Na" in self.concentration:
+  if self.ionic_strength != 0.0 or self.ionic_strength != self.concentration["Na"]:
+    other = 0
+    for ion in self.concentration:
+      if not ion in  ( 'Cl', 'Na', 'NN', 'N1' ):
+        if 0 < self.concentration[ion]:
+          other += self.concentration[ion]
+    if other != 0.0:
+      self.ratio = self.concentration["Na"]/other
+!!!1437103.python!!!	report(in aos : ostream) : void
+print >>aos, "EXPT DIR : %s" % self.directory
+print >>aos, "UUID     : %s" % self.uuid
+print >>aos, "RUN      : %03d" % self.run
+print >>aos, "TRIALS   : %d" % self.steps
+print >>aos, "[Na]/[M] : %g" % self.ratio
+print >>aos, "IONIC STR: %g M" % self.ionic_strength
+for ion in self.concentration:
+  if 0 < self.concentration[ion]:
+    print >>aos, "[%s]     : %g M" % ( ion, self.concentration[ion] )
+!!!1436975.python!!!	set_values(in valuelist : any) : void
+assert len(valuelist) >= 8, "Data list has too few entries"
+
+# "Run"
+count = 0
+self.run = int(valuelist[count])
+if hasattr(self.run,"strip"): self.run = int(self.run.strip())
+
+# "Trials"
+count = count + 1
+self.steps = long(valuelist[count])
+if hasattr(self.steps,"strip"): self.steps = float(self.steps.strip())
+
+# "Ratio"
+count = count + 1
+self.ratio = valuelist[count]
+if hasattr(self.ratio,"strip"): self.ratio = float(self.ratio.strip())
+
+# "UUID"
+count = count + 1
+self.uuid = valuelist[count].strip()
+if self.uuid[0] == "\"" and self.uuid[-1] == "\"":
+  self.uuid = self.uuid[1:-1]
+
+# "RootPath"
+count = count + 1
+self.directory = valuelist[count].strip()
+if self.directory[0] == "\"" and self.directory[-1] == "\"":
+  self.directory = self.directory[1:-1]
+
+# "Temperature"
+count = count + 1
+self.temperature = valuelist[count]
+if hasattr(self.temperature,"strip"):
+  try:
+    self.temperature = float(self.temperature.strip())
+  except ValueError:
+    self.temperature = 0.0
+
+# "IonicStr"
+count = count + 1
+self.ionic_strength = valuelist[count]
+if hasattr(self.ionic_strength,"strip"): self.ionic_strength = float(self.ionic_strength.strip())
+
+# "Ions"
+# number of ions
+count = count + 1
+partcount = int(valuelist[count])
+
+if partcount > 0:
+  for part in range(partcount):
+    count = count + 1
+    ion_name = valuelist[count]
+    if ion_name[0] == "\"" and ion_name[-1] == "\"":
+      ion_name = ion_name[1:-1]
+    count = count + 1
+    floatvalue = valuelist[count]
+    if hasattr (floatvalue,"strip"): floatvalue = float(floatvalue.strip())
+    self.concentration[ion_name] = floatvalue
+!!!1436847.python!!!	set_from_string(in line : string) : void
+datalist = line.split (",")
+if len(datalist) < 8:
+  datalist = line.split ()
+  if len(datalist) < 8:
+    raise ValueError ("Not a valid input line: "+line)
+self.set_values (datalist)
+!!!1436719.python!!!	__str__() : string
+fmt = " %8.6f"
+# "Run"
+result = " %3d" % self.run
+# "Trials"
+result += " %ld" % (self.trys_per_step * self.steps)
+# "Ratio"
+if self.ratio:
+  result += fmt % self.ratio
+else:
+  result += " 999"
+# "UUID"
+result += " \"%s\"" % self.uuid
+# "RootPath"
+result += " \"%s\"" % self.directory
+# "Temperature"
+if None != self.temperature:
+  result += " %8.2f" % self.temperature
+else:
+  result += " \"\""
+# "IonicStr"
+result += fmt % self.ionic_strength
+partresult = ""
+partcount = 0
+# "Ions"
+for name in self.concentration:
+  if 0 <= self.concentration[name]:
+    partcount = partcount + 1
+    partresult += " \"%s\"" % name
+    partresult += fmt % self.concentration[name]
+result += "  %d" % partcount
+result += partresult
+return result
+!!!1453487.python!!!	write_digest_columns(in aos : ostream)
+fmt = " %8s"
+counter = 0
+# "run"
+result = " %3s" % SummaryReader.digest_columns[counter]
+
+# "trial"
+counter = counter + 1
+result = result + fmt % SummaryReader.digest_columns[counter]
+
+# "Ratio"
+counter = counter + 1
+result = result + fmt % SummaryReader.digest_columns[counter]
+
+# "UUID"
+counter = counter + 1
+result = result + "  %32s " % SummaryReader.digest_columns[counter]
+
+# "RootPath"
+counter = counter + 1
+result = result + " %s" % SummaryReader.digest_columns[counter]
+
+# "Temperature"
+counter = counter + 1
+result = result + fmt % SummaryReader.digest_columns[counter]
+
+#ionic str
+counter = counter + 1
+result = result + fmt % SummaryReader.digest_columns[counter]
+
+#  "Ions"
+counter = counter + 1
+result = result + fmt % SummaryReader.digest_columns[counter]
+
+print >>aos,result
+!!!1733679.python!!!	commandline_add(in parser : )
+try:
+  import argparse
+  parser.add_argument('-l','--ion-list',dest='to_find',metavar='AA:BB:CC',help='Set of ion names in the form AA:BB:CC where AA etc are additional ion labels to find')
+  parser.add_argument('--list-ions',dest='write_ionlist',help='Write a list of the currently defined ion labels')
+  # process sys.argv
+except ImportError:
+  parser.add_option('-l','--ion-list',dest='to_find',metavar='AA:BB:CC',help='Set of ion names in the form AA:BB:CC where AA etc are additional ion labels to find',type='string')
+  parser.add_option('--list-ions',dest='write_ionlist',help='Write a list of the currently defined ion labels',action="store_true",default=False)
+!!!1733807.python!!!	commandline_action(in result : )
+if result.to_find:
+  print "Extra ions : ",result.to_find
+  names = list(SummaryReader.ion_names)
+  for ionname in result.to_find.split(":"):
+      if not ionname in names:
+          names.append(ionname)
+  if len(names) != len(SummaryReader.ion_names):
+      SummaryReader.ion_names = tuple(names)
+if result.write_ionlist:
+  print "Recognised ions : ",
+  for nm in SummaryReader.ion_names :
+      print nm, " ",
+  print

@@ -1,0 +1,236 @@
+class icc_fixture
+!!!391856.cpp!!!	icc_fixture(in temperature : double, in epsw : double, in epspr : double, in zl1 : double, in rl1 : double, in rl4 : double, in rlvest : double, in rlmemb : double)
+: amx_()
+, c_()
+, h_()
+, indx_()
+, alfa_()
+, epsw_(epsw)
+, epspr_(epspr)
+, zl1_(zl1)
+, zl2_()
+, zl3_()
+, rl1_(rl1)
+, rl2_()
+, rl3_()
+, rl4_(rl4)
+, rlvest_(rlvest)
+, rlmemb_(rlmemb)
+{
+   zl2_ = zl1_ + rlvest_;
+   zl3_ = zl2_ - rlmemb_;
+   rl2_ = rl1_ + rlvest_;
+   rl3_ = rl4_ - rlmemb_;
+   alfa_ = temperature * core::constants::boltzmann_constant() * core::constants::electron_charge() / (4 * core::constants::pi() * core::constants::epsilon_0() * core::constants::angstrom() * epsw_ );
+}
+!!!394416.cpp!!!	write_a_matrix(inout output : ostream) : void
+UTILITY_REQUIRE( not this->empty(), "No patch information to write." );
+UTILITY_REQUIRE( output.good (), "Invalid output stream." );
+{
+   output << this->size() << "\n";
+   // The indx and A matrix
+   std::array< std::size_t, 2 > idx;
+   for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+   {
+      idx[ 0 ] = ipch;
+      output << this->indx_[ ipch ] << "\n";
+      for (std::size_t jpch = 0; jpch != this->size(); ++jpch)
+      {
+         idx[ 1 ] = jpch;
+         output << ipch << " " << jpch << " " << this->amx_( idx ) << "\n";
+      }
+      output << "\n";
+   }
+}
+!!!394544.cpp!!!	define_grid(inout grid : icc_grid, inout os_log : ostream) : void
+UTILITY_CHECK( grid.empty(), "Cannot define grid twice");
+
+//       |theta1 = pi/2
+// theta2|     theta0 = 0.0
+//  ---- z ----- theta4 = 2pi
+// = pi  |
+//       | theta3 = 3/2 pi
+// d_theta = pi/2
+const double theta0( 0.0);
+const double theta1( core::constants::pi() / 2);
+const double theta2( core::constants::pi() );
+const double theta3( core::constants::pi() * 3.0/2.0 );
+const double theta4( 2 * core::constants::pi() );
+
+// Get geometry data
+const double geom_zl1( zl1_ );
+const double geom_rl1( rl1_ );
+const double geom_rl2( rl2_ );
+const double geom_rlvest( rlvest_ );
+const double geom_zl2( zl2_ );
+const double geom_rl3( rl3_ );
+const double geom_zl3( zl3_ );
+const double geom_rl4( rl4_ );
+const double geom_rlcurv( rlmemb_ );
+
+// Delta permittivity in channel and elsewhere
+const double channel_d_eps( 2 * (epspr_ - epsw_) / (epspr_ + epsw_) );
+const double outer_d_eps( channel_d_eps );
+// Minimum number of tiles along z dimension
+const int channel_min_z_tiles (10);
+const int outer_min_z_tiles (4);
+const int min_r_tiles (16);
+
+// Channel pore cylinder
+grid.add_line( -geom_zl1, geom_zl1, geom_rl1, channel_d_eps, channel_min_z_tiles, min_r_tiles, true, os_log );
+
+// Channel protein outer cylinder
+grid.add_line( -geom_zl3, geom_zl3, geom_rl4, outer_d_eps, outer_min_z_tiles, min_r_tiles, false, os_log );
+
+// Hi-z inner arc
+grid.add_arc( geom_zl1, geom_rl2, geom_rlvest, theta3, theta4, channel_d_eps, outer_min_z_tiles, min_r_tiles, true, os_log );
+
+// Hi-z outer arc
+grid.add_arc( geom_zl3, geom_rl3, geom_rlcurv, theta0, theta1, outer_d_eps, outer_min_z_tiles, min_r_tiles, true, os_log );
+
+// lo-z outer arc
+grid.add_arc( -geom_zl3, geom_rl3, geom_rlcurv, theta1, theta2, outer_d_eps, outer_min_z_tiles, min_r_tiles, true, os_log );
+
+// lo-z inner arc
+grid.add_arc( -geom_zl1, geom_rl2, geom_rlvest, theta2, theta3, channel_d_eps, outer_min_z_tiles, min_r_tiles, true, os_log );
+
+// hi-z wall
+grid.add_wall( geom_zl2, geom_rl2, geom_rl3, outer_d_eps, 0, 0, true, os_log );
+
+// lo-z wall
+grid.add_wall( -geom_zl2, geom_rl2, geom_rl3, outer_d_eps, 0, 0, false, os_log );
+
+os_log << "Grid builder complete\n";
+!!!394672.cpp!!!	compute_raw_amx(inout grid : icc_grid, inout os_log : ostream) : void
+UTILITY_CHECK( this->empty(), "Cannot compute A matrix twice");
+//
+// get grid size
+this->resize( grid.size() );
+
+// generate the A matrix
+grid.generate_matrix( this->amx_, os_log );
+
+!!!394800.cpp!!!	compute_scaled_amx(inout grid : icc_grid, inout os_log : ostream) : void
+UTILITY_CHECK( not this->empty(), "Cannot scale empty A matrix");
+// Delta permittivity in channel and elsewhere
+const double channel_d_eps( 2 * (epspr_ - epsw_) / (epspr_ + epsw_) );
+const double outer_d_eps( channel_d_eps );
+
+// (NOTE : HAVE SPECIAL CASE FOR DEPS=CONSTANT)
+if (channel_d_eps == outer_d_eps)
+{
+   std::array< std::size_t, 2 > idx;
+   for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+   {
+      idx[ 0 ] = ipch;
+      for (std::size_t jpch = 0; jpch != this->size(); ++jpch)
+      {
+         idx[ 1 ] = jpch;
+         this->amx_( idx ) *= channel_d_eps;
+      }
+   }
+}
+else
+{
+   std::array< std::size_t, 2 > idx;
+   for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+   {
+      idx[ 0 ] = ipch;
+      const double deps_ = grid.deps( ipch );
+      for (std::size_t jpch = 0; jpch != this->size(); ++jpch)
+      {
+         idx[ 1 ] = jpch;
+         this->amx_( idx ) *= deps_;
+      }
+   }
+}
+{
+   std::array< std::size_t, 2 > idx;
+   for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+   {
+      idx[ 0 ] = ipch;
+      idx[ 1 ] = ipch;
+      this->amx_( idx ) += 1.0;
+   }
+}
+!!!394928.cpp!!!	lu_decompose_amx(inout grid : icc_grid, inout os_log : ostream) : void
+UTILITY_CHECK( this->indx_[ 0 ] == this->indx_[ 1 ] , "Cannot LU decompose A matrix twice.");
+
+// -----------------------------------------------------
+// Do LU decomposition of the A matrix
+os_log << "LU decomposing the 'A' matrix (using BLAS)\n";
+{
+   const utility::lapack::int_type info_dgetrf = utility::lapack::dgetrf( this->amx_, this->indx_ );
+
+   UTILITY_ALWAYS( info_dgetrf == 0, "Matrix inversion failed, DGETRF routine returned error number " + std::to_string( info_dgetrf ) );
+}
+
+!!!395056.cpp!!!	resize(in npatch : size_t) : void
+// this->absolute_surface_charge_estimate.resize( npatch, 0ul );
+std::array< std::size_t, 2 > idx;
+this->amx_.resize( boost::extents[npatch][npatch] );
+for (std::size_t ii = 0; ii != npatch; ++ii)
+{
+   idx[ 0 ] = ii;
+   for (std::size_t jj = 0; jj != npatch; ++jj)
+   {
+      idx[ 1 ] = jj;
+      this->amx_( idx ) = 0.0;
+   }
+}
+this->c_.resize( npatch, 0.0 );
+this->h_.resize( npatch, 0ul );
+// this->surface_charge_estimate_.resize( npatch, 0ul );
+
+// RIP is delayed until we know the number of particles
+
+this->indx_.resize( npatch, 0 );
+
+!!!395184.cpp!!!	read_a_matrix(inout input : istream) : bool
+UTILITY_REQUIRE( input.good (), "Invalid input stream." );
+
+// Read and check values
+std::size_t cknpch;
+input >> cknpch;
+this->resize( cknpch );
+// NOTE: it is at this point that we know the required size of the A matrix!
+UTILITY_CHECK( this->amx_.size () >= this->size(), "A matrix should always be allocated here?");
+// Actual read
+bool is_row_major = true;
+bool discovered = false;
+std::string dummy_;
+std::array< std::size_t, 2 > idx;
+for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+{
+   input >> this->indx_[ipch];
+   idx[ ( is_row_major ? 0 : 1 ) ] = ipch;
+   for (std::size_t jpch = 0; jpch != this->size(); ++jpch)
+   {
+      std::size_t ii, jj;     // dummy vars for indices
+      idx[ ( is_row_major ? 1 : 0 ) ] = ipch;
+      input >> ii >> jj >> this->amx_( idx );
+
+      if (ii != (is_row_major ? ipch : jpch) or jj != (is_row_major ? jpch : ipch) )
+      {
+         if (not discovered and ii == jpch and jj == ipch)
+         {
+            is_row_major = false;
+            std::array< std::size_t, 2 > tidx;
+            tidx[ 0 ] = idx[ 1 ];
+            tidx[ 1 ] = idx[ 0 ];
+            std::swap( this->amx_( tidx ), this->amx_( idx ) );
+            idx = tidx;
+         }
+         else
+         {
+            return false;
+         }
+      }
+   }
+   if ( input.eof() )
+   {
+      return false;
+   }
+   std::getline (input, dummy_); // skip blank line
+}
+return true;

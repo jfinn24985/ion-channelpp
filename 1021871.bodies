@@ -1,0 +1,130 @@
+class subspecie_test_suite
+!!!1946287.cpp!!!	test_subspecie_help() : void
+  ionch::subspecie::help_information(ionch::input_help::exemplar());
+  TS_ASSERT (ionch::input_help::exemplar().have_section(ionch::constants::fssubs()));
+!!!1946415.cpp!!!	test_subspecie_ctor() : void
+  ionch::subspecie var1;
+  TS_ASSERT (not var1.is_valid ());
+  TS_ASSERT (var1.empty ());
+
+  TS_ASSERT_EQUALS (var1.rate_swap (), 0.0);
+  TS_ASSERT (var1.code_name ().empty ());
+  TS_ASSERT_EQUALS (var1.size (), 0ul);
+  TS_ASSERT_EQUALS (var1.begin (), var1.end ());
+!!!1946543.cpp!!!	test_subspecie_echo_input() : void
+  ionch::subspecie var1;
+  std::stringstream os;
+  var1.echo_input (os);
+  std::string canon_input0("subspecie\nname \"\"\nratswap 0\nend\n\n");
+  std::string actual_input(os.str());
+  std::pair < std::string::iterator, std::string::iterator > result = std::mismatch(canon_input0.begin(), canon_input0.end(), actual_input.begin());
+  TS_ASSERT_EQUALS (std::size_t(result.first - canon_input0.begin()), canon_input0.size());
+  TS_ASSERT_EQUALS (canon_input0, actual_input);
+!!!1946799.cpp!!!	test_subspecie_copy_ctor() : void
+  ionch::subspecie var1;
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fssubs())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  ionch::subspecie var2(var1);
+  {
+    std::stringstream os;
+    var2.echo_input (os);
+    std::string actual_input(os.str());
+    std::pair < std::string::const_iterator, std::string::const_iterator > result = std::mismatch(canon_input.begin(), canon_input.end(), actual_input.begin());
+    if (result.first != canon_input.end())
+    {
+      std::pair < std::string::const_iterator, std::string::const_iterator > result = std::mismatch(alt_input.begin(), alt_input.end(), actual_input.begin());
+      TS_ASSERT_EQUALS (std::size_t(result.first - alt_input.begin()), alt_input.size());
+      TS_ASSERT_EQUALS (alt_input, actual_input);
+    }
+    else
+    {
+      TS_ASSERT_EQUALS (std::size_t(result.first - canon_input.begin()), canon_input.size());
+      TS_ASSERT_EQUALS (canon_input, actual_input);
+    }
+  }
+!!!1946927.cpp!!!	test_subspecie_copy_operator() : void
+  ionch::subspecie var1, var2;
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fssubs())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  {
+    var2 = var1;
+    std::stringstream os;
+    var2.echo_input (os);
+  }
+  {
+    var2 = var1;
+    std::stringstream os;
+    var2.echo_input (os);
+    std::string actual_input(os.str());
+    std::pair < std::string::const_iterator, std::string::const_iterator > result = std::mismatch(canon_input.begin(), canon_input.end(), actual_input.begin());
+    if (result.first != canon_input.end())
+    {
+      std::pair < std::string::const_iterator, std::string::const_iterator > result = std::mismatch(alt_input.begin(), alt_input.end(), actual_input.begin());
+      TS_ASSERT_EQUALS (std::size_t(result.first - alt_input.begin()), alt_input.size());
+      TS_ASSERT_EQUALS (alt_input, actual_input);
+    }
+    else
+    {
+      TS_ASSERT_EQUALS (std::size_t(result.first - canon_input.begin()), canon_input.size());
+      TS_ASSERT_EQUALS (canon_input, actual_input);
+    }
+  }
+!!!1947055.cpp!!!	test_subspecie_serialization() : void
+  ionch::subspecie var1, var2;
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fssubs())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  std::stringstream store;
+  {
+    boost::archive::text_oarchive oa(store);
+    // write class instance to archive
+    oa << var1;
+  }
+  {
+    boost::archive::text_iarchive ia(store);
+    // get class instance from archive
+    ia >> var2;
+  }
+  {
+    std::stringstream os;
+    var2.echo_input (os);
+    std::string actual_input(os.str());
+    std::pair < std::string::const_iterator, std::string::const_iterator > result = std::mismatch(canon_input.begin(), canon_input.end(), actual_input.begin());
+    if (result.first != canon_input.end())
+    {
+      std::pair < std::string::const_iterator, std::string::const_iterator > result = std::mismatch(alt_input.begin(), alt_input.end(), actual_input.begin());
+      TS_ASSERT_EQUALS (std::size_t(result.first - alt_input.begin()), alt_input.size());
+      TS_ASSERT_EQUALS (alt_input, actual_input);
+    }
+    else
+    {
+      TS_ASSERT_EQUALS (std::size_t(result.first - canon_input.begin()), canon_input.size());
+      TS_ASSERT_EQUALS (canon_input, actual_input);
+    }
+  }

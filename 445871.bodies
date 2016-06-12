@@ -1,0 +1,507 @@
+class simulator_old
+!!!1169839.cpp!!!	initialize_choice_set() : void
+// Generate normalisation value for top-level items
+const double norm0 = this->ensemble_->rate_move () + this->ensemble_->rate_gc_salt () + this->ensemble_->rate_gc_individual ();
+
+// Reset the choice range.
+this->choice_range_ = 0.0;
+
+if (not bal::math::feq(this->ensemble_->rate_move (),0.0))
+{
+  // -----------------------
+  // making movement choices
+  // -----------------------
+  const double movescale = this->ensemble_->rate_move () / norm0;
+
+  double norm1; // Generate normalisation values across species
+  for (auto ispec = this->ensemble_->specie_set ().begin ();
+       ispec != this->ensemble_->specie_set ().end ();
+       ++ispec)
+  {
+    if (not bal::math::feq(ispec->rate_specie (), 0.0))
+    {
+      if (not (bal::math::feq(ispec->rate_move (),0.0) and bal::math::feq(ispec->rate_exchange (),0.0)))
+      {
+        norm1 += ispec->rate_specie ();
+      }
+    }
+  }
+
+  for (auto ispec = this->ensemble_->specie_set ().begin ();
+       ispec != this->ensemble_->specie_set ().end ();
+       ++ispec)
+  {
+    if (not bal::math::feq(ispec->rate_specie (), 0.0))
+    {
+      const double norm2 = (ispec->rate_move () + ispec->rate_exchange ());
+      if (not bal::math::feq(norm2, 0.0))
+      {
+        const double speciescale = movescale * ispec->rate_specie () / norm1;
+
+        const double dispmove = speciescale * ispec->rate_move () / norm2 * 0.5;
+        if (not bal::math::feq(dispmove, 0.0))
+        {
+          this->choices_.push_back (choice (dispmove, new small_displacement (*iter)));
+          this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+          this->choices_.push_back (choice (dispmove, new region_displacement (*iter)));
+          this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+        }
+        const double jumpmove = speciescale * ispec->rate_exchange () / norm2;
+        if (not bal::math::feq(jumpmove, 0.0))
+        {
+          this->choices_.push_back (choice (jumpmove, new jump_displacement (*iter)));
+          this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+        }
+      }
+    }
+  }
+}
+if (not bal::math::feq(this->ensemble_->rate_salt (),0.0))
+{
+  // ----------------------
+  // making salt GC choices
+  // ----------------------
+  auto anion = this->ensemble_->specie_set ().end (); // find the anion specie
+  const double saltscale = this->ensemble_->rate_salt () / norm0;
+
+  double norm1; // Generate normalisation values across species
+  for (auto ispec = this->ensemble_->specie_set ().begin ();
+       ispec != this->ensemble_->specie_set ().end ();
+       ++ispec)
+  {
+    if (ispec->is_free ())
+    {
+      if (ispec->is_cation ())
+      {
+        if (not bal::math::feq(ispec->rate_gc_salt (), 0.0))
+        {
+          double norm2 = 0.0;
+          for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+          {
+            norm2 += ispec->rate_region (ireg);
+          }
+          if (not (bal::math::feq(norm2,0.0)))
+          {
+            norm1 += ispec->rate_gc_salt ();
+          }
+        }
+      }
+      else
+      {
+        IONCH_INPUT(anion == this->ensemble_->specie_set ().end ()
+                    , "There may only be one free anion specie in the input");
+        anion = iter;
+      }
+    }
+  }
+  IONCH_INPUT(anion != this->ensemble_->specie_set ().end ()
+              , "There must be one free anion specie in the input");
+
+  for (auto ispec = this->ensemble_->specie_set ().begin ();
+       ispec != this->ensemble_->specie_set ().end ();
+       ++ispec)
+  {
+    if (ispec->is_cation ())
+    {
+      if (not bal::math::feq(ispec->rate_gc_salt (), 0.0))
+      {
+        double norm2 = 0.0;
+        for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+        {
+          norm2 += ispec->rate_region (ireg);
+        }
+        if (not (bal::math::feq(norm2,0.0)))
+        {
+          const double speciescale = saltscale * ispec->rate_gc_salt () / norm1;
+
+          for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+          {
+            const double regionrate = speciescale * ispec->rate_region (ireg) / (2 + norm2);
+            if (not bal::math::feq(regionrate, 0.0))
+            {
+              // add salt
+              this->choices_.push_back (choice (regionrate, new add_particle (*iter)));
+              for (int iv = 0; iv != std::nearbyint(iter->valency ()); ++iv)
+              {
+                this->choices_.back ().add_maker (new add_particle (*anion));
+              }
+              this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+              // remove salt
+              this->choices_.push_back (choice (regionrate, new remove_particle (*iter)));
+              for (int iv = 0; iv != std::nearbyint(iter->valency ()); ++iv)
+              {
+                this->choices_.back ().add_maker (new remove_particle (*anion));
+              }
+              this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+if (not bal::math::feq(this->ensemble_->rate_move (),0.0))
+{
+  // ----------------------------
+  // making individual gc choices
+  // ----------------------------
+  const double indvscale = this->ensemble_->rate_gc_individual () / norm0;
+
+  double norm1; // Generate normalisation values across species
+  for (auto ispec = this->ensemble_->specie_set ().begin ();
+       ispec != this->ensemble_->specie_set ().end ();
+       ++ispec)
+  {
+    if (ispec->is_free ())
+    {
+      if (not bal::math::feq(ispec->rate_gc_individual (), 0.0))
+      {
+        double norm2 = 0.0;
+        for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+        {
+          norm2 += ispec->rate_region (ireg);
+        }
+        if (not (bal::math::feq(norm2,0.0)))
+        {
+          norm1 += ispec->rate_gc_individual ();
+        }
+      }
+    }
+  }
+
+  for (auto ispec = this->ensemble_->specie_set ().begin ();
+       ispec != this->ensemble_->specie_set ().end ();
+       ++ispec)
+  {
+    if (ispec->is_free ())
+    {
+      if (not bal::math::feq(ispec->rate_gc_individual (), 0.0))
+      {
+        double norm2 = 0.0;
+        for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+        {
+          norm2 += ispec->rate_region (ireg);
+        }
+        if (not (bal::math::feq(norm2,0.0)))
+        {
+          const double speciescale = indvscale * ispec->rate_gc_salt () / norm1;
+
+          for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+          {
+            const double regionrate = speciescale * ispec->rate_region (ireg) / (2 + norm2);
+            if (not bal::math::feq(regionrate, 0.0))
+            {
+              // add individual
+              this->choices_.push_back (choice (regionrate, new add_particle (*iter)));
+              this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+              // remove individual
+              this->choices_.push_back (choice (regionrate, new remove_particle (*iter)));
+              this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+!!!828975.cpp!!!	build_selector() : void
+selector_.reset ();
+if (not get_salts().empty () and not bal::feq (rate_salt (), 0.0))
+{
+  ionch::pointer< implementation::chooser > salt_select(new implementation::selector(rate_salt ()));
+  for (auto igc = get_salts().begin (); igc != get_salts().end (); ++igc)
+  {
+    if (not bal::feq (igc->rate_salt (), 0.0))
+    {
+      ionch::pointer< implementation::chooser > salt_choice(new implementation::selector(igc->rate_salt ()));
+      for (int ireg = 0; ireg != constants::end_region; ++ireg)
+      {
+         if (not bal::feq (igc->rate_region (ireg), 0.0))
+         {
+            ionch::pointer< implementation::chooser > region_choice(new implementation::selector(igc->region_rate (ireg)));
+            const int anions_count (igc->z ());
+            for (int j_ = 0; j_ != 2; ++j_)
+            {
+              ionch::pointer< implementation::chooser > add_remove(new implementation::selector(0.5,
+                     (j_==0? acreat_[igc][ireg]:adest_[igc][ireg])));
+              ionch::pointer< implementation::step_maker > maker;
+              maker.reset(j_ == 0 ? new implementation::add_particle(ireg, *igc)
+                               : new implementation::remove_particle(ireg, *igc));
+              add_remove.add_maker (maker);
+              for (int i_ = 0; i_ != anions_count; ++i_)
+              {
+                maker.reset (j_ == 0 ? new implementation::add_particle(ireg, get_chloride())
+                                  : new implementation::remove_particle(ireg, get_chloride()));
+                add_remove.add_maker (maker);
+              }
+	      region_choice.add_choice (add_remove);
+            }
+            salt_choice.add_choice (region_choice);
+          }
+       }
+       salt_select.add_choice (salt_choice);
+    }
+  }
+  selector_.add_choice (salt_select);
+}
+if (not bal::feq (rate_individual(), 0.0))
+{
+  ionch::pointer< implementation::chooser > indv_select(new implementation::selector(rate_individual()));
+  for (auto ispec = get_species().begin (); ispec != get_species().end (); ++ispec)
+  {
+    if (not bal::feq (ispec->rate_individual (), 0.0))
+    {
+      ionch::pointer< implementation::chooser > indv_choice(new implementation::selector(ispec->rate_individual ()));
+      for (int ireg = 0; ireg != constants::end_region; ++ireg)
+      {
+         if (not bal::feq (ispec->rate_region (ireg), 0.0))
+         {
+            ionch::pointer< implementation::chooser > region_choice(new implementation::selector(ispec->region_rate (ireg)));
+            for (int j_ = 0; j_ != 2; ++j_)
+            {
+              ionch::pointer< implementation::chooser > add_remove(new implementation::selector(0.5,
+                     (j_==0? acrea1_[igc][ireg]:adest1_[igc][ireg])));
+              ionch::pointer< implementation::step_maker > maker;
+              maker.reset(j_ == 0 ? new implementation::add_particle(ireg, *ispec)
+                               : new implementation::remove_particle(ireg, *ispec));
+              add_remove.add_maker (maker);
+	      region_choice.add_choice (add_remove);
+            }
+            indv_choice.add_choice (region_choice);
+          }
+       }
+       indv_select.add_choice (salt_choice);
+    }
+  }
+  selector_.add_choice (indv_select);
+}
+// MOVE
+{
+  ionch::pointer< implementation::chooser > move_select(new implementation::selector(rate_move ()));
+  for (auto ispec = get_species().begin (); ispec != get_species().end (); ++ispec)
+  {
+    if (not bal::feq (ispec->rate_move (), 0.0))
+    {
+      ionch::pointer< implementation::chooser > move_specie(new implementation::selector(ispec->rate_move ()));
+      for (int imove = 0; imove != constants::end_move; ++imove)
+      {
+         if (not bal::feq (ispec->rate_move (imove), 0.0))
+         {
+            ionch::pointer< implementation::chooser > move_choice(new implementation::terminal_choice(ispec->rate_move (imove), amove_[ispec][imove]));
+            ionch::pointer< implementation::chooser > mover (move_particle::factory(imove, *ispec));
+            move_choice.add_maker (mover);
+            move_specie.add_choice (move_choice);
+          }
+       }
+       move_select.add_choice (move_specie);
+    }
+  }
+  selector_.add_choice (move_select);
+}
+!!!1170479.cpp!!!	generate_choices() : void
+// Generate normalisation value for top-level items
+const double norm0 = this->independent_->rate_move () + this->independent_->rate_gc_salt () + this->independent_->rate_gc_individual ();
+
+// Reset the choice range.
+this->choice_range_ = 0.0;
+
+if (not bal::math::feq(this->independent_->rate_move (),0.0))
+{
+  // -----------------------
+  // making movement choices
+  // -----------------------
+  const double movescale = this->independent_->rate_move () / norm0;
+
+  double norm1; // Generate normalisation values across species
+  for (auto ispec = this->independent_->get_configuration ().specie_begin ();
+       ispec != this->independent_->get_configuration ().specie_end ();
+       ++ispec)
+  {
+    if (not bal::math::feq(ispec->rate_specie (), 0.0))
+    {
+      if (not (bal::math::feq(ispec->rate_move (),0.0) and bal::math::feq(ispec->rate_exchange (),0.0)))
+      {
+        norm1 += ispec->rate_specie ();
+      }
+    }
+  }
+
+  for (auto ispec = this->independent_->get_configuration ().specie_begin ();
+       ispec != this->independent_->get_configuration ().specie_end ();
+       ++ispec)
+  {
+    if (not bal::math::feq(ispec->rate_specie (), 0.0))
+    {
+      const double norm2 = (ispec->rate_move () + ispec->rate_exchange ());
+      if (not bal::math::feq(norm2, 0.0))
+      {
+        const double speciescale = movescale * ispec->rate_specie () / norm1;
+
+        const double dispmove = speciescale * ispec->rate_move () / norm2 * 0.5;
+        if (not bal::math::feq(dispmove, 0.0))
+        {
+          this->choices_.push_back (choice (dispmove, new small_displacement (*iter)));
+          this->choices_.push_back (choice (dispmove, new region_displacement (*iter)));
+        }
+        const double jumpmove = speciescale * ispec->rate_exchange () / norm2;
+        if (not bal::math::feq(jumpmove, 0.0))
+        {
+          this->choices_.push_back (choice (jumpmove, new jump_displacement (*iter)));
+          this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+        }
+      }
+    }
+  }
+}
+if (not bal::math::feq(this->independent_->rate_salt (),0.0))
+{
+  // ----------------------
+  // making salt GC choices
+  // ----------------------
+  auto anion = this->independent_->get_configuration ().specie_end (); // find the anion specie
+  const double saltscale = this->independent_->rate_salt () / norm0;
+
+  double norm1; // Generate normalisation values across species
+  for (auto ispec = this->independent_->get_configuration ().specie_begin ();
+       ispec != this->independent_->get_configuration ().specie_end ();
+       ++ispec)
+  {
+    if (ispec->is_free ())
+    {
+      if (ispec->is_cation ())
+      {
+        if (not bal::math::feq(ispec->rate_gc_salt (), 0.0))
+        {
+          double norm2 = 0.0;
+          for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+          {
+            norm2 += ispec->rate_region (ireg);
+          }
+          if (not (bal::math::feq(norm2,0.0)))
+          {
+            norm1 += ispec->rate_gc_salt ();
+          }
+        }
+      }
+      else
+      {
+        IONCH_INPUT(anion == this->independent_->get_configuration ().specie_end ()
+                    , "There may only be one free anion specie in the input");
+        anion = iter;
+      }
+    }
+  }
+  IONCH_INPUT(anion != this->independent_->get_configuration ().specie_end ()
+              , "There must be one free anion specie in the input");
+
+  for (auto ispec = this->independent_->get_configuration ().specie_begin ();
+       ispec != this->independent_->get_configuration ().specie_end ();
+       ++ispec)
+  {
+    if (ispec->is_cation ())
+    {
+      if (not bal::math::feq(ispec->rate_gc_salt (), 0.0))
+      {
+        double norm2 = 0.0;
+        for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+        {
+          norm2 += ispec->rate_region (ireg);
+        }
+        if (not (bal::math::feq(norm2,0.0)))
+        {
+          const double speciescale = saltscale * ispec->rate_gc_salt () / norm1;
+
+          for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+          {
+            const double regionrate = speciescale * ispec->rate_region (ireg) / (2 + norm2);
+            if (not bal::math::feq(regionrate, 0.0))
+            {
+              // add salt
+              this->choices_.push_back (choice (regionrate, new add_particle (*iter)));
+              for (int iv = 0; iv != std::nearbyint(iter->valency ()); ++iv)
+              {
+                this->choices_.back ().add_child (new add_particle (*anion));
+              }
+              this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+              // remove salt
+              this->choices_.push_back (choice (regionrate, new remove_particle (*iter)));
+              for (int iv = 0; iv != std::nearbyint(iter->valency ()); ++iv)
+              {
+                this->choices_.back ().add_child (new remove_particle (*anion));
+              }
+              this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+if (not bal::math::feq(this->independent_->rate_move (),0.0))
+{
+  // ----------------------------
+  // making individual gc choices
+  // ----------------------------
+  const double indvscale = this->independent_->rate_gc_individual () / norm0;
+
+  double norm1; // Generate normalisation values across species
+  for (auto ispec = this->independent_->get_configuration ().specie_begin ();
+       ispec != this->independent_->get_configuration ().specie_end ();
+       ++ispec)
+  {
+    if (ispec->is_free ())
+    {
+      if (not bal::math::feq(ispec->rate_gc_individual (), 0.0))
+      {
+        double norm2 = 0.0;
+        for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+        {
+          norm2 += ispec->rate_region (ireg);
+        }
+        if (not (bal::math::feq(norm2,0.0)))
+        {
+          norm1 += ispec->rate_gc_individual ();
+        }
+      }
+    }
+  }
+
+  for (auto ispec = this->independent_->get_configuration ().specie_begin ();
+       ispec != this->independent_->get_configuration ().specie_end ();
+       ++ispec)
+  {
+    if (ispec->is_free ())
+    {
+      if (not bal::math::feq(ispec->rate_gc_individual (), 0.0))
+      {
+        double norm2 = 0.0;
+        for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+        {
+          norm2 += ispec->rate_region (ireg);
+        }
+        if (not (bal::math::feq(norm2,0.0)))
+        {
+          const double speciescale = indvscale * ispec->rate_gc_salt () / norm1;
+
+          for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+          {
+            const double regionrate = speciescale * ispec->rate_region (ireg) / (2 + norm2);
+            if (not bal::math::feq(regionrate, 0.0))
+            {
+              // add individual
+              this->choices_.push_back (choice (regionrate, new add_particle (*iter)));
+              this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+              // remove individual
+              this->choices_.push_back (choice (regionrate, new remove_particle (*iter)));
+              this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

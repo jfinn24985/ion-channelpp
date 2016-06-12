@@ -1,0 +1,348 @@
+class lennard_jones
+!!!136495.cpp!!!	corp(in r : double, in rho : double) : double
+const double sig3 (this->sig2_ * this->sigma_);
+const double ri3 (sig3/(r*r*r));
+return 4 * core::constants::pi () * this->eps4_ * rho * rho * sig3 * (2 * ri3*ri3*ri3/9 - ri3/3);
+!!!136367.cpp!!!	coru(in r : double, in rho : double) : double
+const double sig3 (this->sig2_ * this->sigma_);
+const double ri3 (sig3/(r*r*r));
+return 2 * core::constants::pi () * this->eps4_ * rho * sig3 * (ri3*ri3*ri3/9 - ri3/3);
+!!!247857.cpp!!!	compute_potential(in sys : simulator, inout changes : change_set, in start_index : size_t) : void
+const particle::conf &ens (sys.get_ensemble());
+
+// For each atom
+for (trial::change_set::iterator atom = changes.begin ();
+     not changes.fail () and atom != changes.end ();
+     ++atom)
+{
+  // split in to two loops if necessary
+  trial::change_atom &at (*atom);
+  std::size_t start (at.index == start_index ? at.index + 1 : start_index);
+  std::size_t end (at.index > start_index ? at.index : ens.size());
+
+  while (start < end)
+  {
+    if (at.do_old)
+    {
+      if (at.do_new)
+      {
+        // --------------------------------
+        // BOTH OLD AND NEW
+        // --------------------------------
+        for (std::size_t j = start; j < end; ++j)
+        {
+          // Only use active particles.
+          if (particle::ensemble::nkey != ens.key (j))
+          {
+            const particle::coordinate pos (ens.position(j));
+            double r2 = sys.distance_sqr(at.old_position, pos);
+            UTILITY_CHECK (not utility::feq(r2,0.0), "Overlap in accepted ensemble.");
+            if (r2 < this->rc2_)
+            {
+              const double r2i (this->sig2_ / r2);
+              const double r6i (r2i*r2i*r2i);
+              at.energy_old += this->eps4_*(r6i*r6i-r6i);
+              at.virial_old += this->eps48_*(r6i*r6i-0.50*r6i);
+            }
+            r2 = sys.distance_sqr(at.new_position, pos);
+            if (utility::feq(r2,0.0))
+            {
+              // Set invalid values
+              at.energy_new += 1.0E50;
+              at.virial_new += 1.0E50;
+              changes.set_fail ();
+              return;
+            }
+            else if (r2 < this->rc2_)
+            {
+              const double r2i (this->sig2_ / r2);
+              const double r6i (r2i*r2i*r2i);
+              at.energy_new += this->eps4_*(r6i*r6i-r6i);
+              at.virial_new += this->eps48_*(r6i*r6i-0.50*r6i);
+            }
+          }
+        }
+        if (this->shiftpot_)
+        {
+          at.energy_new -= (end - start) * this->ecut_;
+          at.energy_old -= (end - start) * this->ecut_;
+        }
+      }
+      else
+      {
+        // --------------------------------
+        // JUST OLD
+        // --------------------------------
+        for (std::size_t j = start; j < end; ++j)
+        {
+          // Only use active particles.
+          if (particle::ensemble::nkey != ens.key (j))
+          {
+            const double r2 = sys.distance_sqr(at.old_position, ens.position(j));
+            UTILITY_CHECK (not utility::feq(r2,0.0), "Overlap in accepted ensemble.");
+            if (r2 < this->rc2_)
+            {
+              const double r2i (this->sig2_ / r2);
+              const double r6i (r2i*r2i*r2i);
+              at.energy_old += this->eps4_*(r6i*r6i-r6i);
+              at.virial_old += this->eps48_*(r6i*r6i-0.50*r6i);
+            }
+          }
+        }
+        if (this->shiftpot_)
+        {
+          at.energy_old -= (end - start) * this->ecut_;
+        }
+      }
+    }
+    else
+    {
+      // --------------------------------
+      // JUST NEW
+      // --------------------------------
+      for (std::size_t j = start; j < end; ++j)
+      {
+        // Only use active particles.
+        if (particle::ensemble::nkey != ens.key (j))
+        {
+          const double r2 = sys.distance_sqr(at.new_position, ens.position(j));
+          // Use this energy to sample histogram if
+          // not during equilibration (ii.eq.1)
+          if (utility::feq(r2,0.0))
+          {
+            // Set invalid values
+            at.energy_new += 1.0E50;
+            at.virial_new += 1.0E50;
+            changes.set_fail ();
+            return;
+          }
+          else if (r2 < this->rc2_)
+          {
+            const double r2i (this->sig2_ / r2);
+            const double r6i (r2i*r2i*r2i);
+            at.energy_new += this->eps4_*(r6i*r6i-r6i);
+            at.virial_new += this->eps48_*(r6i*r6i-0.50*r6i);
+          }
+        }
+      }
+      if (this->shiftpot_)
+      {
+        at.energy_new -= (end - start) * this->ecut_;
+      }
+    }
+    if (end == at.index)
+    {
+      start = at.index + 1;
+      end = ens.size();
+    }
+    else
+    {
+      break;
+    }
+  }
+  if (this->tail_correction ())
+  {
+    if (at.do_old)
+    {
+      at.energy_old += this->coru(this->rc(), ens.size()/sys.volume());
+    }
+    if (at.do_new)
+    {
+      at.energy_new += this->coru(this->rc(), ens.size()/sys.volume());
+    }
+  }
+}
+
+!!!489265.cpp!!!	description(inout os : ostream) : void
+os << " EVALUATOR [" << this->type_label_() << "]\n";
+os << " Evalute a Lennard-Jones potential for a single species.\n";
+!!!136239.cpp!!!	ener(inout energy : double, inout virial : double, in r2 : double) : void
+if (r2 < this->rc2_)
+{
+  const double r2i (this->sig2_ / r2);
+  const double r6i (r2i*r2i*r2i);
+  energy = this->eps4_*(r6i*r6i-r6i);
+  if (this->shiftpot_)
+  {
+    energy -= this->ecut_;
+  }
+  virial = this->eps48_*(r6i*r6i-0.50*r6i);
+}
+else
+{
+  energy = 0;
+  virial = 0;
+}
+!!!154031.cpp!!!	lennard_jones(in fn : string)
+: filename_(fn)
+, first_save_(true)
+, epsilon_ (1.0)
+, eps4_ (4.0)
+, eps48_ (48.0)
+, sig2_ (1.0)
+, sigma_ (1.0)
+, mass_ (1.0)
+, rc_ (1.0)
+, rc2_ (0.0)
+, ecut_ (0.0)
+, count_ (0ul)
+, tailco_ (false)
+, shiftpot_ (false)
+{}
+!!!2184751.cpp!!!	lennard_jones(in source : lennard_jones)
+: filename_(source.filename_)
+, first_save_(source.first_save_)
+, epsilon_ (source.epsilon_)
+, eps4_ (source.eps4_)
+, eps48_ (source.eps48_)
+, sig2_ (source.sig2_)
+, sigma_ (source.sigma_)
+, mass_ (source.mass_)
+, rc_ (source.rc_)
+, rc2_ (source.rc2_)
+, ecut_ (source.ecut_)
+, count_ (source.count_)
+, tailco_ (source.tailco_)
+, shiftpot_ (source.shiftpot_)
+{}
+
+!!!225457.cpp!!!	prepare(in sim : simulator) : void
+// Can finalize rc as we now know hbox
+this->rc_ = std::min(this->rc_, std::cbrt(sim.volume())/2);
+this->rc2_ = this->rc_*this->rc_;
+if (this->shiftpot_)
+{
+  double virdum;
+  // Calculate energy of the shift
+  this->ecut_ = 0;
+  this->ener(this->ecut_, virdum, this->rc2_);
+}
+// check there exists only one specie
+UTILITY_INPUT(sim.specie_count() == 1,"The 'lj-single' evaluator can only be used with one specie.",core::strngs::evaluator_label());
+// Add displacement radius adjustment method to thermalization 
+// checkpoint observer list.
+// TODO trans.add_check_observer(boost::bind (&evaluator::lennard_jones::sample, this, _1), true);
+// DEBUG
+std::cout << "Attach ["<< this->type_label_()<<"] evaluator to a simulation ["<< sim.type_label() <<"].\n";
+!!!136111.cpp!!!	readat(inout is : istream, in rho : double, in hbox : double) : void
+std::string dummy;
+std::getline(is, dummy);
+std::getline(is, dummy);
+is >> this->tailco_ >> this->shiftpot_;
+std::getline(is, dummy);
+std::getline(is, dummy);
+
+is >> this->epsilon_ >> this->sigma_ >> this->mass_ >> this->rc_;
+
+// Calculate cut-off radius potential
+this->rc_ = std::min(this->rc_, hbox);
+this->rc2_ = this->rc_*this->rc_;
+this->eps4_ = 4 * this->epsilon_;
+this->eps48_ = 48 * this->epsilon_;
+this->sig2_ = this->sigma_ * this->sigma_;
+std::cout << "  Model parameters:\n";
+std::cout << "     epsilon: " << this->epsilon_ << "\n"; 
+std::cout << "     sigma  : " << this->sigma_ << "\n";
+std::cout << "     mass   : " << this->mass_ << "\n";
+std::cout << "     trunk  : " << this->rc_ << "\n"; 
+if (this->shiftpot_)
+{
+  double virdum;
+  // Calculate energy of the shift
+  this->ecut_ = 0;
+  this->ener(this->ecut_, virdum, this->rc2_);
+  std::cout << " Simulations with truncated and shifted potential: \n"; 
+  std::cout << " Potential truncated at :" << this->rc_ << "\n"; 
+  std::cout << " Energy shift           :" << this->ecut_ << "\n";
+}
+if (this->tailco_) 
+{
+  std::cout << " Simulations with tail correction:  \n"; 
+  std::cout << " Potential truncated at :" << this->rc_ << "\n"; 
+  std::cout << " Tail corrections:   energy = " << this->coru(this->rc_, rho) << " pressure = "; 
+  std::cout << this->corp(this->rc_, rho) << "\n";
+}
+!!!1747375.cpp!!!	sample(in sys : simulator) : void
+if (this->filename_.empty())
+{
+  this->filename_ = "lennard-jones.dat";
+}
+std::ofstream os (this->filename_.c_str(), (this->first_save_? std::ios_base::out : std::ios_base::out | std::ios_base::app));
+if (this->first_save_) 
+{
+  this->first_save_ = false;
+  os << "# index, energy per particle, pressure \n";
+}
+if (sys.get_ensemble ().size() != 0)
+{
+  const double enp (sys.energy ()/double(sys.get_ensemble ().size()));
+  const double vol (sys.volume());
+  const double rho (sys.get_ensemble ().size()/vol);
+  double press (rho/sys.beta() + sys.virial()/(3*vol));
+  if (this->tail_correction()) 
+  {
+     press += this->corp(this->rc(), rho);
+  }
+  os << this->count_ << " " << enp << " " << press << "\n";
+}
+else
+{
+  os << this->count_ << " 0.0  0.0\n";
+}
+++this->count_;
+!!!166833.cpp!!!	make_evaluator(in param_set : string, in simtype : string) : base_evaluator
+std::unique_ptr< lennard_jones > result(new lennard_jones());
+{
+  // tailco parameter optional
+  static const std::string tailco_parameter_name_("tailco");
+  if (param_set.find(tailco_parameter_name_) != param_set.end())
+  {
+    result->tailco_ = core::input_reader::read_as_bool(param_set.at(tailco_parameter_name_));
+  }
+}
+{
+  // shiftpot parameter optional
+  static const std::string shiftpot_parameter_name_("shiftpot");
+  if (param_set.find(shiftpot_parameter_name_) != param_set.end())
+  {
+    result->shiftpot_ = core::input_reader::read_as_bool(param_set.at(shiftpot_parameter_name_));
+  }
+}
+{
+  static const std::string epsilon_parameter_name_("epsilon");
+  UTILITY_INPUT(param_set.find(epsilon_parameter_name_) != param_set.end(), "Missing parameter: energy well depth 'epsilon'", core::strngs::evaluator_label()); 
+  result->epsilon_ = boost::lexical_cast< double >(param_set.at(epsilon_parameter_name_));
+}
+{
+  static const std::string sigma_parameter_name_("sigma");
+  UTILITY_INPUT(param_set.find(sigma_parameter_name_) != param_set.end(), "Missing parameter: energy well distance 'sigma'", core::strngs::evaluator_label()); 
+  result->sigma_ = boost::lexical_cast< double >(param_set.at(sigma_parameter_name_));
+}
+{
+  // mass parameter optional
+  static const std::string mass_parameter_name_("mass");
+  if (param_set.find(mass_parameter_name_) != param_set.end())
+  {
+    result->mass_ = boost::lexical_cast< double >(param_set.at(mass_parameter_name_));
+  }
+}
+{
+  static const std::string rc_parameter_name_("rc");
+  UTILITY_INPUT(param_set.find(rc_parameter_name_) != param_set.end(), "Missing parameter: cutoff parameter 'rc'", core::strngs::evaluator_label()); 
+  result->rc_ = boost::lexical_cast< double >(param_set.at(rc_parameter_name_));
+}
+
+// Calculate cut-off radius potential
+result->eps4_ = 4 * result->epsilon_;
+result->eps48_ = 48 * result->epsilon_;
+result->sig2_ = result->sigma_ * result->sigma_;
+
+return result.release();
+!!!217648.cpp!!!	do_write_input_section(inout os : ostream) : void
+os << core::strngs::fstype() << " " << this->type_label_() << "\n";
+os << "tailco " << std::string(this->tailco_ ? "true" : "false") << "\n";
+os << "shiftpot " << std::string(this->shiftpot_ ? "true" : "false") << "\n";
+os << "epsilon " << this->epsilon_ << "\n";
+os << "sigma " << this->sigma_ << "\n";
+os << "mass " << this->mass_ << "\n";
+os << "rc " << this->rc_ << "\n";

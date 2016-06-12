@@ -1,0 +1,537 @@
+class geom
+!!!1578287.cpp!!!	geom(in spec : ion_specie)
+    GRS400_REQUIRE (NULL != &spec, "Passed nul specie factory as argument");
+    std::char_traits< double >::assign (&volume[0], RegionSize, 0.);
+    std::char_traits< double >::assign (&left[0], RegionSize + 1, 0.);
+    std::char_traits< double >::assign (&right[0], RegionSize + 1, 0.);
+    std::char_traits< double >::assign (&radial[0], RegionSize, 0.);
+    protein_zone = reinterpret_cast< ion_ring * > (new char [SpecieSize * sizeof (ion_ring)]);
+
+    for (uint8_type spc_ = 0; spc_ < SpecieSize; ++spc_)
+    {
+        new (&protein_zone[spc_]) ion_ring (spec, spc_);
+    }
+!!!1578415.cpp!!!	~geom()
+    for (uint8_type spc_ = 0; spc_ < SpecieSize; ++spc_)
+    {
+        protein_zone[spc_].~ion_ring();
+    }
+
+    delete [] reinterpret_cast< char * > (protein_zone);
+!!!1578543.cpp!!!	defgeo(in geomfilename : string) : void
+    if (DEBUG)
+    {
+        /*<     write(*,*)"Beginning defgeo"  >*/
+        std::clog << "Beginning defgeo\n";
+    }
+
+    {
+        GRS400_CHECK (0 < spec_1.count() && 0. < spec_1.diameter (0), "species must be defined before reading geometry");
+        //# [bulk|region|membrane|protein]
+        //#  point [0123] x y --> extension direction SEWN
+        //#  qarc [01] r --> extension direction 0 = longer rad, 1 = sharter rad, angle = pi/2
+        //#  box [01] x1 y1 x2 y2 --> extension direction 0 = outside, 1 = inside
+        //#  end
+        std::ifstream is2_ (geomfilename.c_str ());
+        GRS400_ALWAYS (is2_, ("Unable to open " + geomfilename).c_str ());
+
+        while (is2_)
+        {
+            std::string type_;
+            is2_ >> type_;
+
+            if (type_ == dictionary::bulk_label)
+            {
+                int dir;
+                is2_ >> type_ >> dir >> left[BulkRegion] >> right[BulkRegion] >> radial[BulkRegion];
+                GRS400_ALWAYS (type_ == dictionary::box_label, "invalid input file, 'bulk' requires a 'box' specification");
+
+                for (uint8_type i_ = 0; i_ < spec_1.count(); ++i_)
+                {
+                    protein_zone[i_].set_bulk (dir, left[BulkRegion], right[BulkRegion], radial[BulkRegion]);
+                }
+
+                is2_ >> type_;
+                GRS400_ALWAYS (type_ == dictionary::end_label, "invalid input file, 'bulk' requires a single 'box' specification");
+            }
+            else if (type_ == dictionary::region_label)
+            {
+                int reg, dir;
+                is2_ >> reg;
+                GRS400_ALWAYS (reg < RegionSize, "invalid input file, 'region' index out of range");
+                is2_ >> type_ >> dir >> left[reg] >> right[reg] >> radial[reg];
+                GRS400_ALWAYS (type_ == dictionary::box_label, "invalid input file, 'region' requires a 'box' specification");
+
+                for (uint8_type i_ = 0; i_ < spec_1.count(); ++i_)
+                {
+                    protein_zone[i_].set_region (dir, reg, left[reg], right[reg], radial[reg]);
+                }
+
+                is2_ >> type_;
+                GRS400_ALWAYS (type_ == dictionary::end_label, "invalid input file, 'region' requires a single 'box' specification");
+            }
+            else if (type_ == dictionary::membrane_label)
+            {
+                int dir;
+                double a, b;
+                is2_ >> type_ >> dir >> left[RegionSize] >> a >> right[RegionSize] >> b;
+                GRS400_ALWAYS (type_ == dictionary::box_label, "invalid input file, 'membrane' requires a 'box' specification");
+
+                for (uint8_type i_ = 0; i_ < spec_1.count(); ++i_)
+                {
+                    protein_zone[i_].set_membrane (dir, left[RegionSize], a, right[RegionSize], b);
+                }
+
+                is2_ >> type_;
+                GRS400_ALWAYS (type_ == dictionary::end_label, "invalid input file, 'membrane' requires a single 'box' specification");
+            }
+            else if (type_ == dictionary::protein_label)
+            {
+                while (is2_)
+                {
+                    is2_ >> type_;
+
+                    if (DEBUG)
+                    {
+                        std::clog << "type [" << type_ << "]\n";
+                    }
+
+                    if (type_ == dictionary::point_label)
+                    {
+                        int dir;
+                        double a, b;
+                        is2_ >> dir >> a >> b;
+
+                        for (uint8_type i_ = 0; i_ < spec_1.count(); ++i_)
+                        {
+                            protein_zone[i_].add_point (dir, a, b);
+                        }
+
+                        naked_ring->add_point (a, b);
+                    }
+                    else if (type_ == dictionary::qarc_label)
+                    {
+                        int dir;
+                        double rad;
+                        is2_ >> dir >> rad;
+
+                        for (uint8_type i_ = 0; i_ < spec_1.count(); ++i_)
+                        {
+                            protein_zone[i_].add_qarc (dir, rad);
+                        }
+
+                        naked_ring->add_qarc (dir, rad);
+                    }
+                    else if (type_ == dictionary::end_label)
+                    {
+                        GRS400_ALWAYS (naked_ring->close(), "invalid input file, naked protein shape not completed");
+
+                        for (uint8_type i_ = 0; i_ < spec_1.count(); ++i_)
+                        {
+                            GRS400_ALWAYS (protein_zone[i_].close(), "invalid input file, protein shape not completed");
+                        }
+
+                        naked_ring->close();
+                        break;
+                    }
+                    else
+                    {
+                        GRS400_ALWAYS (type_ == dictionary::end_label, "invalid input file, 'protein' had unrecognised specification");
+                    }
+                }
+            }
+        }
+    }
+
+    if (DEBUG)
+    {
+        /*<     write(*,*)"Beginning defgeo"  >*/
+        std::clog << "Ending defgeo\n";
+    }
+
+!!!1578671.cpp!!!	cylinder_volume(in a_spc : uint8_type, in z0 : double, in z1 : double) : double
+    GRS400_CHECK((!feq(z0, z1)), "zero-length cylinder is a programming error");
+    if (z0 > z1)
+    {
+        std::swap (z0, z1);
+    }
+
+    int locator = 0;
+    locator += z0 < protein_zone[a_spc].protein_left () ? 0 : 1;
+    locator += z1 < protein_zone[a_spc].protein_left () ? 0 : 1;
+    locator += z0 < protein_zone[a_spc].protein_right () ? 0 : 1;
+    locator += z1 < protein_zone[a_spc].protein_right () ? 0 : 1;
+    GRS400_CHECK(!(z0 < protein_zone[a_spc].protein_left () && z1 > protein_zone[a_spc].protein_right ())
+                 , "request for volume of region extending either side of protein is not allowed");
+    double extra_volume = 0.;
+    switch (locator)
+    {
+        case 0: // falling through
+            // both in left bulk
+        case 4:
+            // both in right bulk
+            return constants::pi * (z1 - z0) * sqr (region_radial(BulkRegion,a_spc));
+            
+        case 1:
+            // z0 in left bulk, z1 in protein
+            extra_volume = constants::pi * (protein_left (a_spc) - z0) * sqr (region_radial(BulkRegion,a_spc));
+            z0 = protein_left (a_spc);
+            break;
+        case 3:
+            // z0 in protein, z1 in right bulk
+            extra_volume = constants::pi * (z1 - protein_right (a_spc)) * sqr (region_radial(BulkRegion,a_spc));
+            z1 = protein_right (a_spc);
+            break;
+        case 2:
+            // both in protein
+        default:
+            break;
+    }
+    if (feq(z0, z1)) // One of z0 or z1 was on the edge.
+    {
+        return extra_volume;
+    }
+    {
+        // Harris, J. W. and Stocker, H. "Solids of Rotation." 4.10 in Handbook of
+        // Mathematics and Computational Science. New York: Springer-Verlag, pp. 111-113, 1998.
+        //
+        // Volume of conical frustrum:
+        // 1/3 Pi h sqrt(r_0^2 + r_0 r_1 + r_1^2)
+
+        // Find r0 and r1 from z0 and z1
+        const ion_ring & pz_ = protein_zone[a_spc];
+        // Get iterators to points either side of z0 and z1
+        ring::const_iterator p0[] = { pz_.begin (), pz_.begin (), pz_.begin () };
+        ring::const_iterator p1[] = { pz_.begin (), pz_.begin (), pz_.begin () };
+        ring::const_iterator min_ = pz_.begin ();
+        ring::const_iterator max_ = pz_.begin ();
+        bool d0 = (z0 < pz_.begin ()->x());  // use to detect when iterator passes value
+        bool d1 = (z1 < pz_.begin ()->x());
+        int i0 = 0, i1 = 0;
+        for (ring::const_iterator iter_ = pz_.begin (); iter_ != pz_.end (); ++iter_)
+        {
+            min_ = (iter_->x () < min_->x () 
+                        || (feq(iter_->x (), min_->x ()) && iter_->y () < min_->y ()) ? iter_ : min_);
+            max_ = (iter_->x () > max_->x () 
+                    || (feq(iter_->x (), max_->x ()) && iter_->y () < max_->y ()) ? iter_ : max_);
+            
+            if (d0 == (z0 < iter_->x() || feq(z0, iter_->x())))
+            {
+                p0[i0] = iter_;
+            }
+            else
+            {
+                d0 = !d0;
+
+                if (2 == i0)  // If this is our second crossing, only keep if closer
+                {
+                    if (p0[0]->y() > p0[2]->y ())
+                    {
+                        p0[0] = p0[2];
+                        p0[1] = iter_;
+                    }
+                }
+                else
+                {
+                    ++i0;
+                    p0[i0] = iter_;
+                    ++i0;
+                }
+            }
+
+            if (d1 == (z1 <= iter_->x() || feq(z1, iter_->x())))
+            {
+                p1[i1] = iter_;
+            }
+            else
+            {
+                d1 = !d1;
+
+                if (2 == i1)  // If this is our second crossing, only keep if closer
+                {
+                    if (p1[0]->y() > p1[2]->y ())
+                    {
+                        p1[0] = p1[2];
+                        p1[1] = iter_;
+                    }
+                }
+                else
+                {
+                    ++i1;
+                    p1[i1] = iter_;
+                    ++i1;
+                }
+            }
+        }
+
+        // Check
+        // Make sure that iterators are in ascending _our_ z axis.
+        if (p0[0]->x () > p0[1]->x ())
+        {
+            std::swap (p0[1], p0[0]);
+        }
+        
+        if (p1[0]->x () > p1[1]->x ())
+        {
+            std::swap (p1[1], p1[0]);
+        }
+        if (!((p0[0]->x () < z0 || feq(p0[0]->x (), z0))
+              && (z0 < p0[1]->x () || feq(z0, p0[1]->x ()))))
+        {
+            GRS400_CHECK (feq(min_->x(),z0), "z0 not in protein region");
+            p0[0] = min_;
+            p0[1] = min_ - 1;
+        }
+        if (!((p1[0]->x () < z1 || feq(p1[0]->x (), z1))
+              && (z1 < p1[1]->x () || feq(z1, p1[1]->x ()))))
+        {
+            GRS400_CHECK (feq(max_->x(),z1), "z1 not in protein region");
+            p1[0] = max_ + 1;
+            p1[1] = max_;
+        }
+        GRS400_CHECK (p0[0] != pz_.begin () || p0[1] != pz_.begin (), "iterator unchanged, z0 value not found");
+        GRS400_CHECK (p0[0]->x() != p0[1]->x (), "iterators 0 and 1 are identical");
+        GRS400_CHECK (p1[0] != pz_.begin () || p1[1] != pz_.begin (), "iterator unchanged, z1 value not found");
+        GRS400_CHECK (p1[0]->x() != p1[1]->x (), "iterators 0 and 1 are identical");
+        // Make sure that iterators are in ascending _our_ z axis.
+        if (p0[0]->x () > p0[1]->x ())
+        {
+            std::swap (p0[1], p0[0]);
+        }
+        
+        if (p1[0]->x () > p1[1]->x ())
+        {
+            std::swap (p1[1], p1[0]);
+        }
+        if (DEBUG)
+        {
+            std::cout << "Edge points on protein [" << min_->x() << " - " << max_->x() << "]\n";
+            std::clog << "p0.0  " << p0[0]->x() << " | z0 " << z0 << " | p0.1  " << p0[1]->x() << "\t";
+            std::clog << "p1.0  " << p1[0]->x() << " | z1 " << z1 << " | p1.1  " << p1[1]->x() << "\t";
+            std::clog << "z1 - z0 " << z1 - z0 << "\n";
+        }
+        
+        // If pn[1] is last point, make it the first
+        p0[1] = (p0[1] + 1 == pz_.end () ? pz_.begin() : p0[1]);
+        p1[1] = (p1[1] + 1 == pz_.end () ? pz_.begin() : p1[1]);
+
+        // Check
+        GRS400_CHECK ((p1[0]->x () < z1 || feq(p1[0]->x (), z1)) && (z1 < p1[1]->x () || feq(z1, p1[1]->x ()))
+                       , "iterators 0 and 1 are not either side of z0");
+        GRS400_CHECK ((p0[0]->x () < z0 || feq(p0[0]->x (), z0)) && (z0 < p0[1]->x () || feq(z0, p0[1]->x ()))
+                       , "iterators 0 and 1 are not either side of z1");
+
+        if (p0[0] == p1[0])
+        {
+            // CASE 1,2: p0[0] == p1[0] and p0[1] == p1[1]
+            if (p0[1]->y() == p0[0]->y())
+            {
+                // CASE 1: Have a cylinder
+                const double volume = constants::pi * (z1 - z0) * sqr (p0[0]->y());
+
+                if (DEBUG)
+                {
+                    std::clog << "volume from cylinder: " << volume << "\n";
+                }
+
+                return volume + extra_volume;
+            }
+            else
+            {
+                // CASE 2: Have conic frustrum
+                const double r0 = (p0[1]->y() - p0[0]->y()) / (p0[1]->x() - p0[0]->x()) * (z0 - p0[0]->x()) + p0[0]->y();
+                const double r1 = (p1[1]->y() - p0[0]->y()) / (p1[1]->x() - p0[0]->x()) * (z1 - p0[0]->x()) + p0[0]->y();
+                const double volume =  constants::pi * (z1 - z0) * (sqr (r0) + r0 * r1 + sqr (r1)) / 3.;
+
+                if (DEBUG)
+                {
+                    std::clog << "volume from conic frustrum: " << volume << "\n";
+                }
+
+                return volume + extra_volume;
+            }
+        }
+        else
+        {
+            // CASE 3: Have (at least one) points between z0 and z1
+            double volume;
+
+            const double r0 = (p0[1]->y() - p0[0]->y()) / (p0[1]->x() - p0[0]->x()) * (z0 - p0[0]->x()) + p0[0]->y();
+            volume = (p0[1]->x() - z0) * (sqr (r0) + r0 * p0[1]->y() + sqr (p0[1]->y()));
+
+            const double r1 = (p1[1]->y() - p1[0]->y()) / (p1[1]->x() - p1[0]->x()) * (z1 - p1[0]->x()) + p1[0]->y();
+            volume += (z1 - p1[0]->x()) * (sqr (r1) + r1 * p1[0]->y() + sqr (p1[0]->y()));
+
+            if (DEBUG)
+            {
+                std::clog << "volume from multi conic frustrum: ..";
+            }
+
+            // More than one point, ring goes in clockwise direction so p1[0] is "before" p0[1] in ring
+            // because the part of the polygon we are interested in is closest to our z-axis
+            while (p1[0] != p0[1] && ! feq (p0[1]->x (), p1[0]->x ()))
+            {
+                ++p1[0];
+                ++p1[1];
+
+                if (p1[0] == pz_.end ())
+                {
+                    p1[0] = pz_.begin () + 1;
+                    p1[1] = pz_.begin ();
+                }
+
+                volume += (p1[1]->x() - p1[0]->x()) * (sqr (p1[1]->y()) + p1[1]->y() * p1[0]->y() + sqr (p1[0]->y()));
+            }
+
+            volume *= constants::pi / 3.;
+
+            if (DEBUG)
+            {
+                std::clog << " total volume: " << volume + extra_volume << "\n";
+            }
+
+            return volume + extra_volume;
+        }
+    }
+!!!1578799.cpp!!!	do_readin(inout scnr : reader) : void
+    GRS400_REQUIRE (scnr.name () == dictionary::geometry_label, "incorrect section label");
+    bool targc;
+    double ctrg = 0.;
+    double ntrg = 0.;
+
+    while (scnr.next ())
+    {
+        if (scnr.name () == dictionary::targc_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::targc_label + " tag with no content").c_str ());
+            scnr.get_content (targc);
+        }
+        else if (scnr.name () == dictionary::ntrg_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::ntrg_label + " tag with no content").c_str ());
+            scnr.get_content (ntrg);
+        }
+        else if (scnr.name () == dictionary::ctrg_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::ctrg_label + " tag with no content").c_str ());
+            scnr.get_content (ctrg);
+        }
+        else if (scnr.name () == dictionary::filename_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::filename_label + " tag with no content").c_str ());
+            scnr.get_content (filename);
+        }
+        else
+        {
+            GRS400_ALWAYS (scnr.at_end (), ("unrecognised tag or invalid argument in input file: " + scnr.name ()).c_str ());
+            break;
+        }
+    }
+
+    GRS400_ALWAYS (! filename.empty (), "no filename supplied for geometry");
+
+    if (targc)
+    {
+        // modify bulk region based on ntrg, ctrg.
+        /* fix stuff according to number and concentration of ions */
+        /* tosi converts density unit from particles/A^3 to mole/dm^3 */
+        /*<         rtrg=ctrg/tosi >*/
+        // const double rtrg = ctrg / constants::tosi;
+        /*<         rl(5)=(dble(ntrg)/(rtrg*4*pi))**(1./3.) >*/
+        // ctarget_bulk = ::cbrt (static_cast< double > (ntrg) / (rtrg * 4 * constants::pi));
+        ctarget_bulk = ::cbrt (static_cast< double > (ntrg) * constants::tosi / (ctrg * 2 * constants::pi));
+    }
+!!!1578927.cpp!!!	do_readin() : void
+    // Read in data from file.
+    defgeo (filename);
+    const uint8_type nspec_ = spec_1.count();
+
+    /* if targc was true then ctarget_bulk is positive.
+       use it to set bulk radius and width (*2) */
+    if (0. < ctarget_bulk)
+    {
+        for (uint8_type spc_ = 0; spc_ < nspec_; ++spc_)
+        {
+            protein_zone[spc_].set_bulk (1, -ctarget_bulk, ctarget_bulk, ctarget_bulk);
+        }
+
+        left[BulkRegion] = -ctarget_bulk;
+        right[BulkRegion] = ctarget_bulk;
+        radial[BulkRegion] = ctarget_bulk;
+    }
+
+    // Call shape's do_readin now that bulk is defined.
+    for (uint8_type spc_ = 0; spc_ < nspec_; ++spc_)
+    {
+        protein_zone[spc_].do_readin ();
+    }
+
+    // Calculate volumes
+    for (uint8_type reg = 0; reg < RegionSize; ++reg)
+    {
+        volume[reg] = constants::pi * sqr (radial[reg]) * (right[reg] - left[reg]);
+    }
+
+    // Subtract membrane from bulk
+    volume[BulkRegion] -= constants::pi * sqr (radial[BulkRegion]) * (right[RegionSize] - left[RegionSize]);
+
+    if (DEBUG)
+    {
+        std::clog << "Naked Protein geometry\n";
+        naked_ring->serialise (std::clog);
+
+        for (uint8_type i_ = 0; i_ < spec_1.count(); ++i_)
+        {
+            std::clog << "Protein geometry for specie " << int (i_) << "\n";
+            protein_zone[i_].serialise (std::clog);
+        }
+    }
+
+    std::cout << constants::output_divider << "\n";
+    std::cout << "REGION GEOMETRY\n";
+    std::cout << "     BULK z = (" << left[BulkRegion] << ":" << right[BulkRegion] << "), r = " << radial[BulkRegion] << ", v = " << (constants::pi * sqr (radial[BulkRegion]) * (right[BulkRegion] - left[BulkRegion])) << "\n";
+    std::cout << " MEMBRANE z = (" << left[RegionSize] << ":" << right[RegionSize] << "), r = " << radial[BulkRegion] << ", v = " << (constants::pi * sqr (radial[BulkRegion]) * (right[RegionSize] - left[RegionSize])) << "\n";
+    std::cout << "  CHANNEL z = (" << left[ChannelRegion] << ":" << right[ChannelRegion] << "), r = " << radial[ChannelRegion] << ", v = " << (constants::pi * sqr (radial[ChannelRegion]) * (right[ChannelRegion] - left[ChannelRegion])) << "\n";
+    std::cout << "   FILTER z = (" << left[FilterRegion] << ":" << right[FilterRegion] << "), r = " << radial[FilterRegion] << ", v = " << (constants::pi * sqr (radial[FilterRegion]) * (right[FilterRegion] - left[FilterRegion])) << "\n";
+    std::cout << "   CENTRE z = (" << left[CenterRegion] << ":" << right[CenterRegion] << "), r = " << radial[CenterRegion] << ", v = " << (constants::pi * sqr (radial[CenterRegion]) * (right[CenterRegion] - left[CenterRegion])) << "\n";
+    std::cout << constants::output_divider << "\n";
+
+!!!1579055.cpp!!!	in_region(in a_reg : uint8_type, in ispec : uint8_type, in z : double, in r : double) : bool
+    GRS400_REQUIRE (a_reg < RegionSize, "region index out of range.");
+    GRS400_REQUIRE (ispec < SpecieSize, "ionch can only handle limited number of species.");
+    return protein_zone[ispec].in_region (a_reg, z, r);
+!!!1579311.cpp!!!	protein_left(in ispec : uint8_type) : double
+    GRS400_REQUIRE (ispec < SpecieSize, "ionch can only handle limited number species.");
+    return protein_zone[ispec].protein_left ();
+!!!1579439.cpp!!!	protein_right(in ispec : uint8_type) : double
+    GRS400_REQUIRE (ispec < SpecieSize, "ionch can only handle limited number species.");
+    return protein_zone[ispec].protein_right ();
+!!!1579567.cpp!!!	region_left(in a_reg : uint8_type, in ispec : uint8_type) : double
+    GRS400_REQUIRE (a_reg < RegionSize, "region index out of range.");
+    GRS400_REQUIRE (ispec < SpecieSize, "ionch can only handle limited number species.");
+    return protein_zone[ispec].region_left (a_reg);
+!!!1579823.cpp!!!	region_right(in a_reg : uint8_type, in ispec : uint8_type) : double
+    GRS400_REQUIRE (a_reg < RegionSize, "region index out of range.");
+    GRS400_REQUIRE (ispec < SpecieSize, "ionch can only handle limited number species.");
+    return protein_zone[ispec].region_right (a_reg);
+!!!1580079.cpp!!!	region_radial(in a_reg : uint8_type, in ispec : uint8_type) : double
+    GRS400_REQUIRE (a_reg < RegionSize, "region index out of range.");
+    GRS400_REQUIRE (ispec < SpecieSize, "ionch can only handle limited number species.");
+    return protein_zone[ispec].region_radial (a_reg);
+!!!1580591.cpp!!!	volume_ratio(in ispec : uint8_type) : double
+    GRS400_REQUIRE (ispec < SpecieSize, "ionch can only handle limited number species.");
+    return protein_zone[ispec].volume_ratio ();
+!!!1580719.cpp!!!	wall(in a_spc : uint8_type, in a_z : double, in a_radial : double, in ignore_chonly : bool = false) : bool
+    GRS400_REQUIRE (a_spc < spec_1.count(), "specie index out of range");
+
+    if (DEBUG)
+    {
+        const double ri_ = spec_1.diameter (a_spc) / 2.;
+        std::clog << "WALL (spc = " << int (a_spc) << ", z = " << a_z << ", r = " << a_radial << ", radius = " << ri_ << ")\n";
+    }
+
+    return protein_zone[a_spc].wall (a_z, a_radial, ignore_chonly);

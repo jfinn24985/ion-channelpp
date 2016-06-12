@@ -1,0 +1,89 @@
+class wall_algorithm
+!!!408240.cpp!!!	initiate(in rsize : size_t, in zsize : size_t) : void
+// reset counters
+this->zidx_ = 0ul;
+this->ridx_ = 0ul;
+// Calculate ratio
+this->zend_ = zsize;
+this->rend_ = rsize;
+this->ratio_ = std::pow( this->r2_ / this->r1_, 1.0 / double( this->zend_ ) );
+
+this->on_z_step();
+
+!!!408368.cpp!!!	initiate(in dr : double, in rmin : size_t, in dz : double, in zmin : size_t)
+// reset counters
+this->zidx_ = 0ul; 
+this->ridx_ = 0ul; 
+
+// Number of tiles around ring at centre of wall
+const double dll = this->r2_ - this->r1_;
+const double cir( 2 * core::constants::pi() * (this->r1_ + this->r2) / 2 );
+this->rend_ = std::max< std::size_t >( rmin, std::floor( cir / dr ) + 1);
+
+// Calculate radial tile number
+const double dfiu(2 * core::constants::pi() / this->rend_);
+const double ratio1( (1 + dfiu/2)/(1 - dfiu/2) );
+this->zend_ = std::max< int >( zmin, std::floor( std::log( this->r2_ / this->r1_ ) / std::log( ratio1 ) ) + 1 );
+this->ratio_ = std::pow( this->r2_ / this->r1_, (1 / double( this->zend_ ) ) );
+
+this->on_z_step();
+
+!!!408496.cpp!!!	next() : bool
+if (not this->at_end())
+{
+   const double fik = (this->ridx_ + 0.5) * this->dr_;
+   this->centroid.x = this->rc_ * std::cos( fik );
+   this->centroid.y = this->rc_ * std::sin( fik );
+
+   ++this->ridx_;
+   if (this->ridx_ == this->rend_)
+   {
+      ++this->zidx_;
+      if (this->zidx_ != this->zend_)
+      {
+         this->ridx_ = 0ul;
+         this->on_z_step();
+      }
+      else
+      {
+         return false;
+      }
+   }
+   return true;
+}
+else
+{
+   return false;
+}
+
+!!!409648.cpp!!!	on_z_step() : void
+this->rr1_ = (0 == this->zidx_ ? this->r1 : this->rr2_);
+this->rr2 = (this->zend_ == this->zidx_ + 1 ? this->r2_ : this->rr1_ * this->ratio_);
+
+
+const double arr   (std::pow( this->rr2_, 2 ) - std::pow( this->rr1, 2 ));
+const double szaml (std::pow( this->rr2_, 3 ) - std::pow( this->rr1, 3 ));
+   
+this->rc_ = (2 * szaml) / (3 * arr);
+// AREA:
+//  line length by circumference at centroid
+//  length = rrl2 - rrl2
+//  cir    = ( rrl2 + rrl1 ) / 2 dr
+//  length * cir = (rrl2-rrl1)(rrl2+rrl1) dr / 2
+//               = (rrl2^2 - rrl1^2) dr / 2
+this->area = arr * this->dr_ / 2;
+
+!!!409520.cpp!!!	wall_algorithm(in z : double, in r1 : double, in r2 : double, in deps : double, in is_positive : bool)
+: subdivide_algorithm( deps )
+, r1_(r1)
+, r2_(r2)
+, rr1_()
+, rr2_()
+, rc_()
+, ratio_()
+, dr_()
+{
+   this->centroid = { 0.0, 0.0, z };
+   this->normal = { 0.0, 0.0, (is_positive ? 1.0 : -1.0 ) };
+}
+

@@ -1,0 +1,103 @@
+class cell_geom
+!!!1844911.cpp!!!	input_help(inout a_os : ostream, in msg : string) : void
+  a_os << "Bad geometry section in input.\n";
+  a_os << msg << "\n";
+  a_os << "Required tags are:\n";
+  a_os << constants::fsgzl1 << " " << constants::fsgzl4 << " " << constants::fsgrl1 << " "
+       << constants::fsgrl4 << " " << constants::fsgrl5 << " " << constants::fsgrlv << " "
+       << constants::fsgrlc << " " << constants::fsgzoc << " " << constants::fsntrg << "\n";
+  a_os << "Optional tag: " << constants::fsname << "\n";
+!!!1845039.cpp!!!	read_input(inout parser : input_reader) : void
+  // Check name, if wrong this is programming error
+  IONCH_REQUIRE (parser.name() == constants::fsgeom(), "Error: incorrect section name");
+  // Check value, if present this is an input error
+  IONCH_INPUT (parser.value().empty (), "Error: section does not require any parameters", constants::fsgeom());
+
+  std::bitset< 5 > required_tags_missed;
+  required_tags_missed.set ();
+  enum  // bit set indices
+  {
+    MASK_ZL1 = 0,
+    MASK_RL1 = 1,
+    MASK_RL4 = 2,
+    MASK_RLVEST = 3,
+    MASK_RLCURV = 4
+  };
+
+  while (parser.next())
+  {
+    // exit loop on bad read or section 'end'
+    if (parser.name ().empty() or parser.name () == constants::fsend())
+      break;
+
+    try
+    {
+      // looking for rlvest,rlcurv,zl1,zl4,rl1,rl4,rl5
+      if (parser.name () == constants::fsgzl1())
+      {
+        pore_length_ = boost::lexical_cast< double >(parser.value ());
+        required_tags_missed.reset(MASK_ZL1);
+      }
+      else if (parser.name () == constants::fsgzl4())
+      {
+        cell_length_ = boost::lexical_cast< double >(parser.value ());
+      }
+      else if (parser.name () == constants::fsgrl1())
+      {
+        pore_radius_ = boost::lexical_cast< double >(parser.value ());
+        required_tags_missed.reset (MASK_RL1);
+      }
+      else if (parser.name () == constants::fsgrl4())
+      {
+        outer_radius_ = boost::lexical_cast< double >(parser.value ());
+        required_tags_missed.reset (MASK_RL4);
+      }
+      else if (parser.name () == constants::fsgrl5())
+      {
+        cell_radius_ = boost::lexical_cast< double >(parser.value ());
+      }
+      else if (parser.name () == constants::fsgrlv())
+      {
+        arc_vestibule_ = boost::lexical_cast< double >(parser.value ());
+        required_tags_missed.reset (MASK_RLVEST);
+      }
+      else if (parser.name () == constants::fsgrlc())
+      {
+        arc_membrane_ = boost::lexical_cast< double >(parser.value ());
+        required_tags_missed.reset (MASK_RLCURV);
+      }
+      else
+      {
+        const std::string known_option_name;
+        IONCH_INPUT (parser.name () == known_option_name, "Name " + parser.name () + " is not a valid option in the geometry section", constants::fsgeom());
+      }
+    }
+    catch (boost::bad_lexical_cast &e)
+    {
+      const bool convert_succeed(false);
+      IONCH_INPUT(convert_succeed, e.what(), constants::fsgeom());
+
+    }
+  }
+
+  IONCH_INPUT (not required_tags_missed.any (), "Not all required tags were present: " + required_tags_missed.to_string(), constants::fsgeom());
+  // Input requirements
+  //   ** (zlimit <= zl1) : structural ions limited to central cylinder
+  //   ** (rlvest + rlcurv <= rl4 - rl1) : radial width of toroid is greater than arcs
+  //   ** (rlcurv <= zl1 + rlvest) : z-width of toroid is greater  than outer arc.
+  IONCH_INPUT ((rlvest() + rlcurv()) <= (rl(4) - rl(1))
+               , "Invalid geometry input: rlvest + rlcurv greater than rl4 - rl1", constants::fsgeom());
+  IONCH_INPUT (rlcurv() < zl(2)
+               , "Invalid geometry input: rlcurv greater than zl1 + rlvest", constants::fsgeom());
+!!!1845295.cpp!!!	echo_input(inout a_os : ostream) : void
+  a_os << constants::fsgeom() << "\n";
+  a_os << constants::fsgzl1() << " " << zl(1) << "\n";
+  a_os << constants::fsgzl4() << " " << zl(4) << "\n";
+  a_os << constants::fsgrl1() << " " << rl(1) << "\n";
+  a_os << constants::fsgrl4() << " " << rl(4) << "\n";
+  a_os << constants::fsgrl5() << " " << rl(5) << "\n";
+  a_os << constants::fsgrlv() << " " << rlvest() << "\n";
+  a_os << constants::fsgrlc() << " " << rlcurv() << "\n";
+  a_os << constants::fsend() << "\n";
+  a_os << "\n";
+

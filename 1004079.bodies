@@ -1,0 +1,370 @@
+class channel
+!!!1829423.cpp!!!	set_run_number(in irun : size_t) : void
+  IONCH_CHECK (firun_.empty(), "Run number can only be assigned once.");
+  IONCH_INPUT (irun > 0 and irun < 1000, "Run number must be in range 1 to 999", constants::fschnl());
+  std::stringstream os_;
+  os_ << std::setfill('0') << std::setw(3) << irun;
+  firun_ = os_.str();
+  {
+    uuid_t val;
+    uuid_generate(val);
+    char p[3];
+    fuuid_ = std::string(32, ' ');
+    for (int i = 0; i != 16; ++i)
+    {
+      std::sprintf(&p[0], "%02X", val[i]);
+      fuuid_[2*i] = p[0];
+      fuuid_[2*i + 1] = p[1];
+    }
+  }
+!!!1829935.cpp!!!	help_information(inout exemplar : input_help) : void
+  const std::string seclabel (constants::fschnl());
+  // ----------------------------------------
+  // add section
+  // ----------------------------------------
+
+  //   Specie input section definition
+  exemplar.add_section (seclabel, "Channel input section definition");
+
+  boost::program_options::options_description &desc (exemplar.description(seclabel));
+  // ----------------------------------------
+  // add parameters
+  // ----------------------------------------
+
+  {
+    const std::string description("[optional, string] User-supplied simulation label.");
+    desc.add_options()(constants::fsname().c_str(), description.c_str());
+  }
+  {
+    const std::string description("[optional, integer > 0, default 1000] The total number of simulation steps to perform.");
+    desc.add_options()(constants::fsnstp().c_str(), description.c_str());
+  }
+  {
+    const std::string description("[optional, integer > 0, default 100] The number of simulation steps to ignore while the system thermalizes.");
+    desc.add_options()(constants::fsnavr().c_str(), description.c_str());
+  }
+  {
+    const std::string description("[optional, integer > 0, default "+constants::fsnavr()+"] The number of simulation steps to perform"
+        " in the periodic boundary condition bulk simulation to estimate the chemical excesses.");
+    desc.add_options()(constants::fsnblk().c_str(), description.c_str());
+  }
+  {
+    const std::string description("[optional, boolean, default true] Whether to use the chemical excess potentials "
+        "in the input file or to run a bulk-simulation to estimate the values.");
+    desc.add_options()(constants::fschpt().c_str(), description.c_str());
+  }
+//  {
+//    const std::string description("[required, two letters] specie code name (quotes optional).");
+//    desc.add_options()(constants::fsname().c_str(), description.c_str());
+//  }
+!!!1830191.cpp!!!	execution_environment(inout a_os : ostream) : void
+  class helper_
+  {
+  public:
+    static std::string file_to_string (std::string dirname, const char * fname)
+    {
+      std::string result;
+      dirname.append ("/");
+      dirname.append (fname);
+      std::ifstream ifs_ (dirname.c_str ());
+
+      if (ifs_)
+      {
+        std::getline (ifs_, result);
+      }
+
+      return result;
+    }
+    static int file_to_number (std::string dirname, const char * fname)
+    {
+      int result = -1;
+      std::string s_;
+      dirname.append ("/");
+      dirname.append (fname);
+      std::ifstream ifs_ (dirname.c_str ());
+
+      if (ifs_)
+      {
+        ifs_ >> result;
+
+        if (ifs_)
+        {
+          ifs_ >> s_;
+
+          if (not s_.empty ())
+          {
+            if ('K' == s_[0] or 'k' == s_[0])
+            {
+              result *= 1024;
+            }
+            else if ('M' == s_[0] or 'm' == s_[0])
+            {
+              result *= 1024 * 1024;
+            }
+          }
+        }
+      }
+
+      return result;
+    }
+  };
+  utsname uname_;
+  uname (&uname_);
+  int cache_max = -1;
+  const char num_to_char[] =
+    { "0123456789"
+    };
+  int cache_sz[3] = { -1, -1, -1 };
+  int cache_lnsz[3] = { -1, -1, -1 };
+  //  const boost::format line1_("%1$20s : %2$6d");
+  int idx = 0;
+
+  //  a_os << "PROGRAM:  " << ionch::vers::compnm << "\n";
+
+  // run date information
+  a_os << "RUN DATE: " << boost::gregorian::to_simple_string(boost::gregorian::day_clock::local_day()) << "\n";
+
+  a_os << constants::horizontal_bar() << "\n";
+  // program compilation information
+  //  a_os << "COMPILED VERSION:  " << ionch::vers::compvr << "\n";
+  //  a_os << "COMPILED DATE:  " << ionch::vers::compdt << "\n";
+  //  a_os << "COMPILER INFORMATION\n";
+  //  a_os << "CPP COMPILER: " << ionch::vers::cmpclr << "\n";
+  //  a_os << "CPP TARGET: " << ionch::vers::cmpctg << "\n";
+  //  a_os << "CPP FLAGS: " << ionch::vers::cmpclg << "\n";
+  //  a_os << "-- SIZE LIMITS --\n";
+  //  a_os << boost::format(line1_) % "SPECIES" % constants::nspcmx << "\n";
+  //  a_os << boost::format(line1_) % "FREE SPECIES" % accum::noccmx << "\n";
+  //  a_os << boost::format(line1_) % "SALTS" % constants::nsltmx << "\n";
+  //  a_os << boost::format(line1_) % "SALT COMPONENTS" % constants::nnewmx << "\n";
+  //  a_os << boost::format(line1_) % "TOTAL ION PARTICLES" % constants::ntotmx << "\n";
+  //  a_os << boost::format(line1_) % "STRUCTURAL IONS" % constants::nionmx << "\n";
+  //  a_os << boost::format(line1_) % "REGIONS" % constants::nrgnmx << "\n";
+  //    a_os << boost::format(line1_) % "INPUT FILE LINE WIDTH" % std::string().max_size () << "\n";
+
+  //  a_os << constants::horizontal_bar() << "\n";
+
+  a_os << "MACHINE INTEGER SIZE: " << (sizeof(idx)*8) << "\n";
+  a_os << "REAL NUMBERS\n";
+  a_os << " EPSILON: " << std::numeric_limits<double>::epsilon() << "\n";
+  a_os << " HUGE: " << std::numeric_limits<double>::max() << "\n";
+  a_os << " PRECISION/DENORM: " << std::numeric_limits<double>::denorm_min() << "\n";
+  a_os << " IEC559/IEEE754: " << (std::numeric_limits<double>::is_iec559 ? "true" : "false") << "\n";
+
+  a_os << "OUTPUT DIRECTORIES\n";
+  //    a_os << "  CHECKPOINT DIRECTORY: \"" << this->directory_ << "\"\n";
+  a_os << "  RESULT DIRECTORY    : \"res\"\n";
+
+  a_os << constants::horizontal_bar() << "\n\n";
+
+  // host and environment information
+  //    a_os << "LAPACK LIBRARY: " << vers::libver () << "\n";
+
+  // RANDOM NUMBER GENERATOR USED:
+  a_os << " RANDOM NUMBER GENERATOR: Boost C++ implmentation\n";
+
+  a_os << constants::horizontal_bar() << "\n";
+
+  // ------------------------------------------------------------
+  // Possibly linux specific information
+  for (int index = 0; index < 10; ++index)
+  {
+    std::string dirname ("/sys/devices/system/cpu/cpu0/cache/index_");
+    dirname[dirname.size () - 1] = num_to_char[index];
+    // std::cerr << "Checking directory \"" << dirname << "\"\n";
+    struct stat st;
+
+    if (stat (dirname.c_str (), &st) != 0)
+    {
+      // std::cerr << "Stat failed\n";
+      break;
+    }
+
+    const std::string tmp_ (helper_::file_to_string (dirname, "type"));
+
+    // std::cerr << "Got type \"" << tmp_ << "\"\n";
+    if (std::string::npos != tmp_.find ("ata")
+        or std::string::npos != tmp_.find ("nified"))
+    {
+      // Have data cache
+      int level = helper_::file_to_number (dirname, "level") - 1;
+
+      // std::cerr << "Found level \"" << level << "\"\n";
+      if (0 <= level and level > 2)
+      {
+        break;
+      } // Can`t handle more than three cache levels
+
+      cache_max = std::max (cache_max, level);
+      cache_lnsz[level] = helper_::file_to_number (dirname, "coherency_line_size");
+      cache_sz[level] = helper_::file_to_number (dirname, "size");
+      // std::cerr << "Found cache line \"" << cache_lnsz[level] << "\"\n";
+      // std::cerr << "Found cache size \"" << cache_sz[level] << "\"\n";
+    }
+  }
+
+  // Print some machine information
+  a_os << boost::format (" HOST MACHINE\n  NAME: %1%\n  TYPE: %2%\n") % uname_.nodename % uname_.machine;
+
+  if (cache_sz[0] != -1)
+  {
+    a_os << boost::format ("  L1 CACHE (line,sz): %1%, %2%\n") % cache_sz[0] % cache_lnsz[0];
+  }
+  else
+  {
+    a_os << "  L1 CACHE (line,sz): unknown or not present\n";
+  }
+
+  if (cache_sz[1] != -1)
+  {
+    a_os << boost::format ("  L2 CACHE (line,sz): %1%, %2%\n") % cache_sz[1] % cache_lnsz[1];
+  }
+  else
+  {
+    a_os << "  L2 CACHE (line,sz): unknown or not present\n";
+  }
+
+  if (cache_sz[2] != -1)
+  {
+    a_os << boost::format ("  L3 CACHE (line,sz): %1%, %2%\n") % cache_sz[2] % cache_lnsz[2];
+  }
+  else
+  {
+    a_os << "  L3 CACHE (line,sz): unknown or not present\n";
+  }
+
+  a_os << boost::format (" OPERATING SYSTEM\n  NAME: %1%\n  VERSION: %2%\n  RELEASE: %3%\n") % uname_.sysname % uname_.version % uname_.release;
+
+!!!1830319.cpp!!!	read_input_file() : void
+  {
+    // ------------------------------------------------------------
+    // PHASE ONE: Reading input file(s)
+    ionch::input_delegater meta_(input_file_version);
+    // BUILD input_delegate_map
+    meta_.set_input_delegate(constants::fschnl(), boost::bind(&channel::read_input, this, _1));
+    fm_->register_input_readers(meta_);
+    // Create input stream stack to handle included files.
+    boost::ptr_vector< ionch::input_reader > input_file_list;
+    static const size_t maximum_include_depth (10);
+
+    // Keep track of current filename for error messages
+    std::string current_filename;
+
+    // Look for the input file.
+    // First choice = fschnl.firun.inp
+    // Second choice = fschnl.inp
+    current_filename = constants::fschnl() + "." + this->firun() + ".inp";
+
+    if (not boost::filesystem::exists (current_filename))
+    {
+      current_filename = constants::fschnl() + ".inp";
+    }
+
+    meta_.read_input_file (current_filename);
+  }
+
+  {
+    // ------------------------------------------------------------
+    // PHASE TWO
+    // input file successfully read, call finalisation methods
+    fm_->read_finalise(std::cout);
+    //      std::cout << "Begin phase 2:\nSpecie and salt initialisation" << std::endl;
+    //      spec_->rfspec ();
+    //      std::cout << "Geometry initialisation" << std::endl;
+    //      geom_->rfgeom ();
+    //      std::cout << "Particle configuration initialisation" << std::endl;
+    //      conf_->rfconf ();
+    //      std::cout << "Patch initialisation" << std::endl;
+    //      patch_->rfptch ();
+    //      std::cout << "GCMC trial initialisation" << std::endl;
+    //      trial_->rftral ();
+    //      std::cout << "Result collection initialisation" << std::endl;
+    //      this->stats_->read_finalise ();
+    //      std::cout << "Phase 2 complete" << std::endl;
+  }
+
+!!!1830447.cpp!!!	read_input(inout parser : input_reader) : void
+  IONCH_REQUIRE(parser.name() == constants::fschnl(), "Input section is not for a channel");
+
+  std::bitset < 2 > missed_required_tags_;
+  missed_required_tags_.set ();
+
+  // Empty any title text
+  if (not run_title_.empty ())
+  {
+    run_title_.clear ();
+  }
+
+  IONCH_INPUT (parser.value().empty(), "Error: 'channel' section does not take any parameters", constants::fschnl());
+
+  // process section
+  while (parser.next())
+  {
+    if (parser.name() == constants::fsend())
+      break;
+
+    try
+    {
+      // looking for steps_simulation_,steps_thermalisation_,ratmv, ratslt, ratind;
+      if (parser.name()  == constants::fsnstp())
+      {
+        this->steps_simulation_ = boost::lexical_cast < size_t > (parser.value ());
+        missed_required_tags_.reset (0);
+      }
+      else if (parser.name()  == constants::fsnavr())
+      {
+        this->steps_thermalisation_ = boost::lexical_cast < size_t > (parser.value ());
+        missed_required_tags_.reset (1);
+      }
+      else if (parser.name()  == constants::fsnblk())
+      {
+        this->steps_bulk_simulation_ = boost::lexical_cast < size_t > (parser.value ());
+      }
+      else if (parser.name()  == constants::fsname())
+      {
+        // remove matching leading and trailing quotes;
+        this->run_title_ = parser.value ();
+        parser.dequote (this->run_title_);
+      }
+      else if (parser.name()  == constants::fschpt())
+      {
+        parser.read_as_bool (parser.value (), this->usechm_);
+      }
+      else if (parser.name()  == constants::fsnmcf())
+      {
+        //parser.read_bool (parser.value (), this->byiter);
+      }
+      else
+      {
+        std::string known_input_options;
+        IONCH_INPUT (known_input_options == parser.name ()
+                     , "Name " + parser.name () + " is not valid option in this section"
+                     , constants::fschnl());
+      }
+    }
+    catch (boost::bad_lexical_cast &e)
+    {
+      const bool convert_succeed(false);
+      IONCH_INPUT(convert_succeed, e.what(), constants::fschnl());
+    }
+  }
+
+  // TODO: IONCH_INPUT (not missed_required_tags_.any (), "Not all required tags were present");
+  IONCH_INPUT (this->steps_simulation_ > 0, "You cannot run a simulation with no iteration steps", constants::fschnl());
+  IONCH_INPUT (this->steps_thermalisation_ > 0, "You cannot run a simulation with no thermalisation steps", constants::fschnl());
+  IONCH_INPUT (this->steps_bulk_simulation_ > 0 or this->usechm_, "You cannot run a bulk simulation with no steps", constants::fschnl());
+
+  // Convert Angstrom to meters
+  //static const double dsi = 1.E-10;
+  //this->beta_ = 1.0 /(constants::boltzmann_constant_ * this->temperature_kelvin_);
+  //this->q_star_factor_ = constants::electron_charge_ * std::sqrt(this->beta_/(4 * constants::pi * constants::eps0 * dsi));
+!!!1830575.cpp!!!	echo_input(inout a_os : ostream) : void
+  a_os << constants::fschnl() << "\n";
+  a_os << constants::fsnstp() << " " << this->steps_simulation_ << "\n";
+  a_os << constants::fsnavr() << " " << this->steps_thermalisation_ << "\n";
+  a_os << constants::fsnblk() << " " << this->steps_bulk_simulation_ << "\n";
+  //    a_os << constants::fstsi()  << " " << this->temperature_kelvin_ << "\n";
+  a_os << constants::fsname() << " \"" << this->run_title_ << "\"\n";
+a_os << constants::fschpt() << " " << (this->usechm_ ? constants::fstrue() : constants::fsfalse()) << "\n";
+  //    a_os << constants::fsnmcf() << " " << constants::str(byiter) << "\n";
+  a_os << constants::fsend() << "\n\n";

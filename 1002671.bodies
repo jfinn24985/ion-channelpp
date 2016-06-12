@@ -1,0 +1,370 @@
+class basic_ring
+!!!1817647.cpp!!!	add_point(in a_x : double, in a_y : double) : void
+    state_.push_back (point_xy (a_x, a_y));
+    last_arc_.clear = true;
+!!!1817775.cpp!!!	add_qarc(in direction : uint8_type, in radius : double) : void
+    GRS400_REQUIRE (1 < state_.size (), "Can not add an arc as first two shape");
+
+    // In point_xy, x corresponds to our 'z' and y corresponds to our 'r'
+    if (DEBUG) { std::clog << "In add_qarc with D = " << int (direction) << ", R = " << radius << "\n"; }
+
+    // ---------------------
+    // Handle negative radii
+    // ---------------------
+    if (0 >= radius)
+    {
+        // need to remove points or alter points!
+        if (last_arc_.clear)
+        {
+            // last shape was a line
+            const point_xy last_ = state_[state_.size () - 1];
+            const point_xy last1_ = state_[state_.size () - 2];
+
+            if (feq (last1_.y (), last_.y ()))
+            {
+                state_[state_.size () - 1].x (last_.x() + (last_.x() > last1_.x() ? radius : -radius));
+            }
+            else
+            {
+                state_[state_.size () - 1].y (last_.y() + (last_.y() > last1_.y() ? radius : -radius));
+            }
+
+            if (DEBUG)
+            {
+                std::clog << "# Negative radius: last point (" << state_[state_.size () - 1].x () << ", " << state_[state_.size () - 1].y () << ")\n";
+            }
+
+            return;
+        }
+        else
+        {
+            // last shape was an arc
+            point_xy last_ = state_[state_.size () - 1];
+
+            if ( ( (last_arc_.quadrant + last_arc_.direction) & 1) == 0)
+            {
+                last_.y (last_.y() + (0 == last_arc_.direction ? radius : -radius));
+
+                while (state_.back ().y () > last_.y ())
+                {
+                    last_.x (state_.back ().x ());
+                    state_.pop_back ();
+                }
+
+                state_.push_back (last_);
+            }
+            else
+            {
+                last_.x (last_.x() + (0 == last_arc_.direction ? radius : -radius));
+
+                while (state_.back ().x () > last_.x ())
+                {
+                    last_.y (state_.back ().y ());
+                    state_.pop_back ();
+                }
+
+                state_.push_back (last_);
+            }
+        }
+
+        if (DEBUG)
+        {
+            std::clog << "# Negative radius: \n";
+        }
+    }
+
+    const double ta = constants::pi / 2;
+
+    point_xy last_point_;
+
+    last_arc_.radius = radius;
+
+    if (last_arc_.clear)
+    {
+        // last shape was a line
+        const point_xy last_ = state_[state_.size () - 1];
+
+        if (DEBUG)
+        {
+            std::clog << "# last point (" << last_.x () << ", " << last_.y () << ")\n";
+        }
+
+        const point_xy last1_ = state_[state_.size () - 2];
+
+        if (feq (last1_.y (), last_.y ()))
+        {
+            if (DEBUG) { std::clog << "# line + parallel to x-axis\n"; }
+
+            // Which quadrant?
+            // l.x > l1.x line is left to right, CCW = 4, CW = 1
+            //     otherwise right to left then, CCW = 2, CW = 3
+            // line parallel to z-axis  (a0 = 0)
+            last_arc_.quadrant = ( (last_.x () > last1_.x () ? 4 : 2) + direction);
+            last_arc_.quadrant = (5 == last_arc_.quadrant ? 1 : last_arc_.quadrant);
+            last_arc_.direction = direction;
+            last_arc_.z = last_.x ();
+
+            switch (last_arc_.quadrant)
+            {
+            case 1:
+                last_arc_.r = last_.y () - last_arc_.radius;
+                last_arc_.t0 = 0.;
+                last_arc_.t1 = constants::pi / 2.0;
+                last_point_.x (last_arc_.z + last_arc_.radius);
+                break;
+            case 2:
+                last_arc_.r = last_.y () - last_arc_.radius;
+                last_arc_.t0 = constants::pi / 2.0;
+                last_arc_.t1 = constants::pi;
+                last_point_.x (last_arc_.z - last_arc_.radius);
+                break;
+            case 3:
+                last_arc_.r = last_.y () + last_arc_.radius;
+                last_arc_.t0 = constants::pi;
+                last_arc_.t1 = constants::pi * 3. / 2.0;
+                last_point_.x (last_arc_.z - last_arc_.radius);
+                break;
+            case 4:
+                last_arc_.r = last_.y () + last_arc_.radius;
+                last_arc_.t0 = constants::pi * 3. / 2.0;
+                last_arc_.t1 = constants::pi * 2.;
+                last_point_.x (last_arc_.z + last_arc_.radius);
+                break;
+            default:
+                GRS400_CHECK_OPT (bool inaccessible = false);
+                GRS400_CHECK (inaccessible, "programming error as we have reached inaccessible code");
+                break;
+            }
+
+            last_point_.y (last_arc_.r);
+        }
+        else if (feq (last1_.x (), last_.x ()))
+        {
+            if (DEBUG) { std::clog << "# line + perpendicular to x-axis\n"; }
+
+            // Which quadrant?
+            // l.y > l1.y line is south to north, CCW = 1, CW = 2
+            //     otherwise north to south then, CCW = 3, CW = 4
+            // Perpendicular to z-axis (a0 = inf)
+            last_arc_.quadrant = (last_.y () > last1_.y () ? 1 : 3) + direction;
+            last_arc_.direction = direction;
+            last_arc_.r = last_.y ();
+
+            switch (last_arc_.quadrant)
+            {
+            case 1:
+                last_arc_.z = last_.x () - last_arc_.radius;
+                last_arc_.t0 = 0.;
+                last_arc_.t1 = constants::pi / 2.0;
+                last_point_.y (last_arc_.r + last_arc_.radius);
+                break;
+            case 2:
+                last_arc_.z = last_.x () + last_arc_.radius;
+                last_arc_.t0 = constants::pi / 2.0;
+                last_arc_.t1 = constants::pi;
+                last_point_.y (last_arc_.r + last_arc_.radius);
+                break;
+            case 3:
+                last_arc_.z = last_.x () + last_arc_.radius;
+                last_arc_.t0 = constants::pi;
+                last_arc_.t1 = constants::pi * 3. / 2.0;
+                last_point_.y (last_arc_.r - last_arc_.radius);
+                break;
+            case 4:
+                last_arc_.z = last_.x () - last_arc_.radius;
+                last_arc_.t0 = constants::pi * 3. / 2.0;
+                last_arc_.t1 = constants::pi * 2.;
+                last_point_.y (last_arc_.r - last_arc_.radius);
+                break;
+            default:
+                GRS400_CHECK_OPT (bool inaccessible = false);
+                GRS400_CHECK (inaccessible, "programming error as we have reached inaccessible code");
+                break;
+            }
+
+            last_point_.x (last_arc_.z);
+        }
+        else
+        {
+            // TODO
+            bool code_not_implemented = false;
+            GRS400_ALWAYS (code_not_implemented, "can not add arcs to non parallel or perpendicular lines");
+            const double a0 = (last1_.y () - last_.y ()) / (last1_.x () - last_.x ());
+            const double b0 = last1_.y () + 1 / a0 * last1_.x ();
+
+            if (DEBUG) { std::clog << "# line + y = " << a0 << "x + " << b0 << "\n"; }
+
+            last_arc_.z = (last_.x () + radius / std::sqrt (1. + 1. / sqr (a0)));
+            last_arc_.r = (b0 - 1 / a0 * last_arc_.z);
+            last_arc_.radius = (std::abs (radius));
+            last_arc_.t0 = (std::atan (a0) + (last_.x () > last1_.x () ? 3 * constants::pi / 2.0 : constants::pi / 2));
+            // Use ta to calculate the last point.
+        }
+    }
+    else
+    {
+        // Last shape was an arc. New centre lies on line defined
+        // by the last centre-point and the last point.
+        const point_xy last_ = state_[state_.size () - 1];
+
+        if (DEBUG)
+        {
+            std::clog << "# last point (" << last_.x () << ", " << last_.y () << ")\n";
+        }
+
+        const point_xy last1_ = state_[state_.size () - 2];
+
+        if ( ( (last_arc_.quadrant + last_arc_.direction) & 1) == 0)
+        {
+            if (DEBUG) { std::clog << "# arc + normal parallel to x-axis\n"; }
+
+            // Which quadrant?
+            // l.x > arc.z motion is W to E, old arc.dir=0, arc.qd=4 else arc.qd=1
+            //            arc.qd=4 ->  CCW = 1, CW = 2: arc.qd=1 -> CCW = 3, CW = 4
+            //        otherwise E to W then, old arc.dir=0, arc.qd=2 else arc.qd=3
+            //            arc.qd=2 ->  CCW = 3, CW = 4: arc.qd=3 -> CCW = 1, CW = 2
+            // normal parallel to z-axis (a0 = 0)
+            last_arc_.quadrant = (last_arc_.quadrant > 2 ? 1 : 3) + direction;
+            last_arc_.direction = direction;
+
+            // !unchanged! last_arc_.r = last_.y ();
+            switch (last_arc_.quadrant) // new value
+            {
+            case 1:
+                last_arc_.z = last_.x () - last_arc_.radius;
+                last_arc_.t0 = 0.;
+                last_arc_.t1 = constants::pi / 2.0;
+                last_point_.y (last_arc_.r + last_arc_.radius);
+                break;
+            case 2:
+                last_arc_.z = last_.x () + last_arc_.radius;
+                last_arc_.t0 = constants::pi / 2.0;
+                last_arc_.t1 = constants::pi;
+                last_point_.y (last_arc_.r + last_arc_.radius);
+                break;
+            case 3:
+                last_arc_.z = last_.x () + last_arc_.radius;
+                last_arc_.t0 = constants::pi;
+                last_arc_.t1 = constants::pi * 3. / 2.0;
+                last_point_.y (last_arc_.r - last_arc_.radius);
+                break;
+            case 4:
+                last_arc_.z = last_.x () - last_arc_.radius;
+                last_arc_.t0 = constants::pi * 3. / 2.0;
+                last_arc_.t1 = constants::pi * 2.;
+                last_point_.y (last_arc_.r - last_arc_.radius);
+                break;
+            default:
+                GRS400_CHECK_OPT (bool inaccessible = false);
+                GRS400_CHECK (inaccessible, "programming error as we have reached inaccessible code");
+                break;
+            }
+
+            last_point_.x (last_arc_.z);
+        }
+        else if (feq (last_.x (), last_arc_.z))
+        {
+            if (DEBUG) { std::clog << "# arc + normal perpendicular to x-axis\n"; }
+
+            // Which quadrant?
+            // l.y > arc.r motion is S to N: old arc.dir=0, arc.qd=1 else arc.dr=2
+            //            arc.qd=1(2) ->  CCW = 2, CW = 3: arc.qd=2(3) -> CCW = 4, CW = 1
+            //        otherwise N to S then, old arc.dir=0, arc.qd=3 else arc.dr=4
+            //            arc.qd=3(4) ->  CCW = 4, CW = 1: arc.qd=4(1) -> CCW = 2, CW = 3
+            // normal perpendicular to z-axis  (a0 = inf)
+            last_arc_.quadrant = ( ( ( (last_arc_.quadrant + 1) % 4) > 2 ? 4 : 2) + direction) % 4;
+            last_arc_.direction = direction;
+
+            // !unchanged! last_arc_.z = last_.x ();
+            switch (last_arc_.quadrant)
+            {
+            case 1:
+                last_arc_.r = last_.y () - last_arc_.radius;
+                last_arc_.t0 = 0.;
+                last_arc_.t1 = constants::pi / 2.0;
+                last_point_.x (last_arc_.z + last_arc_.radius);
+                break;
+            case 2:
+                last_arc_.r = last_.y () - last_arc_.radius;
+                last_arc_.t0 = constants::pi / 2.0;
+                last_arc_.t1 = constants::pi;
+                last_point_.x (last_arc_.z - last_arc_.radius);
+                break;
+            case 3:
+                last_arc_.r = last_.y () + last_arc_.radius;
+                last_arc_.t0 = constants::pi;
+                last_arc_.t1 = constants::pi * 3. / 2.0;
+                last_point_.x (last_arc_.z - last_arc_.radius);
+                break;
+            case 4:
+                last_arc_.r = last_.y () - last_arc_.radius;
+                last_arc_.t0 = constants::pi * 3. / 2.0;
+                last_arc_.t1 = constants::pi * 2.;
+                last_point_.x (last_arc_.z + last_arc_.radius);
+                break;
+            default:
+                GRS400_CHECK_OPT (bool inaccessible = false);
+                GRS400_CHECK (inaccessible, "programming error as we have reached inaccessible code");
+                break;
+            }
+
+            last_point_.y (last_arc_.r);
+        }
+        else
+        {
+            // TODO
+            bool code_not_implemented = false;
+            GRS400_ALWAYS (code_not_implemented, "can not add arcs to non parallel or perpendicular arcs");
+            // a0 is slope of normal.
+            const double a0 = (last_arc_.r - last_.y ()) / (last_arc_.z - last_.x ());
+            const double b0 = last_.y () - a0 * last_.x ();
+
+            if (DEBUG) { std::clog << "# arc + normal y = " << a0 << "x + " << b0 << "\n"; }
+
+            // For new point [from y = a0*x + b0 and rad^2 = dy^2 + dx^2]
+            // const double oldx_ = last_arc_.z;
+            last_arc_.z = last_.x () - radius / std::sqrt (1 + sqr (a0));
+            last_arc_.r = b0 + a0 * last_arc_.z;
+            last_arc_.radius = std::abs (radius);
+            last_arc_.t0 = /*std::atan (a0) +*/ (last_.x () > last_arc_.z ? 0. : constants::pi);
+            // Use ta to calculate the last point.
+        }
+    }
+
+    if (DEBUG)
+    {
+        std::clog << "# qarc: (" <<  last_arc_.z << ", " << last_arc_.r << ")(" << last_arc_.radius
+                  << ")  [" << last_arc_.t0 << " -> " << last_arc_.t0 + ta << "]\n"
+                  << "# last point in arc (" << last_point_.x () << ", "
+                  << last_point_.y () << ")\n";
+    }
+
+    if (0 < last_arc_.radius)
+    {
+        const uint8_type n_ = uint8_type (std::ceil (std::abs (radius * ta / 0.5)));
+        const double delta_angle_ = (0 == direction ? ta : -ta) / double (n_);
+        const double theta = (0 == direction ? last_arc_.t0 : last_arc_.t1);
+
+        for (uint8_type i = 1; i < n_ - 1; ++i)
+        {
+            point_xy to_add_;
+            to_add_.x (last_arc_.z + std::cos (theta + i * delta_angle_) * last_arc_.radius);
+            to_add_.y (last_arc_.r + std::sin (theta + i * delta_angle_) * last_arc_.radius);
+            state_.push_back (to_add_);
+        }
+    }
+
+    last_arc_.clear = false;
+    state_.push_back (last_point_);
+!!!1818159.cpp!!!	close() : bool
+    const bool result (feq (state_.front().x (), state_.back ().x ())
+                       && feq (state_.front().y (), state_.back ().y ()));
+
+    if (! result) { state_.push_back (state_.front ()); }
+
+    boost::geometry::correct (this->state_);
+    return result;
+!!!1818287.cpp!!!	closed() : bool
+    return state_.size () > 1
+           && feq (state_.front().x (), state_.back ().x ())
+           && feq (state_.front().y (), state_.back ().y ());

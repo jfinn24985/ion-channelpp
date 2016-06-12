@@ -1,0 +1,64 @@
+class circle_grid
+!!!262832.cpp!!!	circle_grid(in radius : double, in spacing : double)
+: spacing_(spacing)
+, width_()
+, xy_size_()
+{
+   // Calculate radius in integral units of spacing
+   const int iradius( std::floor((radius - spacing/2.0)/ spacing) );
+   UTILITY_CHECK( iradius * spacing <= radius - spacing/2, "Integral radius is too large.");
+   UTILITY_CHECK( (iradius + 1) * spacing > radius - spacing/2, "Integral radius is too small.");
+
+   // xi : x index of grid
+   int xi = iradius;
+   int r2( std::floor( std::pow( (radius - spacing/2)/spacing, 2 ) ) );
+   int x2{ iradius * iradius };
+
+   this->width_.resize(iradius + 1);
+
+   int y2 = 0;
+   // yi : y index of grid
+   for (int yi = 0; yi != iradius + 1 and xi > 0; ++yi)
+   {
+      while (x2 + y2 > r2)
+      {
+         x2 -= xi;
+         --xi;
+         x2 -= xi;
+      }
+      // test before add to array keeps (xi,yi) inside radius
+      this->width_[yi] = xi;
+      // DEBUG: std::cout << "| ["<< xi << ", " << yi << "] | = " << (x2 + y2) << " < " << r2 << "\n";
+      y2 += 2 * yi + 1;
+   }
+
+   // number of gridpoints on the xy plane
+   this->xy_size_ = 2 * this->width_[0] + 1;
+   for (int i = 1; i != iradius + 1; ++i)
+   {
+      this->xy_size_ += 4 * this->width_[i] + 2;
+   }
+}
+!!!262960.cpp!!!	set_xy(inout pnt : coordinate, in index : size_t) : void
+UTILITY_REQUIRE( index < this->size(), "Index out of range" );
+// adjust the xindex, yindex
+size_t xindex( index );
+std::size_t yindex = 0;
+int yincrement = 1; // incremental value to move up and down the width array
+while (xindex >= 2 * this->width_[yindex] + 1)
+{
+   // Detect end of an x row
+   xindex -= 2 * this->width_[yindex] + 1;
+   UTILITY_CHECK(yincrement == 1 or yindex >= 0, "Went off the end of width array");
+   yindex += yincrement;
+   if (yindex == this->width_.size())
+   {
+      // Detect half way through the xy slice
+      yincrement = -1;
+      yindex += yincrement;
+   }
+}
+
+// set x,y coords in circle grid
+pnt.x = this->spacing_ * (double(xindex) - double(this->width_[yindex]));
+pnt.y = this->spacing_ * (-1.0 * double(yincrement) * double(yindex));

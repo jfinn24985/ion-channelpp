@@ -1,0 +1,129 @@
+class PatchEvaluator
+!!!749743.cpp!!!	__call__(in self : PatchEvaluator, inout a_set : change_set) : void
+double uip = 0.0;
+calch (); // calculates hnw_
+
+for (std::size_t ii = 0; ii != dh_.size (); ++ii)
+{
+    dh_[ii] = get_patch().h (ii) - hnw_[ii];
+}
+
+double uiptmp = 0.0;
+
+// Calculate \delta uip for all original position particles + patches
+// based on the change in 'h'
+for (auto iter = get_ensemble ().begin (); iter != get_ensemble ().end (); ++iter)
+{
+    if (iter->is_valid ())
+    {
+      const double xqspc = iter->get_specie().reduced_charge ();
+
+      for (auto ipch = get_patch().begin(); ipch != get_patch().end (); ++ipch)
+      {
+          // -- add for originals
+          uiptmp += xqspc * dh_[ipch.index()] * ipch->area () / (2 * iter->patch_displacement (ipch->index()));
+      }
+    }
+}
+
+uip += uiptmp;
+
+// Adjust for change
+for (auto iter = steps_.begin(); iter != steps_.end (); ++iter)
+{
+    if (iter->has_new ())
+    {
+        double uiptmp = 0.0;
+        const double xqspc = iter->get_specie().reduced_charge ();
+
+        //   -- new configuration: from hnw calculated in calch ---
+        for (auto ipch = get_patch().begin(); ipch != get_patch().end (); ++ipch)
+        {
+          // -- add for originals
+          uiptmp += xqspc * hnw_[ipch.index()] * ipch->area () / (2 * iter->patch_displacement (ipch->index()));
+        }
+        uip += uiptmp;
+    }
+
+    if (iter->has_old ())
+    {
+        uiptmp = 0.0;
+        //   -- remove old configuration using lookup table --
+        const double xqspc = iter->get_specie().reduced_charge ();
+
+        //   -- new configuration: from hnw calculated in calch ---
+        for (auto ipch = get_patch().begin(); ipch != get_patch().end (); ++ipch)
+        {
+           // USE (h + dh) if change also has old position here as we need to also remove value added in the first loop.
+          uiptmp -= xqspc * (iter->has_new () ? get_patch().h (ipch.index()) + dh_[ipch.index()]: get_patch().h (ipch.index()) )
+                    * ipch->area () / (2 * ipch->displacement (iter->index()));
+          uiptmp -= xqspc * (get_patch().h (ipch.index()) + dh_[ipch.index()]) * ipch->area () / (2 * iter->patch_displacement (ipch->index()));
+        }
+
+        uip += uiptmp;
+    }
+}
+return uip;
+!!!749871.cpp!!!	compute_h() : void
+// ------- CALCULATE VECTOR C -----------------------------
+dcnw_ = 0.0;
+
+for (auto iter = steps_.begin (); iter != steps_.end (); ++iter)
+{
+    const double alfa = iter->get_specie().reduced_charge () / (4 * constants::pi);
+    const double ri   = iter->get_specie().radius ();
+
+    // ----- NEW ----------------------------------------------
+    if (iter->has_new ())
+    {
+        const double xold (iter->old_point ().x());
+        const double yold (iter->old_point ().y());
+        const double zold (iter->old_point ().z());
+        const double epsnw (iter->eps ());
+        for (auto ipch = get_patch ().begin (); ipch != get_patch().end (); ++ipch)
+        {
+            const double rxki = ipch->x () - xold;
+            const double ryki = ipch->y () - yold;
+            const double rzki = ipch->z () - zold;
+            const double rij2 = std::pow (rxki,2) + std::pow (ryki,2) + std::pow (rzki,2);
+            const double rij  = std::sqrt (rij2);
+            const double rki  = rxki * ipch->ux () + ryki * ipch->uy () + rzki * ipch->uz ();
+            dcnw_[ipch->index ()] -= ipch->deps () * alfa * rki / (epsnw * rij2 * rij);
+            // Calculate and store distances between patches and particle ii
+            // (return if overlap)
+            //
+            // NOTE: As the particle has been tested against the protein
+            // geometry, overlap here should _NEVER_ occur.
+            iter->patch_displacement (ipch->index (), rij);
+            IONCH_CHECK (rij >= ri, "Error: particle in 'allowed' position overlaps with ICC tile");
+        }
+    }
+
+    // ----- OLD ----------------------------------------------
+    if (iter->has_old ())
+    {
+        const double xold (iter->old_point ().x());
+        const double yold (iter->old_point ().y());
+        const double zold (iter->old_point ().z());
+        const int idx (iter->index());
+        const double rieps (iter->particles().rieps (iter->index()));
+
+	for (auto ipch = get_patch ().begin (); ipch != get_patch().end (); ++ipch)
+        {
+            const double rij = ipch->get_displacement (idx);
+            IONCH_CHECK (not constants::feq (rij, 0.0), "Error: R_i_p is zero");
+            const double rki = (ipch->x () - xold * ipch->ux ())
+                               + (ipch->y () - yold * ipch->uy ())
+                               + (ipch->z () - zold * ipch->uz ());
+            dcnw_[ipch->index ()] += ipch->deps () * alfa * rki / (rieps * rij * rij * rij);
+        }
+    }
+}
+
+for (int ipch = 0; ipch != hnw_.size (); ++ipch)
+{
+    hnw_[ipch] = get_patch ().c (ipch) - dcnw_[ipch];
+}
+
+// ------- CALCULATE VECTOR H -----------------------------
+get_patch ().back_substitute (hnw_);

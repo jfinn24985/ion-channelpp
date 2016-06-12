@@ -1,0 +1,168 @@
+class periodic_system
+!!!194352.cpp!!!	build_reader(inout decoder : input_delegater) : void
+{
+   // Add input decoder class to handle the base application options
+   boost::shared_ptr< core::input_base_meta > delegate( new periodic_cube::bulk_simulator_meta( *this ) );
+   decoder.add_input_delegate( delegate );
+}
+{
+   // Add input decoder class to handle the specie definition options
+   boost::shared_ptr< core::input_base_meta > delegate( new particle::specie_meta());
+   decoder.add_input_delegate( delegate );
+}
+{
+   // Add input decoder class to handle the energy evaluator options.  This
+   // handles instantiation of the requested evaluator.
+   std::unique_ptr< evaluator::evaluator_meta > tmp_( new evaluator::evaluator_meta );
+   // Add the evaluator types that we want this application to handle
+   tmp_->type_to_object_[ evaluator::coulomb::type_label_() ] = &evaluator::coulomb::make_evaluator;
+   boost::shared_ptr< core::input_base_meta > delegate( tmp_.release() );
+   decoder.add_input_delegate( delegate );
+}
+{
+   // Add input decoder class for the generic observer types. This handles the
+   // instantiation of the requested observers
+   std::unique_ptr< observer::sampler_meta > tmp_( new observer::sampler_meta );
+   tmp_->type_to_object_[ observer::density_zaxis::type_label_() ]= &observer::density_zaxis::make_sampler;
+   tmp_->type_to_object_[ observer::metropolis_sampler::type_label_() ]= &observer::metropolis_sampler::make_sampler;
+   tmp_->type_to_object_[ observer::rdf_sampler::type_label_() ]= &observer::rdf_sampler::make_sampler;
+   tmp_->type_to_object_[ observer::specie_count::type_label_() ]= &observer::specie_count::make_sampler;
+   // PBC specific samplers
+   tmp_->type_to_object_[ periodic_cube::widom::type_label_() ]= &periodic_cube::widom::make_sampler;
+
+   boost::shared_ptr< core::input_base_meta > delegate( tmp_.release() );
+   decoder.add_input_delegate( delegate );
+}
+// PBC super loopers
+{
+   std::unique_ptr< periodic_cube::imc_meta > tmp_( new periodic_cube::imc_meta );
+   tmp_->type_to_object_[ periodic_cube::malasics_igcmc::type_label_() ]= &periodic_cube::malasics_igcmc::make_super_looper;
+   tmp_->type_to_object_[ periodic_cube::lamperski_igcmc::type_label_() ]= &periodic_cube::lamperski_igcmc::make_super_looper;
+   tmp_->type_to_object_[ periodic_cube::accept_igcmc::type_label_() ]= &periodic_cube::accept_igcmc::make_super_looper;
+   boost::shared_ptr< core::input_base_meta > delegate( tmp_.release() );
+   decoder.add_input_delegate( delegate );
+}
+// Choices
+{
+   std::unique_ptr< trial::choice_meta > tmp_( new trial::choice_meta );
+   tmp_->type_to_object_[ "move" ]= &trial::chooser< trial::move_choice >::make_chooser;
+   tmp_->type_to_object_[ "gc" ]= &trial::chooser< periodic_cube::gc_choice_pbc >::make_chooser;
+   tmp_->type_to_object_[ "accept" ]= &periodic_cube::alternater_chooser::make_chooser;
+   tmp_->type_to_object_[ "jump" ]= &trial::chooser< periodic_cube::jump_choice_pbc >::make_chooser;
+   boost::shared_ptr< core::input_base_meta > delegate( tmp_.release() );
+   decoder.add_input_delegate( delegate );
+
+}
+!!!706609.cpp!!!	do_description(inout os : ostream) : void
+this->simulator::do_description( os );
+os << "[simulator] periodic cube\n";
+os << "       volume : " << this->volume(0) << "\n";
+os << "  cube length : " << this->length_ << "\n";
+os << " permittivity : " << this->permittivity() << "\n";
+if ( this->imc_ )
+{
+   this->imc_->description( os );
+}
+!!!577456.cpp!!!	do_license(inout os : ostream) : void
+os << core::strngs::horizontal_bar () << "\n";
+os << "  Charge-Space Competition Monte Carlo Simulator\n\n";
+os << "  Simulation program for computing properties of\n";
+os << "  ions in bulk/periodic cube\n";
+!!!201776.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fsepsw(), this->permittivity() );
+if ( this->imc_ )
+{
+   this->imc_->write_document( wr );
+}
+!!!194096.cpp!!!	do_generate_simulation(inout os : ostream) : grid_generator
+// calculate dimensions
+const double sumconc = this->ionic_strength();
+this->length_ = std::cbrt( ( this->target_count() * core::constants::to_SI() ) / sumconc );
+// Generate initial ensemble on a grid
+return std::unique_ptr< trial::grid_generator >{ new trial::cubic_grid( this->length_, this->target_count(), this->get_random() ) };
+!!!194096.python!!!	do_generate_simulation(inout os : ostream) : grid_generator
+from constants import constants
+## Generate a list of trial types
+self.update_choices()
+sumconc = self.ionic_strength()
+# Use a PBC system.
+from periodic_system import periodic_system
+self.cell_region_ = periodic_system(self.target_particles_ * constants.to_SI() / sumconc)
+# Generate initial ensemble on a grid
+gridder = self.cell_region_.make_grid_generator( self.target_particles_, self.get_random() ) 
+self.ensemble_.generate_ensemble( gridder, self.target_particles_, self.get_random() )
+pass
+!!!241456.cpp!!!	do_run(inout oslog : ostream) : void
+// do thermalization
+this->run_loop(this->equilibration_interval(), oslog);
+oslog << "\nEND OF THERMALISATION\n\n";
+// do main simulation
+if ( this->imc_ )
+{
+  while (not this->imc_->at_end())
+  {
+    this->imc_->prepare( *this );
+    this->run_loop(this->production_interval(), oslog);
+    oslog << "END OF PRODUCTION PHASE " << (this->imc_->count() + 1) << "\n";
+    this->imc_->on_super_loop (*this, oslog);
+  }
+}
+else
+{
+  this->run_loop(this->production_interval(), oslog);
+}
+oslog << "\nEND OF PRODUCTION\n\n";
+!!!296881.cpp!!!	do_compute_distances(in position : coordinate, in coords : coordinate_set, inout rij : simulator::array_type, in endindex : size_t, in startindex : size_t = 0) : void
+const particle::coordinate newpos(position);
+const double box = this->length_;
+const double hbox = box/2;
+for (std::size_t j = startindex; j != endindex; ++j)
+{
+   // --------------
+   // Calculate r_ij
+   double dx = newpos.x - coords.x( j );
+   double dy = newpos.y - coords.y( j );
+   double dz = newpos.z - coords.z( j );
+   dx += (dx > hbox ? -box : ( dx < -hbox ? box : 0.0));
+   dy += (dy > hbox ? -box : ( dy < -hbox ? box : 0.0));
+   dz += (dz > hbox ? -box : ( dz < -hbox ? box : 0.0));
+   rij[j] = std::sqrt(dx*dx + dy*dy + dz*dz);
+}
+!!!296881.python!!!	do_compute_distances(in position : coordinate, in coords : coordinate_set, inout rij : simulator::array_type, in endindex : size_t, in startindex : size_t = 0) : void
+dx = position[0] - ens.x[start_index:len(ens)]
+dy = position[1] - ens.y[start_index:len(ens)]
+dz = position[2] - ens.z[start_index:len(ens)]
+# Calculate minimum distance in PBC cube
+# using numpy array operations
+import numpy as np
+box = self.length_
+hbox = box/2
+dx = np.where(dx > hbox, dx - box, np.where (dx < -hbox, dx + box, dx))
+dy = np.where(dy > hbox, dy - box, np.where (dy < -hbox, dy + box, dy))
+dz = np.where(dz > hbox, dz - box, np.where (dz < -hbox, dz + box, dz))
+result = np.zeros(len(ens))
+result[start_index:len(ens)] = np.sqrt(dx*dx + dy*dy + dz*dz)
+return result
+!!!218673.cpp!!!	distance_sqr(in lhs : coordinate, in rhs : coordinate) : double
+const double box (this->length_);
+const double hbox (box/2);
+double dx = lhs.x - rhs.x;
+double dy = lhs.y - rhs.y;
+double dz = lhs.z - rhs.z;
+dx = (dx > hbox ? dx - box : (dx < -hbox ? dx + box : dx));
+dy = (dy > hbox ? dy - box : (dy < -hbox ? dy + box : dy));
+dz = (dz > hbox ? dz - box : (dz < -hbox ? dz + box : dz));
+return dx*dx + dy*dy + dz*dz;
+!!!189745.cpp!!!	is_valid_position(inout coord : coordinate, in ispec : size_t) : bool
+const double box (this->length_);
+coord.x = (coord.x < 0 ? coord.x + box : (coord.x < box ? coord.x : coord.x - box));
+coord.y = (coord.y < 0 ? coord.y + box : (coord.y < box ? coord.y : coord.y - box));
+coord.z = (coord.z < 0 ? coord.z + box : (coord.z < box ? coord.z : coord.z - box));
+return true;
+!!!189745.python!!!	is_valid_position(inout coord : coordinate, in ispec : size_t) : bool
+box = self.length_
+coord.x += box if coord.x < 0 else (0.0 if coord.x < box else -box)
+coord.y += box if coord.y < 0 else (0.0 if coord.y < box else -box)
+coord.z += box if coord.z < 0 else (0.0 if coord.z < box else -box)
+return True
+

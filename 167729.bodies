@@ -1,0 +1,210 @@
+class rdf_sampler
+!!!487729.cpp!!!	description(inout os : ostream) : void
+os << "[sampler] " << this->type_label_() << "\n";
+os << " Collect and report one dimensional density profiles of species\n";
+os << " - Default histogram bin width   : " << this->stepsize_ << "\n";
+!!!731185.cpp!!!	enrol(inout sim : simulator) : void
+if (not this->report_conx_.connected())
+{
+  auto sig = boost::any_cast< platform::simulator::report_signal_type* >(sim.get_signal("report"));
+  this->report_conx_ = sig->connect(boost::bind(&rdf_sampler::on_report, this, _1, _2));
+}
+if (not this->sample_conx_.connected())
+{
+  auto sig = boost::any_cast< platform::simulator::sampler_signal_type* >(sim.get_signal("outer-loop"));
+  this->sample_conx_ = sig->connect(boost::bind(&rdf_sampler::on_sample, this, _1));
+}
+
+!!!731185.python!!!	enrol(inout sim : simulator) : void
+if not self.report_conx_ or not self.report_conx.connected():
+  sig = sim.get_signal("report")
+  self.report_conx_ = sig.connect(lambda *args: self.on_report(*args))
+if not self.sample_conx_ or not self.sample_conx_.connected():
+  sig = sim.get_signal("outer-loop")
+  self.sample_conx_ = sig.connect(lambda *args: self.on_sample(*args))
+if not self.mean_signal_:
+  import signals
+  self.mean_signal_ = signals.signal()
+if not sim.has_signal(self.type_label()):
+  sim.set_signal(self.type_label(), self.mean_signal_)
+!!!336305.cpp!!!	make_sampler(in param_set : string, inout sim : simulator) : void
+double width = 15.0;
+double stepsize = 0.2;
+std::size_t known_parameters = 0;
+if (param_set.count("width") != 0)
+{
+  width = boost::lexical_cast< double >(param_set.at("width"));
+  ++known_parameters;
+}
+if (0 != param_set.count("stepsize"))
+{
+  stepsize = boost::lexical_cast< double >(param_set.at("stepsize"));
+  ++known_parameters;
+}
+if (param_set.size() != known_parameters)
+{
+   std::stringstream os;
+   os << "Extra parameters for \"" << type_label_()
+      << "\" observer were present (allowed: width, stepsize)"
+      << "(found:";
+   for (auto const& nv : param_set)
+   {
+      os << " " << nv.first;
+   }
+   os << ")";
+   const std::string msg( os.str() );
+   UTILITY_INPUT(param_set.size() == known_parameters, msg, core::strngs::sampler_label() );
+}
+std::unique_ptr< rdf_sampler > result(new rdf_sampler);
+result->width_ = width;
+result->stepsize_ = stepsize;
+boost::shared_ptr< base_sampler > tmp( result.release() );
+sim.share_observer( tmp );
+!!!336049.cpp!!!	on_report(in sim : simulator, inout os : ostream) : void
+// Write out RDF data
+for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
+{
+   const std::size_t ispec_idx (ispec * sim.specie_count());
+   for (std::size_t jspec = ispec; jspec != sim.specie_count(); ++jspec)
+   {
+      if (this->data_sets_[ispec_idx + jspec].count() > 0)
+      {
+         // Write out RDF data
+         const std::string filename { "rdf-"+sim.get_specie(ispec).label()+"-"+sim.get_specie(jspec).label()+".dat" };
+
+         auto const& smplr = this->samplers_[ispec_idx + jspec];
+         auto const& dtsr = smplr.get_digitiser();
+         auto const& data = this->data_sets_[ispec_idx + jspec];
+         const std::size_t sz{ smplr.size() };
+
+         core::output_dataset dset { { sim.run_uuid() }, [&sz]()
+            {
+               return sz;
+            }
+         };
+
+         dset.set_title( "Radial distribution histogram for species "+sim.get_specie(ispec).label()+" and "+sim.get_specie(jspec).label() );
+
+         dset.push_back_entry( core::output_field( "XMIN", "ANGSTROM", [dtsr](std::ostream& os, std::size_t ii)
+         {
+            os << dtsr.bin_minimum( ii );
+         } ) );
+
+         dset.push_back_entry( core::output_field( "XMAX", "ANGSTROM", [dtsr](std::ostream& os, std::size_t ii)
+         {
+            os << dtsr.bin_maximum( ii );
+         } ) );
+
+         dset.push_back_entry( core::output_field( "XMID", "ANGSTROM", [dtsr](std::ostream& os, std::size_t ii)
+         {
+            os << dtsr.bin_midpoint( ii );
+         } ) );
+
+         dset.push_back_entry( core::output_field( "YMEAN", "COUNT", [data](std::ostream& os, std::size_t ii)
+         {
+            os << data.mean( ii );
+         } ) );
+
+         dset.push_back_entry( core::output_field( "YSTDDEV", "COUNT**2", [data](std::ostream& os, std::size_t ii)
+         {
+            os << std::sqrt(data.variance( ii ));
+         } ) );
+
+         dset.write( filename, sim.get_sink() );
+      }
+   }
+}
+!!!499120.cpp!!!	on_sample(in sim : simulator) : void
+{
+  // rij index
+  const particle::ensemble &ens( sim.get_ensemble() );
+  std::vector< double > rij( ens.size() );
+  for ( std::size_t ith = 0; ith != ens.size() - 1; ++ith )
+  {
+    const std::size_t ispec( ens.key( ith ) );
+    const std::size_t ispec_offset( ispec * sim.specie_count() );
+    if ( ispec != particle::ensemble::nkey )
+    {
+      sim.compute_distances( ens.position( ith ), ens.get_coordinates(), rij, ens.size(), ith + 1 );
+      for ( std::size_t jth = ith + 1; jth != ens.size(); ++jth )
+      {
+        const std::size_t jspec( ens.key( jth ) );
+        if ( jspec != particle::ensemble::nkey )
+        {
+          if (jspec >= ispec)
+          {
+            this->samplers_[ ispec_offset + jspec ].insert( rij[ jth ] );
+          }
+          else
+          {
+            this->samplers_[ jspec * sim.specie_count() + ispec ].insert( rij[ jth ] );
+          }
+        }
+      }
+    }
+  }
+}
+// Move data from samplers to histogram
+for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
+{
+  const std::size_t ispec_idx (ispec * sim.specie_count());
+  for (std::size_t jspec = ispec; jspec != sim.specie_count(); ++jspec)
+  {
+    auto &smplr = this->samplers_[ispec_idx + jspec];
+    this->data_sets_[ispec_idx + jspec].append (smplr.begin(), smplr.end());
+    smplr.reset();
+  }
+}
+!!!304817.cpp!!!	prepare(inout sim : simulator) : void
+if (this->samplers_.size() >= sim.specie_count()*sim.specie_count())
+{
+  this->data_sets_.resize (sim.specie_count()*sim.specie_count());
+  this->samplers_.resize (sim.specie_count()*sim.specie_count());
+  // Verify the existing data and samplers
+  for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
+  {
+    const std::size_t ispec_idx (ispec * sim.specie_count());
+    for (std::size_t jspec = ispec; jspec != sim.specie_count(); ++jspec)
+    {
+      const double minimum (sim.get_specie(ispec).radius() + sim.get_specie(jspec).radius());
+      utility::digitiser axis(minimum, minimum + this->width_, this->stepsize_);
+      if (not this->samplers_[ispec_idx + jspec].get_digitiser().equivalent(axis))
+      {
+        // Mismatch reset all
+        this->samplers_.clear();
+        this->data_sets_.clear();
+        break;
+      }
+    }
+    if (this->samplers_.empty()) break;
+  }
+}
+// Create samplers and data sets.
+if (this->samplers_.size() < sim.specie_count()*sim.specie_count())
+{
+  this->data_sets_.resize (sim.specie_count()*sim.specie_count());
+  this->samplers_.resize (sim.specie_count()*sim.specie_count());
+  for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
+  {
+    const std::size_t ispec_idx (ispec * sim.specie_count());
+    for (std::size_t jspec = ispec; jspec != sim.specie_count(); ++jspec)
+    {
+      // Build axis for sampler.
+      // MIN = spec1.radius + spec2.radius
+      // MAX = MIN + width_
+      // STEP = stepsize_
+      const double minimum (sim.get_specie(ispec).radius() + sim.get_specie(jspec).radius());
+      utility::digitiser axis(minimum, minimum + this->width_, this->stepsize_);
+      utility::digital_sampler smplr(axis);
+      this->samplers_[ispec_idx + jspec] = smplr;
+      utility::estimate_array data(axis.size());
+      this->data_sets_[ispec_idx + jspec] = data;
+    }
+  }
+}
+
+for (auto &est : this->data_sets_) est.reset();
+!!!217264.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
+wr[ ix ].add_entry( "width", this->width_ );
+wr[ ix ].add_entry( "stepsize", this->stepsize_ );

@@ -1,0 +1,33 @@
+class change_set
+!!!1771055.cpp!!!	~change_set()
+if (this->choice_ != nullptr)
+{
+  this->choice_->end_trial ( *this );
+}
+!!!1771439.cpp!!!	energy() : double
+double result (0.0);
+for (std::size_t i = 0; i != this->size (); ++i)
+{
+  result += changes_[i].energy_new - changes_[i].energy_old;
+}
+return result;
+!!!1770287.cpp!!!	metropolis_factor() : double
+UTILITY_REQUIRE (not this->fail_, "Can not get result from invalid change.");
+const double deltu (-(this->energy () - this->exponential_factor_));
+UTILITY_CHECK (not std::isnan(deltu), "Delta Potential is NaN");
+// avoid NaN of exponential of large or small energies
+return std::exp(std::min(250.0, std::max (-250.0,deltu))) * this->probability_factor_;
+!!!686385.cpp!!!	operator<<(inout os : ostream, in rhs : change_set) : std::ostream
+os << "[change set]\n";
+os << "trial.fail = " << (rhs.fail_ ? "true" : "false" ) << "\n";
+os << "trial.accept = " << (rhs.accept_ ? "true" : "false" ) << "\n";
+os << "trial.exp_factor = " << rhs.exponential_factor_ << "\n";
+os << "trial.prob_factor = " << rhs.probability_factor_ << "\n";
+os << "trial.choice = " << rhs.choice_->label() << "\n";
+os << "trial.size = " << rhs.size() << "\n";
+os << "trial.energy = " << rhs.energy() << "\n";
+for (auto const& atom : rhs.changes_)
+{
+  os << atom;
+}
+return os;

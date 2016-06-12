@@ -1,0 +1,119 @@
+class subspecie
+!!!1704623.cpp!!!	finalize_input() : void
+/*<       write(*,'(72("_"))') >*/
+/*<       write(*,'(72("_"))') >*/
+//this->cation_ = specie_flyweight (this->label_.substr(0, 2));
+//this->anion_ = specie_flyweight (this->label_.substr(2, 2));
+!!!1658415.cpp!!!	read_input(inout scnr : input_reader) : void
+using namespace core;
+// subspecie
+// name "KK"
+// ground "Ka"
+// excited "K1"
+// ratswap 1.0D0
+// enthalpy 42.D0
+// entropy 109.D0
+UTILITY_REQUIRE (scnr.name () == constants::fssubs (), "incorrect section label");
+enum
+{
+  LABEL
+  , GROUND_STATE
+  , EXCITED_STATE
+  , RATE_SWAP
+  , ENTHALPY
+  , ENTROPY
+};
+std::bitset< 6 > missing_flags;
+missing_flags.set();
+
+while (scnr.next ())
+{
+  if (scnr.name () == constants::fsrtsw ())
+  {
+    UTILITY_INPUT (not scnr.value ().empty ()
+                   , ("invalid input file " + constants::fsrtsw () + " tag with no content").c_str ()
+		   , constants::fssalt ());
+    this->rate_gc_ = boost::lexical_cast< double >(scnr.value ());
+    missing_flags.reset (RATE_SWAP);
+  }
+  else if (scnr.name () == constants::fsname ())
+  {
+    UTILITY_INPUT (not scnr.value ().empty ()
+                   , ("invalid input file " + constants::fsname () + " tag with no content").c_str ()
+		   , constants::fssalt ());
+    this->label_ = scnr.value ();
+    missing_flags.reset (LABEL);
+  }
+  // fsgrnd fsexct
+  else if (scnr.name () == constants::fsentr ())
+  {
+    UTILITY_INPUT (not scnr.value ().empty ()
+                   , ("invalid input file " + constants::fsentr () + " tag with no content").c_str ()
+		   , constants::fssalt ());
+    this->entropy_ = boost::lexical_cast< double >(scnr.value ());
+    missing_flags.reset (ENTROPY);
+  }
+  else if (scnr.name () == constants::fsenth ())
+  {
+    UTILITY_INPUT (not scnr.value ().empty ()
+                   , ("invalid input file " + constants::fsenth () + " tag with no content").c_str ()
+		   , constants::fssalt ());
+    this->enthalpy_ = boost::lexical_cast< double >(scnr.value ());
+    missing_flags.reset (ENTHALPY);
+  }
+  else if (scnr.name () == constants::fsgrnd ())
+  {
+    UTILITY_INPUT (not scnr.value ().empty ()
+                   , ("invalid input file " + constants::fsgrnd () + " tag with no content").c_str ()
+		   , constants::fssalt ());
+    this->ground_state_ = specie_flyweight (scnr.value ());
+    missing_flags.reset (GROUND_STATE);
+  }
+  else if (scnr.name () == constants::fsexct ())
+  {
+    UTILITY_INPUT (not scnr.value ().empty ()
+                   , ("invalid input file " + constants::fsexct () + " tag with no content").c_str ()
+		   , constants::fssalt ());
+    this->excited_state_ = specie_flyweight (scnr.value ());
+    missing_flags.reset (EXCITED_STATE);
+  }
+  else 
+  {
+    bool unknown_input_name (false);
+    UTILITY_INPUT (unknown_input_name
+		   , ("unrecognised tag in input file section " + scnr.name ()).c_str ()
+		   , constants::fssubs ());
+    break;
+  }
+}
+
+UTILITY_INPUT (missing_flags.any()
+                , "Missing required input in subspecie definition."
+		, constants::fssubs ());
+!!!1705007.cpp!!!	report(inout os : ostream, in verbose : bool) : void
+using namespace core;
+// subspecie
+// name "KK"
+// ground "Ka"
+// excited "K1"
+// ratswap 1.0D0
+// enthalpy 42.D0
+// entropy 109.D0
+// end
+UTILITY_REQUIRE(this->target != NULL, "Attempt to write subspecie input section without a target subspecie");
+
+os << constants::fssubs() << "\n";
+os << constants::fsname() << " " << this->target->label () << "\n";
+os << constants::fsgrnd() << " " << this->target->ground_state ().get().label () << "\n";
+os << constants::fsexct() << " " << this->target->excited_state ().get().label () << "\n";
+os << constants::fsrtsw() << " " << this->target->rate_gc () << "\n";
+os << constants::fsenth() << " " << this->target->enthalpy () << " # in kJ/mol\n";
+os << constants::fsentr() << " " << this->target->entropy () << " # in J/(molK)\n";
+os << constants::fsend() << "\n\n";
+!!!1660463.cpp!!!	serialize(inout ar : Archive, in version : size_t) : void
+ar & enthalpy_;
+ar & entropy_;
+ar & ground_state_;
+ar & excited_state_;
+ar & label_;
+ar & rate_gc_;

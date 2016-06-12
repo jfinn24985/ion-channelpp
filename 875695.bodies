@@ -1,0 +1,286 @@
+class evaluator
+!!!1569711.cpp!!!	readin(in filename : string) : void
+    std::ifstream is_ (filename.c_str ());
+    GRS400_ALWAYS (is_, ("unable to open file " + filename).c_str () );
+    reader scnr_ (is_);
+    enum
+    {
+        Channel = 1 << 1
+        , Sampler = 1 << 2
+        , Geometry = 1 << 3
+        , Patch = 1 << 4
+        , Particles = 1 << 5
+        , Specie = 1 << 6
+        , Salt = 1 << 7
+        , All = (Channel | Sampler | Geometry | Patch | Particles | Specie | Salt)
+    };
+    uint8_type required_sections_ = 0;
+    while (scnr_.next () )
+    {
+        if (scnr_.name () == dictionary::channel_label)
+        {
+            do_readin (scnr_);
+            required_sections_ |= Channel;
+        }
+        else if (scnr_.name () == dictionary::sampler_label)
+        {
+            get_sampler().do_readin (scnr_);
+            required_sections_ |= Sampler;
+        }
+        else if (scnr_.name () == dictionary::geometry_label)
+        {
+            get_environment().do_readin (scnr_);
+            required_sections_ |= Geometry;
+        }
+        else if (scnr_.name () == dictionary::patch_label)
+        {
+            get_patch().do_readin (scnr_);
+            required_sections_ |= Patch;
+        }
+        else if (scnr_.name () == dictionary::particles_label)
+        {
+            get_particles().do_readin (scnr_);
+            required_sections_ |= Particles;
+        }
+        else if (scnr_.name () == dictionary::specie_label)
+        {
+            get_specie().do_readin (scnr_);
+            required_sections_ |= Specie;
+        }
+        else if (scnr_.name () == dictionary::salt_label)
+        {
+            get_salt().do_readin (scnr_);
+            required_sections_ |= Salt;
+        }
+        else
+        {
+            GRS400_ALWAYS (scnr_.at_end (), ("unrecognised tag in input file " + scnr_.name () ).c_str () );
+            break;
+        }
+    }
+    // Finalise setting of variables
+    GRS400_ALWAYS((required_sections_ xor All) == 0
+                  , "Main input file incomplete, must have all of the sections (accu,channel,conf.geom,patch,salt,specie)");
+    
+    std::cout << " Read of master input file " << filename << " complete.\n";
+    // Objects that have dependents
+    get_environment().do_readin ();
+    std::cout << " Geometry definition complete.\n";
+    
+    // Dependent objects
+    get_particles().do_readin ();
+    get_salt().do_readin ();
+    get_sampler().do_readin ();
+    get_patch ().do_readin ();
+    std::cout  << constants::output_divider << "\n MC environment definition complete.\n" << constants::output_divider << "\n";
+!!!1569839.cpp!!!	main(in argc : int, inout argv : char) : int
+    std::cout << "Initialising, please wait...\n";
+    /*<          call readin     >*/
+    std::string input_filename ("in1.inp");
+    if (argc > 1)
+    {
+      input_filename = argv[1];
+    }
+    readin (input_filename);
+    std::cout << " Start MC";
+    if (! title_.empty ())
+    {
+        std::cout << " for " << title_;
+    }
+    std::cout << "\n";
+try
+{
+    /*<       do iter=1,niter >*/
+    while (iter < niter)
+    {
+        /*<         write(*,'("     iter = ",i2)')iter >*/
+        std::cout << " (Iteration = " << int (iter) << ")\n";
+        /*<          istep0=0 >*/
+        get_particles ().initialise ();
+        /*<          call wrcf(istep0) >*/
+        wrcf (0);
+        /*<          write(*,*)" Start equilibration" >*/
+        std::cout << " Start equilibration\n";
+        /*<          do istep=1,naver >*/
+        for (uint32_type istep = 1; istep <= naver; ++istep)
+        {
+            /*<             do ip=1,ParticleSize >*/
+            const uint16_type inner_max = ParticleSize;
+            for (uint16_type ip = 0; ip < inner_max; ++ip)
+            {
+                /*<                 call tryit >*/
+                tryit ();
+            }
+            /*<             if (mod(istep,isave).eq.0) then >*/
+            if (istep % isave == 0)
+            {
+                /*<               call wrcf(istep)  >*/
+                wrcf (istep);
+                /*<               write(*,*)istep," I am equilibrating" >*/
+                std::cout << " I am equilibrating : " << int (istep) << "\n";
+            }
+        }
+        /*<          write(*,*)" Start simulation"     >*/
+        std::cout << " Start simulation\n";
+        /*<          do istep=1,nstep >*/
+        for (uint16_type istep = 1; istep <= nstep; ++istep)
+        {
+            /*<              do ip=1,ParticleSize >*/
+            const uint16_type inner_max = ParticleSize;
+            for (uint16_type ip = 0; ip < inner_max; ++ip)
+            {
+                /*<                 call tryit >*/
+                tryit ();
+                /*<                 call accum >*/
+                get_sampler().accum (get_particles ().get_guard ());
+            }
+            /*<              call hist >*/
+            get_sampler().hist ();
+            /*<              if (mod(istep,isave).eq.0) call saves(istep) >*/
+            if (istep % isave == 0)
+            {
+                get_particles().verify_invariants ();
+                get_sampler().saves (std::cout, istep + 1);
+                /*<              if (mod(istep,isave).eq.0) call wrcf(istep) >*/
+                wrcf (istep + 1);
+            }
+        }
+        if (nstep % isave != 0) // Save final data
+        {
+          get_sampler().saves (std::cout, nstep);
+          /*<              if (mod(istep,isave).eq.0) call wrcf(istep) >*/
+          wrcf (nstep);
+        }
+        /*<          if (iter.eq.niter) then >*/
+        if (iter + 1 >= niter)
+        {
+            /*<                write(*,*)" End of simulation" >*/
+            std::cout << " End of simulation\n";
+            return 0;
+        }
+        else
+        {
+            /*<                write(*,*)" End of iteration ",iter >*/
+            std::cout << " End of iteration " << int (iter) << "\n\n";
+        }
+        /*<          call zero >*/
+        get_sampler().reset ();
+        ++iter;
+    }
+}
+catch (const std::exception &err)
+{
+  std::cerr << "Caught exception, about to quit.\n";
+  std::cerr << err.what () << "\n";
+  return 1;
+}
+    return 0;
+!!!1569967.cpp!!!	tryit() : void
+    /*<       vszam=ranff(mag) >*/
+    const double pick_ion_ (random_gen (0., 1.) );
+    if (pick_ion_ < salt_1->rate_grow () )
+    {
+        /*<       ratrg2=0.0 >*/
+        double rate_ (0.);
+        // Pick ion ion_specie
+        for (uint8_type isalt_ = 0; isalt_ < salt_1->count (); ++isalt_)
+        {
+            /*<         ratrg2=ratrg2+ratreg(irg) >*/
+            rate_ += salt_1->rate_grow (isalt_);
+            if (pick_ion_ < rate_)
+            {
+                /*<       vszam=ranff(mag) >*/
+                const double pick_region_ (random_gen (0., 1.) );
+                // Pick a region
+                rate_ = 0.; // reset for region
+                for (uint8_type iregion_ = 0; iregion_ < RegionSize; ++iregion_)
+                {
+                    rate_ += salt_1->rate_region (iregion_);
+                    if (pick_region_ < rate_)
+                    {
+                        // Rest of method in salt::create_or_destroy
+
+                        salt_1->create_or_destroy (iregion_, isalt_);
+                        return;
+                    }
+                }
+                break; // No region found
+            }
+        }
+    }
+    // Try to move a random particle instead
+    /*<           iwh   = int(ranff(mag)*ntry)+1 >*/
+    /*<           ispec = nwh(iwh) >*/
+    const uint16_type spec_ = spec_1->specie_to_move (random_igen (spec_1->max_chance () ) );
+    const uint16_type count_ = conf_1->count (spec_);
+    /*<           if (n(ispec).eq.0) goto 1 >*/
+    if (count_ == 0)
+    {
+        return;
+    }
+    /*<           i = int(dble(n(ispec))*ranff(mag)) + 1 >*/
+    const uint16_type idx_ = random_igen (count_);
+
+    // Rest of method in conf::move
+    conf_1->move (spec_, idx_);
+    fp_env::check("in tryit, after particle move");
+!!!1570095.cpp!!!	wrcf(in istep : uint32_type) : void
+    std::ofstream os2_ ( ("fc" + job_suffix () ).c_str () );
+    GRS400_ALWAYS (os2_, "Unable to open fc.dat for writing.");
+    spec_1->do_wrcf (os2_, istep);
+    conf_1->do_wrcf (os2_, istep);
+!!!1570479.cpp!!!	do_readin(inout scnr : reader) : void
+    GRS400_REQUIRE (scnr.name () == dictionary::channel_label, "incorrect section label");
+    while (scnr.next () )
+    {
+        if (scnr.name () == dictionary::niter_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::niter_label + " tag with no content").c_str () );
+            int n;
+            scnr.get_content (n);
+            niter = n;
+        }
+        else if (scnr.name () == dictionary::nstep_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::nstep_label + " tag with no content").c_str () );
+            int n;
+            scnr.get_content (n);
+            nstep = n;
+        }
+        else if (scnr.name () == dictionary::naver_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::naver_label + " tag with no content").c_str () );
+            int n;
+            scnr.get_content (n);
+            naver = n;
+        }
+        else if (scnr.name () == dictionary::iter_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::iter_label + " tag with no content").c_str () );
+            int n;
+            scnr.get_content (n);
+            iter = n;
+        }
+        else if (scnr.name () == dictionary::isave_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::isave_label + " tag with no content").c_str () );
+            int n;
+            scnr.get_content (n);
+            isave = n;
+        }
+        else if (scnr.name () == dictionary::name_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::name_label + " tag with no content").c_str () );
+            scnr.get_line (this->title_);
+        }
+        else
+        {
+            GRS400_ALWAYS (scnr.at_end (), ("unrecognised tag in input file " + scnr.name () ).c_str () );
+        }
+    }

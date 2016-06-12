@@ -1,0 +1,468 @@
+class specie
+!!!1887023.cpp!!!	echo_input(in id : size_t, in cf : conf, inout fid : ostream) : void
+  IONCH_REQUIRE(this->is_valid(), "Invalid specie definition.");
+  fid  << constants::fsspec() << "\n";
+  fid  << constants::fsname() << " \"" << this->code_name_ <<  "\"\n";
+  fid  << constants::fsz() << " " << this->valency_ <<  "\n";
+  fid  << constants::fsd() << " " << this->radius_*2 <<  "\n";
+  // Output the specie type
+  fid  << constants::fstype() << " ";
+  switch (this->type_)
+  {
+  case CHANNEL_ONLY:
+    fid << constants::fschon();
+    break;
+  case MOBILE:
+    fid << constants::fsmobl();
+    break;
+  case FLEXIBLE:
+    fid << constants::fsflxd();
+    break;
+  default:
+    fid << constants::fsfree();
+    break; // Assume INVALID will become a free specie
+  }
+  fid << "\n";
+  fid  << constants::fsrtsp() << " " << this->rate_specie_ <<  "\n";
+  switch (this->type_)
+  {
+  case SOLUTE:
+    fid  << constants::fschex() << " " << this->chem_excess_ <<  "\n";
+    fid  << constants::fsrtex() << " " << this->rate_exchange_ <<  "\n";
+    fid  << constants::fsrtgr() << " " << this->rate_change_ <<  "\n";
+    fid  << constants::fsrtrg();
+    for (size_t idx = 0; idx != this->rate_region_.size(); ++idx)
+    {
+      fid << " " << this->rate_region_[idx];
+    }
+    fid  << "\n";
+    // fall through
+    // no break
+  case CHANNEL_ONLY:
+    fid  << constants::fsrtmv() << " " << this->rate_move_ <<  "\n";
+    break;
+  default:
+    break;
+  }
+  if (cf.size(id) != 0)
+  {
+    // print x y z (r) coordinates
+    IONCH_ENSURE_EXTRA(size_t count = 0);
+    fid  << constants::fsn() << " " << cf.size(id) <<  "\n";
+    for (size_t idx = 0; idx != cf.active_size(); ++idx)
+    {
+      if (cf.specie_index(idx) == id)
+      {
+        fid << cf.rx(idx) << " " << cf.ry(idx) << " " << cf.rz(idx);
+        if (is_mobile() or is_flexible())
+        {
+          fid << " " << std::sqrt(cf.rsr(idx));
+          fid << " " << cf.rsx(idx) << " " << cf.rsy(idx) << " " << cf.rsz(idx);
+        }
+        fid <<  "\n";
+        IONCH_ENSURE_EXTRA(++count);
+      }
+    }
+    IONCH_ENSURE(count == cf.size(id), "Number of reported and found particles of a specie differ.");
+  }
+  fid  << constants::fsend() << "\n";
+  fid  <<  "\n";
+!!!1887151.cpp!!!	transfer_positions(in id : size_t, inout cf : conf) : void
+  if (impl_)
+  {
+    for (size_t idx = 0; idx != impl_->input_x.size(); ++idx)
+    {
+      const double x (impl_->input_x[idx]);
+      const double y (impl_->input_y[idx]);
+      const double z (impl_->input_z[idx]);
+      double r  = 0.0;
+      if (impl_->input_sr.size () > idx)
+      {
+        r = impl_->input_sr[idx];
+      }
+      double sx = 0.0;
+      double sy = 0.0;
+      double sz = 0.0;
+      if (impl_->input_sx.size () > idx)
+      {
+        sx = impl_->input_sx[idx];
+        sy = impl_->input_sy[idx];
+        sz = impl_->input_sz[idx];
+      }
+      cf.add_particle(x, y, z, id, sx, sy, sz, r);
+    }
+    impl_.reset ();
+  }
+!!!1889839.cpp!!!	chemical_potential(in value : double) : void
+  IONCH_REQUIRE(is_solute(), "Invalid specie type for setting the chemical potential");
+  this->chem_potential_ = value;
+  const double rtargi = this->concentration_ /constants::to_SI ();
+  this->chem_excess_ = this->chem_potential_ - std::log(rtargi);
+!!!1889967.cpp!!!	chemical_excess(in value : double) : void
+  IONCH_REQUIRE(is_solute(), "Invalid specie type for setting the chemical potential");
+  this->chem_excess_ = value;
+  const double rtargi = this->concentration_ /constants::to_SI ();
+  this->chem_potential_ = this->chem_excess_ + std::log(rtargi);
+!!!1890479.cpp!!!	swap(inout other : specie) : void
+  std::swap (this->impl_, other.impl_);
+  std::swap (this->radius_, other.radius_);
+  std::swap (this->red_charge_, other.red_charge_);
+  std::swap (this->valency_, other.valency_);
+  std::swap (this->code_name_, other.code_name_);
+  std::swap (this->chem_potential_, other.chem_potential_);
+  std::swap (this->chem_excess_, other.chem_excess_);
+  std::swap (this->concentration_, other.concentration_);
+  std::swap (this->type_, other.type_);
+  std::swap (this->input_count_, other.input_count_);
+  std::swap (this->rate_specie_, other.rate_specie_);
+  std::swap (this->rate_exchange_, other.rate_exchange_);
+  std::swap (this->rate_move_, other.rate_move_);
+  std::swap (this->rate_change_, other.rate_change_);
+  std::swap (this->rate_region_, other.rate_region_);
+!!!1890735.cpp!!!	read_input(inout parser : input_reader) : void
+  struct helper_
+  {
+    static specie::specie_type get_specie_type (std::string val, specie::specie_type orig, bool &set)
+    {
+      set = true;
+      if (val.size() >= 3)
+      {
+        if (val.size() <= constants::fsmobl().size() and val.find(constants::fsmobl().substr(0,val.size())) == 0)
+          return MOBILE;
+        if (val.size() <= constants::fsflxd().size() and val.find(constants::fsflxd().substr(0,val.size())) == 0)
+          return FLEXIBLE;
+        if (val.size() <= constants::fschon().size() and val.find(constants::fschon().substr(0,val.size())) == 0)
+          return CHANNEL_ONLY;
+        if (val.size() <= constants::fsfree().size() and val.find(constants::fsfree().substr(0,val.size())) == 0)
+          return SOLUTE;
+      }
+      set = false;
+      return INVALID;
+    }
+  };
+  IONCH_REQUIRE(parser.name() == constants::fsspec(), "Input section is not for a specie");
+
+  std::bitset< 10 > mask_ (true);
+  enum  // bit set indices
+  {
+    MASK_VALENCY = 0,
+    MASK_RADIUS = 1,
+    MASK_CHEM_EX = 2,
+    MASK_LABEL = 3,
+    MASK_TYPE = 4,
+    MASK_RATE_SPC = 5,
+    MASK_RATE_MOV = 6,
+    MASK_RATE_EXCH = 7,
+    MASK_RATE_CHG = 8,
+    MASK_RATE_REG = 9
+  };
+  this->type_ = INVALID;
+  // optional argument to specie can be specie type
+  if (not parser.value().empty())
+  {
+    bool valid_type;
+    this->type_ = helper_::get_specie_type (parser.value(), this->type_, valid_type);
+    IONCH_INPUT(valid_type, "Unrecognised specie type", constants::fsspec());
+    mask_.reset(MASK_TYPE);
+  }
+
+  // process section
+  while (parser.next())
+  {
+    if (parser.name() == constants::fsend())
+      break;
+
+    try
+    {
+      // looking for name,d,z,chex,type,n,ratspc etc.
+      if (parser.name() == constants::fsz())
+      {
+        this->valency_ = boost::lexical_cast< double >(parser.value());
+        mask_.reset(MASK_VALENCY);
+      }
+      else if (parser.name() == constants::fsd())
+      {
+        this->radius_ = boost::lexical_cast< double >(parser.value())/2.0;
+        IONCH_INPUT(this->radius_ > 0.0, "Diameter must be positive", constants::fsspec());
+        mask_.reset(MASK_RADIUS);
+      }
+      else if (parser.name() == constants::fschex())
+      {
+        this->chem_excess_ = boost::lexical_cast< double >(parser.value());
+        mask_.reset(MASK_CHEM_EX);
+      }
+      else if (parser.name() == constants::fsn())
+      {
+        IONCH_INPUT(not this->impl_, "\""+constants::fsn()+"\" tag appears more than once for a specie", constants::fsspec());
+        size_t input_count (boost::lexical_cast< size_t >(parser.value()));
+        std::unique_ptr< content > tmp (new content (input_count));
+        for (size_t idx = 0; idx != input_count; ++idx)
+        {
+          parser.next();
+          std::vector< double > rates;
+          IONCH_INPUT(parser.read_as_floats (parser.line(), rates), "Conversion of \""+parser.line()+"\" for position definition ("
+                      +boost::lexical_cast<std::string>(idx+1)+" of "+boost::lexical_cast<std::string>(input_count)+") failed.", constants::fsspec());
+          IONCH_INPUT(rates.size () >= 3, "Insufficient values for position definition", constants::fsspec());
+          tmp->input_x[idx] = rates[0];
+          tmp->input_y[idx] = rates[1];
+          tmp->input_z[idx] = rates[2];
+          if (rates.size() > 3)
+          {
+            if (type_ == INVALID)
+            {
+              // Assume is MOBILE type iff type is not yet set. Do not set mask.
+              type_ = MOBILE;
+            }
+            IONCH_INPUT(type_ == MOBILE or type_ == FLEXIBLE,
+                        "Only localised specie types define more than 3 position elements", constants::fsspec());
+            tmp->input_sr[idx] = rates[3];
+            IONCH_INPUT(rates[3] > 0.0, "The localisation radius must be greater than zero", constants::fsspec());
+            if (rates.size() > 4)
+            {
+              tmp->input_sx[idx] = rates[4];
+              tmp->input_sy[idx] = rates[5];
+              tmp->input_sz[idx] = rates[6];
+            }
+            else
+            {
+              tmp->input_sx[idx] = rates[0];
+              tmp->input_sy[idx] = rates[1];
+              tmp->input_sz[idx] = rates[2];
+            }
+          }
+        }
+        this->impl_ = tmp;
+      }
+      else if (parser.name() == constants::fsname())
+      {
+        this->code_name_ = parser.value();
+        parser.dequote(this->code_name_);
+        mask_.reset(MASK_LABEL);
+        this->code_name_.resize(2);
+      }
+      else if (parser.name() == constants::fstype())
+      {
+        bool valid_type;
+        this->type_ = helper_::get_specie_type (parser.value(), this->type_, valid_type);
+        IONCH_INPUT(valid_type, "Unrecognised specie type \""+parser.value()+"\"", constants::fsspec());
+        mask_.reset(MASK_TYPE);
+      }
+      else if  (parser.name() == constants::fsrtsp())
+      {
+        this->rate_specie_ = boost::lexical_cast< double >(parser.value());
+        IONCH_INPUT(this->rate_specie_ >= 0.0, "Probability rates must be greater than zero", constants::fsspec());
+        mask_.reset(MASK_RATE_SPC);
+      }
+      else if (parser.name() == constants::fsrtmv())
+      {
+        this->rate_move_ = boost::lexical_cast< double >(parser.value());
+        IONCH_INPUT(this->rate_move_ >= 0.0, "Probability rates must be greater than zero", constants::fsspec());
+        IONCH_INPUT(this->rate_move_ <= 1.0, "Local probability rates must be less than one", constants::fsspec());
+        mask_.reset(MASK_RATE_MOV);
+      }
+      else if  (parser.name() == constants::fsrtex())
+      {
+        this->rate_exchange_ = boost::lexical_cast< double >(parser.value());
+        IONCH_INPUT(this->rate_exchange_ >= 0.0, "Probability rates must be greater than zero", constants::fsspec());
+        IONCH_INPUT(this->rate_exchange_ <= 1.0, "Local probability rates must be less than one", constants::fsspec());
+        mask_.reset(MASK_RATE_EXCH);
+      }
+      else if  (parser.name() == constants::fsrtgr())
+      {
+        this->rate_change_ = boost::lexical_cast< double >(parser.value());
+        IONCH_INPUT(this->rate_change_ >= 0.0, "Probability rates must be greater than zero", constants::fsspec());
+        mask_.reset(MASK_RATE_CHG);
+      }
+      else if (parser.name() == constants::fsrtrg())
+      {
+        parser.read_as_floats (parser.value(), this->rate_region_);
+        IONCH_INPUT (this->rate_region_.size() > 0,"Error reading region rate numbers from line \""+parser.line()+"\"", constants::fsspec());
+        double sum_ = 0.0; // normalise rates as we set them.
+        for (std::vector< double >::const_iterator it_ = this->
+             rate_region_.begin();
+             it_ != this->rate_region_.end();
+             ++it_)
+        {
+          IONCH_INPUT(*it_ >= 0.0, "Probability rates must be greater than zero", constants::fsspec());
+          sum_ += *it_;
+        }
+        IONCH_CHECK(sum_ >= 0.0, "Probability rates must be greater than zero");
+        for (std::vector< double >
+             ::iterator it_ = this->rate_region_.begin();
+             it_ != this->rate_region_.end();
+             ++it_)
+        {
+          *it_ /= sum_;
+        }
+        mask_.reset(MASK_RATE_REG);
+      }
+      else
+      {
+        static const bool recognised_option (false);
+        IONCH_INPUT(recognised_option, "Option "+parser.name()+" is not valid in specie section", constants::fsspec());
+      }
+    }
+    catch (boost::bad_lexical_cast &e)
+    {
+      const bool convert_succeed(false);
+      IONCH_INPUT(convert_succeed, e.what(), constants::fsspec());
+    }
+  }
+
+  if (this->type_ == INVALID)
+  {
+    // Assume is 'free' type
+    this->type_ = SOLUTE;
+  }
+
+  // Set default values for structural ions where missing
+  // values in the input are permitted.
+  switch (this->type_)
+  {
+  case MOBILE: // fall thru
+  case FLEXIBLE: // fall thru
+  case CHANNEL_ONLY: //
+    {
+      if (utility::feq(this->rate_specie_,0.0))
+      {
+        this->rate_specie_ = 0.2;
+      }
+      this->rate_exchange_ = 0.0;
+      if (utility::feq (this->rate_move_,0.0))
+      {
+        this->rate_move_ = 1.0; // Set no jumps
+      }
+      this->rate_change_ = 0.0; // Set no add/remove
+      for (std::vector< double >::iterator it_ =  this->
+           rate_region_.begin();
+           it_ != this->rate_region_.end();
+           ++it_)
+      {
+        *it_ = 0.0;
+      }
+      mask_.reset (MASK_RATE_SPC);
+      mask_.reset (MASK_RATE_EXCH);
+      mask_.reset (MASK_RATE_MOV);
+      mask_.reset (MASK_RATE_CHG);
+      mask_.reset (MASK_RATE_REG);
+    }
+    break;
+  default:
+    break;
+  }
+
+  // !!BUG!! allow ratreg to be missing iff ratgri is missing
+  if (mask_.test(MASK_RATE_CHG))
+  {
+    mask_.reset(MASK_RATE_CHG);
+    mask_.reset(MASK_RATE_REG);
+  }
+
+  if (mask_.any())
+  {
+    static const bool all_options_found (false);
+    IONCH_INPUT(all_options_found, "Not all required tags were present.", constants::fsspec());
+  }
+!!!1890991.cpp!!!	set_concentration(in conc : double) : void
+  IONCH_CHECK(this->is_solute(), "Only solute species can have a target concentration");
+  IONCH_CHECK (conc > 0.0, "Invalid target concentration.");
+  this->concentration_ = conc;
+  const double rtargi (this->concentration_ / constants::to_SI());
+  this->chem_potential_ = this->chem_excess_ + std::log (rtargi);
+!!!1891247.cpp!!!	help_information(inout exemplar : input_help) : void
+  const std::string seclabel (constants::fsspec());
+  // ----------------------------------------
+  // add section
+  // ----------------------------------------
+
+  //   Specie input section definition
+  exemplar.add_section (seclabel, "Specie input section definition");
+
+  boost::program_options::options_description &desc (exemplar.description(seclabel));
+  // ----------------------------------------
+  // add parameters
+  // ----------------------------------------
+
+  {
+    const std::string description("[required, number] specie valency (atomic).");
+    desc.add_options()(constants::fsz().c_str(), description.c_str());
+  }
+  {
+    const std::string description("[required, number > 0] specie diameter (Angstrom).");
+    desc.add_options()(constants::fsd().c_str(), description.c_str());
+  }
+  {
+    const std::string description("[required, two letters] specie code name (quotes optional).");
+    desc.add_options()(constants::fsname().c_str(), description.c_str());
+  }
+  {
+    std::stringstream description;
+    description << "[optional, default type is \"" << constants::fsfree()
+    << "\"] specie model type. Value should be one of: \""
+    << constants::fsmobl() << "\", \"" << constants::fsflxd() << "\", \""
+    << constants::fschon() << "\" or \"" << constants::fsfree()
+    << "\" (only first 3 letters required).";
+    desc.add_options()(constants::fstype().c_str(), description.str().c_str());
+  }
+  {
+    const std::string description("[required and valid for \"" + constants::fsfree()
+                                  + "\" type only, number] initial chemical excess.");
+    desc.add_options()(constants::fschex().c_str(), description.c_str());
+  }
+  {
+    std::stringstream description;
+    description << "[optional for  \"" << constants::fsmobl()
+    << "\", \"" << constants::fsflxd() << "\" and \""
+    << constants::fschon() << "\", required for \"" << constants::fsfree()
+    << ", number >= 0] Probability this specie is chosen in a move trial compared to other species.";
+    desc.add_options()(constants::fsrtsp().c_str(), description.str().c_str());
+  }
+  {
+    std::stringstream description;
+    description << "[\"" << constants::fsfree()
+    << " type only, required, 0 <= number <= 1] Once selected for a move, probability of jump move into/out of channel or a local move.";
+    desc.add_options()(constants::fsrtex().c_str(), description.str().c_str());
+  }
+  {
+    std::stringstream description;
+    description << "[\"" << constants::fsfree() << " or " << constants::fschon()
+    << " types only, required, 0 <= number <= 0] Once selected for a local move, probability of a gas phase or liquid phase move.";
+    desc.add_options()(constants::fsrtmv().c_str(), description.str().c_str());
+  }
+  {
+    std::stringstream description;
+    description << "[\"" << constants::fsfree()
+    << " type only, required, number >= 0] Probability this specie is used in a individual ion grand-canonical trial"
+    << " compared to other species.";
+    desc.add_options()(constants::fsrtgr().c_str(), description.str().c_str());
+  }
+  {
+    std::stringstream description;
+    description << "[\"" << constants::fsfree()
+    << " type only, required*, number >= 0 for each region and sum > 0] Per-region probabilities "
+    << "this specie is inserted into the particular region in a grand-"
+    << "canonical trial. \n(*)Required if this specie is part of a salt or "
+    << "if " << constants::fsrtgr() << " is set.";
+    desc.add_options()(constants::fsrtrg().c_str(), description.str().c_str());
+  }
+  {
+    std::stringstream description;
+    description << "[required for \"" << constants::fsmobl()
+    << "\", \"" << constants::fsflxd() << "\" and \""
+    << constants::fschon() << "\", optional for \"" << constants::fsfree()
+    << "\", integer number > 0] Number of initial position definitions.\n"
+    << "The lines following \"" << constants::fsn() << "\" contain "
+    << "X number of lines of x,y,z etc information, where X is the argument "
+    << "to \"" << constants::fsn() << "\". This tag must appear after the \""
+    << constants::fstype() << "\" tag for \"" << constants::fsmobl()
+    << "\" and \"" << constants::fsflxd() << "\" species.  \""
+    << constants::fschon() << "\" or \"" << constants::fsfree()
+    << "\" require three numbers defining the initial "
+    << "x,y,z position of the particle. \"" << constants::fsmobl()
+    << "\" and \"" << constants::fsflxd() << "\" additionally require "
+    << "a fourth number with the localisation radius, and an optional three "
+    << "numbers defining the x,y,z position of the localisation centre-point. "
+    << "If these last three numbers are not included then the initial x,y,z "
+    << "position is used as the localisation centre-point.";
+    desc.add_options()(constants::fsn().c_str(), description.str().c_str());
+  }

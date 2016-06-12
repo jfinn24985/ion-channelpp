@@ -1,0 +1,278 @@
+class trial_acceptance_report
+!!!746927.cpp!!!	report(inout a_os : ostream) : void
+a_os << strngs::horizontal_bar << "\n";
+// Summary values across all species/salts
+uint64_t move_acc (0), indv_acc (0), salt_acc (0);
+uint64_t move_try (0), indv_try (0), salt_try (0);
+
+if (not constants::feq (this->ratmv(), 0.0))
+{
+    // summary of MOVE trials
+    uint64_t move_sums[4] = { 0, 0, 0, 0 };
+    uint64_t trys_sums[4] = { 0, 0, 0, 0 };
+    static const boost::format move_long_row ("%1$4s | %2$8.6g | %3$8.6g | %4$8.6g | %5$8.6g | %6$11d | %7$11d");
+    static const boost::format move_short_row ("%1$4s | %2$8.6g | %3$8.6g");
+    a_os << boost::format (move_long_row) % "SPC" % "MOVE" % "JUMP" % "IN" % "OUT" % "ACC IN" % "ACC OUT" << "\n";
+    a_os << strngs::horizontal_bar << "\n";
+
+    for (int ispec = 0; ispec != spec::spec_size (); ++ispec)
+    {
+        trys_sums[0] += this->amove_[ispec][0];
+        move_sums[0] += this->amove_[ispec][1];
+        trys_sums[1] += this->ajump_[ispec][0];
+        move_sums[1] += this->ajump_[ispec][1];
+        trys_sums[2] += this->ajin_[ispec][0];
+        move_sums[2] += this->ajin_[ispec][1];
+        trys_sums[3] += this->ajout_[ispec][0];
+        move_sums[3] += this->ajout_[ispec][1];
+
+        if (not spec::isfree (ispec))
+        {
+            if (not spec::fixed (ispec))
+            {
+                const double move_ratio (0 == this->amove_[ispec][0] ? 0.0
+                                         : double (this->amove_[ispec][1]) / double (this->amove_[ispec][0]));
+                const double jump_ratio (0 == this->ajump_[ispec][0] ? 0.0
+                                         : double (this->ajump_[ispec][1]) / double (this->ajump_[ispec][0]));
+                a_os << boost::format (move_short_row) % spec::fspc (ispec) % move_ratio % jump_ratio << "\n";
+            }
+        }
+        else
+        {
+            const double move_ratio (0 == this->amove_[ispec][0] ? 0.0
+                                     : double (this->amove_[ispec][1]) / double (this->amove_[ispec][0]));
+            const double jump_ratio (0 == this->ajump_[ispec][0] ? 0.0
+                                     : double (this->ajump_[ispec][1]) / double (this->ajump_[ispec][0]));
+            const double jin_ratio (0 == this->ajin_[ispec][0] ? 0.0
+                                    : double (this->ajin_[ispec][1]) / double (this->ajin_[ispec][0]));
+            const double jout_ratio (0 == this->ajout_[ispec][0] ? 0.0
+                                     : double (this->ajout_[ispec][1]) / double (this->ajout_[ispec][0]));
+            a_os << boost::format (move_long_row)
+                 % spec::fspc (ispec) % move_ratio % jump_ratio % jin_ratio % jout_ratio
+                 % this->ajin_[ispec][1] % this->ajout_[ispec][1] << "\n";
+        }
+    }
+
+    a_os << strngs::horizontal_bar << "\nMOVE SUMMARY\n";
+    move_try = trys_sums[0] + trys_sums[1] + trys_sums[2] + trys_sums[3];
+    move_acc = move_sums[0] + move_sums[1] + move_sums[2] + move_sums[3];
+
+    if (0 == move_try)
+    {
+        // All ratios are zero! Don't bother with printing result
+        a_os << "NO RECORDED MOVE ATTEMPTS SO FAR\n";
+    }
+    else
+    {
+        a_os << boost::format (move_long_row) % " " % "MOVE" % "JUMP" % "IN" % "OUT" % "IN+OUT" % "ALL" << "\n";
+        boost::format accepts_row (move_long_row), attempts_row (move_short_row);
+        accepts_row % "ACC";
+        attempts_row % "TRY";
+        accepts_row % (0 == trys_sums[0] or 0 == move_sums[0] ? 0.0 : double (move_sums[0]) / double (trys_sums[0]));
+        accepts_row % (0 == trys_sums[1] or 0 == move_sums[1] ? 0.0 : double (move_sums[1]) / double (trys_sums[1]));
+        // because of 'if' test we know total_trials != 0
+        attempts_row % (double (trys_sums[0]) / double (move_try));
+        attempts_row % (double (trys_sums[1]) / double (move_try));
+
+        // No jumps, skip
+        if (0 == trys_sums[2] and 0 == trys_sums[3])
+        {
+            // All jump-in/out ratios are zero! Don't bother with printing result
+            accepts_row % "---" % "---" % "---";
+            attempts_row % "---" % "---" % "---";
+        }
+        else
+        {
+            accepts_row % (0 == trys_sums[2] or 0 == move_sums[2] ? 0.0 : double (move_sums[2]) / double (trys_sums[2]));
+            accepts_row % (0 == trys_sums[3] or 0 == move_sums[3] ? 0.0 : double (move_sums[3]) / double (move_sums[2]));
+
+            attempts_row % (double (trys_sums[2]) / double (move_try));
+            attempts_row % (double (trys_sums[3]) / double (move_try));
+
+            // 'if' test ensures 0 != trys_sums[2] + trys_sums[3]
+            accepts_row % (double (move_sums[2] + move_sums[3]) / double (move_sums[2] + trys_sums[3]));
+            attempts_row % (double (trys_sums[2] + trys_sums[3]) / double (move_try));
+
+            accepts_row % (double (move_acc) / double (move_try));
+            attempts_row % " ";
+        }
+
+        a_os << accepts_row << "\n" << attempts_row << "\n";
+    }
+} // end of move statistics
+
+// NOTES: column [0] ==> attempt; [1] ==> success
+if (this->do_salt_gcmc () or this->do_individual_gcmc ())
+{
+    static const boost::format gcmc_long_row (" %1$4s | %2$7.4g %3$7.4g %4$7.4g %5$7.4g | %6$7.4g %7$7.4g %8$7.4g %9$7.4g");
+    static const boost::format gcmc_header_row (" %1$4s | %2$=31s | %2$=31s");
+    boost::format region_header_line_ (gcmc_long_row);
+    region_header_line_ % ""
+       % geom::freg (constants::izlim) % geom::freg (constants::ifilt)
+       % geom::freg (constants::ichan) % geom::freg (constants::ibulk)
+       % geom::freg (constants::izlim) % geom::freg (constants::ifilt)
+       % geom::freg (constants::ichan) % geom::freg (constants::ibulk);
+
+    if (this->do_salt_gcmc ())
+    {
+        uint64_t salt_cret[4] = { 0, 0, 0, 0 };
+        uint64_t salt_dest[4] = { 0, 0, 0, 0 };
+        uint64_t salt_ctry[4] = { 0, 0, 0, 0 };
+        uint64_t salt_dtry[4] = { 0, 0, 0, 0 };
+        a_os << boost::format (gcmc_header_row) % "SALT" % "CREATE" % "DESTROY" << "\n";
+        a_os << region_header_line_.str() << "\n";
+        a_os << strngs::horizontal_bar << "\n";
+
+        for (int igc = 0; igc != spec::nsalt; ++igc)
+        {
+            boost::format r_ (gcmc_long_row);
+            const int ispec = spec::isalt (igc);
+            r_  % spec::fsalt (igc);
+
+            for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+            {
+                salt_ctry[ireg] += this->acreat_[igc][ireg][0];
+                salt_cret[ireg] += this->acreat_[igc][ireg][1];
+                salt_try += this->acreat_[igc][ireg][0];
+                salt_acc += this->acreat_[igc][ireg][1];
+                r_ % (0 == this->acreat_[igc][ireg][0] ? 0.0 : double (this->acreat_[igc][ireg][1]) / double (this->acreat_[igc][ireg][0]));
+            }
+
+            for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+            {
+                salt_dtry[ireg] += this->adest_[igc][ireg][0];
+                salt_dest[ireg] += this->adest_[igc][ireg][1];
+                salt_try += this->adest_[igc][ireg][0];
+                salt_acc += this->adest_[igc][ireg][1];
+                r_ % (0 == this->adest_[igc][ireg][0]  ? 0.0 : double (this->adest_[igc][ireg][1]) / double (this->adest_[igc][ireg][0]));
+            }
+
+            a_os << r_ << "\n";
+        }
+
+        a_os << strngs::horizontal_bar << "\nSALT GC SUMMARY\n";
+
+        if (0 == salt_try)
+        {
+            a_os << "NO RECORDED SALT GC MOVE ATTEMPTS SO FAR\n";
+        }
+        else
+        {
+            boost::format racc_ (gcmc_long_row), rtry_ (gcmc_long_row);
+            racc_ % "ACC";
+            rtry_ % "TRY";
+
+            for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+            {
+                racc_ % (0 == salt_acc ? 0.0 : double (salt_cret[ireg]) / double (salt_acc));
+                rtry_ % (double (salt_ctry[ireg]) / double (salt_try));
+            }
+
+            for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+            {
+                racc_ % (0 == salt_acc ? 0.0 : double (salt_dest[ireg]) / double (salt_acc));
+                rtry_ % (double (salt_dtry[ireg]) / double (salt_try));
+            }
+        }
+    }
+
+    if (this->do_individual_gcmc ())
+    {
+        uint64_t indv_cret[4] = { 0, 0, 0, 0 };
+        uint64_t indv_dest[4] = { 0, 0, 0, 0 };
+        uint64_t indv_ctry[4] = { 0, 0, 0, 0 };
+        uint64_t indv_dtry[4] = { 0, 0, 0, 0 };
+        a_os << boost::format (gcmc_header_row) % "ION" % "CREATE" % "DESTROY" << "\n";
+        a_os << region_header_line_.str() << "\n";
+        a_os << strngs::horizontal_bar << "\n";
+
+        for (int ispec = spec::chloride_index (); ispec != spec::spec_size (); ++ispec)
+        {
+            boost::format r_ (gcmc_long_row);
+            r_ % spec::fspc (ispec);
+
+            for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+            {
+                indv_ctry[ireg] += this->acreat_[ispec][ireg][0];
+                indv_cret[ireg] += this->acreat_[ispec][ireg][1];
+                indv_try += this->acrea1_[ispec][ireg][0];
+                indv_acc += this->acrea1_[ispec][ireg][1];
+                r_ % (0 == this->acrea1_[ispec][ireg][0] ? 0.0 : double (this->acrea1_[ispec][ireg][1]) / double (this->acrea1_[ispec][ireg][0]));
+            }
+
+            for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+            {
+                indv_dtry[ireg] += this->adest_[ispec][ireg][0];
+                indv_dest[ireg] += this->adest_[ispec][ireg][1];
+                indv_try += this->adest1_[ispec][ireg][0];
+                indv_acc += this->adest1_[ispec][ireg][1];
+                r_ % (0 == this->adest1_[ispec][ireg][0] ? 0.0 : double (this->adest1_[ispec][ireg][1]) / double (this->adest1_[ispec][ireg][0]));
+            }
+
+            a_os << r_ << "\n";
+        }
+
+        a_os << strngs::horizontal_bar << "\nINDIVIDUAL GC SUMMARY\n";
+
+        if (0 == indv_try)
+        {
+            a_os << "NO RECORDED INDV GC MOVE ATTEMPTS SO FAR\n";
+        }
+        else
+        {
+            boost::format accepts_row (gcmc_long_row), attempts_row (gcmc_long_row);
+            accepts_row % "ACC";
+            attempts_row % "TRY";
+
+            for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+            {
+                accepts_row % (0 == indv_acc ? 0.0 : double (indv_cret[ireg]) / double (indv_acc));
+                attempts_row % (double (indv_ctry[ireg]) / double (indv_try));
+            }
+
+            for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+            {
+                accepts_row % (0 == indv_acc ? 0.0 : double (indv_dest[ireg]) / double (indv_acc));
+                attempts_row % (double (indv_dtry[ireg]) / double (indv_try));
+            }
+        }
+    }
+}
+
+a_os << strngs::horizontal_bar << "\nGC MC SUMMARY\n";
+const uint64_t sum_try (move_try + indv_try + salt_try);
+
+if (0 == sum_try)
+{
+    a_os << "NO RECORDED GC MC TRIALS SO FAR\n";
+}
+else
+{
+    static const boost::format row_sum_ (" %1$9s | %2$9.6g | %3$9.6g | %4$9.6g");
+    a_os << boost::format (row_sum_) % "ITER TYPE" % "MOVE" % "INDIV" % "SALT" << "\n";
+
+    uint64_t sum_acc (move_acc + indv_acc + salt_acc);
+    boost::format accepts_row (row_sum_), attempts_row (row_sum_);
+    accepts_row % "Accept";
+
+    if (0 == sum_acc)
+    {
+        accepts_row % 0.0 % 0.0 % 0.0;
+    }
+    else
+    {
+        accepts_row % (double (move_acc) / double (sum_acc));
+        accepts_row % (double (indv_acc) / double (sum_acc));
+        accepts_row % (double (salt_acc) / double (sum_acc));
+    }
+
+    attempts_row % "Trials";
+    attempts_row % (double (move_try) / double (sum_try));
+    attempts_row % (double (indv_try) / double (sum_try));
+    attempts_row % (double (salt_try) / double (sum_try));
+
+    a_os << accepts_row << "\n" << attempts_row << "\n";
+}
+
+a_os << strngs::horizontal_bar << "\n\n";
+

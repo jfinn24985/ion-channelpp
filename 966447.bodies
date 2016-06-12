@@ -1,0 +1,99 @@
+class ExtractSelectivity
+!!!1740335.python!!!	main()
+import sys
+sys.path.append("/home/finnerty/remotesrc/ionch/BUILD/linux-deb/PNP/scripts")
+sys.path.append("/Users/finnerty/src/ionch/BUILD/linux-deb/PNP/scripts")
+
+import simdict
+
+
+result = object()
+try:
+    import argparse
+    parser = argparse.ArgumentParser(description="Combine several data files into an averaged output file")
+    parser.add_argument('-s','--start',dest='zmin',metavar='zmin',help='The start of the occupancy measurement region',type='float')
+    parser.add_argument('-e','--end',dest='zmax',metavar='zmax',help='The end of the occupancy measurement region',type='float')
+    parser.add_argument('-1','--ion',dest='i1',metavar='ion code',help='The numerator ion code name (selectivity I1/I2)')
+    parser.add_argument('-2','--ion2',dest='i2',metavar='ion code',help='The denominator ion code name (selectivity I1/I2)')
+    parser.add_argument('-k','--key',dest='key',metavar='selectivity ID',help='The ID to use to identify this result')
+    parser.add_argument('-f','--filename',dest='inputsource',metavar='filename',help='The filename of the digest of data set definitions')
+    simdict.SummaryReader.commandline_add(parser)
+    # process sys.argv
+    result = parser.parse_args ()
+except ImportError:
+    from optparse import OptionParser
+    parser = OptionParser(description="Combine several data files into an averaged output file")
+    parser.add_option('-s','--start',dest='zmin',metavar='zmin',help='The start of the occupancy measurement region',type='float')
+    parser.add_option('-e','--end',dest='zmax',metavar='zmax',help='The end of the occupancy measurement region',type='float')
+    parser.add_option('-1','--ion1',dest='i1',metavar='ion code',help='The numerator ion code name (selectivity I1/I2)',type='string')
+    parser.add_option('-2','--ion2',dest='i2',metavar='ion code',help='The denominator ion code name (selectivity I1/I2)',type='string')
+    parser.add_option('-k','--key',dest='key',metavar='selectivity ID',help='The ID to use to identify this result',type='string')
+    parser.add_option('-f','--filename',dest='inputsource',metavar='filename',help='The filename of the digest of data set definitions',type='string')
+    simdict.SummaryReader.commandline_add(parser)
+    ( result, args ) = parser.parse_args()
+    
+    assert not args or not result.inputsource
+    if not result.inputsource:
+        result.inputsource = args[0]
+
+# Process class based args
+simdict.SummaryReader.commandline_action(result)
+
+if not result.i1:
+    result.i1 = 'Na'
+if not result.i2:
+    result.i2 = 'Ca'
+
+if result.zmin or result.zmax:
+    if not result.zmin:
+        result.zmin = -result.zmax
+    elif not result.zmax:
+        result.zmax = -result.zmin
+    # Both values NOT missing check in the right order
+    zlim = result.zmax
+    result.zmax = max (result.zmin, result.zmax)
+    result.zmin = min (result.zmin, zlim)
+
+if not result.key:
+    result.key = result.inputsource
+
+print >>sys.stderr, "Ion range = ",result.zmin,":",result.zmax
+print >>sys.stderr, "Ion 1 :",result.i1
+print >>sys.stderr, "Ion 2 :",result.i2
+print >>sys.stderr, "Key :",result.key
+print >>sys.stderr, "Digest file :",result.inputsource
+
+import simproc
+s1 = simproc.Selectivity(result.i1,result.i2)
+if result.zmin:
+    s1.set_occupancy_range(result.zmin,result.zmax)
+    # ELSE both values missing use default
+inputstream = None
+if not result.inputsource or result.inputsource == '-':
+    inputstream = sys.stdin
+else:
+    inputstream = open(result.inputsource)
+
+for line in inputstream:
+    rs = simdict.ResultSet(line)
+    print >>sys.stderr, rs.digest()
+    try:
+        s1.add_result_set (rs)
+    except simdict.MissingData as err:
+        print >>sys.stderr,str(err)
+        print >>sys.stderr,"Missing data set: ",digest," run: ",run
+        continue
+
+try:
+    s1.compute()
+    print >>sys.stdout,"Input, Range, Ion_1/Ion_2, Selectivity,  ConcMax_1, LogRatio50_1,  ConcMax_2, LogRatio50_2"
+    print >>sys.stdout,result.key,", ",s1.zmin,":",s1.zmax,", ",s1.ion_names[0]+"/"+s1.ion_names[1],", ", s1.selectivity, ", ", s1.fits[s1.ion_names[0]][0][0], ", ", s1.fits[s1.ion_names[0]][0][1], ", ", s1.fits[s1.ion_names[1]][0][0], ", ", s1.fits[s1.ion_names[1]][0][1]
+    print >>sys.stderr,"Data fit passed for: ",result.key,", ",s1.ion_names[0],"/",s1.ion_names[1]
+    print >>sys.stderr,"Collected occupancies: logratio,  occ_ion1, occ_ion2, pred_ion1, pred_ion2"
+    print >>sys.stderr,s1.get_predicted()
+except Exception as err:
+    print >>sys.stderr,str(err)
+    print >>sys.stderr,"Data fit failed for: ",result.key,", ",s1.ion_names[0],"/",s1.ion_names[1] 
+    print >>sys.stderr,"Collected occupancies: logratio,  occ_ion1, occ_ion2"
+    print >>sys.stderr,s1.get_occupancies()
+

@@ -1,0 +1,79 @@
+class energy_distribution
+!!!2175791.cpp!!!	attach(inout sim : bulk_simulator) : base_sampler
+return std::unique_ptr< base_sampler >(new energy_distribution(*this));
+
+!!!2167471.cpp!!!	bind(inout trans : stepper, inout siml : simulator) : void
+trans.add_inner_observer (boost::bind (&observer::energy_distribution::sample, this, _1, _2), true);
+trans.add_check_observer (boost::bind (&observer::energy_distribution::checkpoint, this, _1), true);
+!!!2146607.cpp!!!	checkpoint(in geom : simulator) : void
+UTILITY_REQUIRE (this->count_ != 0, "Can not get results from zero samples.");
+std::ofstream os (this->filename_.c_str());
+for (std::size_t i = 0; i != this->data_.size(); ++i)
+{
+  const double enhelp (this->umin_ + (i + 0.5)/this->factu_);
+  if (this->data_[i] != 0)
+  {
+    const double tmp (double(this->data_[i])/this->count_);
+    os << enhelp << " " << tmp << " " << std::log(tmp) - enhelp * geom.beta()/2 << "\n";
+  }
+  else
+  {
+    os << enhelp << "  0.0  0.0\n";
+  } 
+}
+!!!2146351.cpp!!!	energy_distribution(in fn : string, in max : double, in min : double, in size : size_t)
+: filename_ (fn)
+, count_(0ul)
+, umax_(max)
+, umin_ (min)
+, factu_ (size/(umax_ - umin_))
+, data_ (size, 0)
+{}
+
+!!!2175919.cpp!!!	energy_distribution(in self : energy_distribution)
+: filename_ (self.filename_)
+, count_(self.count_)
+, umax_(self.umax_)
+, umin_ (self.umin_)
+, factu_ (self.factu_)
+, data_ (self.data_)
+{}
+
+!!!2146863.cpp!!!	energy_distribution()
+: filename_ ()
+, count_()
+, umax_()
+, umin_ ()
+, factu_ ()
+, data_ ()
+{}
+
+!!!2146991.cpp!!!	reset() : void
+this->count_ = 0;
+std::fill (this->data_.begin (), this->data_.end (), 0ul);
+!!!2146479.cpp!!!	sample(in changes : change_set, in accepted : bool) : void
+for (trial::change_set::const_iterator atom = changes.begin ();
+     atom != changes.end ();
+     ++atom)
+{
+  double enhelp;
+  if (atom->do_old)
+  {
+    enhelp = atom->energy_old;
+  }
+  else if (atom->do_new) // and not atom->do_old
+  {
+    enhelp = atom->energy_new;
+  }
+  else
+  {
+    continue;
+  }
+
+  if (this->umin_ < enhelp and enhelp < this->umax_)
+  {
+    const uint64_t iu (std::floor((enhelp - this->umin_) * this->factu_));
+    ++this->count_;
+    if (iu < this->data_.size()) ++this->data_[iu];
+  }
+}

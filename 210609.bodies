@@ -1,0 +1,47 @@
+class add_specie_pbc
+!!!382257.python!!!	generate(inout sys : simulator) : change_set
+self.begin_trial()
+ens = sys.get_ensemble()
+resultset = change_set.change_set( self )
+result = change_set.change_atom()
+resultset.changes.append( result )
+result.key = self.key_ 
+result.do_old = False
+if ens.count() + 1 == ens.max_size():
+  resultset.fail = True # Too many particles
+  return resultset
+sys.get_cell_region().new_position(result.new_position, result.key, sys.get_random())
+result.index = len(ens) # "dummy" value
+resultset.update_probability_factor( sys.get_cell_region().volume(result.key) / (sys.get_specie( self.key_ ).count() + 1) )
+resultset.update_exponential_factor( sys.get_specie( self.key_ ).chemical_potential() )
+return resultset
+
+!!!434609.cpp!!!	generate(in sys : simulator, inout ranf : random_distribution) : change_set
+std::unique_ptr< trial::change_set > resultset (new trial::change_set (*this));
+const double cell_length( dynamic_cast< periodic_cube::periodic_system const& >( sys ).length() );
+// ADD
+// ---
+const auto& ens = sys.get_ensemble();
+if (ens.count() + 1 == ens.max_size())
+{
+   resultset->set_fail(); // Too many particles
+   return resultset;
+}
+trial::change_atom result;
+result.key = this->specie_key();
+result.do_old = false;
+// give particle a random position within boundary
+result.new_position.x = ranf.uniform( 0.0, cell_length );
+result.new_position.y = ranf.uniform( 0.0, cell_length );
+result.new_position.z = ranf.uniform( 0.0, cell_length );
+result.eps_new = sys.permittivity_at( result.new_position );
+// Use sys.size as 'invalid' particle index
+result.index = sys.get_ensemble().size();
+const auto& spc = sys.get_specie( result.key );
+resultset->update_exponential_factor( spc.chemical_potential() );
+resultset->update_probability_factor( std::pow( cell_length, 3 ) / (spc.count() + 1) );
+resultset->add_atom( result );
+return resultset;
+
+!!!587825.cpp!!!	label() : string
+  return "-- Add";

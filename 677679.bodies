@@ -1,0 +1,52 @@
+class LogfileReader
+!!!1180591.python!!!	__init__(inout self : , in run : uint)
+
+!!!1181487.python!!!	process(in filename : string) : void
+fullpath = os.path.abspath (filename)
+self.directory = os.path.dirname (fullpath)
+self.filename = os.path.basename (fullpath)
+istream = open(filename)
+
+# Build search set ( findKey, onFindFunc, once )
+search_strs = []
+for ion in self.ion_names:
+  search_strs.append ( (ion + "  ion:", lambda x, y=""+ion: self.concentration.__setitem__(y, x.split ()[3]), False  ) )
+search_strs.append ( ( " INNER", lambda x: self.__setattr__('trys_per_step', int(x.split ()[3])), True  ) )
+search_strs.append ( ( " FOR STEP", lambda x: self.__setattr__('steps', int(x.split ()[4])), True ) )
+search_strs.append ( ( " UUID", lambda x: self.__setattr__('uuid', x.split ()[2].strip()), True ) )
+search_strs.append ( ( " RUN NUMBER", lambda x: self.__setattr__('run', int(x.split ()[2])), True ) )
+search_strs.append ( ( " T [K]", lambda x: self.__setattr__('temperature', float(x.split ("=")[1])), True ) )
+for line in istream :
+  for term in search_strs:
+    if -1 != line.find (term[0]):
+      term[1](line)
+      if term[2]:
+        search_strs.remove(term)
+      break
+
+# delay float conversion until end of log file
+for name in self.ion_names :
+  if name in self.concentration:
+    self.concentration[name] = float(self.concentration[name])
+
+# remove any zero concentration entries.
+delkeys = []
+for name in self.concentration.keys():
+  if not 0 < self.concentration[name]:
+    delkeys.append(name)
+for name in delkeys:
+  del self.concentration[name]
+
+self.ionic_strength = sum(self.concentration.values())
+
+self.ratio = 999
+
+if "Na" in self.concentration:
+  if self.ionic_strength != 0.0 or self.ionic_strength != self.concentration["Na"]:
+    other = 0
+    for ion in self.concentration:
+      if not ion in  ( 'Cl', 'Na', 'NN', 'N1' ):
+        if 0 < self.concentration[ion]:
+          other += self.concentration[ion]
+    if other != 0.0:
+      self.ratio = self.concentration["Na"]/other

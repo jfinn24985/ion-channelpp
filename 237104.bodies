@@ -1,0 +1,87 @@
+class patch_matrix_fixture
+!!!363312.cpp!!!	patch_matrix_fixture()
+: alfa_()
+, dxf_( 4.0 )
+, dxw_( 4.0 )
+, epsw_( 80.0 )
+, epspr_( 10.0 )
+, expected_size_( 620 )
+, nsub_( 10 )
+, zl1_( 5.3 )
+, zl2_()
+, zl3_()
+, rl1_( 8.8 )
+, rl2_()
+, rl3_()
+, rl4_( 30.0 )
+, rlvest_( 10.0 )
+, rlmemb_( 5.0 )
+, temperature_( 300.0 )
+{
+   zl2_ = zl1_ + rlvest_;
+   zl3_ = zl2_ - rlmemb_;
+   rl2_ = rl1_ + rlvest_;
+   rl3_ = rl4_ - rlmemb_;
+   alfa_ = core::constants::electron_charge() / std::sqrt(4 * core::constants::pi() * temperature_ * core::constants::boltzmann_constant() * core::constants::epsilon_0() * core::constants::angstrom() );
+}
+!!!369712.cpp!!!	define_grid(inout grid : icc_surface_grid, inout os_log : ostream) : void
+UTILITY_CHECK( grid.empty(), "Cannot define grid twice");
+
+// Set patch division parameters on grid.
+grid.set_dxf( dxf_ );
+grid.set_dxw( dxw_ );
+grid.set_nsub0( nsub_ );
+
+//       |theta1 = pi/2
+// theta2|     theta0 = 0.0
+//  ---- z ----- theta4 = 2pi
+// = pi  |
+//       | theta3 = 3/2 pi
+// d_theta = pi/2
+const double theta0( 0.0);
+const double theta1( core::constants::pi() / 2);
+const double theta2( core::constants::pi() );
+const double theta3( core::constants::pi() * 3.0/2.0 );
+const double theta4( 2 * core::constants::pi() );
+
+// Get geometry data
+const double geom_zl1( zl1_ );
+const double geom_rl1( rl1_ );
+const double geom_rl2( rl2_ );
+const double geom_rlvest( rlvest_ );
+const double geom_zl2( zl2_ );
+const double geom_rl3( rl3_ );
+const double geom_zl3( zl3_ );
+const double geom_rl4( rl4_ );
+const double geom_rlcurv( rlmemb_ );
+
+// Minimum number of tiles along z dimension
+const int channel_min_z_tiles (10);
+const int outer_min_z_tiles (4);
+const int min_r_tiles (16);
+
+// Channel pore cylinder
+grid.add_line( -geom_zl1, geom_zl1, geom_rl1, epspr_, epsw_, channel_min_z_tiles, min_r_tiles, true, os_log );
+
+// Channel protein outer cylinder
+grid.add_line( -geom_zl3, geom_zl3, geom_rl4, epspr_, epsw_, outer_min_z_tiles, min_r_tiles, false, os_log );
+
+// Hi-z inner arc
+grid.add_arc( geom_zl1, geom_rl2, geom_rlvest, theta3, theta4, epspr_, epsw_, outer_min_z_tiles, min_r_tiles, true, os_log );
+
+// Hi-z outer arc
+grid.add_arc( geom_zl3, geom_rl3, geom_rlcurv, theta0, theta1, epspr_, epsw_, outer_min_z_tiles, min_r_tiles, true, os_log );
+
+// lo-z outer arc
+grid.add_arc( -geom_zl3, geom_rl3, geom_rlcurv, theta1, theta2, epspr_, epsw_, outer_min_z_tiles, min_r_tiles, true, os_log );
+
+// lo-z inner arc
+grid.add_arc( -geom_zl1, geom_rl2, geom_rlvest, theta2, theta3, epspr_, epsw_, outer_min_z_tiles, min_r_tiles, true, os_log );
+
+// hi-z wall
+grid.add_wall( geom_zl2, geom_rl2, geom_rl3, epspr_, epsw_, 0, 0, true, os_log );
+
+// lo-z wall
+grid.add_wall( -geom_zl2, geom_rl2, geom_rl3, epspr_, epsw_, 0, 0, false, os_log );
+
+os_log << "Grid builder complete\n";

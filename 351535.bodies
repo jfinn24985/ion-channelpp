@@ -1,0 +1,83 @@
+class MergeApplication
+!!!489775.python!!!	main(in argc : int, in argv : char) : void
+# Initialise argument parsing system to handle:
+#
+result = None
+import simdict
+try:
+  import argparse
+  parser = argparse.ArgumentParser(description="Combine several data files into an averaged output file")
+  parser.add_argument('-i','--input',dest='inputsource',metavar='filename',nargs='+',help='The list of filenames/directory of the data set definitions')
+  parser.add_argument('-s','--scale',metavar='scale',nargs=1,help='Request that data set be scaled to the given ionic strength')
+  simdict.SummaryReader.commandline_add(parser)
+  # process sys.argv
+  result = parser.parse_args ()
+except ImportError:
+  from optparse import OptionParser
+  parser = OptionParser(description="Combine several data files into an averaged output file")
+  parser.add_option('-i','--input',dest='inputsource',metavar='filename',help='The list of filenames/directory of the data set definitions',action='append',type='string')
+  parser.add_option('-s','--scale',metavar='scale',nargs=1,help='Request that data set be scaled to the given ionic strength',action='store',type='string')
+  simdict.SummaryReader.commandline_add(parser)
+  ( result, args ) = parser.parse_args()
+  if args:
+    result.inputsource += args
+
+# Process class based args
+simdict.SummaryReader.commandline_action(result)
+
+print "input files/directories:",result.inputsource
+print "target ionic strength  :",result.scale
+
+if result.scale:
+  self.target_ionic_strength = float(result.scale[0])
+
+# Create the predefined record map
+# simdict.ResultSetMerger.initialise_definitions ()
+
+# set data set file list, if none set on command line use
+# current directory.
+import os
+if not result.inputsource:
+  result.inputsource = os.curdir
+
+for subpath in result.inputsource:
+  path = os.path.abspath(subpath)
+  if os.path.isdir(path):
+    for dirs in os.walk(path):
+      # look in directory for merge files.
+      for subfile in dirs[2]:
+        if self.merge_regex.search (subfile):
+          self.process (os.path.join (dirs[0], subfile))
+  else:
+    # use filename directly
+    self.process (path)
+!!!489519.python!!!	process(in self : MergeApplication, in path : string) : void
+# prepare the merger object by creating a fake simulation digest
+import os
+merge_run = 0
+fname = os.path.basename (path)
+match = self.merge_regex.search (fname)
+if match:
+  merge_run = int(match.group ("run"))
+else:
+  print "Regular expression \"",self.merge_regex,"\" had no match to ",fname
+  return 
+import uuid
+auuid = uuid.uuid4()
+
+# Get ionic strength
+target_strength = self.target_ionic_strength
+if target_strength == None:
+  target_strength = 0.0
+
+# "Run","Trials", "Ratio", "UUID", "RootPath", "Temperature", "IonicStr", "Ions"
+digest = " %d 0 0.000 \"%s\" \"%s\" 0 %d 0" % ( merge_run, auuid.hex.upper(), os.path.dirname (os.path.dirname (path)), target_strength )
+
+import simdict
+
+merger = simdict.ResultSetMerger(digest)
+
+print merger.digest()
+
+merger.merge()
+print merger.digest()

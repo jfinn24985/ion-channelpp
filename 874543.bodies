@@ -1,0 +1,1218 @@
+class accu
+!!!1555247.cpp!!!	serialize(inout ar : Archive, in version : unsigned int) : void
+    ar & an;
+    ar & ah;
+    ar & anin;
+    ar & amove;
+    ar & acreat;
+    ar & aocc;
+    ar & athist;
+    ar & ataccu;
+    ar & gz;
+    ar & calgin;
+
+    if (calgin)
+    {
+        ar & gin;
+        ar & gin_charge;
+    }
+
+    ar & calrdf;
+
+    if (calrdf)
+    {
+        ar & ardf;
+        ar & drdf;
+        ar & nrdf;
+    }
+
+    ar & anaca;
+    ar & asuba;
+    ar & zocc;
+!!!1556271.cpp!!!	accum(in bufer_1 : guard_letter) : void
+    const conf & conf_1 = parent_.get_particles ();
+    const ion_specie & spec_1 = parent_.get_specie ();
+    const uint8_type nspec = spec_1.count ();
+
+    /*<       do ireg=1,3 >*/
+    for (uint8_type ireg = 0; ireg < BulkRegion; ++ireg)
+    {
+        uint8_type i[SpecieSize];
+
+        for (uint8_type j = 0; j < SpecieSize; ++j) { i[j] = 0; }
+
+        for (uint8_type j = 0, counter_ = 0; j < nspec; ++j)
+        {
+            uint8_type reg_count_ = conf_1.count (ireg, j);
+
+            if (! spec_1.channel_only (j))
+            {
+                /*<         i1=nin(ireg,istr+1) >*/
+                const uint8_type om_ = static_cast<uint8_type> (OccupancyMax);
+                const uint8_type rc_ = static_cast<uint8_type> (reg_count_);
+                i[counter_] = std::min (om_, rc_);
+                ++counter_;
+            }
+
+            anin (j, ireg) += reg_count_;
+        }
+
+        /*<         aocc(ireg,i1,i2,i3,i4)=aocc(ireg,i1,i2,i3,i4)+1.0 >*/
+        ++aocc[ireg][i[0]][i[1]][i[2]][i[3]];
+    }
+
+    for (uint8_type jspec = 0; jspec < nspec; ++jspec)
+    {
+        /*<         an(jspec)=an(jspec)+dble(n(jspec)) >*/
+        an[jspec] += conf_1.count (jspec);
+    }
+
+    /*<         ah(i)=ah(i)+h(i) >*/
+    bufer_1.add_h (ah);
+    /*<       ataccu=ataccu+1.0 >*/
+    ++ataccu;
+!!!1556527.cpp!!!	do_readin(inout scnr : reader) : void
+    GRS400_REQUIRE (scnr.name () == dictionary::sampler_label, "incorrect section label");
+    bool gz_defined = false;
+    bool gin_defined = false;
+
+    while (scnr.next ())
+    {
+        if (scnr.name () == dictionary::calgin_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::calgin_label + " tag with no content").c_str ());
+            scnr.get_content (calgin);
+        }
+        else if (scnr.name () == dictionary::calrdf_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::calrdf_label + " tag with no content").c_str ());
+            scnr.get_content (calrdf);
+        }
+        else if (scnr.name () == dictionary::gz_geometry_label)
+        {
+            gzgeom_->do_readin (scnr);
+            gz_defined = true;
+        }
+        else if (scnr.name () == dictionary::gin_geometry_label)
+        {
+            if (NULL == gingeom_.get ())
+            {
+                gingeom_.reset (new gin_geometry);
+            }
+
+            gingeom_->do_readin (scnr);
+            gin_defined = true;
+        }
+        else
+        {
+            GRS400_ALWAYS (scnr.at_end (), ("unrecognised tag in input file " + scnr.name ()).c_str ());
+            break;
+        }
+    }
+
+    GRS400_ALWAYS (gz_defined, "sampler requires 'gz' definition");
+    GRS400_ALWAYS (! calgin || gin_defined, "calculate 'gin' (calgin=true) requested but no 'gin' definition");
+!!!1556655.cpp!!!	do_readin() : void
+    gzgeom_->do_readin ();
+
+    if (calgin)
+    {
+        if (NULL == gingeom_.get ())
+        {
+            gingeom_.reset (new gin_geometry);
+        }
+
+        gingeom_->do_readin ();
+    }
+    else
+    {
+        if (NULL != gingeom_.get ())
+        {
+            gingeom_.reset ();
+        }
+    }
+
+    reset ();
+!!!1557039.cpp!!!	hist() : void
+    fp_env::check ("floating point error entering hist()");
+    const geom & geom_1 = parent_.get_environment();
+    /*<       athist=athist+1.0 >*/
+    ++athist;
+    /*<       do ispec=1,nspec >*/
+    const conf & conf_1 = parent_.get_particles ();
+    const ion_specie & spec_1 = parent_.get_specie ();
+    const uint8_type nspec = spec_1.count();
+
+    double min_z = 0.;
+    double max_z = 0.;
+    double average_z = 0.;
+
+    for (uint16_type ii = 0; ii < conf_1.max_count (); ++ii)
+    {
+        const uint8_type ispec = conf_1.specie_of (ii);
+
+        if (nspec <= ispec)
+        {
+            // skip deleted particle
+            continue;
+        }
+
+        /*<             rzi=rz(ii) >*/
+        const double rzi = conf_1.z (ii);
+        average_z += rzi;
+        min_z = std::min (min_z, rzi);
+        max_z = std::max (max_z, rzi);
+
+        /*<             nsofar=0 >*/
+        /* nzreg is always 5 */
+        /*<             do j=1,nzreg(ispec) >*/
+        /*<                     k=int((rzi-zzreg(j-1,ispec))/dzg(j,ispec))+1 >*/
+        /*<                     gz(ispec,k+nsofar)=gz(ispec,k+nsofar)+1.0 >*/
+        /*<               nsofar=nsofar+nzg(j,ispec) >*/
+        if (gzgeom_->within (ispec, rzi))
+        {
+            ++gz [ispec][gzgeom_->division_of (ispec, rzi)];
+        }
+
+        if (DEBUG)
+        {
+            std::clog << "PARTICLE [" << int (ispec) << "][" << int (ii) << "] r = " << rzi << "\n";
+        }
+
+        /*<             if (calgin) then  >*/
+        if (calgin)
+        {
+            /*<             r2i=r2(ii) >*/
+            const double r2i = conf_1.r (ii);
+
+            /* Check if particle is in gin sample region */
+            /*<                if (dabs(rzi).lt.-zinlft.and.r2i.lt.rinup) then >*/
+            if (gingeom_->within (rzi, r2i))
+            {
+                /*<                     k=int((rzi-zinlft)/drg)+1 >*/
+                const uint16_type k = gingeom_->z_index_of (rzi);
+                /*<                     l=int(r2i/drg)+1 >*/
+                const uint16_type l = gingeom_->r_index_of (r2i);
+                /*<                     gin(nspec+1,k,l)=gin(nspec+1,k,l)+z(ispec) >*/
+                gin_charge[ginchg_ (k, l)] += spec_1.valency (ispec);
+                /*<                     gin(ispec,k,l)=gin(ispec,k,l)+1.0      >*/
+                ++gin[ispec][gin_ (gingeom_.get (), k, l)];
+            }
+        }
+
+        if (! (geom_1.region_left (ChannelRegion, ispec) <= rzi && rzi <= geom_1.region_right (ChannelRegion, ispec)))
+        {
+            ++anin (ispec, BulkRegion);
+        }
+    }
+
+    std::cout << "Average particle location = " << (average_z / conf_1.count ())
+              << ", (min,max) = (" << min_z << ", " << max_z << ")\n";
+
+    /*<       if (calrdf) then >*/
+    if (calrdf)
+    {
+        for (uint8_type ireg = 0; ireg < ChannelRegion; ++ireg)
+        {
+            /*<          do ispec=1,nspec >*/
+            for (uint8_type ispec = 0; ispec < nspec; ++ispec)
+            {
+                /*<            do i=1,nin(1,ispec) >*/
+                const uint16_type nipart_ = conf_1.count (ireg, ispec);
+
+                for (uint16_type i = 0; i < nipart_; ++i)
+                {
+                    /*<              ii=indreg(1,ispec,i) >*/
+                    const uint16_type ii = conf_1.global_index (ireg, ispec, i);
+
+                    /*<              do jspec=1,nspec >*/
+                    for (uint8_type jspec = 0; jspec < nspec; ++jspec)
+                    {
+                        const double dd_ = spec_1.closest_approach (ispec, jspec);
+                        /*<                do j=1,n(jspec) >*/
+                        const uint16_type njpart = conf_1.count (jspec);
+
+                        for (uint16_type j = 0; j < njpart; ++j)
+                        {
+                            /*<                  jj=indspc(jspec,j) >*/
+                            const uint16_type jj = conf_1.global_index (jspec, j);
+                            /*<                  rzj=rz(jj) >*/
+                            const double rij = conf_1.separation (ii, jj);
+
+                            /*<                  if (dabs(rzi-rzj).lt.20.0) then >*/
+                            if (rij < constants::rdf_cutoff)
+                            {
+                                /*<                    rxj=rx(jj) >*/
+                                /*<                    ryj=ry(jj) >*/
+                                /*<                      k=int((rij-dd(ispec,jspec))/drdf)+1 >*/
+                                const uint16_type k0 (AccumulatorSize2 - 1);
+                                const uint16_type k1 = static_cast< uint16_type > ( (rij - dd_) / drdf);
+                                const uint16_type k = std::min (k0, k1);
+                                /*<                        rdf(1,ispec,jspec,k)=rdf(1,ispec,jspec,k)+1.0 >*/
+                                ++rdf[ireg][ispec][jspec][k];
+                                /*<                        ardf(1,ispec,jspec)=ardf(1,ispec,jspec)+1.0 >*/
+                                ++ardf[ireg][ispec][jspec];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+!!!1557295.cpp!!!	reset() : void
+    /* _ ZERO OUT STUFF ______ */
+    /*<        an(ispec)=0.0 >*/
+    an = 0U;
+    /*<         double ah[PatchSize] = 0.0 >*/
+    ah.resize (0);
+    // anin[0:RegionSize][0:RegionSize] = 0.
+    static distribution_type< uint16_type > zero_ = {{ { 0 } }};
+    anin = zero_;
+    /*<        amove(1,ispec)=0.0 >*/
+    /*<        amove(2,ispec)=0.0 >*/
+    /*<        ajump(1,ispec)=0.0 >*/
+    /*<        ajump(2,ispec)=0.0 >*/
+    /*<        ajin(1,ispec)=0.0 >*/
+    /*<        ajin(2,ispec)=0.0 >*/
+    /*<        ajout(1,ispec)=0.0 >*/
+    /*<        ajout(2,ispec)=0.0 >*/
+    amove = 0U;
+    /* uint32_type acreat[RegionSize][SaltSize][2] = 0 */
+    /* uint32_type adest[RegionSize][SaltSize][2] = 0 */
+    acreat = 0U;
+    /*<  aocc(1:3,0:4,0:4,0:4,0:4)=0.0 >*/
+    std::char_traits< uint32_type >::assign (&aocc[0][0][0][0][0], RegionSize * OccupancyMax * OccupancyMax * OccupancyMax * OccupancyMax, 0U);
+    /*<       athist = 0.0 >*/
+    athist = 0;
+    /*<       ataccu = 0.0 >*/
+    ataccu = 0;
+
+    GRS400_ALWAYS (NULL != gzgeom_.get (), "a valid sampler always has a 'gz' geometry object");
+
+    for (uint8_type ispec = 0; ispec < parent_.get_specie ().count (); ++ispec)
+    {
+        /* gz[SpecieSize][AccumulatorSize1] = 0 */
+        if (gz[ispec].size () != gzgeom_->count (ispec))
+        {
+            gz[ispec].resize (gzgeom_->count (ispec));
+        }
+
+        gz[ispec] = 0U;
+
+        if (calgin)
+        {
+            /* gin[SpecieSize][AccumulatorSize2][AccumulatorSize2] = 0 */
+            if (gin[ispec].size () != gingeom_->count_radial () * gingeom_->count_axial ())
+            {
+                gin[ispec].resize (gingeom_->count_radial () * gingeom_->count_axial ());
+            }
+
+            gin[ispec] = 0U;
+        }
+    }
+
+    if (calgin)
+    {
+        gin_charge = 0.;
+    }
+
+    if (calrdf)
+    {
+        /*<  ardf(1:3,1:nspec,1:nspec)=0.0 >*/
+        std::char_traits< uint32_type >::assign (&ardf[0][0][0], RegionSize * SpecieSize * SpecieSize, 0U);
+        /*<  rdf(1:3,1:nspec,1:nspec,1:nrdf)=0.0 >*/
+        std::char_traits< uint32_type >::assign (&rdf[0][0][0][0], RegionSize * SpecieSize * SpecieSize * AccumulatorSize2, 0U);
+    }
+
+    anaca.clear ();
+    asuba.clear ();
+
+!!!1557423.cpp!!!	saves(inout a_os : ostream, in istep : uint32_type) : void
+    fp_env::check ("floating point error occured before saves()");
+
+    /*<       write(*,*)" Begin saves" >*/
+    if (DEBUG)
+    {
+        std::clog << " Begin saves\n";
+    }
+
+    const geom & geom_1 = parent_.get_environment();
+
+    const patch & patch_1 = parent_.get_patch();
+
+    const ion_specie & spec_1 = parent_.get_specie();
+
+    const uint8_type nspec_ = spec_1.count ();
+
+    a_os << constants::output_divider << "\n";
+
+    /*<       write(2,'(" zl4 [A]     = ",f10.5)')zl(4) >*/
+    a_os << " MC cylinder (" << geom_1.region_right (BulkRegion) - geom_1.region_left (BulkRegion) << ", ";
+
+    /*<       write(2,'(" rl5 [A]     = ",f10.5)')rl(5) >*/
+    /*<       write(2,*) >*/
+    a_os << geom_1.region_radial (BulkRegion) << ")\n";
+
+    /*<       write(2,'(" epspr       = ",f10.5)')epspr    >*/
+    /*<       write(2,*) >*/
+    a_os << " Relative permittivities: protein (" << patch_1.protein_eps ()
+         << ") water (" << patch_1.water_eps () << ")\n";
+
+    // Salt part of saves
+//    {
+//        const salt & salt_1 = parent_.get_salt();
+//        /*<       do igr=1,nsalt >*/
+//        const uint8_type nsalt_ = salt_1.count ();
+//
+//        for (uint8_type igr = 0; igr < nsalt_; ++igr)
+//        {
+//            /*<    write(a4,\": ctarg = \",f11.8,\", chemp = \",f10.5,\", excess = \",f10.6)...    >*/
+//            a_os << "Salt " << salt_1.name (igr) << ": ctarg = " <<  salt_1.concentration (igr)
+//                 << ", chemp = " << salt_1.chemical_potential (igr)
+//                 << ", excess = " << salt_1.chemical_excess (igr) << "\n";
+//        }
+//    }
+
+    /*<       write(2,*) >*/
+
+    a_os << "Particles |     N |   q [e] |   d [A]\n";
+
+    for (uint8_type ispec = 0; ispec < nspec_; ++ispec)
+    {
+        a_os << " " << spec_1.name (ispec) << "       | "
+             << std::setw (5) << parent_.get_particles ().count (ispec) << " | "
+             << std::fixed << std::setw (7) << std::setprecision (3) << spec_1.valency (ispec) << " | "
+             << std::setw (7) << std::setprecision (3) << spec_1.diameter (ispec) << "\n";
+    }
+
+    /* ##### Calculate and write out concentration profiles ############### */
+    /*<         do ispec=1,nspec >*/
+    for (uint8_type ispec = 0; ispec < nspec_; ++ispec)
+    {
+        /*<           fngz  = fgz(ispec) >*/
+        /*<           open(22,file=fngz) >*/
+        std::ofstream os22_ (fngz (spec_1.name (ispec), parent_.job_suffix ()).c_str ());
+        GRS400_ALWAYS (os22_, ("unable to open file " + fngz (spec_1.name (ispec), parent_.job_suffix ()) + " for writing").c_str ());
+        os22_ << "# Z-coord\tConc.\tCount\tVolume\tWidth\n";
+        /*<            do i=1,nzgtot(ispec) >*/
+        const uint16_type nzgtot_ = gzgeom_->count (ispec);
+
+        for (uint16_type i_ = 0; i_ < nzgtot_; ++i_)
+        {
+            /*<              anz = tosi*gz(ispec,i)/athist >*/
+            const double anz = (constants::tosi * gz[ispec][i_]) / double (athist);
+            /*<              cz(ispec,i) = tosi*gz(ispec,i)/athist/vjz(ispec,i) >*/
+            const double cz = (feq (0., anz) ? 0. : anz / gzgeom_->volume (ispec, i_));
+            /*<        >*/
+            os22_ << gzgeom_->coord_axial (ispec, i_) << " \t" << cz << " \t" << anz << " \t"
+                  << gzgeom_->volume (ispec, i_) << " \t"
+                  << gzgeom_->division_width (ispec,  gzgeom_->section (ispec, i_)) << "\n";
+        }
+    }
+
+    //  Calculate and write out concentration profiles
+    /*<       if (calgin) then >*/
+    if (patch_1.in_use() && calgin)
+    {
+        /*<         do ispec=1,nspec   >*/
+        for (uint8_type ispec = 0; ispec < nspec_; ++ispec)
+        {
+            /*<             open(12,file=fngin) >*/
+            std::ofstream os12_ (fngin (spec_1.name (ispec), parent_.job_suffix ()).c_str ());
+            GRS400_ALWAYS (os12_, ("unable to open file " + fngin (spec_1.name (ispec), parent_.job_suffix ()) + " for writing").c_str ());
+            os12_ << "# Z-coord\tR-coord\tConc.\tSub-volume\n";
+            /*<             do i=1,nrgz  >*/
+            const uint16_type nrgz_ = gingeom_->count_axial ();
+
+            for (uint16_type i_ = 0; i_ < nrgz_; ++i_)
+            {
+                /*<                do j=1,nrgr          >*/
+                const uint16_type nrgr_ = gingeom_->count_radial ();
+
+                for (uint16_type j_ = 0; j_ < nrgr_; ++j_)
+                {
+                    /*<        >*/
+                    const double cin_ = constants::tosi * gin[ispec][gin_ (gingeom_.get(), i_, j_)] / (athist * gingeom_->volume (j_));
+                    /*<                   zri=zinlft+(i-1)*drg+drg/2.0 >*/
+                    const double zri = gingeom_->coord_axial (i_);
+                    /*<                   rrj=(j_-1)*drg+drg/2.0 >*/
+                    const double rrj = gingeom_->coord_radial (j_);
+                    /*<                   write(12,*)zri,rrj,cin(ispec,i,j_),vjin(ispec,i,j_) >*/
+                    os12_ << zri << " \t" << rrj << " \t" << cin_ << " \t" << gingeom_->volume (j_) << "\n";
+                }
+
+                /*<                write(12,*) >*/
+                os12_ << "\n";
+            }
+        }
+    }
+
+    /*<       if (calrdf) then >*/
+    if (calrdf)
+    {
+        /*<         do ispec=1,nspec >*/
+        for (uint8_type ispec = 0; ispec < nspec_; ++ispec)
+        {
+            /*<           do jspec=1,nspec >*/
+            for (uint8_type jspec = 0; jspec < nspec_; ++jspec)
+            {
+                /*<             ddi=dd(ispec,jspec) >*/
+                const double ddi = spec_1.closest_approach (ispec, jspec);
+                /*<             open(22,file=frdf(ispec,jspec)) >*/
+                std::ofstream os22_ (frdf (spec_1.name (ispec), spec_1.name (jspec), parent_.job_suffix ()).c_str ());
+                GRS400_ALWAYS (os22_, ("unable to open file " + frdf (spec_1.name (ispec), spec_1.name (jspec), parent_.job_suffix ()) + " for writing").c_str ());
+                os22_ << "# R-coord\tRadial dist. 1\tRadial dist. 2\tdist/vol 1\tdist/vol 2\n";
+
+                /*<             do j=1,nrdf >*/
+                const uint16_type nrdf_ = nrdf;
+
+                for (uint16_type j = 0; j < nrdf_; ++j)
+                {
+                    /*<               rlow=ddi+(j-1)*drdf >*/
+                    const double rlow = ddi + (j) * drdf;
+                    /*<               rhigh=rlow+drdf >*/
+                    const double rhigh = rlow + drdf;
+                    /*<               ri=rlow+drdf/2.0 >*/
+                    const double ri = rlow + drdf / 2.;
+                    /*<               vshell=4*pi*(rhigh**3-rlow**3)/3.0 >*/
+                    const double vshell = constants::pi * 4 * (rhigh * rhigh * rhigh - rlow * rlow * rlow) / 3.;
+                    /*<               if (ardf(1,ispec,jspec).gt.0.01) then >*/
+                    /*<                 rdfi1=rdf(1,ispec,jspec,j)/ardf(1,ispec,jspec) >*/
+                    /*<               else >*/
+                    /*<                 rdfi1=0.0 >*/
+                    const double rdfi1 = (ardf[1][ispec][jspec] > 0
+                                          ? rdf[1][ispec][jspec][j] / ardf[1][ispec][jspec]
+                                          : 0.);
+                    /*<               if (ardf(2,ispec,jspec).gt.0.01) then >*/
+                    /*<                 rdfi2=rdf(2,ispec,jspec,j)/ardf(2,ispec,jspec) >*/
+                    /*<               else >*/
+                    /*<                 rdfi2=0.0 >*/
+                    const double rdfi2 = (ardf[2][ispec][jspec ] > 0
+                                          ? rdf[2][ispec][jspec][j] / ardf[2][ispec][jspec ]
+                                          : 0.);
+                    /*<               write(22,*)ri,rdfi1,rdfi2,rdfi1/vshell,rdfi2/vshell >*/
+                    os22_ << ri << " \t"
+                          << rdfi1 << " \t"
+                          << rdfi2 << " \t"
+                          << rdfi1 / vshell << " \t" << rdfi2 / vshell << "\n";
+                }
+            }
+        }
+    }
+
+    /* ##### Calculate bulk concentration and ############################# */
+    /* ##### number of ions in the filter ################################# */
+    /*<       chfilt=0.0 >*/
+    // double chfilt = 0.;
+    /*<       chzocc=0.0 >*/
+    // double chzocc = 0.;
+    /*<       chchan=0.0 >*/
+    // double chchan = 0.;
+    /*<       chbulk=0.0 >*/
+    // double chbulk = 0.;
+    std::valarray< double > ch (0., RegionSize);
+    // std::valarray< double > czocc (0., SpecieSize * RegionSize); === anaca.back ()(ispec, ireg)
+    std::valarray< double >  ctot (0., SpecieSize);
+
+    /*<         write(2,'(72("#"))') >*/
+    a_os << constants::output_divider << "\n";
+    /*<         write(2,'(i9,". cycle -------- ",i2,". iteration")')istep,iter >*/
+    a_os << std::setw (9) << int (istep) << ". cycle -------- " << std::setw (2) << int (parent_.jobnumber ()) << ". iteration\n";
+    /*<         write(*,'(72("_"))') >*/
+    a_os << constants::output_divider << "\n";
+    static const std::string regionnames_[] = { " CENTRE", " FILTER", "CHANNEL", "   BULK" };
+
+    /*<        >*/
+    a_os << "          |    ";
+
+    for (uint8_type reg = 0; reg <= BulkRegion; ++reg)
+    {
+        a_os << regionnames_[reg] << " |    ";
+    }
+
+    a_os << "TOTAL\n";
+
+    /*<       do ispec=1,nspec >*/
+    anaca.push_back (distribution_type< double > ());
+    asuba.push_back (distribution_type< double > ());
+
+    for (uint8_type ispec = 0; ispec < nspec_; ++ispec)
+    {
+        const double z_ = spec_1.valency (ispec);
+        const std::string nm_ (spec_1.name (ispec));
+        a_os << " " << nm_[0] << nm_[1] << "  ion: | " << std::fixed;
+
+        for (uint8_type ireg = 0; ireg < RegionSize; ++ireg)
+        {
+            if (ireg == BulkRegion)
+            {
+                /*<          anaca(ispec,4,ksub)=cbulk(ispec) >*/
+                /*<         cbulk(ispec)=tosi*anin(4,ispec)/athist/vbulk >*/
+                anaca.back () (ispec, BulkRegion) = double (anin (ispec, BulkRegion)) / double (athist);
+                //anaca.back () (ispec, BulkRegion) = constants::tosi * double (anin (ispec, BulkRegion)) / (double (athist) * geom_1.vbulk (ispec));
+
+                /*<         if (.not.chonly(ispec)) chbulk=chbulk+z(ispec)*cbulk(ispec) >*/
+                if (! spec_1.channel_only (ispec))
+                {
+                    ch[BulkRegion] += z_ * anaca.back () (ispec, BulkRegion);
+                }
+            }
+            else
+            {
+                /*<         czocc(ispec)=anin(1,ispec)/ataccu >*/
+                /*<         cfilt(ispec)=anin(2,ispec)/ataccu >*/
+                /*<         cchan(ispec)=anin(3,ispec)/ataccu >*/
+                /*<          anaca.back ()(ispec,1)=czocc(ispec) >*/
+                /*<          anaca.back ()(ispec,2)=cfilt(ispec) >*/
+                /*<          anaca.back ()(ispec,3)=cchan(ispec) >*/
+                anaca.back () (ispec, ireg) = double (anin (ispec, ireg)) / double (ataccu);
+
+                /*<         chfilt=chfilt+z(ispec)*cfilt(ispec) >*/
+                /*<         chzocc=chzocc+z(ispec)*czocc(ispec) >*/
+                /*<         chchan=chchan+z(ispec)*cchan(ispec) >*/
+                ch[ireg] += z_ * anaca.back () (ispec, ireg);
+            }
+
+            /*<          if (ksub.gt.1) then >*/
+            /*<          else   asuba(ispec,j,ksub)=anaca(ispec,j,ksub) >*/
+            asuba.back () (ispec, ireg) = (anaca.size () * anaca.back () (ispec, ireg)
+                                           - (anaca.size () <= 1 ? 0.
+                                              : (anaca.size () - 1) * anaca[anaca.size () - 2] (ispec, ireg)));
+
+            if (! spec_1.channel_only (ispec))
+            {
+                /*<         do j=1,4 >*/
+                /*<           open(12,file=fnaca(ispec,j)) >*/
+                std::ofstream os12_ (fnaca (spec_1.name (ispec), ireg , parent_.job_suffix ()).c_str()
+                                     , (anaca.size () > 1 ? std::ios_base::out | std::ios_base::app : std::ios_base::out));
+                GRS400_ALWAYS (os12_, ("unable to open file " + fnaca (spec_1.name (ispec), ireg , parent_.job_suffix ()) + " for writing").c_str ());
+
+                if (anaca.size () == 1)
+                {
+                    os12_ << "# Index\t\n";
+                }
+
+                /*<             write(12,*)k,anaca(ispec,j,k),asuba(ispec,j,k) >*/
+                os12_ << anaca.size () << " \t"
+                      << anaca.back () (ispec, ireg) << " \t"
+                      << asuba.back () (ispec, ireg) << "\n";
+            }
+
+            /*        write(*,*) */
+            /*     ;    fion(ispec),cbulk(ispec),cchan(ispec),cfilt(ispec), */
+            /*     :    czocc(ispec),ctot(ispec) */
+            a_os << /* e10.5 */ std::setw (10) << std::setprecision (5) << anaca.back () (ispec, ireg) << " | ";
+        }
+
+        /*        write(*,*)"ispec, athist, vbulk = ", ispec, athist, vbulk */
+        /*<         ctot(ispec)=an(ispec)/ataccu >*/
+        ctot[ispec] = double (an[ispec]) / double (ataccu);
+        a_os << /* e9.3 */ std::setw (8) << std::setprecision (3) << ctot[ispec] << "\n";
+    }
+
+    /*<       ina=istr+2 >*/ // ANION ??
+    // UNUSED const uint8_type ina = spec_1.istr + 2;
+    /*<       ica=istr+3 >*/ // CATION ??
+    // UNUSED const uint8_type ica = spec_1.istr + 3;
+
+    /*<       write(2,'(72("_"))') >*/
+    a_os << constants::output_divider << "\n";
+    a_os << "  Charge: | " << std::fixed;
+
+    for (uint8_type ireg = 0; ireg < RegionSize; ++ireg)
+    {
+        a_os << /* e10.7 */ std::setw (10) << std::setprecision (7) << ch[ireg] << " | ";
+    }
+
+    a_os << "\n";
+
+    /*<       write(2,'(72("_"))') >*/
+    a_os << constants::output_divider << "\n";
+
+    /* #### Salt data #################################################### */
+    const salt & salt_1 = parent_.get_salt ();
+    a_os << "          |     mu old |     mu new | excess old | excess new\n";
+
+    for (uint8_type igc = 0; igc < salt_1.count (); ++igc)
+    {
+        /*<           iv=igcval(igc) >*/
+        const uint8_type iv = salt_1.cation_valency (igc);
+        GRS400_ALWAYS (salt_1.count (igc) == 2, "This version of the code can only handle salts with two species");
+        // Cation is _always_ index 0
+
+        // Count in bulk
+        const double rbulki = anaca.back () (salt_1.get_cation (igc), BulkRegion) / constants::tosi;
+        /*<           rblkcl=cbulk(istr+1)/tosi >*/
+        const double rblkcl = anaca.back () (salt_1.get_chloride (), BulkRegion) / constants::tosi;
+        /*<           chexnw=chemp(igc)-dlog(rbulki*rblkcl**iv) >*/
+        const double chexnw = salt_1.chemical_potential (igc) - std::log (rbulki * std::pow (rblkcl, int(iv)));
+        /*<           chempn=dlog(rtargi)+chexnw >*/
+        // NOTE: this->chemp[igc] = std::log (rtargi) + this->chex[igc];
+        const double chempn = salt_1.chemical_potential (igc) - salt_1.chemical_excess (igc) + chexnw;
+        a_os << " " << salt_1.name (igc) << "     | "
+             << std::setw (10) << std::setprecision (5) << salt_1.chemical_potential (igc) << " | "
+             << std::setw (10) << std::setprecision (5) << chempn << " | "
+             << std::setw (10) << std::setprecision (5) << salt_1.chemical_excess (igc) << " | "
+             << std::setw (10) << std::setprecision (5) << chexnw << "\n";
+    }
+
+    a_os << constants::output_divider << "\n";
+
+    /* ##### Acceptance ratios ############################################ */
+    a_os << " Move Acceptance Ratios (try/succeed)\n";
+    a_os << "          |    TYPE |    SUCCEED |    ATTEMPT |      RATIO\n";
+    static const std::string typenames_[] = { "   Move", "   Jump", " JumpIn", "JumpOut" };
+
+    for (uint8_type spc = 0; spc < spec_1.count (); ++spc)
+    {
+        for (uint8_type type_ = 0; type_ <= JumpOut; ++type_)
+        {
+            const uint64_type succeed_ = amove[amove_ (spc, type_, Succeed)];
+            const uint64_type attempt_ = amove[amove_ (spc, type_, Attempt)];
+            const double ratio_ = (0 == attempt_ ? 0 : double (succeed_) / double (attempt_));
+            a_os << " " << spec_1.name (spc) << "  ion: | " << typenames_[type_] << " | "
+                 << std::setw (10) << succeed_ << " | "
+                 << std::setw (10) << attempt_ << " | "
+                 << std::setw (10) << std::setprecision (5) << ratio_ << "\n";
+        }
+    }
+
+    a_os << constants::output_divider << "\n";
+    a_os << " Create/Destroy Acceptance Ratios\n"; // -3
+    a_os << "             |           CREATE            |           DESTROY          \n";
+    a_os << "      REGION | SUCCEED | ATTEMPT |   RATIO | SUCCEED | ATTEMPT |   RATIO\n" ;
+
+    for (uint8_type slt = 0; slt < salt_1.count (); ++slt)
+    {
+        for (uint8_type reg = 0; reg <= BulkRegion; ++reg)
+        {
+            const uint64_type cr_succeed_ = acreat[acreat_ (reg, slt, Create, Succeed)];
+            const uint64_type cr_attempt_ = acreat[acreat_ (reg, slt, Create, Attempt)];
+            const double cr_ratio_ = (0 == cr_attempt_ ? 0 : double (cr_succeed_) / double (cr_attempt_));
+            const uint64_type ds_succeed_ = acreat[acreat_ (reg, slt, Destroy, Succeed)];
+            const uint64_type ds_attempt_ = acreat[acreat_ (reg, slt, Destroy, Attempt)];
+            const double ds_ratio_ = (0 == ds_attempt_ ? 0 : double (ds_succeed_) / double (ds_attempt_));
+
+            a_os << " " << salt_1.name (slt) << " " << regionnames_[reg] << "| "
+                 << std::setw (7) << cr_succeed_ << " | "
+                 << std::setw (7) << cr_attempt_ << " | "
+                 << std::setw (7) << std::setprecision (5) << cr_ratio_ << " | "
+                 << std::setw (7) << ds_succeed_ << " | "
+                 << std::setw (7) << ds_attempt_ << " | "
+                 << std::setw (7) << std::setprecision (5) << ds_ratio_ << "\n";
+        }
+    }
+
+    a_os << constants::output_divider << "\n";
+    /* ##### Occupancies ################################################## */
+    a_os << "Occupancy:\n";
+    {
+        uint8_type nonstruct_ = 0;
+
+        for (uint8_type spc = 0; spc < spec_1.count (); ++spc)
+        {
+            nonstruct_ += (spec_1.channel_only (spc) ? 0 : 1);
+        }
+
+        for (uint8_type ireg = 0; ireg < BulkRegion; ++ireg)
+        {
+            a_os << "# " << regionnames_[ireg] << "\n" << int (ireg) << "\n";
+            std::string aocc_fmt = "               ";
+
+            switch (nonstruct_)
+            {
+            case 4:
+                aocc_formatter< 3, OccupancyMax * OccupancyMax * OccupancyMax, OccupancyMax >::output (&aocc[ireg][0][0][0][0], aocc_fmt, a_os, double (ataccu));
+                break;
+            case 3:
+                aocc_formatter< 2, OccupancyMax * OccupancyMax * OccupancyMax, OccupancyMax >::output (&aocc[ireg][0][0][0][0], aocc_fmt, a_os, double (ataccu));
+                break;
+            case 2:
+                aocc_formatter< 1, OccupancyMax * OccupancyMax * OccupancyMax, OccupancyMax >::output (&aocc[ireg][0][0][0][0], aocc_fmt, a_os, double (ataccu));
+                break;
+            }
+
+        }
+    }
+//    /*<       open(12,file=focc) >*/
+//    o_1.oerr = 0;
+//    o_1.ounit = 12;
+//    o_1.ofnmlen = 11;
+//    o_1.ofnm = names_1.focc;
+//    o_1.orl = 0;
+//    o_1.osta = 0;
+//    o_1.oacc = 0;
+//    o_1.ofm = 0;
+//    o_1.oblnk = 0;
+//    f_open (&o_1);
+//    /*<          if (nfree.eq.2) then >*/
+//    if (occ_1.nfree == 2)
+//    {
+//        /*<             do ireg=1,3 >*/
+//        for (ireg = 1; ireg <= 3; ++ireg)
+//        {
+//            /*<               do i=0,4 >*/
+//            for (i_ = 0; i_ <= 4; ++i_)
+//            {
+//                /*<               do j=0,4 >*/
+//                for (j = 0; j <= 4; ++j)
+//                {
+//                    /*<                  k=0   >*/
+//                    k = 0;
+//                    /*<                  m=0   >*/
+//                    m = 0;
+//                    /*<                  aocci=aocc(ireg,i,j,k,m) >*/
+//                    aocci = occ_1.aocc[ireg + (i_ + (j + (k + m * 5) * 5) *
+//                                               5) * 3 - 1];
+//                    /*<                  aocci=aocci/ataccu >*/
+//                    aocci /= this->ataccu;
+//                    /*<                  write(12,'(2(i1,1x),f15.10)')i,j,aocci >*/
+//                    ci_1.cierr = 0;
+//                    ci_1.ciunit = 12;
+//                    ci_1.cifmt = "(2(i1,1x),f15.10)";
+//                    s_wsfe (&ci_1);
+//                    do_fio (&c_1, (char *) &i_, (ftnlen) sizeof (integer) );
+//                    do_fio (&c_1, (char *) &j, (ftnlen) sizeof (integer) );
+//                    do_fio (&c_1, (char *) &aocci, (ftnlen) sizeof (doublereal) );
+//                    e_wsfe();
+//                    /*<               enddo >*/
+//                }
+//                /*<               enddo >*/
+//            }
+//            /*<               write(12,*) >*/
+//            s_wsle (&io_396);
+//            e_wsle();
+//            /*<             enddo      >*/
+//        }
+//        /*<             write(12,'(72("_"))') >*/
+//        ci_1.cierr = 0;
+//        ci_1.ciunit = 12;
+//        ci_1.cifmt = "(72(\"_\"))";
+//        s_wsfe (&ci_1);
+//        e_wsfe();
+//        /*<             do ireg=1,3       >*/
+//        for (ireg = 1; ireg <= 3; ++ireg)
+//        {
+//            /*<               do j=0,4 >*/
+//            for (j = 0; j <= 4; ++j)
+//            {
+//                /*<                 azcl=0.0 >*/
+//                azcl = 0.;
+//                /*<                 do i=0,4 >*/
+//                for (i_ = 0; i_ <= 4; ++i_)
+//                {
+//                    /*<                    k=0   >*/
+//                    k = 0;
+//                    /*<                    m=0   >*/
+//                    m = 0;
+//                    /*<                    azcl=azcl+aocc(ireg,i,j,k,m)/ataccu >*/
+//                    azcl += occ_1.aocc[ireg + (i_ + (j + (k + m * 5) * 5) *
+//                                               5) * 3 - 1] / this->ataccu;
+//                    /*<                 enddo >*/
+//                }
+//                /*<                 write(12,'(1(i1,1x),f15.10)')j,azcl   >*/
+//                ci_1.cierr = 0;
+//                ci_1.ciunit = 12;
+//                ci_1.cifmt = "(1(i1,1x),f15.10)";
+//                s_wsfe (&ci_1);
+//                do_fio (&c_1, (char *) &j, (ftnlen) sizeof (integer) );
+//                do_fio (&c_1, (char *) &azcl, (ftnlen) sizeof (doublereal) );
+//                e_wsfe();
+//                /*<               enddo >*/
+//            }
+//            /*<               write(12,*) >*/
+//            s_wsle (&io_398);
+//            e_wsle();
+//            /*<             enddo       >*/
+//        }
+//        /*<          elseif (nfree.eq.3) then >*/
+//    }
+//    else if (occ_1.nfree == 3)
+//    {
+//        /*<             do ireg=1,3 >*/
+//        for (ireg = 1; ireg <= 3; ++ireg)
+//        {
+//            /*<               do i=0,4 >*/
+//            for (i_ = 0; i_ <= 4; ++i_)
+//            {
+//                /*<               do j=0,4 >*/
+//                for (j = 0; j <= 4; ++j)
+//                {
+//                    /*<               do k=0,4 >*/
+//                    for (k = 0; k <= 4; ++k)
+//                    {
+//                        /*<                  m=0   >*/
+//                        m = 0;
+//                        /*<                  aocci=aocc(ireg,i,j,k,m) >*/
+//                        aocci = occ_1.aocc[ireg + (i_ + (j + (k + m * 5) * 5)
+//                                                   * 5) * 3 - 1];
+//                        /*<                  aocci=aocci/ataccu >*/
+//                        aocci /= this->ataccu;
+//                        /*<                  write(12,'(3(i1,1x),f15.10)')i,j,k,aocci >*/
+//                        ci_1.cierr = 0;
+//                        ci_1.ciunit = 12;
+//                        ci_1.cifmt = "(3(i1,1x),f15.10)";
+//                        s_wsfe (&ci_1);
+//                        do_fio (&c_1, (char *) &i_, (ftnlen) sizeof (integer) );
+//                        do_fio (&c_1, (char *) &j, (ftnlen) sizeof (integer) );
+//                        do_fio (&c_1, (char *) &k, (ftnlen) sizeof (integer) );
+//                        do_fio (&c_1, (char *) &aocci, (ftnlen) sizeof (
+//                                    doublereal) );
+//                        e_wsfe();
+//                        /*<               enddo >*/
+//                    }
+//                    /*<               enddo >*/
+//                }
+//                /*<               enddo >*/
+//            }
+//            /*<               write(12,*) >*/
+//            s_wsle (&io_399);
+//            e_wsle();
+//            /*<             enddo      >*/
+//        }
+//        /*<             write(12,'(72("_"))') >*/
+//        ci_1.cierr = 0;
+//        ci_1.ciunit = 12;
+//        ci_1.cifmt = "(72(\"_\"))";
+//        s_wsfe (&ci_1);
+//        e_wsfe();
+//        /*<             do ireg=1,3       >*/
+//        for (ireg = 1; ireg <= 3; ++ireg)
+//        {
+//            /*<               do j=0,4 >*/
+//            for (j = 0; j <= 4; ++j)
+//            {
+//                /*<               do k=0,4 >*/
+//                for (k = 0; k <= 4; ++k)
+//                {
+//                    /*<                 azcl=0.0 >*/
+//                    azcl = 0.;
+//                    /*<                 do i=0,4 >*/
+//                    for (i_ = 0; i_ <= 4; ++i_)
+//                    {
+//                        /*<                    m=0   >*/
+//                        m = 0;
+//                        /*<                    azcl=azcl+aocc(ireg,i,j,k,m)/ataccu >*/
+//                        azcl += occ_1.aocc[ireg + (i_ + (j + (k + m * 5) * 5)
+//                                                   * 5) * 3 - 1] / this->ataccu;
+//                        /*<                 enddo >*/
+//                    }
+//                    /*<                 write(12,'(2(i1,1x),f15.10)')j,k,azcl   >*/
+//                    ci_1.cierr = 0;
+//                    ci_1.ciunit = 12;
+//                    ci_1.cifmt = "(2(i1,1x),f15.10)";
+//                    s_wsfe (&ci_1);
+//                    do_fio (&c_1, (char *) &j, (ftnlen) sizeof (integer) );
+//                    do_fio (&c_1, (char *) &k, (ftnlen) sizeof (integer) );
+//                    do_fio (&c_1, (char *) &azcl, (ftnlen) sizeof (doublereal) );
+//                    e_wsfe();
+//                    /*<               enddo >*/
+//                }
+//                /*<               enddo >*/
+//            }
+//            /*<               write(12,*) >*/
+//            s_wsle (&io_400);
+//            e_wsle();
+//            /*<             enddo       >*/
+//        }
+//        /*<          elseif (nfree.eq.4) then >*/
+//    }
+//    else if (occ_1.nfree == 4)
+//    {
+//        /*<             do ireg=1,3 >*/
+//        for (ireg = 1; ireg <= 3; ++ireg)
+//        {
+//            /*<               do i=0,4 >*/
+//            for (i_ = 0; i_ <= 4; ++i_)
+//            {
+//                /*<               do j=0,4 >*/
+//                for (j = 0; j <= 4; ++j)
+//                {
+//                    /*<               do k=0,4 >*/
+//                    for (k = 0; k <= 4; ++k)
+//                    {
+//                        /*<               do m=0,4 >*/
+//                        for (m = 0; m <= 4; ++m)
+//                        {
+//                            /*<                  aocci=aocc(ireg,i,j,k,m) >*/
+//                            aocci = occ_1.aocc[ireg + (i_ + (j + (k + m * 5)
+//                                                             * 5) * 5) * 3 - 1];
+//                            /*<                  aocci=aocci/ataccu >*/
+//                            aocci /= this->ataccu;
+//                            /*<                  write(12,'(4(i1,1x),f15.10)')i,j,k,m,aocci >*/
+//                            ci_1.cierr = 0;
+//                            ci_1.ciunit = 12;
+//                            ci_1.cifmt = "(4(i1,1x),f15.10)";
+//                            s_wsfe (&ci_1);
+//                            do_fio (&c_1, (char *) &i_, (ftnlen) sizeof (
+//                                        integer) );
+//                            do_fio (&c_1, (char *) &j, (ftnlen) sizeof (integer) )
+//                            ;
+//                            do_fio (&c_1, (char *) &k, (ftnlen) sizeof (integer) )
+//                            ;
+//                            do_fio (&c_1, (char *) &m, (ftnlen) sizeof (integer) )
+//                            ;
+//                            do_fio (&c_1, (char *) &aocci, (ftnlen) sizeof (
+//                                        doublereal) );
+//                            e_wsfe();
+//                            /*<               enddo >*/
+//                        }
+//                        /*<               enddo >*/
+//                    }
+//                    /*<               enddo >*/
+//                }
+//                /*<               enddo >*/
+//            }
+//            /*<               write(12,*) >*/
+//            s_wsle (&io_401);
+//            e_wsle();
+//            /*<             enddo      >*/
+//        }
+//        /*<             write(12,'(72("_"))') >*/
+//        ci_1.cierr = 0;
+//        ci_1.ciunit = 12;
+//        ci_1.cifmt = "(72(\"_\"))";
+//        s_wsfe (&ci_1);
+//        e_wsfe();
+//        /*<             do ireg=1,3       >*/
+//        for (ireg = 1; ireg <= 3; ++ireg)
+//        {
+//            /*<               do j=0,4 >*/
+//            for (j = 0; j <= 4; ++j)
+//            {
+//                /*<               do k=0,4 >*/
+//                for (k = 0; k <= 4; ++k)
+//                {
+//                    /*<               do m=0,4 >*/
+//                    for (m = 0; m <= 4; ++m)
+//                    {
+//                        /*<                 azcl=0.0 >*/
+//                        azcl = 0.;
+//                        /*<                 do i=0,4 >*/
+//                        for (i_ = 0; i_ <= 4; ++i_)
+//                        {
+//                            /*<                    azcl=azcl+aocc(ireg,i,j,k,m)/ataccu >*/
+//                            azcl += occ_1.aocc[ireg + (i_ + (j + (k + m * 5)
+//                                                             * 5) * 5) * 3 - 1] / this->ataccu;
+//                            /*<                 enddo >*/
+//                        }
+//                        /*<                 write(12,'(3(i1,1x),f15.10)')j,k,m,azcl   >*/
+//                        ci_1.cierr = 0;
+//                        ci_1.ciunit = 12;
+//                        ci_1.cifmt = "(3(i1,1x),f15.10)";
+//                        s_wsfe (&ci_1);
+//                        do_fio (&c_1, (char *) &j, (ftnlen) sizeof (integer) );
+//                        do_fio (&c_1, (char *) &k, (ftnlen) sizeof (integer) );
+//                        do_fio (&c_1, (char *) &m, (ftnlen) sizeof (integer) );
+//                        do_fio (&c_1, (char *) &azcl, (ftnlen) sizeof (
+//                                    doublereal) );
+//                        e_wsfe();
+//                        /*<               enddo >*/
+//                    }
+//                    /*<               enddo >*/
+//                }
+//                /*<               enddo >*/
+//            }
+//            /*<               write(12,*) >*/
+//            s_wsle (&io_402);
+//            e_wsle();
+//            /*<             enddo       >*/
+//        }
+//        /*<          endif >*/
+//    }
+//    /*<       close(12) >*/
+//    cl_1.cerr = 0;
+//    cl_1.cunit = 12;
+//    cl_1.csta = 0;
+//    f_clos (&cl_1);
+//    /*<       close(2) >*/
+//    cl_1.cerr = 0;
+//    cl_1.cunit = 2;
+//    cl_1.csta = 0;
+//    f_clos (&cl_1);
+//    /*<       open(2,file=fh) >*/
+//    o_1.oerr = 0;
+//    o_1.ounit = 2;
+//    o_1.ofnmlen = 11;
+//    o_1.ofnm = names_1.fh;
+//    o_1.orl = 0;
+//    o_1.osta = 0;
+//    o_1.oacc = 0;
+//    o_1.ofm = 0;
+//    o_1.oblnk = 0;
+//    f_open (&o_1);
+//    /*<       do i=1,npatch >*/
+//    i_1 = patch_1.npatch;
+//    for (i_ = 1; i_ <= i_1; ++i_)
+//    {
+//        /*<         write(2,*)i,ah(i)/ataccu >*/
+//        s_wsle (&io_403);
+//        do_lio (&c_3, &c_1, (char *) &i_, (ftnlen) sizeof (integer) );
+//        d_1 = ah[i_ - 1] / this->ataccu;
+//        do_lio (&c_5, &c_1, (char *) &d_1, (ftnlen) sizeof (doublereal) );
+//        e_wsle();
+//        /*<       enddo >*/
+//    }
+//    /*<       close(2) >*/
+//    cl_1.cerr = 0;
+//    cl_1.cunit = 2;
+//    cl_1.csta = 0;
+//    f_clos (&cl_1);
+//    /*<       close(32) >*/
+//    cl_1.cerr = 0;
+//    cl_1.cunit = 32;
+//    cl_1.csta = 0;
+//    f_clos (&cl_1);
+//    /*      open(2,file=fdata,form='unformatted') */
+//    /*<       open(2,file=fdata) >*/
+//    o_1.oerr = 0;
+//    o_1.ounit = 2;
+//    o_1.ofnmlen = 11;
+//    o_1.ofnm = names_1.fdata;
+//    o_1.orl = 0;
+//    o_1.osta = 0;
+//    o_1.oacc = 0;
+//    o_1.ofm = 0;
+//    o_1.oblnk = 0;
+//    f_open (&o_1);
+//    /*<        >*/
+//    s_wsle (&io_404);
+//    do_lio (&c_5, &c_6, (char *) &spec_1.d_[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_36, (char *) &spec_1.dd[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_36, (char *) &spec_1.d2[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_6, (char *) &spec_1.z_[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_6, (char *) &spec_1.q[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_6, (char *) &spec_1.ratmov[0], (ftnlen) sizeof (doublereal)
+//           );
+//    do_lio (&c_5, &c_6, (char *) &spec_1.ratexc[0], (ftnlen) sizeof (doublereal)
+//           );
+//    do_lio (&c_5, &c_6, (char *) &spec_1.eps[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_1, (char *) &spec_1.qstar, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_3, &c_6, (char *) &spec_1.itry[0], (ftnlen) sizeof (integer) );
+//    do_lio (&c_8, &c_6, (char *) &spec_1.chonly[0], (ftnlen) sizeof (logical) );
+//    do_lio (&c_3, &c_1, (char *) &spec_1.nspec, (ftnlen) sizeof (integer) );
+//    do_lio (&c_3, &c_1, (char *) &spec_1.istr, (ftnlen) sizeof (integer) );
+//    do_lio (&c_9, &c_10, names_1.fion, (ftnlen) 2);
+//    e_wsle();
+//    /*<       write(2,*)zl,rl,rlvest,rlcurv,epsw,epspr,deps,npatch >*/
+//    s_wsle (&io_405);
+//    do_lio (&c_5, &c_6, (char *) &geom_1.zl[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_6, (char *) &geom_1.rl[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_1, (char *) &geom_1.rlvest, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_1, (char *) &geom_1.rlcurv, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_1, (char *) &geom_1.epsw, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_1, (char *) &geom_1.epspr, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_1, (char *) &patch_1.deps, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_3, &c_1, (char *) &patch_1.npatch, (ftnlen) sizeof (integer) );
+//    e_wsle();
+//    /*<       write(2,*)drmax,vin,vout  >*/
+//    s_wsle (&io_406);
+//    do_lio (&c_5, &c_2, (char *) &moove_1.drmax[0], (ftnlen) sizeof (doublereal)
+//           );
+//    do_lio (&c_5, &c_6, (char *) &moove_1.vin[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_6, (char *) &moove_1.vout[0], (ftnlen) sizeof (doublereal) )
+//    ;
+//    e_wsle();
+//    /*<        >*/
+//    s_wsle (&io_407);
+//    do_lio (&c_5, &c_3, (char *) &salt_1.chemp[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_3, (char *) &salt_1.ctarg[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_12, (char *) &salt_1.vgc[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_3, (char *) &salt_1.chex[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_1, (char *) &salt_1.ctrgcl, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_3, (char *) &salt_1.ratgr[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_3, &c_12, (char *) &salt_1.ispcin[0], (ftnlen) sizeof (integer) );
+//    do_lio (&c_3, &c_3, (char *) &salt_1.igcval[0], (ftnlen) sizeof (integer) );
+//    do_lio (&c_3, &c_3, (char *) &salt_1.isalt[0], (ftnlen) sizeof (integer) );
+//    do_lio (&c_3, &c_3, (char *) &salt_1.ication[0], (ftnlen) sizeof (integer) );
+//    do_lio (&c_3, &c_1, (char *) &salt_1.nsalt, (ftnlen) sizeof (integer) );
+//    do_lio (&c_3, &c_1, (char *) &salt_1.niter, (ftnlen) sizeof (integer) );
+//    do_lio (&c_9, &c_10, names_1.fsalt, (ftnlen) 4);
+//    e_wsle();
+//    /*<       write(2,*)athist,ataccu,dzg,drg,nzg,nrg,nrgr,nrgz >*/
+//    s_wsle (&io_408);
+//    do_lio (&c_5, &c_1, (char *) &this->athist, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_1, (char *) &this->ataccu, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_60, (char *) &this->dzg[0], (ftnlen) sizeof (doublereal) )
+//    ;
+//    do_lio (&c_5, &c_1, (char *) &this->drg, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_3, &c_60, (char *) &this->nzg[0], (ftnlen) sizeof (integer) );
+//    do_lio (&c_3, &c_1, (char *) &this->nrg, (ftnlen) sizeof (integer) );
+//    do_lio (&c_3, &c_1, (char *) &this->nrgr, (ftnlen) sizeof (integer) );
+//    do_lio (&c_3, &c_1, (char *) &this->nrgz, (ftnlen) sizeof (integer) );
+//    e_wsle();
+//    /*<       write(2,*)an,ah,cbulk,zocc,amove,ajump,ajin,ajout,acreat,ades >*/
+//    s_wsle (&io_409);
+//    do_lio (&c_5, &c_6, (char *) &an[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_2000, (char *) &ah[0], (ftnlen) sizeof (doublereal) )
+//    ;
+//    do_lio (&c_5, &c_24, (char *) &anin[0], (ftnlen) sizeof (doublereal) )
+//    ;
+//    do_lio (&c_5, &c_6, (char *) &cbulk[0], (ftnlen) sizeof (doublereal) )
+//    ;
+//    do_lio (&c_5, &c_1, (char *) &zocc, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_12, (char *) &adj_1.amove[0], (ftnlen) sizeof (doublereal) )
+//    ;
+//    do_lio (&c_5, &c_12, (char *) &adj_1.ajump[0], (ftnlen) sizeof (doublereal) )
+//    ;
+//    do_lio (&c_5, &c_12, (char *) &adj_1.ajin[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_12, (char *) &adj_1.ajout[0], (ftnlen) sizeof (doublereal) )
+//    ;
+//    do_lio (&c_5, &c_24, (char *) &adj_1.acreat[0], (ftnlen) sizeof (doublereal)
+//           );
+//    do_lio (&c_5, &c_1, (char *) &ades, (ftnlen) sizeof (doublereal) );
+//    e_wsle();
+//    /*<       write(2,*)nstep,naver,isave >*/
+//    s_wsle (&io_411);
+//    do_lio (&c_3, &c_1, (char *) &simp_1.nstep, (ftnlen) sizeof (integer) );
+//    do_lio (&c_3, &c_1, (char *) &simp_1.naver, (ftnlen) sizeof (integer) );
+//    do_lio (&c_3, &c_1, (char *) &simp_1.isave, (ftnlen) sizeof (integer) );
+//    e_wsle();
+//    /*<       write(2,*)zbulk1,zbulk2,rbulk,vbulk,anaca,anaca.size () >*/
+//    s_wsle (&io_412);
+//    do_lio (&c_5, &c_1, (char *) &zbulk1, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_1, (char *) &zbulk2, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_1, (char *) &rbulk, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_1, (char *) &bulk_1.vbulk, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_b1161, (char *) &anaca[0], (ftnlen) sizeof (
+//                doublereal) );
+//    do_lio (&c_3, &c_1, (char *) &anaca.size (), (ftnlen) sizeof (integer) );
+//    e_wsle();
+//    /*<       write(2,*)nfree,drdf,nrdf,calrdf >*/
+//    s_wsle (&io_413);
+//    do_lio (&c_3, &c_1, (char *) &occ_1.nfree, (ftnlen) sizeof (integer) );
+//    do_lio (&c_5, &c_1, (char *) &radf_1.drdf, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_3, &c_1, (char *) &radf_1.nrdf, (ftnlen) sizeof (integer) );
+//    do_lio (&c_8, &c_1, (char *) &radf_1.calrdf, (ftnlen) sizeof (logical) );
+//    e_wsle();
+//    /*<       write(2,*)cfilt,cchan,ctot,czocc    >*/
+//    s_wsle (&io_414);
+//    do_lio (&c_5, &c_6, (char *) &cfilt[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_6, (char *) &cchan[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_6, (char *) &ctot[0], (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_6, (char *) &czocc[0], (ftnlen) sizeof (doublereal) );
+//    e_wsle();
+//    /*<       write(2,*)chbulk,chchan,chfilt,chzocc >*/
+//    s_wsle (&io_415);
+//    do_lio (&c_5, &c_1, (char *) &chbulk, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_1, (char *) &chchan, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_1, (char *) &chfilt, (ftnlen) sizeof (doublereal) );
+//    do_lio (&c_5, &c_1, (char *) &chzocc, (ftnlen) sizeof (doublereal) );
+//    e_wsle();
+//    /*      write(2)d,dd,d2,z,q,ratmov,ratexc,eps,qstar,itry,chonly, */
+//    /*     :        nspec,istr,fion */
+//    /*      write(2)zl,rl,rlvest,rlcurv,epsw,epspr,deps,npatch */
+//    /*      write(2)drmax,vin,vout */
+//    /*      write(2)chemp,ctarg,vgc,chex,ctrgcl,ratgr,ispcin,igcval,isalt, */
+//    /*     :        ication,nsalt,niter,fsalt */
+//    /*      write(2)athist,ataccu,dzg,drg,nzg,nrg,nrgr,nrgz */
+//    /*      write(2)an,ah,anin,cbulk,zocc,amove,ajump,ajin,ajout,acreat,adest */
+//    /*      write(2)nstep,naver,isave */
+//    /*      write(2)zbulk1,zbulk2,rbulk,vbulk,anaca,anaca.size () */
+//    /*      write(2)nfree,drdf,nrdf,calrdf */
+//    /*      write(2)cfilt,cchan,ctot,czocc */
+//    /*      write(2)chbulk,chchan,chfilt,chzocc */
+//    /*      close(2) */
+    fp_env::check ("floating point error occured in saves()");

@@ -1,0 +1,36 @@
+class alternater_sampler
+!!!213808.cpp!!!	remove_alternater_choice(in choice : alternater_choice) : void
+for (std::vector< alternater_choice const* >::iterator itr = this->choices_.begin(); itr != this->choices_.end(); ++itr)
+{
+   if (*itr == choice)
+   {
+      this->choices_.erase( itr );
+      return;
+   }
+}
+const bool item_not_found( false );
+UTILITY_REQUIRE( item_not_found, "Attempt to remove a choice object that is not in the list." );
+!!!212528.cpp!!!	description(inout out : ostream) : void
+out << "SAMPLER [" << this->type_label() << "]\n";
+out << " Collect data about alternater choice add/remove probabilities\n";
+!!!212784.cpp!!!	enrol(inout sim : simulator) : void
+if (not sim.has_signal(this->type_label()))
+{
+  boost::any sig = &this->prob_signal_;
+  sim.set_signal(this->type_label(), sig);
+}
+if (not this->report_conx_.connected())
+{
+  auto sig = boost::any_cast< platform::simulator::report_signal_type* >(sim.get_signal("report"));
+  this->report_conx_ = sig->connect(boost::bind(&alternater_sampler::on_report, this, _1, _2));
+}
+!!!223920.cpp!!!	on_report(in sim : simulator, inout os : ostream) : void
+if (not this->prob_signal_.empty())
+{
+  std::vector< std::pair< double, double > > probabilities ( sim.specie_count() );
+  for (auto const& item : this->choices_)
+  {
+     probabilities[ item->specie_key() ] = std::make_pair( item->add_success_rate(), item->remove_success_rate() );
+  }
+  this->prob_signal_( probabilities );
+}

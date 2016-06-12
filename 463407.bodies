@@ -1,0 +1,34 @@
+class random_distribution
+!!!1605423.cpp!!!	uniform(in a : double = 1, in b : double = 0) : double
+if ( a == b ) return a;
+boost::random::uniform_real_distribution<> dist( std::min( a, b ), std::max( a, b ) );
+return dist( *this->generator_ );
+!!!1605679.cpp!!!	split_uniform(in outlft : double, in outrht : double, in inlft : double, in inrht : double) : double
+// outlft, inlft, inright, outright
+std::vector< double > bounds = { outlft, inlft, inrht, outrht };
+std::sort(bounds.begin(), bounds.end());
+const double skip ( bounds[2] - bounds[1] );
+const double Result = this->uniform(bounds[0], bounds[3] - skip);
+return (Result > bounds[1] ? Result + skip : Result);
+!!!1754927.cpp!!!	randint(in a : size_t, in b : size_t = 0) : size_t
+if (a == b) return a;
+boost::random::uniform_int_distribution<> dist(std::min(a, b), std::max(a, b));
+return dist( *this->generator_ );
+!!!2061359.cpp!!!	version() : string
+std::stringstream is;
+is << "Boost library version (compile) " <<  (BOOST_VERSION / 100000) << "." << ((BOOST_VERSION / 100) % 1000) << "." << (BOOST_VERSION % 100);
+return is.str ();
+!!!655025.cpp!!!	shuffle(inout alist : ContentType) : void
+typedef typename boost::ptr_vector< ContentType >::difference_type size_type;
+for (size_type n = alist.size() - 1; n > 0; --n)
+{
+  size_type off(this->randint(0, n));
+  if (off != n)
+  {
+    // replace element at 'off' with element from 'n'
+    // (This should be well defined as off < n)
+    auto ptr = alist.replace(alist.begin() + off, alist.release(alist.begin() + n).release());
+    // insert element from 'off' at nth position.
+    alist.insert(alist.begin() + n, ptr.release());
+  }
+}

@@ -1,0 +1,49 @@
+class SplitRegion
+!!!1203375.cpp!!!	generate_position(inout a_gen : mersenne_twister_19937)
+switch (index_)
+{
+case constants::ipblk:
+{
+  // Somewhere in periodic system
+  a_pt.set_z(a_gen() * zhigh_);
+  a_pt.set_xy(a_gen() * zhigh_, a_gen() * zhigh_);
+}
+break;
+
+case constants::ismpl:
+{
+  // ERROR: cannot generate position in sampling-only region
+  const bool invalid_region = false;
+  IONCH_CHECK(invalid_region, "Cannot generate positions in a sampling-only region");
+}
+break;
+
+default:
+{
+  // Somewhere in a cylinder
+  a_pt.set_z((2 * a_gen() - 1.0) * zhigh_);
+  a_pt.set_r(a_gen() * radius_, a_gen() * 2 * constants::pi);
+}
+break;
+}
+!!!1203375.python!!!	generate_position(inout a_gen : mersenne_twister_19937)
+# Somewhere in a cylinder
+Result = Particle ()
+sublength = self.half_length - self.half_gap
+Result.z = a_gen(-1 * sublength, sublength)
+if Result.z > 0:
+  Result.z += self.half_gap
+else:
+  Result.z -= self.half_gap
+
+Result.set_r (a_gen(self.radius), a_gen(2 * constants.Constants.pi));
+
+if self.valid_position (Result):
+  return Result
+return None
+!!!1131439.cpp!!!	in_region(in a_pt : ) : bool
+const double dzabs (std::abs(a_z));
+return a_r <= radius_ and dzabs <= zhigh_ and zlow_ <= dzabs;
+
+!!!1131439.python!!!	in_region(in a_pt : ) : bool
+return CylinderRegion.in_region(self, a_pt) and self.half_gap <= abs(a_pt.z)

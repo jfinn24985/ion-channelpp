@@ -1,0 +1,297 @@
+class formation_builder
+!!!1834159.cpp!!!	build(inout fm : formation, inout rgen : mersenne_twister_19937, in use_grid : bool, in do_bulk : bool) : void
+  //size_t ispec, size_t target_particle_number_, mersenne_twister_19937 &rgen)
+  // }
+  // {
+  // - Calculate required number of particles per specie
+  // - Check existing particles in conformation
+  // - If use_grid build grid.
+  // - Create add_particle object for each specie.
+  // - Randomly select adder and try addition
+  // -- count attempts and exit if max-trys reached.
+  // -- if add successful decrement count for specie
+  // -- if specie count == 0 then remove its adder
+  struct spec_
+  {
+    std::vector< double > cutoff_sq; // The actual minimum inter-particle distances
+    std::unique_ptr< move_generator > adder; // The particle generator
+    double radius; // The specie radius
+    double max_sep; // The maximum inter-particle spacing
+    size_t id; // specie if in conformation
+    size_t target_count; // target particle count
+  };
+  std::vector < spec_ > targets;
+
+  //IONCH_INDEX (ispec, fm.specie_set().size (), "Specie index is out of range.");
+  const double q_ = fm.specie_set().get_specie(ispec).reduced_charge();
+  const double ri_ = fm.specie_set().get_specie(ispec).radius();
+  double max_sep_ (0.0);
+  // Array of square minimum distances
+  std::valarray< double > cutoffsq_ (fm.specie_set().size ());
+  for (int jspec_ = 0; jspec_ != fm.specie_set().size (); ++jspec_)
+  {
+    max_sep_ = std::max(max_sep_, fm.specie_set().get_specie(jspec_).radius());
+    cutoffsq_[jspec_] = utility::sqr (ri_ + fm.specie_set().get_specie(jspec_).radius());
+  }
+  max_sep_ += ri_;
+  int trys_ = 0; // Guard variable
+  const int maxtrys_ (100*target_particle_number_); // set max to average of 100 trys per particle.
+
+  std::unique_ptr< change_generator > chnger;
+  if (use_grid)
+    {
+      chnger.reset(new add_particle_grid(ispec, *grid_));
+    }
+  else
+    {
+      if (is_bulk)
+        {
+          chnger.reset(new add_particle_bulk(ispec));
+
+        }
+      else
+        {
+          chnger.reset(new add_particle(ispec, fm.number_of_regions() - 1));
+
+        }
+    }
+
+  // Create particles until target_particle_number_ have been created.
+  while (target_particle_number_ != 0 and trys_ < maxtrys_)
+  {
+    ++trys_;
+    trial_move t;
+    chnger->do_generate(fm, t, rgen);
+    if (not t.is_fail())
+    {
+      IONCH_CHECK(t.size() == 1, "Problem with add-particle generator, valid move but not only one particle");
+      // Check inter-particle distances
+      bool no_overlap = true;
+      for (size_t idx = 0; no_overlap and idx != fm.conformation().active_size(); ++idx)
+      {
+        const double dx = std::abs(t[0].x - fm.conformation().rx(idx));
+        const double dy = std::abs(t[0].y - fm.conformation().ry(idx));
+        const double dz = std::abs(t[0].z - fm.conformation().rz(idx));
+        size_t jspec = fm.conformation().specie_index(idx);
+        if (max_sep_ < std::max(dx,std::max(dy,dz)))
+        {
+          no_overlap = cutoffsq_[jspec] < (dx*dx+dy*dy+dz*dz);
+        }
+      }
+      if (no_overlap)
+      {
+        fm.on_commit(t);
+        --target_particle_number_;
+      }
+    }
+  }
+  IONCH_INPUT (target_particle_number_ == 0, "Unable to add all particles for specie "+fm.specie_set().get_specie(jspec_).code_name(), constants::fschnl());
+!!!1834415.cpp!!!	genrbk() : void
+  logger << " Making initial simulation of bulk formationiguration\n\n";
+  // This method must rest 'formation' variables then reinitialise
+  // the system as PBC box with required solute ions.
+  formation::reset ();
+
+  // Target particle numbers
+  std::valarray< int > loc_ni (spec_.spec_size (), 0);
+
+  // ratio of particles per molar fraction
+  const double rmolar_ = geom_.volblk() / constants::to_SI ();
+
+  // ------- Calculate particle numbers --------------------
+  // (Do not handle any "structural" ions as this is bulk sim.)
+  // Use [spc] = n_spc * tosi / V_tot(spc)
+  for (int igc_ = 0; igc_ != spec_.nsalt; ++igc_)
+  {
+    const int frac_ =  (spec_.ctargs (igc_) * rmolar_);
+    loc_ni [spec_.isalt (igc_)] += frac_;
+    loc_ni [spec_.chloride_index ()]       += frac_ *  (spec_.xz (spec_.isalt (igc_)));
+  }
+
+  // Double check for electroneutrality due to possible rounding
+  // and structural ions
+  charge_ = 0;
+  for (int ispec_ = spec_.chloride_index (); ispec_ != spec_.spec_size (); ++ispec_)
+  {
+    charge_ += spec_.xz (ispec_) * loc_ni[ispec_];
+  }
+  // -----adjust N(Cl) if cell is not neutral ------------
+  if (not constants::feq (charge_, 0.0))
+  {
+    const int nchg ( (charge_)); // dbl -> int
+    loc_ni [spec_.chloride_index ()] += nchg;
+  }
+
+  // Bulk simulations always start neutral, so reset charge.
+  charge_ = 0.0;
+
+  // Create generator for PBC bulk
+  bulk_particle_position gen(geom_, geom_.lenblk ());
+
+  // Now have particle numbers
+  for (int ispec = spec_.chloride_index (); ispec != spec_.spec_size (); ++ispec)
+  {
+    if (loc_ni[ispec] > 0)
+      generate_particles (ispec, loc_ni[ispec], gen);
+  }
+
+  logger << " Initial bulk formationiguration made\n";
+!!!1834543.cpp!!!	genrcf(in filename : string) : void
+  logger << " Making initial simulation formationiguration\n\n";
+
+  // list of required ( specie, add_particle_num )
+  std::valarray< int > ni_target_list_ (0, spec_.spec_size ());
+
+  // ratio of particles per molar fraction
+  const double rmolar_ = geom_.ntargt() / spec_.ionic_strength();
+
+  // ------- Calculate particle numbers --------------------
+  // Use [spc] = n_spc * tosi / V_tot(spc)
+  for (int igc_ = 0; igc_ != spec_.nsalt; ++igc_)
+  {
+    const int ispec_ = spec_.isalt (igc_);
+    ni_target_list_ [ispec_] +=  (spec_.ctargs (igc_) * geom_.vtotal(ispec_)/constants::to_SI ());
+    ni_target_list_ [spec_.chloride_index ()] +=  (spec_.ctargs (igc_) * geom_.vtotal(spec_.chloride_index ()) * spec_.xz (ispec_) / constants::to_SI ());
+  }
+  // get particle counts for structural ions from ni
+  for (int ispec_ = 0; ispec_ != spec_.chloride_index (); ++ispec_)
+  {
+    ni_target_list_[ispec_] = ni(ispec_);
+  }
+
+  // ----------------------------------------
+  // Make system electroneutral
+  charge_ = 0;
+  for (int ispec_ = 0; ispec_ != spec_.spec_size (); ++ispec_)
+  {
+    charge_ += spec_.xz (ispec_) * ni_target_list_[ispec_];
+  }
+  // recompute N(Cl) if cell is not neutral
+  if (not constants::feq (charge_, 0.0))
+  {
+    const int nchg =  (charge_); // dbl -> int
+    ni_target_list_ [spec_.chloride_index ()] += nchg;
+  }
+
+
+  // ------------------------------
+  // At this point ni_target_list has the target number of
+  // particles for each specie.
+
+  // We need the target number later, so we create a copy
+  // to use for working out the differences between actual
+  // and target.
+  std::valarray< int > ni_actual_list_ (ni_target_list_);
+
+  // Reset charge to calculate it from the actual values.
+  charge_ = 0;
+
+  // Subtract existing particles from the target
+  for (int idx_ = 0; idx_ != nactv_; ++idx_)
+  {
+    const int ispec_ = ispcbk(idx_);
+
+    if (ispec_ == constants::invspc)
+    {
+      continue;
+    }
+    // Update particle number
+    --ni_actual_list_[ispec_];
+
+    // Update charge
+    charge_ += spec_.xz (ispec_);
+  }
+
+  // Assert that ni is correct
+  logger << "Particles defined or requested in input\nION\tTARG\tCUR\tREQ\n";
+  for (int ispec_ = 0; ispec_ != spec_.spec_size (); ++ispec_)
+  {
+    IONCH_ALWAYS(ni_target_list_[ispec_] - ni_actual_list_[ispec_] == ni_[ispec_]
+                 , "Bad specie count, n(" + spec_.fspc(ispec_) + ") != actual number.");
+    logger << spec_.fspc(ispec_) << "\t" << ni_target_list_[ispec_] << "\t" << ni_[ispec_] << "\t" << ni_actual_list_[ispec_] << "\n";
+  }
+  // TODO: If the above ALWAYS succeeds then we can omit the loop preceding it.
+
+
+  // Compare structural count to target number of particles and
+  // create particles if necessary.
+  for (int ispec_ = 0; ispec_ != spec_.spec_size (); ++ispec_)
+  {
+    // Only check cases where existing particle number is not the target number.
+    if (ni_actual_list_[ispec_] != 0)
+    {
+      if (not spec_.isfree(ispec_))
+      {
+        // We want structural (ie non free) ions to have exactly the
+        // requested number as we do no add/remove them in the simulation.
+        // Therefore any difference must be generated but we can only create
+        // random positions for channel-only structural ions!
+        IONCH_INPUT (spec_.chonly (ispec_)
+                     , "Can generate random structural ions only for channel-only species");
+
+        // Here we know how many particles to generate so do it!
+        channel_particle_position gen (*this, geom_, ispec_, -geom_.zreg (ispec_, constants::izlim)
+                                       , geom_.zreg (ispec_, constants::izlim)
+                                       , geom_.rreg (ispec_, constants::izlim));
+        generate_particles (ispec_, ni_actual_list_[ispec_], gen);
+        // adjust initial charge
+        charge_ += ni_actual_list_[ispec_] * spec_.xz(ispec_);
+      }
+      else
+      {
+        // --------------------------------------------------
+        // If some particle have been defined, check how close
+        // to the target number
+        if (ni_target_list_[ispec_] != ni_actual_list_[ispec_])
+        {
+          // --------------------------------------------------
+          // When comparing non-structural target number of particles
+          // we allow actual number to be close to target.
+          if (ni_target_list_[ispec_] <= 16)
+          {
+            // For small numbers we allow difference to be nearly as large as target
+            IONCH_INPUT (ni_target_list_[ispec_] - ni_actual_list_[ispec_] < 2 * ni_target_list_[ispec_]
+                         , "Too many particles of type " + spec_.fspc(ispec_) + " defined in input");
+            // reset only if some particles have been defined.
+            ni_actual_list_[ispec_] = 0;
+          }
+          else
+          {
+            // For larger number the particle number must be within two
+            // square-roots of target. This number comes from assuming particle
+            // distribution is Uniform.
+            const int cutoff (2 * (std::sqrt (double(ni_target_list_[ispec_]))));
+
+            // We allow greater leeway for too many particles as we currently
+            // do not delete excess, instead aborting the program run.
+            IONCH_INPUT (ni_target_list_[ispec_] - ni_actual_list_[ispec_] < ni_target_list_[ispec_] + (2 * cutoff)
+                         , "Too many particles of type " + spec_.fspc(ispec_) + " defined in input");
+
+            // For too few, any number inside the cutoff causes no more
+            // particles to be created.
+            if (ni_target_list_[ispec_] - cutoff < ni_target_list_[ispec_] - ni_actual_list_[ispec_])
+            {
+              // number within allowed range so reset target to 0
+              ni_actual_list_[ispec_] = 0;
+            }
+          }
+        }
+        if (0 != ni_actual_list_[ispec_])
+        {
+          // Need particles created
+          channel_particle_position gen (*this, geom_, ispec_, -geom_.zreg (ispec_, constants::ibulk)
+                                         , geom_.zreg (ispec_, constants::ibulk)
+                                         , geom_.rreg (ispec_, constants::ibulk));
+          generate_particles (ispec_, ni_actual_list_[ispec_], gen);
+          // adjust initial charge
+          charge_ += ni_actual_list_[ispec_] * spec_.xz(ispec_);
+        }
+      }
+    }
+  }
+  logger << "\nParticle creation summary\nION\tTARG\tCUR\tNEW\n";
+  for (int ispec_ = 0; ispec_ != spec_.spec_size (); ++ispec_)
+  {
+    logger << spec_.fspc(ispec_) << "\t" << ni_target_list_[ispec_] << "\t" << ni_[ispec_] << "\t" << ni_actual_list_[ispec_] << "\n";
+  }
+  logger << " Initial formationiguration made\n";

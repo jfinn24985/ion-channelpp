@@ -1,0 +1,122 @@
+class ion_ring
+!!!1589551.cpp!!!	set_box(inout a_box : box, in direction : uint8_type, in x1 : double, in y1 : double, in x2 : double, in y2 : double) : void
+    const double ri_ = specie_factory_.diameter (specie_index_) / 2.;
+
+    switch (direction)
+    {
+    case 0:
+        x1 = std::min (x1, x2) - ri_;
+        y1 = std::min (y1, y2) - ri_;
+        x2 = std::max (x1, x2) + ri_;
+        y2 = std::max (y1, y2) + ri_;
+        break;
+    case 1:
+        x1 = std::min (x1, x2) + ri_;
+        y1 = std::min (y1, y2) + ri_;
+        x2 = std::max (x1, x2) - ri_;
+        y2 = std::max (y1, y2) - ri_;
+        break;
+    default:
+        GRS400_REQUIRE (direction < 2, "Invalid direction setting region, membrane or bulk box");
+        break;
+    }
+
+    a_box = box (point_xy (x1, y1), point_xy (x2, y2));
+!!!1589807.cpp!!!	add_point(in direction : uint8_type, in a_x : double, in a_y : double) : void
+    const double ri_ = specie_factory_.diameter (specie_index_) / 2.;
+
+    switch (direction)
+    {
+    case 0:
+        a_y -= ri_;
+        break;
+    case 1:
+        a_x += ri_;
+        break;
+    case 2:
+        a_y += ri_;
+        break;
+    case 3:
+        a_x -= ri_;
+        break;
+    default:
+        GRS400_REQUIRE (direction < 4, "Invalid direction in add_point");
+        break;
+    }
+
+    if (DEBUG) { std::clog << "# point: (" <<  a_x << ", " << a_y << ")\n"; }
+
+    basic_ring::add_point (a_x, a_y);
+!!!1589935.cpp!!!	add_qarc(in direction : uint8_type, in radius : double) : void
+    GRS400_REQUIRE (1 < state_.size (), "Can not add an arc as first shape");
+    const double ri_ = specie_factory_.diameter (specie_index_) / 2.;
+
+    switch (direction)
+    {
+    case 0:
+        radius += ri_;
+        break;
+    case 1:
+        radius -= ri_;
+        break;
+    default:
+        GRS400_REQUIRE (direction < 2, "Invalid direction in add_qarc");
+        break;
+    }
+
+    basic_ring::add_qarc (direction, radius);
+!!!1590447.cpp!!!	do_readin() : void
+    GRS400_REQUIRE (closed(), "attempt to finish initialisation of geometry before shape completely defined");
+    boost::geometry::correct (this->state_);
+    boost::geometry::envelope (this->state_, this->bound_);
+    // Calculate vin_vout ratio
+    const double voutr = sqr (region_[BulkRegion].max_corner().y()) * (region_[BulkRegion].max_corner().x() - membrane_.max_corner().x());
+    const double vinr = sqr (region_[ChannelRegion].max_corner().y()) * region_[ChannelRegion].max_corner().x();
+    vin_vout_ = vinr / voutr;
+!!!1590575.cpp!!!	in_region(in a_x : double, in a_y : double) : uint8_type
+    const point_xy test_ (a_x, a_y);
+
+    for (uint8_type i = 0; i < RegionSize; ++i)
+    {
+        if (boost::geometry::within (test_, this->region_[i]))
+        {
+            return i;
+        }
+    }
+
+    return RegionSize;
+!!!1590703.cpp!!!	in_region(in a_reg : uint8_type, in a_x : double, in a_y : double) : bool
+    GRS400_REQUIRE (a_reg < RegionSize, "region index out of range");
+    const point_xy test_ (a_x, a_y);
+    return boost::geometry::within (test_, this->region_[a_reg]);
+!!!1591727.cpp!!!	serialise(inout a_os : ostream) : void
+    a_os << "-- for specie [" << specie_factory_.name (specie_index_) << "] --\n";
+    a_os << "-- vin/vout ratio = " << vin_vout_ << " --\n";
+    a_os << "-- membrane box --\n";
+    a_os << boost::geometry::dsv (this->membrane_) << "\n";
+
+    for (uint8_type ireg = 0; ireg < RegionSize; ++ireg)
+    {
+        a_os << "-- region box [" << int (ireg) << "] --\n";
+        a_os << boost::geometry::dsv (this->region_[ireg]) << "\n";
+    }
+
+    a_os << "-- bounding box --\n";
+    a_os << boost::geometry::dsv (this->bound_) << "\n";
+    a_os << "-- protein shape --\n";
+    a_os << boost::geometry::dsv (this->state_) << "\n";
+!!!1592623.cpp!!!	wall(in a_x : double, in a_y : double, in ignore_chonly : bool) : bool
+    GRS400_REQUIRE (! (this->bound_.max_corner() == this->bound_.min_corner())
+                    , "attempt to test geometry before calling initialise");
+    GRS400_REQUIRE (closed(), "attempt to test geometry before shape is closed");
+    point_xy test_ (a_x, a_y);
+    point_xy test_z0 (a_x, 0.);
+    const bool use_bulk = ignore_chonly || !specie_factory_.channel_only (specie_index_);
+    // Is it in the membrane region (ch.l < a_x < ch.r)
+    return (boost::geometry::within (test_z0, this->region_[ChannelRegion])
+            // if yes then check is in channel but not in membrane or protein
+            ? boost::geometry::within (test_, this->region_[ChannelRegion])
+            && !boost::geometry::within (test_, this->membrane_)
+            && (!boost::geometry::within (test_, this->bound_) || !boost::geometry::within (test_, this->state_))
+            // otherwise it must be in bulk
+            : use_bulk && boost::geometry::within (test_, this->region_[BulkRegion]));

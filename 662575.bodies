@@ -1,0 +1,464 @@
+class sampler
+!!!1162287.cpp!!!	on_conclusion(in a_is_success : bool, in a_set : ) : void
+if (bal::shared_ptr < sampler_letter >::Type p = letter_.lock ())
+{
+  p->on_conclusion ();
+}
+!!!707503.cpp!!!	initialise_observables() : void
+constants::os_log << strngs::horizontal_bar << "\n";
+constants::os_log << "Statistical data accumulation parameters\n";
+constants::os_log << strngs::horizontal_bar << "\n";
+
+// --------------------------------------------------
+// Allocate arrays to fit number of species
+anaca_.resize (boost::extents[spec::size ()][constants::nrgnmx]);
+amobile_.resize (constants::nionmx);
+amobdx_.resize (spec::size ());
+amobdy_.resize (spec::size ());
+amobdz_.resize (spec::size ());
+anin_.resize (boost::extents[spec::size ()][constants::nrgnmx]);
+abulk_.resize (spec::size ());
+
+
+// --------------------------------------------------
+// initialise gin 2D distribution
+if (calgin)
+{
+    // Set radial parameters
+    this->nrgr_   = int (std::floor ((geom::rl (4) + 10.0) / this->drg_));
+    this->rinup_  = this->nrgr_ * this->drg_;
+
+    // Set z-axial parameters
+    this->nrgz_   = int (std::floor ((geom::zl (2) + 10.0) / this->drg_));
+    this->zinlft_ = -this->nrgz_ * this->drg_;
+    this->nrgz_   *= 2;
+
+    // Set volume factor (vol = factor * (2*r_indx + 1))
+    this->vjin_factor_ = this->drg_ * this->drg_ * this->drg_ * constants::pi;
+
+    constants::os_log << "Parameters for 2D histogram of Z-axis and Radius\n";
+    constants::os_log << " Histogram bins in radial dimension = " << std::setw (8) << this->nrgr_ << " width = " << this->drg_ << "\n";
+    constants::os_log << " Histogram bins in z-axial dimension= " << std::setw (8) << this->nrgz_ << " width = " << this->drg_  << "\n";
+
+    if (this->nrgr_ > nrgmx or this->nrgz_ > nrgmx)
+    {
+        constants::os_log << "\n\nWARNING\n\nThe number of requested bins exceeds suggested limit\n request = "
+                          << this->nrgz_ <<  " and " << this->nrgr_ <<  "; suggested limit = "
+                          << nrgmx <<  "\nSUGGESTION: increase '"
+                          << strngs::fsdrg <<  "' option in input file\n\n";
+    }
+    constants::os_log << strngs::horizontal_bar << "\n";
+
+    this->gin_.resize (spec::size (), ionch::count_matrix< double, 2 > (boost::extents[this->nrgz_][constants::next64 (this->nrgr_)]));
+    this->chgdist_.resize (boost::extents[this->nrgz_][constants::next64 (this->nrgr_)]);
+}
+
+// ------------------------------------------------------------
+// Initialise geometry and variables for the radial distribution
+if (calrdf)
+{
+    this->drdf_ = this->drg_;
+    this->nrdf_ = int (std::floor (10.0 / this->drdf_));
+    this->rdf_zlim_.resize (boost::extents[spec::size ()][spec::size ()]);
+    this->rdf_chan_.resize (boost::extents[spec::size ()][spec::size ()]);
+
+    for (std::size_t idx = 0; idx != rdf_zlim_.size(); ++idx)
+    {
+        this->rdf_zlim_.data() [idx].resize (nrdf_);
+        this->rdf_chan_.data() [idx].resize (nrdf_);
+    }
+}
+
+// --------------------------------------------------
+// Initialise array parameters now we know sizes
+this->gz_.resize (spec::size (), ionch::count_histogram< double > (constants::next64 (geom::gz_max ())));
+
+this->ah_.resize (patch::npatch ());
+
+// Set zocc if not already set
+if (constants::feq (0.0, zocc_))
+{
+    this->zocc_ = geom::zlimit ();
+}
+else
+{
+    IONCH_INPUT (this->zocc_ <= geom::zl (1)
+                 , "Limit of occupancy region 1 is outside central cylinder (zocc > zl1)");
+}
+
+constants::os_log << strngs::horizontal_bar << "\n";
+constants::os_log << "Interpreted statistic/accumulation parameters from input (includes defaults)\n";
+constants::os_log << strngs::horizontal_bar << "\n";
+this->write_input_section (constants::os_log);
+constants::os_log << strngs::horizontal_bar << "\n";
+!!!747055.cpp!!!	report_energy_means(inout a_os : ostream, in ispec : int) : void
+IONCH_INDEX (ispec, spec::spec_size (), "Error: specie index out of range");
+
+if (spec::isfree (ispec))
+{
+    static const boost::format long_row ("  %1$2s : %2$30s %3$10.3g %4$10.3g %5$10.3g");
+    a_os << boost::format (long_row)
+         % spec::fspc (ispec) % "Mean accept factor:(Mov,Cr,De)"
+         % ameng_[ispec].mean() % aceng_[ispec].mean() % adeng_[ispec].mean() << "\n";
+
+    a_os << boost::format (long_row)
+         % spec::fspc (ispec) % "Variance    factor:(Mov,Cr,De)"
+         % ameng_[ispec].variance() % aceng_[ispec].variance() % adeng_[ispec].variance() << "\n";
+}
+else
+{
+    static const boost::format short_row ("  %1$2s : %2$30s %3$10.3g %4$10.3g");
+    a_os << boost::format (short_row)
+         % spec::fspc (ispec) % "Move accept factor:(Mean,Var)"
+         % ameng_[ispec].mean() % ameng_[ispec].variance() << "\n";
+}
+
+!!!706479.cpp!!!	accumulate() : void
+this->acharge_ << ensemble::charge ();
+
+if (this->is_bulk ())
+{
+  for (auto ispec = spec::begin (); ispec != spec::end (); ++ispec)
+  {
+    if (ispec->is_free ())
+    {
+      this->anin_[ispec->index()][constants::ibulk] << static_cast< double > (ispec->particles ().size ());
+    }
+  }
+}
+else if (not this->is_thermalized ())
+{
+  // in thermalisation
+  for (auto ispec = spec::begin (); ispec != spec::end (); ++ispec)
+  {
+    if (ispec->is_free ())
+    {
+      this->anin_[ispec->index()][constants::isample] << static_cast< double > (ispec->particles_in (constants::isample).size ());
+    }
+  }
+}
+else
+{
+  // in main simulation
+  for (std::size_t ireg = constants::izlim; ireg != constants::izlim + 3; ++ireg)
+  {
+    // histogram index
+    uint8_t index_ = 0;
+    bool is_first = true; // false for second cation
+    for (auto ispec = spec::begin (); ispec != spec::end (); ++ispec)
+    {
+      if (ispec->is_free ())
+      {
+        uint8_t num;
+        uint8_t shift;
+        if (ipec->is_cation ())
+        {
+          num = 7; // maximum of 7
+          shift = (is_first ? 3 : 0);
+          is_first = false;
+        }
+        else
+        {
+          num = 3; // maximum of 3
+          shift = 6;
+        }
+        num = std::min (num, ispec->particles_in (ireg));
+        num <<= shift;
+        index_ |= num; // OR partial index with full index
+        this->anin_[ispec.index()][ireg] << static_cast< double > (ispec->particles_in (ireg).size ());
+      }
+    }
+    // Use index_ as indices to increment aocc
+    ++this->aocc_ [ireg - constants::izlim][index_];
+  }
+
+  for (auto ispec = spec::begin (); ispec != spec::end (); ++ispec)
+  {
+    if (ispec->is_free ())
+    {
+      this->anin_[ispec->index()][constants::ibulk] << static_cast< double > (ispec->particles ().size ());
+      this->anin_[ispec->index()][constants::isample] << static_cast< double > (ispec->particles_in (constants::isample).size ());
+    }
+  }
+
+  if (not patch::homog ())
+  {
+    IONCH_CHECK (this->ah_.bin_count () >= patch::get_h ().size ()
+                 , "Observable for patch::h is too small");
+    this->ah_.insert (patch::get_h ().begin (), patch::get_h ().end ());
+  }
+}
+!!!706991.cpp!!!	compute_accumulate() : void
+if (not this->is_thermalized or this->is_bulk ())
+{
+  // Perform the thermalisation / bulk version of hist (fortran accum::iterat)
+  this->iterat ();
+  return;
+}
+
+
+const int ifree (spec::spec_size () - spec::nstr); // number of free ions
+
+// -----------------------------------------------------------------
+// Create a scope object for counting observables and add
+// observables to the object
+ionch::count_scope cscope_;
+for (int ispec = 0; ispec != spec::size (); ++ispec)
+{
+    cscope_ << this->gz_[ispec];
+}
+
+if (calrdf)
+{
+    for (int ispec = 0; ispec != spec::size (); ++ispec)
+    {
+        for (int jspec = 0; jspec != spec::size (); ++jspec)
+        {
+            cscope_ << this->rdf_chan_[ispec][jspec];
+            cscope_ << this->rdf_zlim_[ispec][jspec];
+        }
+    }
+}
+
+if (calgin)
+{
+    cscope_ << this->chgdist_;
+
+    for (int ispec = 0; ispec != spec::size (); ++ispec)
+    {
+        cscope_ << this->gin_[ispec];
+    }
+}
+
+// -----------------------------------------------------------------
+// START OF SAMPLING
+//
+// Rather than loop over each specie then particle, here we loop over
+// the particles and select the specie
+for (int ii = 0; ii != conf::active_size (); ++ii)
+{
+    const int ispec = conf::ispcbk (ii);
+
+    if (ispec == constants::invspc) { continue; }
+
+    const double rzi = conf::rz (ii);
+
+    const double r2i = conf::r2 (ii);
+
+    // Collect z-axial distribution
+    this->gz_ [ispec].increment (geom::gz_bin (rzi));
+
+    // Collect statistics about the mobile ions
+    if (this->calmob and spec::mobile (ispec))
+    {
+        // Mobile ion statistics
+        const double dx = conf::rx (ii) - conf::rsx (ii);
+        const double dy = conf::ry (ii) - conf::rsy (ii);
+        const double dz = rzi - conf::rsz (ii);
+        const double rsq = constants::sqr (dx) + constants::sqr (dy) + constants::sqr (dz);
+        this->amobdl_ [ispec] << std::sqrt (rsq);
+        this->amobdx_ [ispec] << dx;
+        this->amobdy_ [ispec] << dy;
+        this->amobdz_ [ispec] << dz;
+    }
+
+    // Collect z-azial & r-radial distrbution
+    if (this->calgin)
+    {
+        if (this->zinlft_ <= rzi and rzi <= -this->zinlft_ and r2i <= this->rinup_)
+        {
+            // matrix indices (z,r)
+            const std::vector< size_t > idx_ = { int (std::floor ((rzi - this->zinlft_) / this->drg_)), int (std::floor (r2i / this->drg_)) };
+            this->chgdist_.increment (idx_, int64_t (std::nearbyint (2 * spec::xz (ispec))));
+            this->gin_[ispec].increment (idx_);
+        }
+    }
+
+    // inter-particle radial distribution in region ifilt and izlim
+    if (this->calrdf)
+    {
+        int ireg;
+        geom::inregn (rzi, ispec, ireg);
+
+        if (ireg <= constants::ichan)
+        {
+            boost::multi_array< ionch::count_histogram< double >, 2 > &rdf_ (ireg == constants::izlim ? this->rdf_zlim_ : this->rdf_chan_);
+            const double rxi (conf::rx (ii));
+            const double ryi (conf::ry (ii));
+
+            for (int jj = 0; jj != conf::active_size (); ++jj)
+            {
+                if (jj != ii)
+                {
+                    const int jspec = conf::ispcbk (jj);
+
+                    if (jspec == constants::invspc) { continue; }
+
+                    const double rijsq (constants::sqr (rxi - conf::rx (jj))
+                                        + constants::sqr (ryi - conf::ry (jj))
+                                        + constants::sqr (rzi - conf::rz (jj)));
+
+                    // RDF only consider particles with closest surface-surface distance
+                    // of 10A.  We translate this here to minimum centre-centre sq test
+                    // of (10 + 4)^2 rounded up to 200 before we do the sqrt.
+                    if (rijsq <= 200.0)
+                    {
+                        // need sqrt now
+                        const int r_bin_ (std::floor ( (std::sqrt (rijsq) - spec::dd_get (ispec, jspec)) / drdf_));
+                        IONCH_CHECK (0 <= r_bin_, "'RDF' index is negative: particles are too close");
+
+                        if (r_bin_ < nrdf_)
+                        {
+                            rdf_ [ispec][jspec].increment (r_bin_);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+!!!707887.cpp!!!	chemical_potentials(inout strbuf : ostream) : void
+// Current per-specie concentration in bulk ?
+std::vector< double > cbulk (spec::size ());
+strbuf << "Chemical potential comparison\n";
+static const boost::format fmt_ ("  %1$6s:  %2$10.6g %3$10.6g %4$10.6g %5$10.6g");
+strbuf << boost::format (fmt_) % "SPECIE" % "mu TARGET" % "mu CURRNT" % "excess TRG" % "excess CUR" << "\n";
+
+for (auto ispec = spec::begin (); ispec != spec::end (); ++ispec)
+{
+  if (ispec->is_free ())
+  {
+    // bulk here is from the 'bulk' sampling sub-zone
+    cbulk[ispec->index ()] = (this->anin_[ispec->index ()][constants::isample].mean () * constants::to_SI ()
+                 / geom::bulk_sample_volume ());
+
+    if (constants::feq (0.0, cbulk[ispec->index ()]))
+    {
+        // Skip on zero concentration
+        strbuf << boost::format (fmt_) % ispec->name () % ispec->chemical_potential () % "-----" % ispec->chemical_potential () % "-----" << "\n";
+    }
+    else
+    {
+        const double chexnw = ispec->chemical_potential () - std::log (cbulk[ispec->index ()] / constants::to_SI ());
+        const double chmpnw = std::log (ispec->concentration () / constants::to_SI ()) - chexnw;
+        strbuf << boost::format (fmt_) % ispec->name () % ispec->chemical_potential () % chmpnw % ispec->chemical_potential () % chexnw << "\n";
+    }
+  }
+}
+
+for (auto ispec = spec::begin (); ispec != spec::end (); ++ispec)
+{
+  if (ispec->is_cation ())
+  {
+    const double chemps (ispec->chemical_potential () + ispec->valency () * ispec->chloride()->chemical_potential ());
+    const double chexs (ispec->chemical_excess () + ispec->valency () * ispec->chloride()->chemical_excess ());
+    if (constants::feq (cbulk[ispec->index ()], 0.0))
+    {
+        // Skip on zero concentration
+        strbuf << boost::format (fmt_) % (ispec->name () + ispec->chloride()->name ()) % chemps % "-----" % chexs % "-----" << "\n";
+    }
+    else
+    {
+        const double rtargi = (ispec->concentration () / constants::to_SI ()) * std::pow (ispec->chloride ().concentration () / constants::to_SI (), ispec->valency ());
+        const double rbulki = cbulk[ispec->index ()] / constants::to_SI ();
+        const double rblkcl = cbulk[ispec->chloride ()->index ()] / constants::to_SI ();
+        const double chexnw = chemps - std::log (rbulki * std::pow (rblkcl, std::nearbyint (ispec->valency ())));
+        const double chempn = std::log (rtargi) + chexnw;
+        strbuf << boost::format (fmt_) % (ispec->name () + ispec->chloride()->name ()) % chemps % chempn % chexs % chexnw << "\n";
+    }
+}
+!!!708143.cpp!!!	mobile_particle_motion() : void
+const static boost::format fmt_ (" %1$5s[%2$3d] %3$3d %4$6.3g:%5$6.3g %6$6.3g:%7$6.3g %8$6.3g:%9$6.3g");
+constants::os_log << "Statistics for mobile ions\n";
+constants::os_log << boost::format (fmt_) % "SPC" % "idx" % "IDX" % "X MEAN" % "VAR" % "Y MEAN" % "VAR" % "Z MEAN" % "VAR" << "\n";
+std::size_t counter = 0;
+for (auto ispec = spec::begin (); ispec != spec::end (); ++ispec)
+{
+  if (ispec->is_mobile ())
+  {
+    auto const& parts = ispec->particles ();
+    for (std::size_t idx = 0; idx != parts.size (); ++idx, ++counter)
+    {
+      point const mean (this->amobile_.mean (counter));
+      point const var (this->amobile_.variance (counter));
+      boost::format tmp(fmt_);
+      tmp % ispec->name () % (counter + 1);
+      tmp % ispec->particles ().index (idx);
+      tmp % mean.x() % var.x ();
+      tmp % mean.y() % var.y ();
+      tmp % mean.z() % var.z ();
+
+      constants::os_log << tmp << "\n";
+    }
+  }
+}
+!!!708015.cpp!!!	particle_counts(inout strbuf : ostream) : void
+std::vector< double > region_charge (constants::region_end);
+
+static const boost::format row_fmt (" %1$8s | %2$10.5g | %3$10.5g | %4$10.5g | %5$10.5g | %6$8.3g (%7$4d)");
+strbuf << "Particle Count by region\n";
+strbuf << boost::format (row_fmt) % "SPECIE" % "BULK SMPL" % "CHANNEL" % "FILTER" % "CENTER" % "TOTAL" % "CURR" << "\n";
+
+// ----- number of ions -------------------------
+for (auto ispec = spec::begin(); ispec != spec::end (); ++ispec)
+{
+    if (ispec->is_fixed ()) { continue; }
+
+    boost::format region_count (row_fmt);
+    region_count % ispec->name () % "";
+
+    // non free ions always have constant ni
+    for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+    {
+        region_count % conf::ni (ispec);
+        region_charge[ireg] += ispec->particles ().size () * ispec->valency ();
+    }
+
+    // Output concentration profiles
+    strbuf << region_count % conf::ni (ispec) << "\n";
+}
+
+for (auto ispec = spec::begin(); ispec != spec::end (); ++ispec)
+{
+   const int ispec_index (ispec->index ());
+    boost::format region_count (row_fmt);
+    region_count % ispec->name ();
+    region_count % this->anin_[ispec_index][constants::isample].mean ();
+    region_count % this->anin_[ispec_index][constants::ichan].mean ();
+    region_count % this->anin_[ispec_index][constants::ifilt].mean ();
+    region_count % this->anin_[ispec_index][constants::izlim].mean ();
+    region_count % this->anin_[ispec_index][constants::ibulk].mean ();
+    strbuf << region_count % ispec->particles ().size () << "\n";
+
+    for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+    {
+        region_charge[ireg] += this->anin_[ispec_index][ireg].mean () * ispec->valency ();
+    }
+}
+
+strbuf << strngs::horizontal_bar << "\n";
+strbuf << boost::format ("  Charge: |  %1$10.5g | %2$10.5g | %3$10.5g | %4$10.5 |")
+       % region_charge[constants::ibulk] % region_charge[constants::ichan] % region_charge[constants::ifilt] % region_charge[constants::izlim] << "\n";
+strbuf << strngs::horizontal_bar << "\n";
+!!!708271.cpp!!!	particle_count_distribution() : void
+for (auto ispec = spec::begin (); ispec != spec::end (); ++ispec)
+{
+  if (ispec->is_free ())
+  {
+    const int ispec_index (ispec->index ());
+    const std::size_t region_ids[] =
+    {
+      constants::izlim, constants::ifilt, constants::ichan, constants::isample
+    };
+
+    for (int idx = 0; idx != sizeof(region_ids)/sizeof(std::size_t); ++idx)
+    {
+      const std::size_t ireg (region_ids [idx]);
+      const std::string filename_ (make_result_filename ("a" + geom::get_region (ireg).name() + "-" + ispec->name ()));
+      std::ofstream os_arg (filename_.c_str (),  (this->checkpoint_count_ == 0 ? std::ifstream::trunc : std::ifstream::ate));
+
+      // Output particle region_ids mean/variance profiles for solute ions
+      os_arg << this->checkpoint_count_ << " " << this->anin_[ispec_index][ireg].mean() << " " << this->anin_[ispec_index][ireg].variance () << "\n";
+    }
+  }
+}

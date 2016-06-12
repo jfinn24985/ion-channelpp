@@ -1,0 +1,106 @@
+class Input2XyzTranslater
+!!!1189807.python!!!	main(in argc : int, in argv : char) : void
+
+try:
+  import argparse
+  # Initialise argument parsing system to handle:
+  #
+  parser = argparse.ArgumentParser(description="Combine several data files into an averaged output file")
+  parser.add_argument('-o','--output',default=None,metavar='filename',help='The output filename')
+  parser.add_argument('-i','--input',default=None,metavar='filename',help='The channel input filename to convert')
+  parser.add_argument('-d','--directory',default=None,metavar='directory',help='The location of the input file to convert if you are using standard input')
+  parser.add_argument('-m','--map',dest='mapper',default=None,metavar='CODE=ABBRV',nargs='+',help='The code-name to atom mappings as CODE=ABBRV')
+  parser.add_argument('-c','--centre',default=False,nargs='?',const=True,help='Output mobile-ion centre points')
+  # process sys.argv
+  result = parser.parse_args ()
+except ImportError:
+  from optparse import OptionParser
+  parser = OptionParser(description="Combine several data files into an averaged output file")
+  parser.add_option('-o','--output',default=None,metavar='filename',help='The output filename')
+  parser.add_option('-i','--input',default=None,metavar='filename',help='The channel input filename to convert')
+  parser.add_option('-d','--directory',default=None,metavar='directory',help='The location of the input file to convert if you are using standard input')
+  parser.add_option('-m','--map',dest='mapper',default=None,metavar='CODE=ABBRV',nargs='+',help='The code-name to atom mappings as CODE=ABBRV')
+  parser.add_option('-c','--centre',default=False,action="store_true",help='Output mobile-ion centre points')
+  ( result, args ) = parser.parse_args()
+
+print "input file      :", result.input
+print "output file     :", result.output
+print "input directory :", result.directory
+print "using centres   :", str(result.centre)
+self.use_centre = result.centre
+
+self.atom_map["Ka"]="K"
+self.atom_map["Ox"]="O"
+if result.mapper != None:
+  key = None
+  for entry in result.mapper:
+    kv = entry.split('=',2)
+    if len(kv) == 1:
+      if key == None:
+        key = entry
+      else:
+        self.atom_map[key] = entry
+        key = None
+    else:
+      self.atom_map[kv[0]] = kv[1]
+
+self.process (result.input, result.output, result.directory)
+!!!1189679.python!!!	process(in inputfile : string, in outputfile : string, in basedir : string) : void
+import fileinp
+reader = fileinp.InputFileReader()
+import sys
+if None == inputfile:
+  reader.use(sys.stdin, basedir)
+else:
+  reader.open(inputfile)
+if None == outputfile:
+  aos = sys.stdout
+else:
+  aos = open(outputfile, "w")
+
+output = []
+title = None
+maxsplit = 4
+if self.use_centre:
+  maxsplit = 8
+for outer in reader:
+  if reader.in_section:
+    key = None
+    locations = None
+    for inner in reader:
+      if inner[0] == "name":
+        key = inner[1]
+      elif inner[0] == "n":
+        locations =inner[1]
+    if key != None:
+      if len(key) != 2:
+        if key[0] == '"':
+          key = key[1:3]
+        else:
+          key = key[0:2]
+      if locations != None:
+        if key in self.atom_map:
+          atom = self.atom_map[key]
+        else:
+          atom = key
+        for line in locations:
+          dat = line.lstrip().split(None, maxsplit)
+          assert len(dat) >= 3, "Position data has two few entries in "+line
+          if self.use_centre:
+            if len(dat) >= 7:
+              output.append(' '.join( (atom, dat[4], dat[5], dat[6], '\n') ))
+            else:
+              output.append(' '.join( (atom, dat[0], dat[1], dat[2], '\n') ))
+          else:
+            output.append(' '.join( (atom, dat[0], dat[1], dat[2], '\n') ))
+      else:
+        if outer[0] == "channel":
+          title = key
+print >>aos, len(output)
+if title != None:
+  print >>aos, title," : ",
+if None != inputfile:
+  print >>aos, " converted from 'channel' input file: ",inputfile
+else:
+  print >>aos, " converted 'channel' input file. "
+aos.writelines(output)

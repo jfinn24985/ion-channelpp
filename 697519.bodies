@@ -1,0 +1,63 @@
+class PatchEnvironment
+!!!740655.python!!!	write_input(inout a_os : ostream) : void
+print >>a_os, Strngs.fsptch 
+print >>a_os, Strngs.fsdxf << " " << self.patch_radial_factor 
+print >>a_os, Strngs.fsdxw << " " << self.patch_axial_factor
+print >>a_os, Strngs.fsnsub << " " << self.patch_subtile_factor
+print >>a_os, Strngs.fsepsw << " " << self.eps_solvent
+print >>a_os, Strngs.fsepsp << " " << self.eps_protein 
+if not self.homogeneous_solvent:
+  print >>a_os, Strngs.fsepsc << " " << self.eps_channel_solvent 
+
+print >>a_os, Strngs.fsend 
+print >>a_os, ""
+
+
+!!!740399.python!!!	read_input(inout fid : istream, in sname : string, in svalue : string) : void
+assert sname == Strngs.fsptch, "Error: incorrect section name"
+assert len(svalue) == 0, "Error: " + Strngs.fsptch + " section label does not take any parameters"
+
+# process section
+while fid:
+  ( name, value ) = Strngs.readnv (fid)
+
+  # exit on bad read or section 'end'
+  if len(name) == 0 or name == Strngs.fsend
+    break
+
+  if Strngs.fsdxf == name:
+    self.patch_radial_factor = float(value)
+  elif Strngs.fsdxw == name:
+    self.patch_axial_factor = float(value)
+  elif Strngs.fsnsub == name:
+    self.patch_subtile_factor = int(value)
+  elif Strngs.fsepsw == name:
+    self.eps_solvent = float(value)
+  elif Strngs.fsepsp == name:
+    self.eps_protein = float(value)
+  elif Strngs.fsepsc == name:
+    self.eps_channel_solvent = float(value)
+  else:
+    known_label = ""
+    assert name == known_label, "Name \"" + name + "\" is not valid in " + Strngs.fsptch + " section"
+
+!!!740527.python!!!	interpret_input() : void
+assert not Constants.feq(0.0, self.eps_solvent), "Error: solvent permitivity can not be 0"
+
+## -----------------------------------------------------
+# Determine if and what variations of ICC will be used
+self.homogeneous = Constants.feq(self.eps_protein, self.eps_solvent)
+
+## -----------------------------------------------------
+# if ICC is in use, generate the surface
+if not self.homogeneous:
+  matrix_builder = self.compute_surface_grid (Constants.os_log)
+  # Write out patch grid parameters
+  self.surface.compute_matrix (matrix_builder)
+ 
+print >>Constants.os_log, Strngs.horizontal_bar
+print >>Constants.os_log, "Interpreted ICC ('patch') input section"
+print >>Constants.os_log, Strngs.horizontal_bar
+self.write_input (Constants.os_log)
+print >>Constants.os_log, Strngs.horizontal_bar
+

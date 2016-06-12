@@ -1,0 +1,308 @@
+class ResultSetMerger
+!!!1445679.python!!!	_write_summary(in self : , in datalist : any) : void
+# We need to create a fake 'o.XXX' log file with the concentrations of the
+# different species.
+import statutil
+import os
+ionconc = {}
+step_scale = self.steps() * self.trys_per_step() / len(datalist)
+for p in datalist:
+  cscale = self.ionic_strength() / p.ionic_strength()
+  concdict =  p.concentration()
+  for entry in concdict:
+    if 0 < concdict[entry]:
+      if not entry in ionconc:
+        ionconc[entry] = statutil.Running()
+      ionconc[entry].push (concdict[entry] * cscale, (p.steps() * p.trys_per_step()/ step_scale))
+
+filename = os.path.join (self.directory(),"res","o.%03d" % self.run())
+aos = open (filename, "w")
+print >>aos,' UUID  = ',self.uuid()
+print >>aos,' STEP  = ',self.steps()
+print >>aos,' INNER = ',self.trys_per_step()
+print >>aos,' RUN   = %03d' % self.run()
+
+for entry in ionconc:
+  self._base.concentration[entry] = ionconc[entry].mean
+  print >>aos, "  %2s  ion: |    %lf |     0.000 |     0.000 |     0.000 | 00.000   0" % ( entry, ionconc[entry].mean )
+
+!!!1446575.python!!!	merge(in self : ResultSetMerger) : void
+#DEBUG# print "Record list is: ",record.record_list
+import filedata
+filedata.FileDefinition.generate_dictionary()
+
+import sys
+import statutil
+import os
+
+# list of simulations
+datalist = []
+
+# directory for the merged output dataset
+path = os.path.join (self.directory (), 'res', 'merge.%03d' % self.run())
+
+#
+# Basic action:
+# * for each line
+# ** If line has "ionic" and "strength" try:
+# *** set target_ionic_strength
+# *** except fall thru
+# ** else
+# *** p = create filelog from line
+# * if p:
+# ** append p to datalist
+# ** calculate average ionic_strength
+# ** calculate average step count
+
+target_str = statutil.Running()
+total_trials = 0
+t_per_s = 0
+use_average_ionic_strength = True
+for line in open(path):
+  if len(line.strip()) == 0:
+    continue
+  p = None
+  lowerline = line.lower ()
+  if "ionic" in lowerline and "strength" in lowerline:
+    # First assume is ionic strength
+    try:
+      ionicstrtry = float(line.split()[2])
+      # only assign if conversion successful
+      self._base.ionic_strength = ionicstrtry
+      use_average_ionic_strength = False
+      continue
+    except:
+      pass
+  p = ResultSet (line)
+  if p != None:
+    target_str.push (p.ionic_strength())
+    total_trials = total_trials + p.steps() * p.trys_per_step()
+    t_per_s = t_per_s + p.trys_per_step()
+    datalist.append (p)
+    p.report(sys.stdout)
+
+if 0 == len(datalist):
+  return
+
+# set scale factors from averages or input
+if use_average_ionic_strength:
+  self._base.ionic_strength = target_str.mean
+
+self._base.trys_per_step = t_per_s
+
+import math
+self._base.steps = int(math.ceil(float(total_trials)/float(t_per_s)))
+
+# We need to create a fake log file with the concentrations of the
+# different species.
+self._write_summary(datalist)
+
+# Basic action:
+# * For record in recordlist:
+# ** For sim in datalist:
+# *** For name in listdir(sim.directory) matching record.inregex
+# **** Make source (name)
+# **** Set src.scale as sim.ionicstr/target_ionstr
+# **** Set src.weight as sim.steps/average_steps
+# **** k = 'key' in record.inregex or None
+# **** filemap[k].append (src)
+# * For k in filemap.keys
+# ** Open output file in output dir with name from record.outfmt
+# ** Call record.process_sources
+#
+sub_keys = [ [ [] ], [], []]
+ions = self.solute_ions
+ions += self.structural_ions
+for ion in ions:
+  sub_keys[1].append( ( ion, ) )
+  for jon in ions:
+    sub_keys[2].append( ( ion, jon ) )
+for reg in ( 'zlim', 'zocc', 'chan', 'filt', 'bulk' ):
+  for jon in ions:
+    sub_keys[2].append( ( reg, jon ) )
+
+weights = {}
+istr = self.ionic_strength()
+class _helper:
+  def __init__(self, sim, aistr=istr):
+    self.resultset = sim
+    self.steps_weight = float(sim.steps() * sim.trys_per_step())/float(total_trials)
+    self.conc_weight = sim.ionic_strength()/aistr
+    self.resultframe = None
+    self.has_frame = False
+dataparts = [ _helper(sim) for sim in datalist ]
+
+# cache field type constants
+_VALUE = filedata.FieldType.VALUE
+_SERIAL = filedata.FieldType.SERIAL
+_CVALUE = filedata.FieldType.CVALUE
+_CSERIAL = filedata.FieldType.CSERIAL
+_TSERIAL = filedata.FieldType.TSERIAL
+_SUM = filedata.FieldType.SUM
+
+for merge_definition in filedata.FileDefinition.file_definition_dict.values():
+  for key in [ tuple([ merge_definition.key ] + list(subk)) for subk in sub_keys [merge_definition.subkeys]]:
+
+    # Apply weighting for solute ions only
+    use_weight = False
+    for keypart in key:
+      if keypart in self.solute_ions:
+        use_weight = True
+        break
+
+    # Merged data variables
+    result = None
+    columnset = None
+
+    # The number of sims that have the data set available
+    partcount = 0
+    # The sum of the normalised step weights, in case some sets do
+    # not have the result available
+    total_step_weight = 0.0
+    for part in dataparts:
+      if part.resultset.available (key):
+        # Always weight by step count
+        part.resultframe = part.resultset[key]
+        total_step_weight = total_step_weight + part.steps_weight
+        partcount = partcount + 1
+        part.has_frame = True
+        # Initialise the result set from the first non-empty fram
+        if result is None:
+          import pandas
+          result = pandas.DataFrame(index=part.resultframe.index)
+          columnset = part.resultframe.columns
+      else:
+        part.resultframe = None
+        part.has_frame = False
+  
+    if partcount > 0:
+      print "Processing data set ","-".join(key)
+      assert not columnset is None
+      # Function to combine the data sets
+      for collabel in columnset:
+        col_dfn = [ a for a in merge_definition.field_list if a.label == collabel ][0]
+        assert col_dfn
+        acolumn = None
+        fld_type = col_dfn.type
+        series_count = None
+        for part in dataparts:
+          if part.has_frame:
+            if part.resultframe is None:
+              continue
+            if fld_type == _VALUE:
+              # Scale by step weight
+              scale = part.steps_weight / total_step_weight
+              if acolumn is None:
+                acolumn = part.resultframe[col_dfn.label] * scale
+              else:
+                combiner = lambda x,y : x + y * scale
+                acolumn = acolumn.combine(part.resultframe[col_dfn.label], combiner)
+            elif fld_type == _CVALUE:
+              # scale by step weight + conc
+              scale = part.steps_weight * part.conc_weight / total_step_weight
+              if acolumn is None:
+                acolumn = part.resultframe[col_dfn.label] * scale
+              else:
+                combiner = lambda x,y : x + y * scale
+                acolumn = acolumn.combine(part.resultframe[col_dfn.label], combiner)
+            elif fld_type == _SERIAL:
+              # Scale by number of parts
+              scale = float(partcount)
+              if acolumn is None:
+                acolumn = part.resultframe[col_dfn.label] * scale
+              else:
+                combiner = lambda x,y : x + y * scale
+                acolumn = acolumn.combine(part.resultframe[col_dfn.label], combiner)
+            elif fld_type == _CSERIAL:
+              # scale by number of parts and conc
+              scale = float(partcount) * part.conc_weight
+              if acolumn is None:
+                acolumn = part.resultframe[col_dfn.label] * scale
+              else:
+                combiner = lambda x,y : x + y * scale
+                acolumn = acolumn.combine(part.resultframe[col_dfn.label], combiner)
+            elif fld_type == _TSERIAL:
+              # Sequential data is tricky as data series are likely to
+              # be of different length and may also have duplicate
+              # index values. The duplicate index values are the
+              # trickiest part for the Pandas library.
+              #
+              # The following code removes duplicate indices using
+              # '.groupby(level=0).last()', which means we take later
+              # duplicates over earlier ones. Removing duplicates
+              # means that we can then use the standard 'combine'
+              # methods to merge different sized series.
+              #
+              # We calculate the average based on { mean[i] =
+              # mean[i-1] + (x[i] - mean[i-1])/i } which means we need
+              # to create a series (series_count) to keep track of the
+              # number of entries at each index position.  We then use
+              # a for loop instead of 'combine' to update the mean.
+              import numpy
+              if acolumn is None:
+                import pandas
+                # Remove duplicate index values
+                acolumn = part.resultframe[col_dfn.label].groupby(level=0).last()
+                # Copy series label lost in '.groupby(level=0).last()'
+                # calls.
+                acolumn.name = part.resultframe[col_dfn.label].name
+                # Create a Series object to hold the count at each
+                # index position.
+                series_count = acolumn.copy()
+                series_count.values[:] = 1
+              else:
+                # Remove duplicate index values
+                tempcol = part.resultframe[col_dfn.label].groupby(level=0).last()
+                # Increment the count array for each element in the
+                # tempcol series, extending it with 1s.
+                combiner0 = lambda x, y : numpy.where(numpy.isnan(y),x,numpy.where(numpy.isnan(x),1,x+1))
+                series_count = series_count.combine(tempcol, combiner0)
+                # Extend acolumn with 0s for data in tempcol and not
+                # in acolumn, in preparation for running the for loop.
+                combiner1 = lambda x,y : numpy.where(numpy.isnan(y), x, x + y)
+                acolumn = acolumn.combine(tempcol, combiner1)
+                # copy series label lost in '.groupby(level=0).last()'
+                # calls.
+                acolumn.name = part.resultframe[col_dfn.label].name
+            elif fld_type == _SUM:
+              # simple addition
+              if acolumn is None:
+                acolumn = part.resultframe[col_dfn.label].copy()
+              else:
+                combiner = lambda x,y : x + y
+                acolumn = acolumn.combine(part.resultframe[col_dfn.label], combiner)
+            else:
+              # Combine the entries
+              if acolumn is None:
+                acolumn = part.resultframe[col_dfn.label].copy()
+              else:
+                acolumn.combine_first(part.resultframe[col_dfn.label])
+        if acolumn is None:
+          print >>sys.stderr, "Have none result"
+        else:
+          if not series_count is None:
+            # Calculate mean values for serial data
+            series_count.name = acolumn.name
+            combiner = lambda x,y: x / float(y)
+            acolumn = acolumn.combine(series_count, combiner)
+          result = result.join(acolumn)
+
+      # Add the resulting data set to this objects dictionary
+      self[key] = result
+
+      # Write out the data set.
+      output = None
+      if len(key) == 1:
+        output = open(os.path.join(self.directory(),"res", merge_definition.filename_format % ( self.run(), )),"w")
+      else:
+        output = open(os.path.join(self.directory(),"res", merge_definition.filename_format % tuple( list(key[1:]) + [ self.run() ] )),"w")
+      print >>output,"# UUID ",self.uuid()
+      print >>output,"# label ",
+      for dfn in merge_definition.field_list:
+          print >>output, dfn.label,
+      print >>output
+      print >>output,"# units ",
+      for dfn in merge_definition.field_list:
+          print >>output, dfn.unit,
+      print >>output
+      result.to_string (buf=output, na_rep='NaN', sparsify=False, index_names=False, header=False)

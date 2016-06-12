@@ -1,0 +1,155 @@
+class lapack
+!!!835631.cpp!!!	dgetrf(in m : lapack::int_type, in n : lapack::int_type, inout amx : double, in lda : lapack::int_type, inout ipiv : lapack::int_type) : lapack::int_type
+lapack::int_type info( 1 );
+// Intel MKL library
+#ifdef USE_MKL
+::dgetrf(&m, &n, amx, &lda, ipiv, &info);
+#endif
+
+// ATLAS library
+#ifdef USE_ATLAS
+info = ::clapack_dgetrf(CblasRowMajor, m, n, a, lda, ipiv);
+#endif
+
+// GNU Scientific library
+#ifdef USE_GSL
+::dgetrf(m, n, amx, lda, ipiv, info);
+#endif
+return info;
+!!!352688.cpp!!!	dgetrf(inout amx : boost::multi_array< double, 2 >, inout ipiv : std::vector< int_type  >) : lapack::int_type
+lapack::int_type info( 1 );
+// Intel MKL library
+#ifdef USE_MKL
+lapack::int_type m( amx.shape()[ 0 ] );
+lapack::int_type n( amx.shape()[ 1 ] );
+lapack::int_type lda( m );
+::dgetrf(&m, &n, amx.origin(), &lda, ipiv.data(), &info);
+#endif
+
+// ATLAS library
+#ifdef USE_ATLAS
+lapack::int_type m( amx.shape()[ 0 ] );
+lapack::int_type n( amx.shape()[ 1 ] );
+lapack::int_type lda( m );
+info = ::clapack_dgetrf(CblasRowMajor, m, n, amx.origin(), lda, ipiv.data());
+#endif
+
+// GNU Scientific library
+#ifdef USE_GSL
+lapack::int_type m( amx.shape()[ 0 ] );
+lapack::int_type n( amx.shape()[ 1 ] );
+lapack::int_type lda( m );
+info = ::clapack_dgetrf(CblasRowMajor, m, n, amx.origin(), lda, ipiv.data());
+#endif
+return info;
+!!!835759.cpp!!!	dgetrs(in n : lapack::int_type, in nrhs : lapack::int_type, inout amx : double, in lda : lapack::int_type, inout ipiv : lapack::int_type, out b : double, in ldb : lapack::int_type) : lapack::int_type
+lapack::int_type info( 1 );
+// Intel Maths Kernel Library
+#ifdef USE_MKL
+char trans('N');
+::dgetrs(&trans, &n, &nrhs, amx, &lda, ipiv, b, &ldb, &info);
+#endif
+
+// The ATLAS Library
+#ifdef USE_ATLAS
+info = ::clapack_dgetrs(CblasRowMajor, CblasNoTrans, n, nrhs, a, lda, ipiv, b, ldb);
+#endif
+
+// GNU Scientific Library
+#ifdef USE_GSL
+char trans('N')
+::dgetrs(trans, n, nrhs, amx, lda, ipiv, b, ldb, info);
+#endif
+return info;
+
+!!!352560.cpp!!!	dgetrs(in amx : boost::multi_array< double, 2 >, in ipiv : std::vector< int_type >, out b : std::vector< double >) : lapack::int_type
+lapack::int_type info( 1 );
+// Intel Maths Kernel Library
+#ifdef USE_MKL
+lapack::int_type n( amx.shape()[ 1 ] );
+lapack::int_type nrhs( 1 );
+lapack::int_type lda( amx.shape()[ 0 ] );
+lapack::int_type ldb( b.size() );
+char trans('N');
+::dgetrs(&trans, &n, &nrhs, const_cast< double* >( amx.origin() ), &lda, const_cast< lapack::int_type* >( ipiv.data() ), b.data(), &ldb, &info);
+#endif
+
+// The ATLAS Library
+#ifdef USE_ATLAS
+lapack::int_type n( amx.shape()[ 1 ] );
+lapack::int_type nrhs( 1 );
+lapack::int_type lda( amx.shape()[ 0 ] )
+lapack::int_type ldb( b.size() );
+info = ::clapack_dgetrs(CblasRowMajor, CblasNoTrans, n, nrhs, static_cast< double* >( amx.origin() ), lda, ipiv.data(), b.data(), ldb);
+#endif
+
+// GNU Scientific Library
+#ifdef USE_GSL
+lapack::int_type n( amx.shape()[ 1 ] );
+lapack::int_type nrhs( 1 );
+lapack::int_type lda( amx.shape()[ 0 ] )
+lapack::int_type ldb( b.size() );
+return ::clapack_dgetrs(CblasRowMajor, CblasNoTrans, n, nrhs, static_cast< double* >( amx.origin() ), lda, ipiv.data(), b.data(), ldb);
+#endif
+return info;
+
+!!!532272.cpp!!!	dgetrs(in amx : boost::multi_array< double, 2 >, in ipiv : std::vector< int_type >, out b : std::valarray< double >) : lapack::int_type
+lapack::int_type info( 1 );
+// Intel Maths Kernel Library
+#ifdef USE_MKL
+lapack::int_type n( amx.shape()[ 1 ] );
+lapack::int_type nrhs( 1 );
+lapack::int_type lda( amx.shape()[ 0 ] );
+lapack::int_type ldb( b.size() );
+char trans('N');
+::dgetrs(&trans, &n, &nrhs, const_cast< double* >( amx.origin() ), &lda, const_cast< lapack::int_type* >( ipiv.data() ), &b[0], &ldb, &info);
+#endif
+
+// The ATLAS Library
+#ifdef USE_ATLAS
+lapack::int_type n( amx.shape()[ 1 ] );
+lapack::int_type nrhs( 1 );
+lapack::int_type lda( amx.shape()[ 0 ] )
+lapack::int_type ldb( b.size() );
+info = ::clapack_dgetrs(CblasRowMajor, CblasNoTrans, n, nrhs, static_cast< double* >( amx.origin() ), lda, ipiv.data(), &b[0], ldb);
+#endif
+
+// GNU Scientific Library
+#ifdef USE_GSL
+lapack::int_type n( amx.shape()[ 1 ] );
+lapack::int_type nrhs( 1 );
+lapack::int_type lda( amx.shape()[ 0 ] )
+lapack::int_type ldb( b.size() );
+return ::clapack_dgetrs(CblasRowMajor, CblasNoTrans, n, nrhs, static_cast< double* >( amx.origin() ), lda, ipiv.data(), &b[0], ldb);
+#endif
+return info;
+
+!!!836015.cpp!!!	version() : string
+static bool once (false);
+static std::string version;
+
+if (not once)
+{
+// Get version information for the MKL library
+#ifdef USE_MKL
+  char buf_[256];
+  ::mkl_get_version_string (buf_, 255);
+  buf_[255] = '\0';
+  version = std::string (buf_);
+#endif
+
+// Get version information for the ATLAS library
+#ifdef USE_ATLAS
+  boost::format ver ("ATLAS math library version %1%: arch %2%") % ATL_VERS % ATL_ARCH;
+  version = ver.str();
+#endif
+
+// Get version information for the GSL library
+#ifdef USE_GSL
+  boost::format ver ("Gnu Scientific library %1%") % gsl_version;
+  version = ver.str ();
+#endif
+  once = true;
+}
+return version;
+

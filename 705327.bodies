@@ -1,0 +1,83 @@
+class CubeRegion
+!!!1308335.cpp!!!	generate_position(in self : , inout a_gen : mersenne_twister_19937)
+switch (index_)
+{
+case constants::ipblk:
+{
+  // Somewhere in periodic system
+  a_pt.set_z(a_gen() * zhigh_);
+  a_pt.set_xy(a_gen() * zhigh_, a_gen() * zhigh_);
+}
+break;
+
+case constants::ismpl:
+{
+  // ERROR: cannot generate position in sampling-only region
+  const bool invalid_region = false;
+  IONCH_CHECK(invalid_region, "Cannot generate positions in a sampling-only region");
+}
+break;
+
+default:
+{
+  // Somewhere in a cylinder
+  a_pt.set_z((2 * a_gen() - 1.0) * zhigh_);
+  a_pt.set_r(a_gen() * radius_, a_gen() * 2 * constants::pi);
+}
+break;
+}
+!!!1308335.python!!!	generate_position(in self : , inout a_gen : mersenne_twister_19937)
+# Somewhere in a cube
+x = self.dimensions[0] * a_gen()
+y = self.dimensions[1] * a_gen()
+z = self.dimensions[2] * a_gen()
+return ( x, y, z, 0 )
+!!!1234991.python!!!	hypot_sq(in self : , in p0 : double, in p1 : double) : double
+# Minimum image means d[u] is <= 1/2 dim[u] if per[u]
+#assert len(p0) >= 3, "First argument to hypot_sq must have minimum length of 3"
+#assert len(p0) == len(p1), "Second argument to hypot_sq must be the same length as the first"
+_d = self.dimensions
+_p = self.periodic
+_r = numpy.abs(p0 + p1)
+#
+# What the following should translate to:
+#
+# for i in ( 0, 1 , 2 ):
+#   if self.periodic[i] and abs(p0[i] - p1[i]) > self.dimensions[i]/2:
+#     sum += pow( self.dimensions[i] - abs(p0[i] - p1[i]), 2)
+#   else:
+#     sum += pow(p0[i] - p1[i], 2)
+return pow(((_p[0] and 2*_r[0] > _d[0]) and (_d[0] - _r[0]) or _r[0]), 2) + pow(((_p[1] and 2*_r[1] > _d[1]) and (_d[1] - _r[1]) or _r[1]), 2) + pow(((_p[2] and 2*_r[2] > _d[2]) and (_d[2] - _r[2]) or _r[2]), 2)
+
+!!!1308463.python!!!	in_region(in self : , in apt : ) : bool
+pos = apt.position()
+npos = pos[:]
+changed = False
+for i in ( 0, 1, 2 ):
+  if pos[i] < 0:
+    npos[i] += self.dimensions[i]
+    changed = True
+  elif pos[i] >= self.dimensions[i]:
+    npos[i] -= self.dimensions[i]
+    changed = True
+if changed:
+  apt.set_cartesian( npos[0], npos[1], npos[2] )
+return True
+!!!1235503.python!!!	__init__(inout self : , in xdim : , in ydim : , in zdim : )
+self.periodic.fill(False)
+self.dimensions[0] = xdim
+self.dimensions[1] = ydim
+self.dimensions[2] = zdim
+!!!1235119.python!!!	valid(in self : , in p0 : double) : double
+for i in ( 0, 1, 2):
+  if p0[i] < 0.0:
+    if self.periodic[i]:
+      p0[i] = self.dimension[i] - p0[i]
+    else:
+      return None
+  elif p0[i] >= self.dimension[i]:
+    if self.periodic[i]:
+      p0[i] -= self.dimension[i]
+    else:
+      return None
+return p0

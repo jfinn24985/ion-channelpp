@@ -1,0 +1,373 @@
+class formation
+!!!1873327.cpp!!!	help_information(inout exemplar : input_help) : void
+  const std::string seclabel (constants::fsform());
+  std::stringstream a_os;
+  a_os << "The settings in the " << seclabel << " input section relate";
+  a_os << " to the interface between the move generation and the simulation cell.";
+  // ----------------------------------------
+  // add section
+  // ----------------------------------------
+
+  //   Specie input section definition
+  exemplar.add_section (seclabel, a_os.str());
+
+  // ----------------------------------------
+  // add parameters
+  // ----------------------------------------
+  {
+    std::stringstream description;
+    description << "[required, \"label\" (number|"<< constants::fsgzl1() << "|";
+    description << constants::fsgzl4() << ") (number|" << constants::fsgrl1();
+    description << "|" << constants::fsgrl4() << "|" << constants::fsgrl5();
+    description << ")] Define a cylindrical region by label, length and radius.";
+    description << " Multiple regions may be defined. The first defined region ";
+    description << "will be used to restrict \"" << constants::fschon() << "\" and \"";
+    description << constants::fsmobl() << "\" type particles.";
+    exemplar.description(seclabel).add_options()(constants::fsregn().c_str(), description.str().c_str());
+  }
+  {
+    std::stringstream description;
+    description << "[optional, (true|false), default=false] Use the optional ";
+    description << " grid-based starting configuration generator.  This is";
+    description << " especially useful at higher ionic strengths where the";
+    description << " standard random position generator is most likely to";
+    description << " have trouble inserting enough particles.";
+    exemplar.description(seclabel).add_options()(constants::fsgrid().c_str(), description.str().c_str());
+  }
+  {
+    std::stringstream description;
+    description << "[optional, number] The target number of solute particles";
+    description << " in the simulation. If it is not present it will be deduced";
+    description << " from the geometry and ionch strength. When present the";
+    description << " the cell dimensions are deduced from this number and the";
+    description << " ionic strength.";
+    exemplar.description(seclabel).add_options()(constants::fsntrg().c_str(), description.str().c_str());
+  }
+  {
+    const std::string description("The temperature of the simulation in Kelvin\n  (Valid values 260 < " + constants::fstsi() + " < 380)");
+    exemplar.description(seclabel).add_options()(constants::fstsi().c_str(), description.c_str());
+  }
+!!!1873583.cpp!!!	read_input(inout parser : input_reader) : void
+  // Check name, if wrong this is programming error
+  IONCH_REQUIRE (parser.name() == constants::fsform(), "Error: incorrect section name");
+  // Check value, if present this is an input error
+  IONCH_INPUT (parser.value().empty (), "Error: section does not require any parameters", constants::fsgeom());
+  bool temperature_set (false);
+  while (parser.next())
+  {
+    // exit loop on bad read or section 'end'
+    if (parser.name ().empty() or parser.name () == constants::fsend())
+      break;
+
+    // looking for region, usegrid and ntarg
+    if (parser.name () == constants::fsregn())
+    {
+      region_desc_.push_back (parser.value ());
+    }
+    else if (parser.name () == constants::fsgrid())
+    {
+      IONCH_INPUT (parser.read_as_bool(parser.value (), use_grid_)
+                   , "Input value "+parser.value()+" could not be interpreted as true or false"
+                   , constants::fsform());
+    }
+    else if (parser.name () == constants::fstsi())
+    {
+      temperature_kelvin_ = boost::lexical_cast < double > (parser.value ());
+      IONCH_INPUT(temperature_kelvin_ > 260.0, "Temperature is in Kelvin so T < 260 makes no sense", constants::fsform());
+      IONCH_INPUT(temperature_kelvin_ < 380.0, "Temperature is in Kelvin so T > 380 makes no sense", constants::fsform());
+      beta_ = 1.0/(constants::boltzmann_constant() * temperature_kelvin_);
+      qstar_ = constants::electron_charge() * std::sqrt(beta_ / (4 * constants::pi() * constants::epsilon_0() * constants::angstrom()));
+      temperature_set = true;
+    }
+    else if (parser.name () == constants::fsntrg())
+    {
+      target_particle_number_ = boost::lexical_cast< size_t >(parser.value ());
+      IONCH_INPUT (target_particle_number_ > 0
+                   , "Target number of particles must be unset or greater than 0", constants::fsgeom());
+    }
+    else
+    {
+      const std::string known_option_name;
+      IONCH_INPUT (parser.name () != known_option_name, "Name " + parser.name () + " is not a valid option in the geometry section", constants::fsgeom());
+    }
+  }
+  IONCH_INPUT(temperature_set, "Required temperature setting ("+constants::fstsi()+") missing in input.", constants::fsform());
+
+!!!1873711.cpp!!!	echo_input(inout logger : ostream) : void
+  logger << constants::fsform() << "\n";
+  for (size_t index = 0; index != region_desc_.size (); ++index)
+  {
+    logger << constants::fsregn() << " " << region_desc_[index] << "\n";
+  }
+  logger << constants::fstsi()  << " " << temperature_kelvin_ << "\n";
+  logger << constants::fsgrid() << " " << (use_grid_ ? "true" : "false") << "\n";
+  logger << constants::fsntrg() << " " << target_particle_number_ << "\n";
+  logger << constants::fsend() << "\n\n";
+!!!1873839.cpp!!!	read_finalise(inout logger : ostream) : void
+  conf_->read_finalise();
+  spec_->read_finalise(*this, *conf_, logger);
+  geom_->read_finalise(logger, spec_->ionic_strength(), target_particle_number_);
+
+  // Convert regions
+  for (size_t index = 0; index != region_desc_.size (); ++index)
+  {
+    std::stringstream os (region_desc_[index]);
+    std::string name, tmp;
+    double len, rad, dis;
+    // first element is name
+    os >> name;
+    input_reader::dequote(name);
+    if (DEBUG)
+      logger << "Got N[" << name << "]\n";
+    // second element is length
+    if (not (os >> len))
+    {
+      os.clear();
+      os >> tmp;
+      if (DEBUG)
+        logger << "Got L[" << tmp << "]\n";
+      if (constants::fsgzl1() == tmp)
+      {
+        len = geom_->zl(1);
+      }
+      else if (constants::fsgzl2() == tmp)
+      {
+        len = geom_->zl(2);
+      }
+      else if (constants::fsgzl3() == tmp)
+      {
+        len = geom_->zl(3);
+      }
+      else if (constants::fsgzl4() == tmp)
+      {
+        len = geom_->zl(4);
+      }
+      else
+      {
+        IONCH_INPUT (false, "Z Value \""+tmp+"\" could not be interpreted as a keyword or number"
+                     , constants::fsform ());
+      }
+    }
+    if (DEBUG)
+      logger << "Got L[" << len << "]\n";
+    // third element is radius
+    if (not (os >> rad))
+    {
+      os.clear();
+      os >> tmp;
+      if (DEBUG)
+        logger << "Got R[" << tmp << "]\n";
+      if (constants::fsgrl1() == tmp)
+      {
+        rad = geom_->rl(1);
+      }
+      else if (constants::fsgrl2() == tmp)
+      {
+        rad = geom_->rl(2);
+      }
+      else if (constants::fsgrl3() == tmp)
+      {
+        rad = geom_->rl(3);
+      }
+      else if (constants::fsgrl4() == tmp)
+      {
+        rad = geom_->rl(4);
+      }
+      else if (constants::fsgrl5() == tmp)
+      {
+        rad = geom_->rl(5);
+      }
+      else
+      {
+        IONCH_INPUT (false, "R Value "+tmp+" could not be interpreted as a keyword or number"
+                     , constants::fsform ());
+      }
+    }
+    if (DEBUG)
+      logger << "Got R[" << rad << "]\n";
+    IONCH_INPUT ((os >> dis), "D Value "+os.str()+" could not be interpreted as a number"
+                 , constants::fsform ());
+    if (DEBUG)
+      logger << "Got D[" << dis << "]\n";
+    this->regions_.push_back (region(name, len, rad, dis));
+  }
+
+  // - Check all initial positions are valid geometric locations.
+  // - Build region<->index map data structures.
+  nreg_.resize (this->number_of_regions(), 0ul);
+  nin_.resize (boost::extents [this->spec_->size()][this->number_of_regions()]);
+  indreg_.resize(this->number_of_regions());
+  for (size_t ii = 0; ii != conf_->active_size(); ++ii)
+  {
+    const int ispec = conf_->specie_index(ii);
+
+
+    if (~0ul == ispec)
+    {
+      continue;
+    }
+    IONCH_INPUT (valid_position (ii, ispec, conf_->rx(ii), conf_->ry(ii), conf_->rz(ii), conf_->r2(ii))
+                 , "Particle " + boost::lexical_cast< std::string >(ii) + " ("
+                 + spec_->get_specie(ispec).code_name() + ") is in an invalid position."
+                 , constants::fsform());
+    for (size_t ireg = 0; ireg < regions_.size(); ++ireg)
+    {
+      if (regions_[ireg].in_region(conf_->rz(ii), conf_->r2(ii), spec_->get_specie(ispec).radius ()))
+      {
+        addreg_private(ireg, ispec, ii);
+      }
+    }
+  }
+
+  logger << constants::horizontal_bar () << "\n";
+  logger << "Interpreted formation input\n";
+  logger << constants::horizontal_bar () << "\n";
+  echo_input(logger);
+  logger << constants::horizontal_bar () << "\n";
+
+!!!1874607.cpp!!!	register_input_readers(inout meta : input_delegater) : void
+  meta.set_input_delegate(constants::fsform(), boost::bind(&formation::read_input, this, _1));
+  meta.set_input_delegate(constants::fsgeom(), boost::bind(&cell_geom::read_input, this->geom_, _1));
+  meta.set_input_delegate(constants::fsspec(), boost::bind(&spec::read_specie, this->spec_, _1));
+  meta.set_input_delegate(constants::fssalt(), boost::bind(&spec::read_salt, this->spec_, _1));
+  meta.set_input_delegate(constants::fssubs(), boost::bind(&spec::read_subspecie, this->spec_, _1));
+!!!1874863.cpp!!!	on_commit(inout trial : ) : void
+  if (trial.is_add() or trial.is_amove())
+  {
+    // ----------
+    // ADD or MOVE
+    for (size_t ichg = 0; ichg != trial.size(); ++ichg)
+    {
+      if (trial.is_add())
+      {
+        // Get new index from conf
+        trial[ichg].particle_id = conf_->allocate_index(trial[ichg].specie_id);
+      }
+      if (not is_bulk ()) // Adjust region/index maps
+      {
+        IONCH_CHECK (trial[ichg].specie_id < spec_->size (), "Error: specie index is out of range");
+        IONCH_CHECK (trial[ichg].particle_id < conf_->active_size(), "Error: particle index out of range");
+        const double radius (spec_->get_specie(trial[ichg].specie_id).radius());
+        if (trial.is_add())
+        {
+          // MANAGE indreg: add particle to a region
+          //
+          // Add a particle to a region index if rz is in region's z scope
+          //
+          for (size_t ireg = 0; ireg < regions_.size(); ++ireg)
+          {
+            if (regions_[ireg].in_region(trial[ichg].z, 0, radius))
+            {
+              addreg_private(ireg, trial[ichg].specie_id, trial[ichg].particle_id);
+            }
+          }
+        }
+        else
+        {
+          // MANAGE indreg: move a particle between regions.
+          //
+          // Update a particle's region settings after moving.
+          //
+          // This method only updates settings where a particle has moved into
+          // or out of a region.
+          for (size_t ireg = 0; ireg < regions_.size(); ++ireg)
+          {
+            if (regions_[ireg].in_region(conf_->rx(trial[ichg].particle_id), 0, radius))
+            {
+              if (not regions_[ireg].in_region(trial[ichg].z, 0, radius))
+              {
+                delreg_private(ireg, trial[ichg].specie_id, trial[ichg].particle_id);
+              }
+            }
+            else
+            {
+              if (regions_[ireg].in_region(trial[ichg].z, 0, radius))
+              {
+                addreg_private(ireg, trial[ichg].specie_id, trial[ichg].particle_id);
+              }
+            }
+          }
+        }
+      }
+      // update position
+      conf_->set_position(trial[ichg].particle_id, trial[ichg].x, trial[ichg].y, trial[ichg].z, trial[ichg].r, trial[ichg].eps);
+    }
+  }
+  else
+  {
+    // -- DELETE --
+    for (int ichg = 0; ichg != trial.size(); ++ichg)
+    {
+      if (not is_bulk ())
+      {
+        // MANAGE indreg: remove a particle from regions.
+        //
+        // Remove a particle from a region index if rz it was in region's z scope
+        //
+        const double radius (spec_->get_specie(trial[ichg].specie_id).radius());
+        for (size_t ireg = 0; ireg < regions_.size(); ++ireg)
+        {
+          if (regions_[ireg].in_region(trial[ichg].z, 0, radius))
+          {
+            delreg_private(ireg, trial[ichg].specie_id, trial[ichg].particle_id);
+          }
+        }
+      }
+      conf_->release_index(trial[ichg].particle_id);
+    }
+  }
+!!!1875119.cpp!!!	addreg_private(in ireg : size_t, in ispec : size_t, in idx : size_t) : void
+  // In C++ we set indreg before incrementing nreg
+  if (indreg_[ireg].size () == nreg_[ireg])
+    {
+      indreg_[ireg].push_back(idx);
+    }
+  else
+    {
+      indreg_[ireg][nreg_[ireg]] = idx;
+    }
+  ++nreg_[ireg];
+  ++nin_[ispec][ireg];
+!!!1875247.cpp!!!	delreg_private(in ireg : size_t, in ispec : size_t, in ii : size_t) : void
+  // Work in reverse, moving indices down until ii is found
+  // Setting j1 -> ii effectively rotates the list
+  // to bring ii to the end.  Then reducing nreg[ireg] one
+  // cuts off this end element.
+  for (size_t j = nreg_ [ireg] - 1, j1 = ii; j != 0; --j)
+  {
+    const size_t i1 = indreg_[ireg][j]; // save current value
+
+    // set current to value from last loop (or ii in first loop)
+    indreg_ [ireg][j] = j1;
+
+    // If particle found decrement counters and return
+    if (i1 == ii)
+    {
+      --nreg_[ireg];
+      --nin_[ispec][ireg];
+      return;
+    }
+
+    j1 = i1; // Set value of j+1 for next loop to current.
+  }
+  const bool not_in_region_index = false;
+  IONCH_ENSURE (not_in_region_index, "Error deleting particle from region: possibly corrupt indices.");
+!!!1875375.cpp!!!	index_in_region(in ispec : size_t, in ireg : size_t, in lindx : size_t) : size_t
+  IONCH_INDEX(ispec, spec_->size (), "Specie index out of range");
+  IONCH_INDEX(ireg, regions_.size (), "Region index out of range");
+  IONCH_INDEX(lindx, nin_[ispec][ireg], "Local index out of range in given region");
+  IONCH_INDEX(lindx, nreg_[ireg],  "Error: number of values greater than array size");
+  IONCH_REQUIRE(indreg_[ireg].size () >= nreg_[ireg], "Error: array size smaller than specified maximum");
+  size_t spcidx;
+  for (spcidx = 0; spcidx != nreg_[ireg]; ++spcidx)
+  {
+    if (conf_->specie_index(indreg_[ireg][spcidx]) == ispec)
+    {
+      if (lindx == 0)
+        break;
+      --lindx;
+    }
+  }
+  IONCH_ENSURE(spcidx != nreg_[ireg], "No valid index found");
+  IONCH_ENSURE(conf_->specie_index(indreg_[ireg][spcidx]) == ispec, "Invalid index found");
+  return indreg_[ireg][spcidx];

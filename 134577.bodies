@@ -1,0 +1,216 @@
+class specie
+!!!382769.cpp!!!	chemical_potential() : double
+return (utility::feq(0.0, this->concentration_) ? 0.0 : std::log(this->concentration_/core::constants::to_SI()) + this->excess_potential_);
+!!!549425.cpp!!!	description(inout out : ostream) : void
+out << "specie\n";
+out << "        label :" << this->label_ << "\n";
+out << "       radius :" << this->radius_ << "\n";
+out << "         rate :" << this->rate_ << "\n";
+out << "      valency :" << this->valency_ << "\n";
+out << "  excess c.p. :" << this->excess_potential_ << "\n";
+out << "   chem. pot. :" << this->chemical_potential() << "\n";
+out << " target conc. :" << this->concentration_ << "\n";
+out << "        count :" << this->count_ << "\n";
+out << "         type :" << type_label(this->type_) << "\n";
+if (not this->parameter_set_.empty())
+{
+  out << " - parameters -\n";
+  for (auto const& keyval : this->parameter_set_)
+  {
+    out << std::setw(15) << (keyval.first + " :") << keyval.second << "\n";
+  }
+}
+!!!549425.python!!!	description(inout out : ostream) : void
+print >>out, "[specie] definition"
+print >>out, "        label :", self.label_
+print >>out, "       radius :", self.radius_
+print >>out, "      valency :", self.valency_
+print >>out, "  excess c.p. :", self.excess_potential_
+print >>out, "   chem. pot. :", self.chemical_potential()
+print >>out, " target conc. :", self.concentration_
+print >>out, "        count :", self.count_
+!!!304816.cpp!!!	equivalent(in other : specie) : bool
+return 
+  this->parameter_set_ == other.parameter_set_ and
+  this->locations_ == other.locations_ and
+  this->localize_data_ == other.localize_data_ and
+  this->concentration_ == other.concentration_ and
+  this->count_ == other.count_ and
+  this->excess_potential_ == other.excess_potential_ and
+  this->label_ == other.label_ and
+  this->radius_ == other.radius_ and
+  this->rate_ == other.rate_ and
+  this->valency_ == other.valency_ and
+  this->type_ == other.type_;
+!!!2079535.cpp!!!	has_parameter(in name : string) : bool
+return 0 != this->parameter_set_.count (name);
+!!!2079407.cpp!!!	parameter(in name : string) : string
+UTILITY_REQUIRE(0 != this->parameter_set_.count (name), "Parameter '"+name+"' not in specie '"+this->label_+"'");
+return this->parameter_set_.find(name)->second;
+!!!549553.cpp!!!	type_label(in typeval : size_t) : string
+switch(typeval) 
+{
+case MOBILE:
+  return core::strngs::fsmobl();
+case FLEXIBLE:
+  return core::strngs::fsflxd();
+case CHANNEL_ONLY:
+  return core::strngs::fschon();
+case SOLUTE:
+  return core::strngs::fsfree();
+default:
+  {
+    size_t valid_value = MOBILE;
+    UTILITY_ALWAYS(typeval == valid_value, "Attempt to get label for invalid specie type");
+  }
+case INVALID:
+  return "invalid";
+};
+
+!!!282929.cpp!!!	specie(in other : specie)
+: parameter_set_ ( other.parameter_set_ )
+, locations_ ( other.locations_ )
+, localize_data_ ( other.localize_data_ )
+, concentration_ ( other.concentration_ )
+, count_ ( other.count_ )
+, excess_potential_ ( other.excess_potential_ )
+, label_ ( other.label_ )
+, radius_ ( other.radius_ )
+, rate_ ( other.rate_ )
+, valency_ ( other.valency_ )
+, type_ ( other.type_ )
+{}
+!!!230448.cpp!!!	specie(in other : specie)
+: parameter_set_( std::move( other.parameter_set_ ) )
+, locations_ ( std::move( other.locations_ ) )
+, localize_data_ ( std::move( other.localize_data_ ) )
+, concentration_( std::move( other.concentration_ ) )
+, count_( std::move( other.count_ ) )
+, excess_potential_( std::move( other.excess_potential_ ) )
+, label_( std::move( other.label_ ) )
+, radius_( std::move( other.radius_ ) )
+, rate_( std::move( other.rate_ ) )
+, valency_( std::move( other.valency_ ) )
+, type_( std::move( other.type_ ) )
+{}
+!!!283185.cpp!!!	swap(inout other : specie) : void
+std::swap(this->parameter_set_, other.parameter_set_);
+std::swap(this->locations_, other.locations_);
+std::swap(this->localize_data_, other.localize_data_);
+std::swap(this->concentration_, other.concentration_);
+std::swap(this->count_, other.count_);
+std::swap(this->excess_potential_, other.excess_potential_);
+std::swap(this->label_, other.label_);
+std::swap(this->radius_, other.radius_);
+std::swap(this->rate_, other.rate_);
+std::swap(this->valency_, other.valency_);
+std::swap(this->type_, other.type_);
+!!!550577.cpp!!!	decrement() : void
+UTILITY_REQUIRE( this->type_ == SOLUTE, "Only solute particles can change in number" );
+--this->count_;
+!!!550449.cpp!!!	increment() : void
+UTILITY_REQUIRE( this->type_ == SOLUTE, "Only solute particles can change in number" );
+++this->count_;
+!!!799921.cpp!!!	set_parameter(in name : string, in value : string) : void
+UTILITY_REQUIRE( not this->has_parameter( name ),
+      "Can not change value of an existing parameter." );
+this->parameter_set_.insert( std::make_pair( name, value ) );
+!!!204464.cpp!!!	string_to_specie_type(in val : string, in orig : specie::specie_type, out set : bool) : specie::specie_type
+val = core::input_reader::dequote(val);
+set = true;
+if (val == core::strngs::fsmobl()) return specie::MOBILE;
+if (val == core::strngs::fsflxd()) return specie::FLEXIBLE;
+if (val == core::strngs::fschon()) return specie::CHANNEL_ONLY;
+if (val == core::strngs::fsfree()) return specie::SOLUTE;
+set = false;
+return orig;
+!!!1704879.cpp!!!	write_document(inout wr : input_document) : void
+std::size_t ix = wr.add_section( core::strngs::fsspec() );
+auto &sec = wr[ ix ];
+sec.add_entry( core::strngs::fsname(), "\"" + this->label () + "\"" );
+// Output the specie type
+switch ( this->sub_type() )
+{
+ case specie::CHANNEL_ONLY:
+  sec.add_entry( core::strngs::fstype(), core::strngs::fschon() );
+  break;
+case specie::MOBILE:
+  sec.add_entry( core::strngs::fstype(), core::strngs::fsmobl() );
+  break;
+case specie::FLEXIBLE:
+  sec.add_entry( core::strngs::fstype(), core::strngs::fsflxd() );
+  break;
+default:
+  sec.add_entry( core::strngs::fstype(), core::strngs::fsfree() );
+  break; // Assume INVALID will become a free specie
+}
+sec.add_entry( core::strngs::fsctrg(), this->concentration() );
+sec.add_entry( core::strngs::rate_label(), this->rate() );
+sec.add_entry( core::strngs::fsd(), this->radius()*2.0 );
+sec.add_entry( core::strngs::fsz(), this->valency() );
+sec.add_entry( core::strngs::fschex(), this->excess_potential() );
+auto quote = [](std::string s){ return (s.front() == '"' and s.front() != s.back() ? s : '"' + s  + '"'); };
+for (auto const& nvpair : this->parameter_set_)
+{
+  sec.add_entry( quote( nvpair.first ), quote( nvpair.second ) );
+}
+if (this->count() != 0)
+{
+   UTILITY_REQUIRE( this->locations_.size() == this->count(), "Cache has not been updated" );
+   std::stringstream ss;
+   if ( this->is_localized() )
+   {
+     UTILITY_REQUIRE( this->localize_data_.size() == this->count(), "Cache has not been updated" );
+      for (std::size_t ix = 0; ix != this->count(); ++ix)
+      {
+         ss << this->locations_[ ix ] << " " << this->localize_data_[ ix ];
+         ss << "\n";
+      }
+   }
+   else
+   {
+      for (std::size_t ix = 0; ix != this->count(); ++ix)
+      {
+         ss << this->locations_[ ix ] << "\n";
+      }
+   }
+   std::string result( ss.str() );
+   if (result.size() != 0) // remove last '\n' if it exists
+   {
+      result.pop_back();
+   }
+   sec.add_entry( core::strngs::fsn(), std::to_string( this->count() ) + "\n" +
+result );
+}
+!!!283952.cpp!!!	update_position(in lidx : size_t, in pos : coordinate) : void
+UTILITY_REQUIRE( lidx < this->count(), "Index is out of range" );
+if ( this->locations_.size() != this->count() )
+{
+   this->locations_.resize( this->count() );
+}
+this->locations_[ lidx ] = pos;
+!!!284080.cpp!!!	append_position(in pos : coordinate, in cntr : centroid) : void
+if ( this->type_ == INVALID )
+{
+  this->type_ = MOBILE;
+}
+UTILITY_INPUT( this->type_ == MOBILE or this->type_ == FLEXIBLE,
+      "Specie type MOBILE and FLEXIBLE require centre information",
+      core::strngs::fsspec() );
+UTILITY_REQUIRE( this->locations_.size() == this->localize_data_.size(),
+      "Error in location cache, different sizes for position and centre information." );
+this->locations_.push_back( pos );
+this->localize_data_.push_back( cntr );
+!!!284208.cpp!!!	append_position(in pos : coordinate) : void
+UTILITY_INPUT( this->type_ != MOBILE and this->type_ != FLEXIBLE,
+      "Specie type MOBILE and FLEXIBLE require centre information",
+      core::strngs::fsspec() );
+UTILITY_REQUIRE( this->localize_data_.empty(),
+      "Error in location cache, appending only the position requires no centre information." );
+this->locations_.push_back( pos );
+!!!284464.cpp!!!	get_position(in lidx : size_t) : coordinate
+UTILITY_REQUIRE( this->locations_.size() == this->count(), "Locations information is out-of-date" );
+return this->locations_.at( lidx );
+!!!320816.cpp!!!	get_localization_data(in lidx : size_t) : centroid
+UTILITY_REQUIRE( this->is_localized(), "Only localized species have localization data" );
+return this->localize_data_.at( lidx );

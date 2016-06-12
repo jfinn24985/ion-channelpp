@@ -1,0 +1,176 @@
+class salt
+!!!1881903.cpp!!!	echo_input(inout fid : ostream) : void
+  fid << constants::fssalt() << "\n";
+  fid << constants::fsname() << " \"" << code_name_ << "\"\n";
+  fid << constants::fsrtgr() << " " << rate_change_ << "\n";
+  fid << constants::fsctrg() << " " << concentration_ << "\n";
+  fid << constants::fsend() << "\n\n";
+!!!1883055.cpp!!!	swap(inout other : salt) : void
+  std::swap(chemical_potential_, other.chemical_potential_);
+  std::swap(chemical_excess_, other.chemical_excess_);
+  std::swap(rate_change_, other.rate_change_);
+  std::swap(concentration_, other.concentration_);
+  std::swap(cation_index_, other.cation_index_);
+  std::swap(anion_index_, other.anion_index_);
+  std::swap(code_name_, other.code_name_);
+!!!1883311.cpp!!!	read_input(inout parser : input_reader) : void
+  IONCH_REQUIRE(parser.name() == constants::fssalt(), "Input section is not for a salt");
+
+  std::bitset< 3 > mask_ (true);
+  enum  // bit set indices
+  {
+    MASK_LABEL = 0,
+    MASK_RATE_CHG = 1,
+    MASK_CONCENTRATION = 2
+  };
+
+  // no optional argument to salt
+  IONCH_INPUT(parser.value().empty(), "Unrecognised salt type", constants::fssalt());
+
+  // process section
+  while (parser.next())
+  {
+    if (parser.name() == constants::fsend())
+      break;
+    try
+    {
+      // looking for ctarg, name, ratgr
+      if (parser.name() == constants::fsctrg())
+      {
+        this->concentration_ = boost::lexical_cast< double >(parser.value());
+        IONCH_INPUT(this->concentration_ >= 0.0, "Concentrations must be greater than zero", constants::fssalt());
+        mask_.reset(MASK_CONCENTRATION);
+      }
+      else if (parser.name() == constants::fsname())
+      {
+        this->code_name_ = parser.value();
+        parser.dequote(this->code_name_);
+        IONCH_INPUT(this->code_name_.size() == 4, "Salt label must have four letters", constants::fssalt());
+        mask_.reset(MASK_LABEL);
+      }
+      else if (parser.name() == constants::fsislt())
+      {
+        this->code_name_ = parser.value();
+        parser.dequote(this->code_name_);
+        IONCH_INPUT(this->code_name_.size() == 2, "Cation label must have two letters", constants::fssalt());
+        mask_.reset(MASK_LABEL);
+      }
+      else if  (parser.name() == constants::fsrtgr())
+      {
+        this->rate_change_ = boost::lexical_cast< double >(parser.value());
+        IONCH_INPUT(this->rate_change_ >= 0.0, "Probability rates must be greater than zero", constants::fssalt());
+        mask_.reset(MASK_RATE_CHG);
+      }
+      else
+      {
+        static const bool recognised_option (false);
+        IONCH_INPUT(recognised_option, "Option "+parser.name()+" is not valid in salt section", constants::fssalt());
+      }
+    }
+    catch (boost::bad_lexical_cast &e)
+    {
+      const bool convert_succeed(false);
+      IONCH_INPUT(convert_succeed, e.what(), constants::fssalt());
+    }
+  }
+  if (mask_.any())
+  {
+    static const bool all_options_found (false);
+    IONCH_INPUT(all_options_found, "Not all required tags were present.", constants::fssalt());
+  }
+!!!1883439.cpp!!!	associate(in beg : std::vector<specie>::const_iterator, in end : std::vector<specie>::const_iterator) : void
+  IONCH_CHECK(code_name().size() == 2 or code_name().size() == 4, "Specie code name must be exactly 4 letters.");
+  // Find cation specie from first two letters of fsalt
+  bool no_cation (true);
+  bool no_anion (true);
+  const std::string cation (code_name().substr(0,2));
+  const std::string anion (code_name().size() == 4 ? code_name().substr(2,2): std::string());
+  size_t counter = 0;
+  for (; beg != end and (no_cation or no_anion); ++beg, ++counter)
+  {
+    if (no_cation and cation == beg->code_name())
+    {
+      IONCH_INPUT (beg->is_solute(), "Cation specie found for " + code_name() + " was not a solute specie.",
+                   constants::fssalt());
+      IONCH_INPUT (beg->valency() > 0.0, "Salt cation should have positive valency.",
+                   constants::fssalt());
+      cation_index_ = counter;
+      no_cation = false;
+    }
+    if (no_anion)
+    {
+      if (anion.empty())
+      {
+        // Use first free anion.
+        if (beg->is_solute() and beg->valency() < 0.0)
+        {
+          anion_index_ = counter;
+          no_anion = false;
+          code_name_.append(beg->code_name());
+        }
+      }
+      else
+      {
+        if (anion == beg->code_name())
+        {
+          IONCH_INPUT (beg->is_solute(), "Anion specie found for " + code_name() + " was not a solute specie.",
+                       constants::fssalt());
+          IONCH_INPUT (beg->valency() < 0.0, "Salt anion should have negative valency.",
+                       constants::fssalt());
+          anion_index_ = counter;
+          no_anion = false;
+        }
+      }
+    }
+  }
+  // Check anion and cation found
+  IONCH_INPUT (not no_cation,
+               "Could not find cation " + cation + " for " + code_name(),
+               constants::fssalt());
+  IONCH_INPUT (not no_anion,
+               "Could not find anion " + anion + " for " + code_name(),
+               constants::fssalt());
+
+!!!1883567.cpp!!!	set_chemical_potential(in beg : std::vector<specie>::const_iterator, in end : std::vector<specie>::const_iterator) : void
+  IONCH_CHECK(std::distance (beg, end) > cation_index_, "Cation index is no longer valid");
+  IONCH_CHECK(std::distance (beg, end) > anion_index_, "Anion index is no longer valid");
+  std::vector<specie>::const_iterator cation (beg);
+  std::advance(cation, cation_index_);
+  std::vector<specie>::const_iterator anion (beg);
+  std::advance(anion, anion_index_);
+  chemical_potential_ = -cation->chemical_potential()*anion->valency() +
+                        cation->valency()*anion->chemical_potential();
+  const double rtargi (std::pow(cation->concentration()/constants::to_SI(), -anion->valency()) *
+                       std::pow(anion->concentration()/constants::to_SI(), cation->valency()));
+  chemical_excess_ = chemical_potential_ - std::log(rtargi);
+!!!1883695.cpp!!!	help_information(inout exemplar : input_help) : void
+  // ----------------------------------------
+  // add section
+  // ----------------------------------------
+
+  const std::string seclabel (constants::fssalt());
+  //   Specie input section definition
+  exemplar.add_section (seclabel, "Salt input section definition");
+
+  // ----------------------------------------
+  // add parameters
+  // ----------------------------------------
+
+  {
+    const std::string description("*[required, four letters] salt code name.");
+    exemplar.description(seclabel).add_options()(constants::fsname().c_str(), description.c_str());
+  }
+  {
+    std::stringstream description;
+    description << "*[required, two letters] specie code name of the cation"
+    << "* Only one of \"" << constants::fsname() << "\" or \"" << constants::fsislt() << "\" is required\n";
+    exemplar.description(seclabel).add_options()(constants::fsislt().c_str(), description.str().c_str());
+  }
+  {
+    const std::string description("[required, number] Probability this salt is used in a grand-canonical trial.");
+    exemplar.description(seclabel).add_options()(constants::fsrtgr().c_str(), description.c_str());
+  }
+  {
+    const std::string description("[required, number] target salt concentration.");
+    exemplar.description(seclabel).add_options()(constants::fsctrg().c_str(), description.c_str());
+  }

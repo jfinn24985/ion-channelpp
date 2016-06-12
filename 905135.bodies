@@ -1,0 +1,79 @@
+class salt
+!!!1585967.cpp!!!	finalize_input() : void
+/*<       write(*,'(72("_"))') >*/
+/*<       write(*,'(72("_"))') >*/
+this->cation_ = specie_flyweight (this->label_.substr(0, 2));
+this->anion_ = specie_flyweight (this->label_.substr(2, 2));
+!!!1585839.cpp!!!	read_input(inout scnr : input_reader) : void
+using namespace core;
+UTILITY_REQUIRE (scnr.name () == constants::fssalt (), "incorrect section label");
+enum
+{
+  CONC_TARGET=0
+  , RATE_GROW=1
+  , LABEL=2
+};
+std::bitset< 4 > missing_flags;
+missing_flags.set();
+
+while (scnr.next ())
+{
+  if (scnr.name () == constants::fsctrg ())
+  {
+    UTILITY_INPUT (not scnr.value ().empty ()
+                   , ("invalid input file " + constants::fsctrg () + " tag with no content").c_str ()
+		   , constants::fssalt ());
+    this->concentration_ = boost::lexical_cast< double >(scnr.value ());
+    missing_flags.reset (CONC_TARGET);
+  }
+  else if (scnr.name () == constants::fsrtgr ())
+  {
+    UTILITY_INPUT (not scnr.value ().empty ()
+                   , ("invalid input file " + constants::fsrtgr () + " tag with no content").c_str ()
+		   , constants::fssalt ());
+    this->rate_gc_ = boost::lexical_cast< double >(scnr.value ());
+    missing_flags.reset (RATE_GROW);
+  }
+  else if (scnr.name () == constants::fsname ())
+  {
+    UTILITY_INPUT (not scnr.value ().empty ()
+                   , ("invalid input file " + constants::fsname () + " tag with no content").c_str ()
+		   , constants::fssalt ());
+    UTILITY_INPUT (scnr.value ().size () == 4
+                   , ("Salt " + constants::fsname () + " tag requires four letter value").c_str ()
+		   , constants::fssalt ());
+    this->label_ = scnr.value ();
+    missing_flags.reset (LABEL);
+  }
+  else
+  {
+    bool unknown_input_name (false);
+    UTILITY_INPUT (unknown_input_name
+		   , ("unrecognised tag in input file " + scnr.name ()).c_str ()
+		   , constants::fssalt ());
+  }
+}
+
+UTILITY_INPUT (missing_flags.any()
+                , "Missing required input in salt definition."
+		, constants::fssalt ());
+!!!1705135.cpp!!!	report(inout os : ostream, in verbose : bool) : void
+using namespace core;
+// salt
+// name "NaCl"
+// ratgr 1.0
+// ctarg 0.055
+// end
+UTILITY_REQUIRE(this->target != NULL, "Attempt to write salt input section without a target salt  definition");
+
+os << constants::fssubs() << "\n";
+os << constants::fsname() << " " << this->target->label () << "\n";
+os << constants::fsrtgr() << " " << this->target->rate_gc () << "\n";
+os << constants::fsctrg() << " " << this->target->concentration () << " # in molar\n";
+os << constants::fsend() << "\n\n";
+!!!1704751.cpp!!!	serialize(inout ar : Archive, in version : size_t) : void
+ar & anion_;
+ar & cation_;
+ar & rate_gc_;
+ar & concentration_;
+ar & label_;

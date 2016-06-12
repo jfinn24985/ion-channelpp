@@ -1,0 +1,123 @@
+class fp_env
+!!!128943.cpp!!!	error_message() : string
+if (err_setup == -1)
+{
+  return "Floating point environment setup function not called.";
+}
+else if (err_setup != 0)
+{
+  return "Non-zero return value setting up floating point environment.";
+}
+std::string errormsg;
+if (fetestexcept(DivByZero))
+{
+  errormsg += " DivByZero";
+}
+if (fetestexcept(Inexact))
+{
+  errormsg += " Inexact";
+}
+if (fetestexcept(Invalid))
+{
+  errormsg += " Invalid";
+}
+if (fetestexcept(Overflow))
+{
+  errormsg += " Overflow";
+}
+if (fetestexcept(Underflow))
+{
+  errormsg += " Underflow";
+}
+if (not errormsg.empty ())
+{
+  return "floating point exceptions:" + errormsg;
+}
+return errormsg;
+!!!129199.cpp!!!	except() : uint
+unsigned int result_ = 0;
+if (fetestexcept(FE_DIVBYZERO))
+  {
+    result_ |= DivByZero;
+  }
+if (fetestexcept(FE_INEXACT))
+  {
+    result_ |= Inexact;
+  }
+if (fetestexcept(FE_INVALID))
+  {
+    result_ |= Invalid;
+  }
+if (fetestexcept(FE_OVERFLOW))
+  {
+    result_ |= Overflow;
+  }
+if (fetestexcept(FE_UNDERFLOW))
+  {
+    result_ |= Underflow;
+  }
+return result_;
+!!!129071.cpp!!!	no_except() : bool
+return 0 == fetestexcept(FE_ALL_EXCEPT);
+!!!128687.cpp!!!	reset() : void
+if (0 != feclearexcept(FE_ALL_EXCEPT))
+{
+  throw std::runtime_error ("could not reset floating point exceptions");
+}
+!!!128559.cpp!!!	report(inout a_os : ostream) : void
+a_os << "Floating point rounding mode: ";
+switch (fegetround ())
+  {
+  case FE_DOWNWARD:
+    a_os << "Downward";
+    break;
+  case FE_TONEAREST:
+    a_os << "To Nearest";
+    break;
+  case FE_TOWARDZERO:
+    a_os << "Toward Zero";
+    break;
+  case FE_UPWARD:
+    a_os << "Upward";
+    break;
+  default:
+    a_os << "UNKNOWN";
+    break;
+  }
+a_os << "\nCurrent floating point exceptions: ";
+const int excpts (fetestexcept(FE_ALL_EXCEPT));
+if (excpts & FE_DIVBYZERO)
+  {
+    a_os << "DivByZero ";
+  }
+if (excpts & FE_INEXACT)
+  {
+    a_os << "Inexact ";
+  }
+if (excpts & FE_INVALID)
+  {
+    a_os << "Invalid ";
+  }
+if (excpts & FE_OVERFLOW)
+  {
+    a_os << "Overflow ";
+  }
+if (excpts & FE_UNDERFLOW)
+  {
+    a_os << "Underflow ";
+  }
+a_os << "\n";
+!!!1632047.cpp!!!	round() : int
+return fegetround();
+!!!129327.cpp!!!	set_round(in mode : uint) : void
+switch (mode)
+  {
+  case Downward:
+  case Upward:
+  case ToNearest:
+  case TowardZero:
+    fesetround (mode);
+    break;
+  default:
+    throw std::domain_error("Attempt to set floating point rounding to unknown mode");
+  }

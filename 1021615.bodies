@@ -1,0 +1,54 @@
+class spec_test_suite
+!!!1944751.cpp!!!	test_spec_serialisation() : void
+  ionch::spec var1, var2;
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_full_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fsspec())
+      {
+        var1.read_specie (irdr);
+      }
+      else if (irdr.name() == ionch::constants::fssalt())
+      {
+        var1.read_salt (irdr);
+      }
+      if (irdr.name() == ionch::constants::fssubs())
+      {
+        var1.read_subspecie (irdr);
+      }
+    }
+  }
+  std::stringstream store;
+  {
+    boost::archive::text_oarchive oa(store);
+    // write class instance to archive
+    oa << var1;
+  }
+  {
+    boost::archive::text_iarchive ia(store);
+    // get class instance from archive
+    ia >> var2;
+  }
+  TS_ASSERT_EQUALS (var2.size (), 3ul);
+  TS_ASSERT_EQUALS (var2.nsalt (), 1ul);
+  {
+    // Check the copied element gives the same output as the original.
+    std::string out1, out2;
+    {
+      std::stringstream os;
+      ionch::conf cf;
+      var1.echo_input(cf, os);
+      out1 = os.str();
+    }
+    {
+      std::stringstream os;
+      ionch::conf cf;
+      var2.echo_input(cf, os);
+      out2 = os.str();
+    }
+    std::pair < std::string::iterator, std::string::iterator > result = std::mismatch(out1.begin(), out1.end(), out2.begin());
+    TS_ASSERT_EQUALS (std::size_t(result.first - out1.begin()), out1.size());
+    TS_ASSERT_EQUALS (out1, out2);
+  }

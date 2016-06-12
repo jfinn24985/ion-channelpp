@@ -1,0 +1,69 @@
+class lamperski_igcmc
+!!!128057.cpp!!!	description(inout os : ostream) : void
+os << "[sampler] " << this->type_label_() << "\n";
+os << " Super-observer: used to perform iterative GCMC simulations.\n";
+os << " Use IGCMC to estimate the excess chemical potentials required\n";
+os << " to maintain the target concentrations of solute species.\n";
+os << " Reference: S. Lamperski, Mol. Simul. 33, 1193, 2007\n";
+this->igcmc::description(os);
+!!!128185.cpp!!!	do_on_super_loop(inout sys : simulator) : void
+for (size_t ispec = 0; ispec != sys.specie_count(); ++ispec)
+{
+   particle::specie & spcobj = sys.get_specie(ispec);
+   // only solute species exist when using IGCMC
+   double actual_concentration = this->bulk_count_[ispec]*core::constants::to_SI()/sys.volume(ispec);
+   if (not utility::feq(actual_concentration,0.0))
+   {
+      double chempi = spcobj.excess_potential() + (spcobj.concentration() > actual_concentration? this->delta : -this->delta);
+      spcobj.set_excess_potential( chempi );
+   }
+}
+!!!128313.cpp!!!	make_super_looper(in params : string, inout sim : simulator) : void
+// Only generate for bulk simulations
+std::unique_ptr< lamperski_igcmc > smplr(new lamperski_igcmc);
+// Check parameters for usable values
+for (auto const& item : params)
+{
+  if (item.first == core::strngs::fsnstp())
+  {
+    smplr->set_loop_size(boost::lexical_cast< std::size_t >(item.second));
+  }
+  else if (item.first == "delta")
+  {
+    smplr->delta=(boost::lexical_cast< double >(item.second));
+  }
+  else
+  {
+    const std::string known_key;
+    UTILITY_INPUT( item.first == known_key,
+                  "Parameter ["+item.first+"] unknown for sampler type ["+lamperski_igcmc::type_label_()+"]",
+                  core::strngs::sampler_label ());
+  }
+}
+boost::shared_ptr< periodic_cube::igcmc > result( smplr.release() );
+dynamic_cast< periodic_cube::periodic_system& >( sim ).set_super_looper( result );
+!!!724529.cpp!!!	on_specie_count_signal(in means : estimater) : void
+for (size_t ispec = 0; ispec != this->bulk_count_.size(); ++ispec)
+{
+  this->bulk_count_[ispec] = means [ispec].mean();
+}
+!!!724401.cpp!!!	do_prepare(inout sim : simulator) : void
+this->bulk_count_.clear();
+this->bulk_count_.resize(sim.specie_count());
+// Set up signal/slot to set specie means list
+if (not this->specie_count_conx_.connected())
+{
+  auto sig = boost::any_cast< boost::signals2::signal<void (const std::vector<utility::estimater>&) >* >(sim.get_signal("specie-count"));
+  // Need to cast signal from Any object
+  this->specie_count_conx_ = sig->connect(boost::bind(&lamperski_igcmc::on_specie_count_signal, this, _1));
+}
+!!!724401.python!!!	do_prepare(inout sim : simulator) : void
+super( malasics_igcmc, self ).prepare( sim )
+# Set up signal/slot to set specie means list
+if self.specie_count_conx_ == None or not self.specie_count_conx_.connected():
+  sig = sim.get_signal("specie-count")
+  self.specie_count_conx_ = sig.connect(lambda *args: self.on_specie_count_signal(*args))
+pass
+!!!218160.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
+wr[ ix ].add_entry( "delta", this->delta );

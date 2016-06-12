@@ -1,0 +1,60 @@
+class channel_test_suite
+!!!1657775.cpp!!!	test_set_temperature() : void
+TS_ASSERT_THROWS(ionch::core::constants::beta(), std::runtime_error);
+TS_ASSERT_THROWS(ionch::core::constants::temperature(), std::runtime_error);
+TS_ASSERT_THROWS(ionch::core::constants::qstar(), std::runtime_error);
+
+// Assure invalid temperatures throw
+TS_ASSERT_THROWS(ionch::core::constants::set_temperature(260.0), std::runtime_error);
+TS_ASSERT_THROWS(ionch::core::constants::set_temperature(380.0), std::runtime_error);
+
+// Ensure valid temperature throws nothing on first try
+const double temperature(298.0);
+TS_ASSERT_THROWS_NOTHING(ionch::core::constants::set_temperature(temperature));
+
+// Enusre constants are set correctly
+const double beta(1.0/(1.3806E-23 * temperature));
+const double qstar(1.5189199340200594419E-9 * std::sqrt(beta));
+TS_ASSERT (utility::feq(ionch::core::constants::temperature(), temperature));
+TS_ASSERT (utility::feq(ionch::core::constants::beta(), beta));
+TS_ASSERT (utility::feq(ionch::core::constants::qstar(), qstar));
+
+// Ensure valid temperature throws on second try
+TS_ASSERT_THROWS(ionch::core::constants::set_temperature(temperature), std::runtime_error);
+
+!!!1657903.cpp!!!	test_set_run_number() : void
+TS_ASSERT_EQUALS (ionch::core::constants::firun, "");
+TS_ASSERT_EQUALS (ionch::core::constants::fuuid, "");
+ionch::core::constants::set_run_number(1);
+const std::string uuid1 (ionch::core::constants::fuuid);
+TS_ASSERT_EQUALS (ionch::core::constants::firun, "001");
+TS_ASSERT_EQUALS (ionch::core::constants::fuuid.size(), 32);
+TS_ASSERT_THROWS(ionch::core::constants::set_run_number(2), std::runtime_error);
+
+!!!1658031.cpp!!!	test_serialize() : void
+const double atemperature(ionch::core::constants::temperature());
+const double abeta(ionch::core::constants::beta());
+const double aqstar(ionch::core::constants::qstar());
+const std::string afirun(ionch::core::constants::firun);
+const std::string afuuid(ionch::core::constants::fuuid);
+
+std::stringstream store;
+{
+  ionch::core::constants b;
+  boost::archive::text_oarchive oa(store);
+  // write class instance to archive
+  oa << b;
+}
+{
+  ionch::core::constants c;
+  boost::archive::text_iarchive ia(store);
+  // write class instance to archive
+  ia >> c;
+}
+
+TS_ASSERT_EQUALS (ionch::core::constants::temperature(), atemperature);
+TS_ASSERT_EQUALS (ionch::core::constants::beta(), abeta);
+TS_ASSERT_EQUALS (ionch::core::constants::qstar(), aqstar);
+TS_ASSERT_EQUALS (ionch::core::constants::firun, afirun);
+TS_ASSERT_EQUALS (ionch::core::constants::fuuid, afuuid);
+

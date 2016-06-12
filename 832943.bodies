@@ -1,0 +1,109 @@
+class ResultSet
+!!!1437615.python!!!	available(in key : string) : bool
+# There are two cases to check:
+#  Is the key in the cache dictionary?
+#  Is there are datafile that would contain the data?
+if key in self:
+    return True
+import os
+
+stem = os.path.join(self._base.directory,'res','-'.join(key))
+if os.path.isfile(stem + '.%03d'%self._base.run):
+    return True
+elif os.path.isfile(stem + '.%03d.dat'%self._base.run):
+    return True
+elif os.path.isfile(stem + '.%03d.bz2'%self._base.run):
+    return True
+elif os.path.isfile(stem + '.%03d.dat.bz2'%self._base.run):
+    return True
+return False
+!!!1437743.python!!!	__getitem__(in key : string)
+# There are two cases to check:
+#  Is the key in the cache dictionary?
+#  Is there are datafile that would contain the data?
+if not key in self:
+    import os
+    stem = None
+    if len(key) > 1:
+        stem = os.path.join(self._base.directory,'res','-'.join(key)+'.%03d'%self._base.run)
+    else:
+        stem = os.path.join(self._base.directory,'res', key[0]+'.%03d'%self._base.run)
+    if os.path.isfile(stem):
+        self[key] = self._read_datafile (stem)
+    elif os.path.isfile(stem+'.bz2'):
+        self[key] = self._read_datafile (stem+'.bz2')
+    elif os.path.isfile(stem+'.dat'):
+        self[key] = self._read_datafile (stem+'.dat')
+    elif os.path.isfile(stem+'.dat.bz2'):
+        self[key] = self._read_datafile (stem+'.dat.bz2')
+
+return dict.__getitem__(self, key)
+!!!1444527.python!!!	__init__(inout self : , in filename : string)
+import os
+# initialise self._base depending on whether filename argument is a
+# path to a real file or simulation run digest string.
+if os.path.exists(filename):
+    try:
+        self._base.process(filename)
+    except IndexError:
+        import filelog
+        self._base = filelog.LogfileReader(0)
+        self._base.process(filename)
+else:
+    try:
+        self._base.set_from_string(filename)
+    except ValueError as err:
+        raise MissingData(str(err))
+!!!1437871.python!!!	_read_datafile(in filename : string)
+#
+#  This function parses the file header for the UUID and column labels.
+#  The UUID must match that of the current simulation.
+
+#
+# Parse the header: expect the following '# name value' pairs.
+# * name = 'UUID' gives the simulation UUID
+# * name = 'version' gives the output file version
+# * name = 'label' gives the set of column labels
+# * name = 'units' goves the units of each column
+#
+# 'version' and 'units' are optional.
+
+import pandas
+import io
+istream = None
+if -1 != filename.find(".bz2"):
+    import bz2
+    istream = io.BufferedReader(io.BytesIO(bz2.BZ2File(filename, "r").read()))
+else:
+    istream = io.BufferedReader(io.FileIO(filename))
+labels=None
+inheader = True
+while inheader:
+    apeek = istream.peek(1)
+    for achar in apeek:
+        if achar == ' ':
+            # loop for next char
+            continue
+        if achar != '#':
+            # End of header
+            inheader = False
+            break
+        line = istream.readline()
+        line = line[line.find('#')+1:].strip()
+        nv = line.split(None,1)
+        if nv[0].strip() == 'UUID':
+            if nv[1].strip() != self.uuid():
+                raise KeyError (nv[1].strip()+" != "+str(self.uuid()))
+        elif nv[0].strip() == 'label':
+            labels = nv[1].split()
+        break
+
+# Attempt to get labels from FileDefinition if not present in file
+if labels == None:
+    import filedata, os
+    keyset = os.path.basename(filename).split('-')
+    filedata.FileDefinition.generate_dictionary()
+    fd = filedata.FileDefinition.file_definition_dict[keyset[0]]
+    labels = fd.labels()
+# Processed header read in dataset
+return pandas.read_table(istream, sep=' *', header=None, names=labels, index_col=0)

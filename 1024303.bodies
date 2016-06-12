@@ -1,0 +1,71 @@
+class arc_integrator
+!!!396720.cpp!!!	arc_integrator()
+: integrator()
+, za0_()
+, ra0_()
+, radius_()
+, theta1_()
+, theta2_()
+, phi1_()
+, phi2_()
+{}
+!!!1959983.cpp!!!	operator ()(in pchx : size_t, in pxi : double, in pyi : double, in pzi : double, in pux : double, in puy : double, in puz : double) : double
+//
+//  calculate ( r_ij . n_i ) / | r_ij |^3
+//
+//  NOTE: direction of vector r_ij is important for the
+//  dot product. The vector goes from tile i to tile j.
+//  In this method we are integrating over tile j.
+const std::size_t nsub( pchx == this->index() ? this->nsub_self() : this->nsub_other() );
+const double z0 (this->za0_); // distance along rotation axis
+const double r0 (this->ra0_); // distance from rotation axis
+const double r  (this->radius_); // radius of arc
+const double t1 (this->theta1_); // start angle along arc
+const double t2 (this->theta2_); // end angle along arc
+const double fi1(this->phi1_); // start angle along rotation
+const double fi2(this->phi2_); // end angle along rotation
+// LOCALS
+double aij = 0.0; // RESULT
+
+UTILITY_CHECK(not utility::feq(0.0, t2 - t1), "Arc tile has zero width in z direction");
+UTILITY_CHECK(not utility::feq(0.0, fi2 - fi1), "Arc tile has zero width in z direction");
+const double dtsub = (t2 - t1) / double(nsub);
+const double dfisub = (fi2 - fi1) / double(nsub);
+
+// --- double loop over subtiles ----------------------
+// --- loop over theta angle --------------------------
+
+for (std::size_t i = 0; i != nsub; ++i)
+{
+   const double tt1 = t1  + i * dtsub;
+   const double tt2 = tt1 + dtsub;
+   const double ar = r0 * dtsub - r * (std::cos(tt2) - std::cos(tt1));
+   const double szaml = 0.5 * r0 * (std::pow( tt2, 2 ) - std::pow( tt1, 2 ))
+                        - r * (tt2 * std::cos(tt2) - tt1 * std::cos(tt1))
+                        + r * (std::sin(tt2) - std::sin(tt1));
+   const double ttc = szaml / ar;
+   UTILITY_CHECK (not std::isnan(ttc), "Error in integrating an arc, offset angle = NaN");
+   UTILITY_CHECK (tt1 < ttc and ttc < tt2, "Error in integrating an arc, offset angle outset t1 and t2");
+   const double rc = r0 + r * std::sin(ttc);
+   const double area = r * ar * dfisub;
+   UTILITY_CHECK ((r0-r)*dfisub*r*dtsub <= area, "Error in integrating an arc, area too small");
+   UTILITY_CHECK ((r0+r)*dfisub*r*dtsub >= area, "Error in integrating an arc, area too large");
+   const double pzj = z0 + r * std::cos(ttc);
+
+   // --- loop over phi angle ----------------------------
+   for (std::size_t j = 0; j != nsub; ++j)
+   {
+      const double fij = fi1 + (j + 0.50) * dfisub;
+      const double pxj = rc * std::cos(fij);
+      const double pyj = rc * std::sin(fij);
+      // Direction is i to j
+      const double pxij = pxj - pxi;
+      const double pyij = pyj - pyi;
+      const double pzij = pzj - pzi;
+      const double rijsq = std::pow( pxij, 2 ) + std::pow( pyij, 2 ) + std::pow( pzij, 2 );
+      const double rij3  = rijsq * std::sqrt(rijsq);
+      aij += (pxij * pux + pyij * puy + pzij * puz) * area / rij3;
+   }
+}
+UTILITY_CHECK (not std::isnan(aij), "Error in integrating an arc, result = NaN");
+return aij / (4 * core::constants::pi());

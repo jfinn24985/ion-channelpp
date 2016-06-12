@@ -1,0 +1,137 @@
+class density_zaxis
+!!!498608.cpp!!!	description(inout os : ostream) : void
+os << "[sampler] " << this->type_label_() << "\n";
+os << " Collect and report radial distribution between ion pairs\n";
+os << " - Default histogram bin width   : " << this->stepsize_ << "\n";
+!!!498736.cpp!!!	enrol(inout sim : simulator) : void
+if (not this->report_conx_.connected())
+{
+  auto sig = boost::any_cast< platform::simulator::report_signal_type* >( sim.get_signal( "report" ) );
+  this->report_conx_ = sig->connect(boost::bind(&density_zaxis::on_report, this, _1, _2));
+}
+if (not this->sample_conx_.connected())
+{
+  auto sig = boost::any_cast< platform::simulator::sampler_signal_type* >( sim.get_signal( "outer-loop" ) );
+  this->sample_conx_ = sig->connect( boost::bind( &density_zaxis::on_sample, this, _1 ) );
+}
+
+!!!498736.python!!!	enrol(inout sim : simulator) : void
+if not self.report_conx_ or not self.report_conx.connected():
+  sig = sim.get_signal("report")
+  self.report_conx_ = sig.connect(lambda *args: self.on_report(*args))
+if not self.sample_conx_ or not self.sample_conx_.connected():
+  sig = sim.get_signal("outer-loop")
+  self.sample_conx_ = sig.connect(lambda *args: self.on_sample(*args))
+if not self.mean_signal_:
+  import signals
+  self.mean_signal_ = signals.signal()
+if not sim.has_signal(self.type_label()):
+  sim.set_signal(self.type_label(), self.mean_signal_)
+!!!498864.cpp!!!	make_sampler(in param_set : string, inout sim : simulator) : void
+double stepsize = 0.2;
+std::size_t known_parameters = 0;
+if (0 != param_set.count("stepsize"))
+{
+  stepsize = boost::lexical_cast< double >(param_set.at("stepsize"));
+  ++known_parameters;
+}
+if (param_set.size() != known_parameters)
+{
+   std::stringstream os;
+   os << "Extra parameters for \"" << type_label_()
+      << "\" observer were present (allowed: stepsize)"
+      << "(found:";
+   for (auto const& nv : param_set)
+   {
+      os << " " << nv.first;
+   }
+   os << ")";
+   const std::string msg( os.str() );
+   UTILITY_INPUT(param_set.size() == known_parameters, msg, core::strngs::sampler_label() );
+}
+std::unique_ptr< density_zaxis > result(new density_zaxis);
+result->stepsize_ = stepsize;
+boost::shared_ptr< base_sampler > tmp( result.release() );
+sim.share_observer( tmp );
+!!!498992.cpp!!!	on_report(in sim : simulator, inout os : ostream) : void
+// Write out gz data
+for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
+{
+   if (this->data_sets_[ispec].count() > 0)
+   {
+      const std::string filename { "gz-"+sim.get_specie(ispec).label()+".dat" };
+
+      auto const& smplr = this->samplers_[ispec];
+      auto const& dtsr = smplr.get_digitiser();
+      auto const& data = this->data_sets_[ispec];
+      const std::size_t sz { smplr.size() };
+
+      core::output_dataset dset { { sim.run_uuid() }, [&sz]()
+         {
+            return sz;
+         }
+      };
+
+      dset.set_title( "Z-axial distribution histogram for species "+sim.get_specie(ispec).label() );
+
+      dset.push_back_entry( core::output_field( "XMIN", "ANGSTROM", [dtsr](std::ostream& os, std::size_t ii)
+      {
+         os << dtsr.bin_minimum( ii );
+      } ) );
+
+      dset.push_back_entry( core::output_field( "XMAX", "ANGSTROM", [dtsr](std::ostream& os, std::size_t ii)
+      {
+         os << dtsr.bin_maximum( ii );
+      } ) );
+
+      dset.push_back_entry( core::output_field( "XMID", "ANGSTROM", [dtsr](std::ostream& os, std::size_t ii)
+      {
+         os << dtsr.bin_midpoint( ii );
+      } ) );
+
+      dset.push_back_entry( core::output_field( "YMEAN", "COUNT", [data](std::ostream& os, std::size_t ii)
+      {
+         os << data.mean( ii );
+      } ) );
+
+      dset.push_back_entry( core::output_field( "YSTDDEV", "COUNT**2", [data](std::ostream& os, std::size_t ii)
+      {
+         os << std::sqrt(data.variance( ii ));
+      } ) );
+
+      dset.write( filename, sim.get_sink() );
+   }
+}
+!!!305329.cpp!!!	on_sample(in sim : simulator) : void
+// Sample the z axis
+const particle::ensemble &ens( sim.get_ensemble() );
+for ( std::size_t ith = 0; ith != ens.size(); ++ith )
+{
+   const std::size_t ispec( ens.key( ith ) );
+   if (ispec != particle::ensemble::nkey)
+   {
+      this->samplers_[ ispec ].insert( ens.z( ith ) );
+   }
+}
+// Move data from samplers to histogram
+for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
+{
+   auto &smplr = this->samplers_[ ispec ];
+   this->data_sets_[ ispec ].append( smplr.begin(), smplr.end() );
+   smplr.reset();
+}
+!!!499248.cpp!!!	prepare(inout sim : simulator) : void
+// Reset all
+this->samplers_.clear();
+this->data_sets_.clear();
+
+std::pair< double, double > zrange { sim.range_z() };
+// exemplar coordinate to bin object.
+utility::digitiser axis( zrange.first, zrange.second, this->stepsize_ );
+
+// Create samplers and data sets.
+this->data_sets_.resize( sim.specie_count(), utility::estimate_array( axis.size() ) );
+this->samplers_.resize( sim.specie_count(), utility::digital_sampler( axis ) );
+!!!499888.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
+wr[ ix ].add_entry( "stepsize", this->stepsize_ );

@@ -1,0 +1,66 @@
+class DigestApplication
+!!!1453231.python!!!	main(in argc : int, in argv : char) : void
+# Initialise argument parsing system to handle:
+#
+result = None
+import simdict
+try:
+  import argparse
+  parser = argparse.ArgumentParser(description="Combine several data files into an averaged output file")
+  parser.add_argument('-i','--input',dest='inputsource',metavar='filename',nargs='+',help='The list of filenames/directory of the data set definitions')
+  simdict.SummaryReader.commandline_add(parser)
+  # process sys.argv
+  result = parser.parse_args ()
+except ImportError:
+  from optparse import OptionParser
+  parser = OptionParser(description="Combine several data files into an averaged output file")
+  parser.add_option('-i','--input',dest='inputsource',metavar='filename',help='The list of filenames/directory of the data set definitions',action='append',type='string')
+  simdict.SummaryReader.commandline_add(parser)
+  ( result, args ) = parser.parse_args()
+  if args:
+    result.inputsource += args
+
+# Process class based args
+simdict.SummaryReader.commandline_action(result)
+
+# set data set file list, if none set on command line use
+# current directory.
+import os
+if not result.inputsource:
+  result.inputsource = os.curdir
+print "input files/directories:",result.inputsource
+
+import filelog
+import sys
+
+if result.to_find:
+  print "Extra ions : ",result.to_find
+  names = list(simdict.SummaryReader.ion_names)
+  for ionname in result.to_find.split(":"):
+      if not ionname in names:
+          names.append(ionname)
+  if len(names) != len(simdict.SummaryReader.ion_names):
+      simdict.SummaryReader.ion_names = tuple(names)
+          
+simdict.SummaryReader.write_digest_columns (sys.stdout)
+for subpath in result.inputsource:
+  path = os.path.abspath(subpath)
+  if os.path.isdir(path):
+    for dirs in os.walk(path):
+      # look in directory for merge files.
+      for subfile in dirs[2]:
+        if self.summary_regex.search (subfile):
+          sm = simdict.SummaryReader (0)
+          sm.process(os.path.join (dirs[0], subfile))
+          print str(sm)
+
+  else:
+    # use filename directly
+    try:
+      sm = simdict.SummaryReader (0)
+      sm.process(path)
+      print str(sm)
+    except IndexError:
+      sm = filelog.LogfileReader(0)
+      sm.process(path)
+      print str(sm)

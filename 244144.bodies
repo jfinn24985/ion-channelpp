@@ -1,0 +1,109 @@
+class induced_charge_matrix
+!!!388144.cpp!!!	induced_charge_matrix()
+: amx_()
+, indx_()
+{}
+!!!390960.cpp!!!	write_a_matrix(inout output : ostream) : void
+UTILITY_REQUIRE( not this->empty(), "No patch information to write." );
+UTILITY_REQUIRE( output.good (), "Invalid output stream." );
+{
+   output << core::strngs::comment_begin() << " " << this->size() << " " << core::strngs::comment_end() << "\n";
+   // The indx and A matrix
+   std::array< std::size_t, 2 > idx;
+   for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+   {
+      idx[ 0 ] = ipch;
+      output << this->indx_[ ipch ] << "\n";
+      for (std::size_t jpch = 0; jpch != this->size(); ++jpch)
+      {
+         idx[ 1 ] = jpch;
+         output << ipch << " " << jpch << " " << this->amx_( idx ) << "\n";
+      }
+      output << "\n";
+   }
+}
+!!!397488.cpp!!!	back_substitute(inout ch : double) : void
+{
+   const utility::lapack::int_type info_dgetrs = utility::lapack::dgetrs( this->amx_, this->indx_, ch );
+   UTILITY_ALWAYS( info_dgetrs == 0, "DGETRS routine returned error number " + std::to_string( info_dgetrs ) );
+}
+
+!!!532144.cpp!!!	back_substitute(inout ch : double) : void
+{
+   const utility::lapack::int_type info_dgetrs = utility::lapack::dgetrs( this->amx_, this->indx_, ch );
+   UTILITY_ALWAYS( info_dgetrs == 0, "DGETRS routine returned error number " + std::to_string( info_dgetrs ) );
+}
+
+!!!391216.cpp!!!	compute_amx(inout grid : icc_surface_grid, inout os_log : ostream) : void
+UTILITY_CHECK( this->empty(), "Cannot compute A matrix twice");
+UTILITY_CHECK( not grid.empty(), "Cannot compute A matrix without any patches defined");
+//
+// get grid size
+this->amx_.resize( boost::extents[ grid.size() ][ grid.size() ] );
+this->indx_.resize( grid.size(), 0 );
+
+// generate the A matrix
+grid.generate_matrix( this->amx_, os_log );
+
+!!!391472.cpp!!!	lu_decompose_amx(inout os_log : ostream) : void
+UTILITY_CHECK( this->indx_[ 0 ] == this->indx_[ 1 ] , "Cannot LU decompose A matrix twice.");
+
+// -----------------------------------------------------
+// Do LU decomposition of the A matrix
+os_log << "LU decomposing the 'A' matrix (using BLAS)\n";
+{
+   const utility::lapack::int_type info_dgetrf = utility::lapack::dgetrf( this->amx_, this->indx_ );
+
+   UTILITY_ALWAYS( info_dgetrf == 0, "Matrix inversion failed, DGETRF routine returned error number " + std::to_string( info_dgetrf ) );
+}
+
+!!!391728.cpp!!!	read_a_matrix(inout input : istream) : bool
+UTILITY_REQUIRE( input.good (), "Invalid input stream." );
+
+// Read and check values
+std::size_t cknpch;
+std::string cmnt;
+input >> cmnt >> cknpch;
+UTILITY_REQUIRE( cmnt == core::strngs::comment_begin(), "Invalid A matrix file" );
+std::getline( input, cmnt );
+this->amx_.resize( boost::extents[ cknpch ][ cknpch ] );
+this->indx_.resize( cknpch, 0 );
+// Actual read
+bool is_row_major = true;
+bool discovered = false;
+std::string dummy_;
+std::array< std::size_t, 2 > idx;
+for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+{
+   input >> this->indx_[ipch];
+   idx[ ( is_row_major ? 0 : 1 ) ] = ipch;
+   for (std::size_t jpch = 0; jpch != this->size(); ++jpch)
+   {
+      std::size_t ii, jj;     // dummy vars for indices
+      idx[ ( is_row_major ? 1 : 0 ) ] = jpch;
+      input >> ii >> jj >> this->amx_( idx );
+
+      if (ii != (is_row_major ? ipch : jpch) or jj != (is_row_major ? jpch : ipch) )
+      {
+         if (not discovered and ii == jpch and jj == ipch)
+         {
+            is_row_major = false;
+            std::array< std::size_t, 2 > tidx;
+            tidx[ 0 ] = idx[ 1 ];
+            tidx[ 1 ] = idx[ 0 ];
+            std::swap( this->amx_( tidx ), this->amx_( idx ) );
+            idx = tidx;
+         }
+         else
+         {
+            return false;
+         }
+      }
+   }
+   if ( input.eof() )
+   {
+      return false;
+   }
+   std::getline (input, dummy_); // skip blank line
+}
+return true;

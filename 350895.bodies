@@ -1,0 +1,81 @@
+class FileDefinition
+!!!518575.python!!!	check_invariant(in self : FileDefinition)
+assert self.key, "File key must be a non-nul"
+assert self.field_list and len(self.field_list) > 0, "Field list can not be an empty list."
+!!!488879.python!!!	generate_dictionary() : void
+if len(FileDefinition.file_definition_dict) == 0:
+    thedict = FileDefinition.file_definition_dict
+    
+    dfn = FileDefinition( 'gz', 1, 'gz-%s.%03d',             
+                         ( ( 'zcoord', FieldType.KEY, 'ang'), ( 'conc',FieldType.CVALUE, 'molar'),
+                           ( 'amount', FieldType.CVALUE, 'mol'), ( 'vol', FieldType.CONSTANT, 'ang3' ),
+                           ( 'width', FieldType.CONSTANT, 'ang' ) ) )
+    thedict[dfn.key] = dfn
+    
+    dfn = FileDefinition( 'gin', 2, 'gin-%s-%s.%03d',
+                         ( ( 'zcoord', FieldType.KEY, 'ang' ), ( 'rcoord', FieldType.KEY, 'ang' ),
+                           ( 'conc', FieldType.CVALUE, 'molar' ), ('vol', FieldType.CONSTANT, 'ang3' ) ))
+    thedict[dfn.key] = dfn
+    
+    dfn = FileDefinition( 'rdf', 2, 'rdf-%s-%s.%03d', 
+                         ( ('dist', FieldType.KEY, 'ang'), ('nzlim', FieldType.VALUE, 'count'),
+                           ('nfilt', FieldType.VALUE, 'count'), ('dzlim', FieldType.VALUE, 'ang-3'),
+                           ('dfilt', FieldType.VALUE, 'ang-3') ) )
+    thedict[dfn.key] = dfn
+    
+    dfn = FileDefinition( 'h', 0, 'h.%03d',  ( ('zcoord', FieldType.KEY ,'ang'), ('h',FieldType.VALUE, 'ENG' ) ) )
+    thedict[dfn.key] = dfn
+    
+#    dfn = FileDefinition( 'wid', 1, 'wid-%s.%03d.dat',
+#                         ( ( 'zcoord', FieldType.KEY, 'ang' ), ( 'mu', FieldType.VALUE, 'ENG' ), ( 'mu_ex', FieldType.VALUE, 'ENG' ),
+#                           ( 'trials', FieldType.SUM, 'count' ), ( 'umfi', FieldType.SUM, 'ENG' ), ( 'uchs', FieldType.VALUE, 'ENG' ),
+#                           ( 'uchsi', FieldType.SUM, 'ENG' ), ( 'euchs', FieldType.VALUE, 'PROB' ), ( 'euchsi', FieldType.VALUE, 'PROB' ),
+#                           ( 'vol', FieldType.CONSTANT, 'ang3' ), ( 'succss', FieldType.SUM, 'count' ) ) )
+#    thedict[dfn.key] = dfn
+    
+    dfn = FileDefinition( 'occvol', 0, 'occvol.%03d.dat',
+                         ( ( 'step', FieldType.KEY, 'count' ), ( '5', FieldType.TSERIAL, '%' ), ( '15', FieldType.TSERIAL, '%' ),
+                           ( '25', FieldType.TSERIAL, '%' ), ( '35', FieldType.TSERIAL, '%' ), ( '45', FieldType.TSERIAL, '%' ),
+                           ( '55', FieldType.TSERIAL, '%' ), ( '65', FieldType.TSERIAL, '%' ), ( '75', FieldType.TSERIAL, '%' ),
+                           ( '85', FieldType.TSERIAL, '%' ), ( '95', FieldType.TSERIAL, '%' ), ( 'aver', FieldType.TSERIAL, '%' ),
+                           ( 'var', FieldType.TSERIAL, '%' ) ) )
+    thedict[dfn.key] = dfn
+    
+#    dfn = FileDefinition( 'grtz', 1, 'grtz-%s.%03d',
+#                         ( ( 'rcoord', FieldType.KEY, 'ang' ), ( 'theta', FieldType.KEY, 'radian' ), ( 'zcoord', FieldType.TSERIAL, 'ang' ),
+#                           ( 'conc', FieldType.VALUE, 'molar' ), ( 'vol', FieldType.CONSTANT, 'ang3' ) ) )
+#    thedict[dfn.key] = dfn
+#    
+#    dfn = FileDefinition( 'gxyz', 1, 'gxyz-%s.%03d',
+#                         ( ( 'xcoord', FieldType.KEY, 'ang' ), ( 'ycoord', FieldType.KEY, 'ang' ), ( 'zcoord', FieldType.TSERIAL, 'ang' ),
+#                           ( 'conc', FieldType.VALUE, 'molar' ), ( 'vol', FieldType.CONSTANT, 'ang3' ) ) )
+#    thedict[dfn.key] = dfn
+    
+    
+    dfn = FileDefinition( 'a', 2, 'a-%s-%s.%03d', ( ('step', FieldType.KEY, 'count' ), ( 'aver_cml', FieldType.SERIAL, 'count' ),
+                                                    ( 'aver_step', FieldType.SERIAL, 'count' ) ) )
+    thedict[dfn.key] = dfn
+    
+    dfn = FileDefinition( 'g', 2, 'g-%s-%s.%03d', ( ('step',FieldType.KEY,'count'), ('slope-conduct',FieldType.CSERIAL,'UNK') ) )
+    thedict[dfn.key] = dfn
+    
+    if len(FileDefinition.file_definition_dict) == 0:
+        raise Exception("Unable to generate a list of result file types")
+!!!490543.python!!!	__init__(in self : , in akey : string, in asubkey : int, in outfmt : string, in fieldlist : uint)
+if not len(fieldlist):
+  raise Exception("Can not create record object with an empty field list")
+
+# Create list of fields
+for fieldtype in fieldlist:
+  ft = FieldType(fieldtype)
+  self.field_list.append( ft )
+  if ft.type == FieldType.SERIAL:
+    self.is_serial = True
+assert len(self.field_list) > 0, "Unable to create fields from field list:"+str(fieldlist)
+
+if __debug__:
+  self.check_invariant ()
+!!!1487279.python!!!	labels(in self : )
+return [ item.label for item in self.field_list ]
+!!!518447.python!!!	__len__(in self : FileDefinition)
+return len(self.field_list)

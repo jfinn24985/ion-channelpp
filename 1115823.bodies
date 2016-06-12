@@ -1,0 +1,92 @@
+class application_meta
+!!!2131119.cpp!!!	application_meta(inout target : application)
+: input_base_meta (core::strngs::fschnl(), 0, false, true)
+, target_(target)
+{
+  std::stringstream os;
+  const std::string seclabel (core::strngs::fschnl());
+  // ----------------------------------------
+  // add section
+  // ----------------------------------------
+
+  //   Specie input section definition
+  core::input_help::exemplar().add_section (seclabel, "Main (channel) input section definition");
+
+  // ----------------------------------------
+  // add parameters
+  // ----------------------------------------
+  //   name : [optional, string] simulation temperature (in Kelvin)
+  {
+    const std::string description("[optional, text] title text for the simulation.");
+    core::input_help::exemplar().description(seclabel).add_options()
+    (core::strngs::fsname().c_str(), description.c_str());
+  }
+  //   checkdir : [optional, filename] directory for checkpoint files.
+  {
+    const std::string description("[optional, valid directory name] directory for checkpoint files (will be created if not present).");
+    core::input_help::exemplar().description(seclabel).add_options()
+    (core::strngs::checkdir_label().c_str(), description.c_str());
+  }
+  //   outputdir : [optional, filename] directory for output files
+  {
+    const std::string description("[optional, valid directory name] directory for result/output files.");
+    core::input_help::exemplar().description(seclabel).add_options()
+    (core::strngs::outputdir_label().c_str(), description.c_str());
+  }
+  //   inputname : [optional, filename regular expression] how to locate input.
+  {
+    const std::string description("[command line only, filename regular expression] how to recognise an input file, output in the log file as documentation.");
+    core::input_help::exemplar().description(seclabel).add_options()
+    (core::strngs::inputpattern_label().c_str(), description.c_str());
+  }
+}
+!!!2130863.cpp!!!	read_section(inout reader : input_reader) : void
+UTILITY_REQUIRE(reader.name() == core::strngs::fschnl(), "Input section is not for a channel.");
+UTILITY_REQUIRE(reader.value().empty(), "Channel section takes no arguments.");
+// process section
+while (reader.next())
+{
+  if (reader.name().find(core::strngs::fsend()) == 0) break;
+  if (reader.name().find(core::strngs::fsname()) == 0)
+  {
+    // --------------------
+    // Run title "name 'abc'"
+    UTILITY_INPUT(not reader.value().empty(), "Run title must have a value.", core::strngs::fschnl());
+    this->target_->run_title_ = reader.dequote( reader.value() );
+  }
+  else if (reader.name().find(core::strngs::checkdir_label()) == 0)
+  {
+    // --------------------
+    // Checkpoint directory name "checkdir 'abc/def'"
+    UTILITY_INPUT(not reader.value().empty(), "Checkpoint directory '"+core::strngs::checkdir_label()+"' must have a value.", core::strngs::fschnl());
+    // Need to test for directory existance elsewhere
+    this->target_->checkpoint_dir_ = reader.dequote( reader.value() );
+  }
+  else if (reader.name().find(core::strngs::outputdir_label()) == 0)
+  {
+    // --------------------
+    // Output/data directory name "outputdir 'abc/def'"
+    UTILITY_INPUT(not reader.value().empty(), "Output directory '"+core::strngs::outputdir_label()+"' must have a value.", core::strngs::fschnl());
+    // Need to test for directory existance elsewhere
+    this->target_->output_dir_ = reader.dequote( reader.value() );
+  }
+  else if (reader.name().find(core::strngs::inputpattern_label()) == 0)
+  {
+    // --------------------
+    // Input file recognition pattern "inputpattern 'abc.%03d.def'"
+    UTILITY_INPUT(not reader.value().empty(), "Input file recognition pattern '"+core::strngs::inputpattern_label()+"' must have a value.", core::strngs::fschnl());
+    this->target_->filename_base_ = reader.dequote( reader.value() );
+  }
+  else
+  {
+    // --------------------
+    // Other (usually) evaluator specific specie parameters
+    bool unknown_input_label = false;
+    UTILITY_INPUT (unknown_input_label, ("keyword \""+reader.name()+"\" is not recognised"), core::strngs::fschnl());
+  }
+}
+!!!2130991.cpp!!!	do_write_section(inout os : ostream) : void
+os  << core::strngs::fsname() << " \"" << this->target_->run_title_ <<  "\"\n";
+os  << core::strngs::checkdir_label() << " \"" << this->target_->checkpoint_dir_ <<  "\"\n";
+os  << core::strngs::outputdir_label() << " \"" << this->target_->output_dir_ <<  "\"\n";
+os  << core::strngs::inputpattern_label() << " \"" << this->target_->filename_base_ <<  "\"\n";

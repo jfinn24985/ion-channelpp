@@ -1,0 +1,2321 @@
+class channel_simulator
+!!!2175535.cpp!!!	add_observer(in obs : base_sampler) : void
+std::unique_ptr< base_sampler > res;
+res = obs.attach(*this);
+if (res) this->observers_.push_back (res);
+!!!762031.cpp!!!	input_help(in a_os : ostream, in msg : string) : void
+// An input error occured on the command line or input file
+// ERROR REPORT routine for 'readin'
+a_os << "A problem occurred on the command line or reading the input file.\n";
+a_os << msg << "\n";
+a_os << "The command line requires at least one argument:\n";
+a_os << "   program <run_number> [random_seed]\n";
+a_os << "  The [run-id] is required and should be any integer in the range 1 to 999.\n";
+a_os << "  The [random-seed] is optional and can be any integer in the range\n";
+a_os << "     0 to " << std::numeric_limits< uint64_t >::max() << ".\n";
+a_os << "The input file has a number of required sections that must appear at\n";
+a_os << "the top-level or included via an \"" << strngs::fsincl << "\" statement. The required\n";
+a_os << "are: ";
+a_os << strngs::fschnl << " " << strngs::fsgeom << " " << strngs::fssalt << " " 
+	 << strngs::fsspec << " " << strngs::fstry << " " << strngs::fsaccu << "\n";
+a_os << "The input file may also optionally include a \"" << strngs::fsptch << "\" section.\n\n";
+a_os << "The option \"" << strngs::fsfver << "\" indicates the input file version, if\n";
+a_os << "used this should be the first option in the input file.\n";
+
+a_os << "Bad statistic (" << strngs::fsaccu << ") section in input:\n";
+a_os << msg << "\n";
+a_os << "Required tags are:\n";
+a_os << strngs::fsdrg << " " << strngs::fsdzg << " " << strngs::fsisav << "\n";
+a_os << "These optional tags control what results are obtained (default to false):\n";
+a_os << strngs::fscgin << " " << strngs::fscrdf << " " << strngs::fsclac << " " << strngs::fsclmb << " " << strngs::fswidm << "\n";
+a_os << "If " << strngs::fswidm << " is true then " << strngs::fsiwid << " indicates the minimum number of\n";
+a_os << "test particle insertions to be used.\n";
+
+
+
+
+!!!1233455.cpp!!!	commit(in delta : ) : void
+// for change in delta.changes:
+//   # If add, generate a new index
+//   if change.is_add:
+//     # Add particle
+//     if len(self.deletion_list) != 0:
+//       change.index = self.deletion_list[0]
+//       del self.deletion_list[0]
+//     else:
+//       # check for resize
+//       if self.end_index == len(self.species):
+//         self.species.resize ( 2*self.end_index )
+//         self.positions.resize ( (2*self.end_index, 4) )
+//       change.index = self.end_index
+//       self.end_index += 1
+//     self.species[change.index] = change.specie_index()
+//     self.positions[change.index, : ] = change.new_position
+//   # If new_position set position, else remove
+//   elif change.is_move:
+//     # Move particle
+//     self.positions[change.index, : ] = change.new_position
+//   elif change.is_remove:
+//     # Remove particle
+//     self.species[change.index] = ParticleSet.INVALID_SPECIE_INDEX
+//     if self.end_index == change.index + 1:
+//       # reduce total size when removing 'last' particle
+//       self.end_index -= 1
+//     else:
+//       self.deletion_list.append(change.index)
+//       self.deletion_list.sort()
+//   else:
+//     assert False, "Invalid change"
+//   if None != self.subscribers:
+//     for subs in self.subscribers:
+//       subs.on_update(change)
+//   for views in self.specie_set[change.specie_index()].views.values():
+//     views.on_update(change)
+!!!1233455.python!!!	commit(in delta : ) : void
+for change in delta.changes:
+  # If add, generate a new index
+  if change.is_add:
+    # Add particle
+    if len(self.deletion_list) != 0:
+      change.index = self.deletion_list[0]
+      del self.deletion_list[0]
+    else:
+      # check for resize
+      if self.end_index == len(self.species):
+        self.species.resize ( 2*self.end_index )
+        self.positions.resize ( (2*self.end_index, 4) )
+      change.index = self.end_index
+      self.end_index += 1
+    self.species[change.index] = change.specie_index()
+    self.positions[change.index, : ] = change.new_position
+  # If new_position set position, else remove
+  elif change.is_move:
+    # Move particle
+    self.positions[change.index, : ] = change.new_position
+  elif change.is_remove:
+    # Remove particle
+    self.species[change.index] = ParticleSet.INVALID_SPECIE_INDEX
+    if self.end_index == change.index + 1:
+      # reduce total size when removing 'last' particle
+      self.end_index -= 1
+    else:
+      self.deletion_list.append(change.index)
+      self.deletion_list.sort()
+  else:
+    assert False, "Invalid change"
+  if None != self.subscribers:
+    for subs in self.subscribers:
+      subs.on_update(change)
+  for views in self.specie_set[change.specie_index()].views.values():
+    views.on_update(change)
+!!!747951.cpp!!!	commit_virt(in a_range : ) : void
+if (this->is_add_gcmc() or this->is_displacement ()) // g5t3r5
+{
+    // ----------
+    // ADD or MOVE
+    for (int ichg = 0; ichg != this->nchgnw; ++ichg)
+    {
+        if (this->is_add_gcmc()) // c0d1e8
+        {
+            // -- ADD --
+            // Get new II from conf
+            IONCH_CHECK (conf::ni (this->ispcnw[ichg]) < constants::nionmx, "Too many particles being created.");
+            indxnw[ichg] = conf::idxget (this->ispcnw[ichg]);
+            conf::rieps_ [this->indxnw[ichg]] = 1.0 / this->epsnw_[ichg];
+
+            if (not isbulk)
+            {
+                // set region
+                conf::addreg (ispcnw[ichg], indxnw [ichg], rznw_[ichg]);
+            }
+
+            // Iff ichg not 1 then we need to merge riicrn into riinw
+            if (ichg != 1)
+            {
+                for (int jj = 0; jj != ichg - 1; ++jj)
+                {
+                    riinw_ [ichg][indxnw[jj]] = riicrn[ichg][jj];
+                }
+            }
+        }
+        else
+        {
+            // -- MOVE --
+            // Get II from indxnw
+            // set region before updating position
+            if (not isbulk) { conf::setreg (ispcnw[ichg], indxnw [ichg], conf::rz (indxnw[ichg]), rznw_[ichg]); }
+        }
+
+        // update position
+        conf::setpos (indxnw [ichg], rxnw_[ichg], rynw_[ichg], rznw_[ichg], r2nw_[ichg]);
+
+        // update rqqii matrix
+        const double qi = spec::xq (ispcnw[ichg]);
+
+        for (int jj = 0; jj != conf::active_size (); ++jj)
+        {
+            if (jj == indxnw [ichg]) { continue; }
+
+            const int jspec = conf::ispcbk (jj);
+
+            if (jspec == constants::invspc) { continue; }
+
+            IONCH_CHECK (not constants::feq (riinw_[jj][ichg], 0.0), "Rii_nw was zero.");
+
+            conf::rqqii_[indxnw [ichg]][jj] = spec::xq (jspec) * qi / riinw_[ichg][jj];
+            conf::rqqii_[jj][indxnw [ichg]] = conf::rqqii_[indxnw [ichg]][jj];
+        }
+
+        conf::rqqii_[indxnw [ichg]][indxnw [ichg]] = 0.0;
+
+        // update rip matrix
+        if (not isbulk and not patch::homog())
+        {
+            for (int ipch = 0; ipch != patch::npatch(); ++ipch)
+            {
+                patch::rip_[indxnw [ichg]][ipch] = ripnw_ [ichg][ipch];
+            }
+        }
+    }
+}
+else // g5t3r5
+{
+    // -- DELETE --
+    for (int ichg = 0; ichg != nchgnw; ++ichg)
+    {
+        if (not isbulk) { conf::delreg (ispcnw[ichg], indxnw[ichg], rznw_ [ichg]); }
+
+        conf::idxrel (ispcnw[ichg], indxnw[ichg]);
+        // idxrel sets ISPCBK(?) to INVSPC to indicate invalid particle
+    }
+} // g5t3r5
+
+if (not isbulk and not patch::homog ())
+{
+    for (int ipch = 0; ipch != patch::npatch(); ++ipch)
+    {
+        patch::h_[ipch] = hnw_[ipch];
+        patch::c_[ipch] += dcnw_[ipch];
+    }
+}
+!!!676655.cpp!!!	dostep() : void
+// DO one step
+
+this->trial_.next_move ();
+if (this->trial_.compute_metropolis ())
+{
+  this->conf_->commit (this->trial_);
+}
+
+// per-step statistics
+this->stats_.accumulate ();
+
+--this->steps_to_next_hist;
+
+if (this->steps_to_next_hist == 0)
+{
+  this->steps_to_next_hist = this->steps_mix_;
+  // collect occasional stats
+  this->stats_.compute_accumulate ();
+}
+
+--this->steps_to_next_chkpt;
+if (this->steps_to_next_chkpt == 0)
+{
+  this->steps_to_next_chkpt_ = this->steps_saves_;
+  // checkpoint
+  this->checkpoint ();
+}
+// increment only at end or this->is_thermalized () will
+// be true on the last thermalisation step
+++this->steps_count_;
+
+// Handle changes at end of bulk simulation 
+if (this->steps_count_ == this->steps_thermalization_)
+{
+  if (this->is_bulk ())
+  {
+    constants::os_log << "\nEND OF CHEMICAL EXCESS IN BULK CALCULATION\n\n";
+    this->cpmeth = 0;
+    this->is_bulk_ = false;
+    this->steps_count_ = 0;
+    this->trial_.select_state (trial::thermalization);
+  }
+  else
+  {
+    constants::os_log << "\nEND OF THERMALISATION\n\n";
+    this->trial_.select_state (trial::simulation);
+  }
+  this->reset_statistics ();
+}
+!!!753199.cpp!!!	read_input_section(inout fid : istream, in sname : string, in svalue : string) : void
+std::bitset < 8 > missed_required_tags_;
+missed_required_tags_.set ();
+run_title_ = "Ion Channel Simulation";
+
+IONCH_REQUIRE (constants::fschnl() == reader.name (), "Error: incorrect section name");
+IONCH_INPUT (reader.value().empty (), "Error: "+constants::fschnl()+" section label does not take any parameters.", constants::fschnl());
+
+//
+// # CONTROL INPUT SECTION
+// channel
+// name "Na selective channel"
+// nstep 500000
+// naver 1000
+// usepot .false.
+// kelvin 298.0
+// drg REAL
+// calgin (true|false)
+// calacc (true|false)
+// calrdf (true|false)
+// calmob (true|false)
+// calwid (true|false)
+// iwidom INT
+// isave INT
+// mobk 4.5
+// drmaxin 0.2
+// drmaxout 0.5
+// ratmov 1.0
+// ratslt 1.0
+// ratind 1.0
+// end
+
+
+// dzgtrg REAL
+// end
+
+bool widom_on_ (false); // -> trial::calwid
+int  widom_try_;        // -> trial::nwdtry
+bool calgin_ (false);
+double drg_;
+
+while (reader.next ())
+{
+  // exit loop on section 'end'
+  if (reader.name() == constants::fsend())
+  {
+    break;
+  }
+
+  // looking for data collection variables calgin, calrdf, etc
+  if (reader.name() == constants::fscgin())
+  {
+    constants::read_bool (reader.value(), calgin_);
+  }
+  else if (reader.name() == constants::fscrdf())
+  {
+    bool calrdf;
+    constants::read_bool (reader.value(), calrdf);
+    if (calrdf)
+      {
+	this->observer_.push_back (new rdf_sampler (*this));
+      }
+  }
+  else if (reader.name() == constants::fsclac())
+  {
+    bool calacc;
+    constants::read_bool (reader.value(), calacc);
+    if (calacc)
+      {
+	this->observer_.push_back (new acc_sampler (*this));
+      }
+  }
+  else if (reader.name() == constants::fsclmb())
+  {
+    bool calmob;
+    constants::read_bool (reader.value(), calmob);
+    if (calmob)
+      {
+	this->observer_.push_back (new mobile_statistics_sampler (*this));
+      }
+  }
+  else if (reader.name() == constants::fswidm())
+  {
+    // WIDOM sampling variables
+    constants::read_bool (reader.value(), widom_on_);
+  }
+  else if (reader.name() == constants::fsiwid())
+  {
+    widom_try_ = boost::lexical_cast< int > (reader.value());
+  }
+  else if (reader.name() == constants::fsgzoc())
+  {
+    // TODO
+    this->zocc_ = boost::lexical_cast< double > (reader.value());
+  }
+  else if (reader.name() == constants::fsdrg())
+  {
+    drg_ = boost::lexical_cast< double > (reader.value());
+    missing_options.flip (0);
+  }
+  // looking for program control variables/constants
+  else if (reader.name() == constants::fsisav())
+  {
+    const std::size_t sample_interval = boost::lexical_cast< std::size_t > (reader.value());
+    BOOST_FOREACH(istep_,  this->steppers_)
+      {
+	istep_->set_outer_loop_count (sample_interval);
+      }
+    missing_options.flip (1);
+  }
+  else if (reader.name() == constants::fsnstp())
+    {
+      const std::size_t max_steps (boost::lexical_cast < std::size_t > (reader.value()));
+      IONCH_INPUT(max_steps > 0, "You cannot run a simulation with no iteration steps");
+      this->steppers_[STEPPER_SIMULATOR].set_step_count (max_steps);
+      missed_required_tags_.reset (2);
+  }
+  else if (reader.name() == constants::fsnavr())
+  {
+    const std::size_t steps_thermalisation = boost::lexical_cast < std::size_t > (reader.value());
+    IONCH_INPUT(steps_thermalisation > 0, "You cannot run a simulation with no thermalisation steps");
+
+    this->steppers_[STEPPER_THERMALIZER].set_step_count (steps_thermalisation);
+    missed_required_tags_.reset (3);
+  }
+  else if (reader.name() == constants::fstsi())
+  {
+    UTILITY_INPUT(this->temperature_kelvin_ < 260.0, "Temperature can only be input once.", constants::fschnl());
+    this->temperature_kelvin_ = boost::lexical_cast < double > (reader.value());
+    UTILITY_INPUT(this->temperature_kelvin_ > 260.0, "Temperature is in Kelvin so T < 260 makes no sense", constants::fschnl());
+    UTILITY_INPUT(this->temperature_kelvin_ < 380.0, "Temperature is in Kelvin so T > 380 makes no sense", constants::fschnl());
+  }
+  else if (reader.name() == constants::fsname())
+  {
+    // remove matching leading and trailing quotes;
+    this->run_title_ = constants::dequote (reader.value());
+  }
+  else if (reader.name() == constants::fschpt())
+  {
+    this->steppers_[STEPPER_BULK].set_step_count (1);
+  }
+  else if (reader.name() == constants::fsnmcf())
+  {
+    bool number_checkpoints;
+    constants::read_bool (reader.value(), number_checkpoints);
+    
+  }
+  // looking for drmaxin,drmaxout,ratmv, ratslt, ratind
+   else  if (nme_ == constants::fsdrmi())
+  {
+    this->drmax_[0] = boost::lexical_cast< double >(val_);
+    missed_required_tags_.reset (4);
+  }
+  else if (nme_ == constants::fsdrmo())
+  {
+    this->drmax_[1] = boost::lexical_cast< double >(val_);
+    missed_required_tags_.reset (5);
+  }
+  else if (nme_ == constants::fsrtmv())
+  {
+    this->rate_move_ = boost::lexical_cast< double >(val_);
+    missed_required_tags_.reset (6);
+  }
+  else if (nme_ == constants::fsrtsl())
+  {
+    this->rate_salt_ = boost::lexical_cast< double >(val_);
+    missed_required_tags_.reset (7);
+  }
+  else if (nme_ == constants::fsrtid())
+  {
+    this->rate_individual_ = boost::lexical_cast< double >(val_);
+  }
+  else if (nme_ == constants::fsrswp())
+  {
+    this->rate_change_ = boost::lexical_cast< double >(val_);
+  }
+  else if (nme_ == constants::fskmob())
+  {
+    double spring_factor_mobile_ = boost::lexical_cast< double >(val_);
+    UTILITY_INPUT(spring_factor_mobile_ > 0.0, "Input spring factor was negative, positive (attractive) factor required.", constants::fschnl());
+    this->evaluators_.push_back (new evaluator::localization_evaluator (spring_factor_mobile_));
+  }
+  else
+  {
+    std::string known_input_options;
+    IONCH_INPUT (known_input_options == reader.name()
+                 , "Name " + reader.name() + " is not valid option in this section", constants::fschnl());
+  }
+}
+while (true);
+
+IONCH_INPUT(not missed_required_tags_.any (), "Not all required tags were present");
+
+if (calgin)
+  {
+    IONCH_INPUT(not constants::feq (drg_, 0.0)
+		, "When collecting 2/3D statistics " + constants::fsdrg() + " option may not be zero.");
+    this->observer_.push_back (new gin_sampler (*this, drg_));
+  }
+
+if (widom_on_)
+  {
+    this->observer_.push_back (new widom_energy_sampler (*this, widom_try_));
+  }
+
+// Optionally set default temperature and then related constants
+if (this->temperature_kelvin_ < 260.0))
+  {
+    this->temperature_kelvin_ = 298.0;
+  }
+
+this->beta_ = 1.0/(constants::boltzmann_constant() * this->temperature_kelvin_);
+this->q_star_factor_ = constants::electron_charge() * std::sqrt(this->beta_ / (4 * constants::pi() * constants::epsilon_0() * constants::angstrom()));
+!!!714927.cpp!!!	rfconf() : void
+// Calculate ntotsz so we pre-allocate capacity 
+//
+// ntotsz_ = sum(ni[x];x != free) + ntargt;
+//
+// normal distribution of particle number means
+// getting to max or min particle number is an error.
+std::size_t ntotsz_ = target_particle_number ();
+for (auto iter = species_begin (); iter != species_end (); ++iter)
+{
+  if (not iter->is_free ())
+  {
+    ntotsz_ += iter->get_view (constants::ibulk).size ();
+  }
+}
+// want ntotsz to be multiple of 64.
+ntotsz_ = bal::math::next_multiple (ntotsz_, 64);
+
+reserve (ntotsz_);
+
+constants::os_log << strngs::horizontal_bar << "\n";
+constants::os_log << "Initial position of structural ions (*mobile update radii and centre)\n";
+constants::os_log << strngs::horizontal_bar << "\n";
+
+const boost::format lefthalf ("%1$3s %2$3d %3$8.4g %4$8.4g %5$8.4g");
+const boost::format righthalf ("%1$8.4g %2$8.4g %3$8.4g %4$8.4g");
+constants::os_log << boost::format (lefthalf) % "Spc" % "Idx" % "X" % "Y" % "Z"
+                  << boost::format (righthalf) % "Radii" % "Xc" % "Yc" % "Zc" << "\n";
+constants::os_log << strngs::horizontal_bar << "\n";
+
+// copy any predefined positions from spec module
+{
+  int ispec = -1;
+  int idx = -1;
+  bool islast = false;
+  do
+  {
+    double x, y, z, r, rx, ry, rz;
+    // NOTE: ispec and idx are 'inout', others are 'out' vars
+    spec::struks (ispec, idx, rx_[nactv_], ry_[nactv_], rz_[nactv_]
+                  , rsr_[nactv_], islast
+                  , rsx_[nactv_], rsy_[nactv_], rsz_[nactv_]);
+    if (islast or ispec == spec::spec_size () or ispec < 0)
+    {
+      break;  // last or no predefined
+    }
+
+    r2_[nactv_] = std::sqrt(constants::sqr(rx_[nactv_]) + constants::sqr(ry_[nactv_]));
+    constants::os_log << boost::format (lefthalf)  % spec::fspc (ispec) % nactv_
+                      % rx_[nactv_] % ry_[nactv_] % rz_[nactv_];
+
+    if (spec::mobile (ispec))
+    {
+      rsr_[nactv_] *= rsr_[nactv_];
+      constants::os_log << boost::format (righthalf)
+                        % rsr_[nactv_] % rsx_[nactv_] % rsy_[nactv_] % rsz_[nactv_];
+    }
+    constants::os_log << "\n";
+
+    ispcbk_[nactv_] = ispec;
+    patch::caleps (rz_[nactv_], rz_[nactv_], ispec, rieps_[nactv_]);
+    rieps_[nactv_] = 1.0 / rieps_[nactv_];
+    ++ni_[ispec];
+    ++nactv_;
+
+    // Need to call addreg after incrementing nactv_
+    addreg (ispec, nactv_ - 1, rz_[nactv_ - 1]);
+  }
+  while (not islast);
+}
+
+constants::os_log << strngs::horizontal_bar << "\n";
+constants::os_log << "(*)The given radii is the distance a 'mobile' type particle can move from \n";
+constants::os_log << "   the Xc,Yc,Zc position (may be the same as the starting position).\n";
+constants::os_log << strngs::horizontal_bar << "\n";
+
+// tell spec module that copying is complete
+spec::deltmp ();
+
+// Fill up index arrays and lookup tables for predifined particles
+lookup ();
+
+// Calculate volume ratios
+volslb (constants::os_log, 10, 0);
+
+!!!1573039.cpp!!!	do_readin() : void
+    /* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
+    /*<       write(*,*)" Making initial configuration" >*/
+    std::cout << " Verifying particle configuration\n";
+    /*<       do ispec=1,nspec >*/
+    const uint8_type nspec_ = parent_.get_specie ().count ();
+    GRS400_ALWAYS (inputkeys_.size () <= nspec_, "bad input, not all species requested in 'conf' input section have been defined");
+    // Check for input keys
+    {
+        int unused_ = 0;
+
+        if (!inputkeys_.empty ())
+        {
+            // input keys maps specie names to the temporary index used in the first
+            // stage of readin. We now need to update the map with the actual indices
+            // then change the old indices.
+            for (uint8_type ispec_ = 0; ispec_ < nspec_; ++ispec_)
+            {
+                std::string name_ (parent_.get_specie ().name (ispec_));
+
+                if (inputkeys_.find (name_) != inputkeys_.end ())
+                {
+                    inputkeys_[name_].second = ispec_;
+                }
+                else
+                {
+                    ++unused_;
+                }
+            }
+        }
+
+        GRS400_ALWAYS (inputkeys_.size () + unused_ == nspec_, "bad input, not all species requested in 'conf' input section have been defined");
+        // Fix indices of 'n', 'ntarget' and (do structural ions later)
+        uint16_type n_tmp[nspec_], ntarget_tmp[nspec_];
+        std::char_traits< uint16_type >::copy (&n_tmp[0], &n[0], nspec_);
+        std::char_traits< uint16_type >::copy (&ntarget_tmp[0], &ntarget[0], nspec_);
+
+        for (std::map< std::string, std::pair< uint8_type, uint8_type > >::const_iterator it_ = inputkeys_.begin (); it_ != inputkeys_.end (); ++it_)
+        {
+            n[it_->second.second] = n_tmp[it_->second.first];
+            ntarget[it_->second.second] = ntarget_tmp[it_->second.first];
+        }
+    }
+
+    // Did we read in some structural species?
+    if (0 != ntot)
+    {
+        // If structural species defined then we must re-add them properly
+        std::pair< uint8_type, uint8_type >  cache;
+        cache.first = nspec_;
+
+        if (DEBUG)
+        {
+            std::clog << "Have " << ntot << " predefined particles\n";
+        }
+
+        for (uint16_type gidx = 0; gidx < max_count (); ++gidx)
+        {
+            const uint8_type oldindex_ = static_cast<uint8_type > (xyzr[gidx].r);
+
+            // Fix indices from temp to real
+            if (oldindex_ != cache.first)
+            {
+                for (std::map< std::string, std::pair< uint8_type, uint8_type > >::const_iterator it_ = inputkeys_.begin (); it_ != inputkeys_.end (); ++it_)
+                {
+                    if (oldindex_ == it_->second.first)
+                    {
+                        cache = it_->second;
+                        break;
+                    }
+                }
+            }
+
+            const uint8_type a_spc = cache.second;
+
+            xyzr[gidx].r = std::sqrt (sqr (xyzr[gidx].x) + sqr (xyzr[gidx].y));
+
+            //indspc[a_spc][n[a_spc]] = gidx;
+
+            ispcbk[gidx] = a_spc;
+
+            ++n[a_spc];
+
+            set_region (a_spc, gidx, xyzr[gidx].z, xyzr[gidx].r);
+
+            indexer i_;
+
+            i_.gidx = gidx;
+
+            for (uint8_type ireg = 0; ireg < RegionSize; ++ireg)
+            {
+                if (parent_.get_environment().in_region (ireg, a_spc, xyzr[gidx].z, xyzr[gidx].r))
+                {
+                    i_.set_region (ireg, a_spc);
+                }
+            }
+
+            pset_->modify (i_);
+        }
+
+    }
+
+    // We have finished with inputkey map here
+    inputkeys_.clear ();
+
+    //----------------- FROM SPEC -----------------
+    /*<       do ispec=1,nspec  >*/
+    uint16_type nimax_ = 0;
+    uint16_type ntot_ = 0;
+
+    for (uint8_type spx = 0; spx < nspec_; ++spx)
+    {
+        nimax_ = std::max (nimax_, std::max (ntarget[spx], n[spx]));
+        ntot_ += std::max (ntarget[spx], n[spx]);
+    }
+
+    /*<          if (n(ispec).gt.nimax) nimax=n(ispec) >*/
+    GRS400_ALWAYS (nimax_ < IonSize, "requested too many entries for at least one ion ion_specie");
+    /*<       if (ntot.gt.ParticleSize) stop "ntot too large" >*/
+    GRS400_ALWAYS (max_count () < ParticleSize, "requested too many entries over all species");
+
+    // Check we have read in particles for or have target for all species
+    for (uint8_type spx = 0; spx < nspec_; ++spx)
+    {
+        if (ntarget[spx] == 0 && n[spx] == 0)
+        {
+            std::clog << "# Warning: No particles requested for specie " << parent_.get_specie ().name (spx)
+                      << ".\n# This will mean no ions of this specie will be created in the"
+                      << "\n# initial configuration.\n";
+        }
+    }
+
+    if (0 != ntot)
+    {
+        // If we read in some particles then we need to build the displacement matrix
+        build_displacement_matrix();
+    }
+!!!1060527.cpp!!!	interpret_input(in self : , inout aos : )
+std::string ion_summary_table[4];
+std::ostringstream free_summary_table;
+std::ostringstream salt_summary_table;
+
+const boost::format ion_summary_format ("  %1$=6s  %2$6.2f  %3$6.3f  %4$s\n");
+const boost::format salt_summary_format(" %1$-8s %2$12.4f %3$12.4f %4$12.4f\n");
+
+// Type counters
+int nmob = 0;
+int nfix = 0;
+int ncho = 0;
+int nfre = 0;
+auto anion = species_.begin ();
+double anion_concentration = 0.0;
+for (auto ispec = species_.begin (); ispec != species_.end (); ++ispec)
+{
+  // call interpret_input on each specie 
+  ispec->interpret_input (aos, parent_->qstar ());
+  
+  boost::format ion_summary_row(ion_summary_format);
+  ion_summary_row % ispec->name () % ispec->valency () % (ispec->radius () * 2);
+  if (ispec->is_mobile())
+  {
+    // Construct the ion summary row for this specie
+    ion_summary_row % ionch::strngs::fsmobl;
+    ion_summary_table[0].append (ion_summary_row.str ());
+    ++nmob;
+  }
+  else if (ispec->is_fixed())
+  {
+    // Construct the ion summary row for this specie
+    ion_summary_row % ionch::strngs::fsfixd;
+    ion_summary_table[1].append (ion_summary_row.str ());
+    ++nfix;
+  }
+  else if (ispec->is_channel_only())
+  {
+    // Construct the ion summary row for this specie
+    ion_summary_row % ionch::strngs::fschon;
+    ion_summary_table[2].append (ion_summary_row.str ());
+    ++ncho;
+  }
+  else if (ispec->is_free())
+  {
+    // Construct the ion summary row for this specie
+    ion_summary_row % ionch::strngs::fsfree;
+    ion_summary_table[3].append (ion_summary_row.str ());
+    ++nfre;
+    // ---- ion chemical potentials -----------
+    free_summary_table << boost::format(salt_summary_format) % ispec->name()
+                       % ispec->concentration () % ispec->chemical_excess ()
+                       % ispec->chemical_potential ();
+    if (ispec->is_cation ())
+    {
+      anion_concentration += ispec->valency () * ispec->concentration ();
+    }
+    else
+    {
+      anion = ispec;
+    }
+  }
+  else
+  {
+    // default to unknown is error
+    const bool unknown_specie_type = false;
+    IONCH_INPUT(unknown_specie_type, "One of the specie definitions does not have a valid type");
+  }
+}
+IONCH_INPUT((anion != species_.end() and anion->valency() < 0.0), "No anionic specie has been defined");
+anion->set_concentration (anion_concentration);
+
+aos << ionch::strngs::horizontal_bar << "\n";
+aos << "Specie type and salt data summary\n";
+aos << ionch::strngs::horizontal_bar << "\n";
+
+
+aos << " Number of structural ion species = " << (nmob + ncho + nfix) << "\n";
+aos << ionch::strngs::horizontal_bar << "\n";
+aos << "       mobile within sphere (mob) = " << nmob << "\n";
+aos << "     mobile within channel (chnl) = " << ncho << "\n";
+aos << "                      fixed (fix) = " << nfix << "\n";
+aos << ionch::strngs::horizontal_bar << "\n";
+
+aos << boost::format (ion_summary_format) % "Ion" % "Valency [e]" % "Diameter [A]" % "Type";
+aos << std::string(32, '-') << "\n";
+for (int idx = 0; idx != 4; ++idx)
+{
+  if (not ion_summary_table [idx].empty())
+  {
+    aos << ion_summary_table [idx];
+  }
+}
+aos << ionch::strngs::horizontal_bar << "\n";
+
+aos << boost::format(salt_summary_format) % "Ion/Salt" % "Targ. Conc." % "Chem. Ex." % "Chem. Pot.";
+aos << std::string (52, '-') << "\n";
+aos << free_summary_table.str ();
+// Need to scan species again as we needed to set anion concentration in first loop
+for (auto ispec = species_.begin (); ispec != species_.end (); ++ispec)
+{
+  if (ispec->is_free() and ispec->is_cation ())
+    {
+      // -----salt chemical potentials-----------------------------
+      const int iv = std::nearbyint(ispec->valency ());
+      const double chexs = ispec->chemical_excess () + iv * anion->chemical_excess();
+      const double rtargi = (ispec->concentration ()/ionch::constants::to_SI ())
+                            * std::pow (anion->concentration ()/ionch::constants::to_SI (), iv);
+      const double chemps = std::log(rtargi) + chexs;
+      aos << boost::format(salt_summary_format) % (ispec->name() + anion->name())
+                         % ispec->concentration () % chexs % chemps;
+    }
+  }
+
+
+aos << ionch::strngs::horizontal_bar << "\n";
+aos << "Total Ionic Strength: " << ionic_strength () << "\n";
+aos << ionch::strngs::horizontal_bar << "\n";
+aos << "Interpreted specie and salt sections of input\n";
+aos << ionch::strngs::horizontal_bar << "\n";
+
+for (auto ispec = species_.begin (); ispec != species_.end (); ++ispec)
+{
+  ispec->write_input (aos);
+}
+aos << ionch::strngs::horizontal_bar << "\n";
+
+
+os_log << " Regions for specie and salt insertion/deletion\n";
+os_log << strngs::strngs::horizontal_bar << "\n";
+{
+  const boost::format fmt_ (" %1$6s %2$6s %3$10.2g %4$10.2g %5$10.2g %6$14.4g");
+  os_log << boost::format (fmt_)
+                    % "Spec./salt" % "Region" % "Left Z" % "Right Z" % "Radius" % "Vol. Fact." << "\n";
+  os_log << strngs::strngs::horizontal_bar << "\n";
+  for (int ispec = spec::chloride_index (); ispec != spec::spec_size (); ++ispec)
+  {
+    for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+    {
+      os_log << boost::format (fmt_) % spec::fspc(ispec) % freg_[ireg] % -zreg_[ispec][ireg] % zreg_[ispec][ireg]
+                        % rreg_[ispec][ireg] % vreg_[ispec][ireg] << "\n";
+    }
+  }
+  for (int igc = 0; igc!= spec::nsalt; ++igc)
+  {
+    const int ispec = spec::isalt(igc);
+    const int iv = std::nearbyint(spec::xz(ispec));
+    for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+    {
+      double vol_ (vreg_[ispec][ireg]);
+      switch (iv)
+      {
+      default:
+      case 3:
+        vol_ *= vreg_[spec::chloride_index ()][constants::ibulk];
+      case 2:
+        vol_ *= vreg_[spec::chloride_index ()][constants::ibulk];
+      case 1:
+        vol_ *= vreg_[spec::chloride_index ()][constants::ibulk];
+      }
+      os_log << boost::format (fmt_) % spec::fsalt(igc) % freg(ireg)
+                        % -zreg_[ispec][ireg] % zreg_[ispec][ireg]
+                        % rreg_[ispec][ireg] % vol_ << "\n";
+    }
+  }
+}
+
+!!!1060527.python!!!	interpret_input(in self : , inout aos : )
+#TODO# std::string ion_summary_table[4];
+#TODO# std::ostringstream free_summary_table;
+#TODO# std::ostringstream salt_summary_table;
+#TODO# 
+#TODO# const boost::format ion_summary_format ("  %1$=6s  %2$6.2f  %3$6.3f  %4$s\n");
+#TODO# const boost::format salt_summary_format(" %1$-8s %2$12.4f %3$12.4f %4$12.4f\n");
+#TODO# 
+#TODO# # Type counters
+#TODO# int nmob = 0;
+#TODO# int nfix = 0;
+#TODO# int ncho = 0;
+#TODO# int nfre = 0;
+#TODO# auto anion = species_.begin ();
+#TODO# double anion_concentration = 0.0;
+#TODO# 
+#TODO# for ispec in self.species:
+#TODO#   # call interpret_input on each specie 
+#TODO#   ispec.interpret_input (aos, self.parent.qstar ())
+#TODO#   
+#TODO#   boost::format ion_summary_row(ion_summary_format);
+#TODO#   ion_summary_row % ispec.name () % ispec.valency () % (ispec.radius () * 2);
+#TODO#   if (ispec.is_mobile())
+#TODO#   {
+#TODO#     # Construct the ion summary row for this specie
+#TODO#     ion_summary_row % ionch::strngs::fsmobl;
+#TODO#     ion_summary_table[0].append (ion_summary_row.str ());
+#TODO#     ++nmob;
+#TODO#   }
+#TODO#   else if (ispec.is_fixed())
+#TODO#   {
+#TODO#     # Construct the ion summary row for this specie
+#TODO#     ion_summary_row % ionch::strngs::fsfixd;
+#TODO#     ion_summary_table[1].append (ion_summary_row.str ());
+#TODO#     ++nfix;
+#TODO#   }
+#TODO#   else if (ispec.is_channel_only())
+#TODO#   {
+#TODO#     # Construct the ion summary row for this specie
+#TODO#     ion_summary_row % ionch::strngs::fschon;
+#TODO#     ion_summary_table[2].append (ion_summary_row.str ());
+#TODO#     ++ncho;
+#TODO#   }
+#TODO#   else if (ispec.is_free())
+#TODO#   {
+#TODO#     # Construct the ion summary row for this specie
+#TODO#     ion_summary_row % ionch::strngs::fsfree;
+#TODO#     ion_summary_table[3].append (ion_summary_row.str ());
+#TODO#     ++nfre;
+#TODO#     # ---- ion chemical potentials -----------
+#TODO#     free_summary_table << boost::format(salt_summary_format) % ispec.name()
+#TODO#                        % ispec.concentration () % ispec.chemical_excess ()
+#TODO#                        % ispec.chemical_potential ();
+#TODO#     if (ispec.is_cation ())
+#TODO#     {
+#TODO#       anion_concentration += ispec.valency () * ispec.concentration ();
+#TODO#     }
+#TODO#     else
+#TODO#     {
+#TODO#       anion = ispec;
+#TODO#     }
+#TODO#   }
+#TODO#   else
+#TODO#   {
+#TODO#     # default to unknown is error
+#TODO#     const bool unknown_specie_type = false;
+#TODO#     IONCH_INPUT(unknown_specie_type, "One of the specie definitions does not have a valid type");
+#TODO#   }
+#TODO# }
+#TODO# IONCH_INPUT((anion != species_.end() and anion->valency() < 0.0), "No anionic specie has been defined");
+#TODO# anion->set_concentration (anion_concentration);
+#TODO# 
+#TODO# print >>aos,ionch::strngs::horizontal_bar << "\n";
+#TODO# print >>aos,"Specie type and salt data summary\n";
+#TODO# print >>aos,ionch::strngs::horizontal_bar << "\n";
+#TODO# 
+#TODO# 
+#TODO# print >>aos," Number of structural ion species = " << (nmob + ncho + nfix) << "\n";
+#TODO# print >>aos,ionch::strngs::horizontal_bar << "\n";
+#TODO# print >>aos,"       mobile within sphere (mob) = " << nmob << "\n";
+#TODO# print >>aos,"     mobile within channel (chnl) = " << ncho << "\n";
+#TODO# print >>aos,"                      fixed (fix) = " << nfix << "\n";
+#TODO# print >>aos,ionch::strngs::horizontal_bar << "\n";
+#TODO# 
+#TODO# print >>aos,boost::format (ion_summary_format) % "Ion" % "Valency [e]" % "Diameter [A]" % "Type";
+#TODO# print >>aos,std::string(32, '-') << "\n";
+#TODO# for (int idx = 0; idx != 4; ++idx)
+#TODO# {
+#TODO#   if (not ion_summary_table [idx].empty())
+#TODO#   {
+#TODO#     print >>aos,ion_summary_table [idx];
+#TODO#   }
+#TODO# }
+#TODO# print >>aos,ionch::strngs::horizontal_bar << "\n";
+#TODO# 
+#TODO# print >>aos,boost::format(salt_summary_format) % "Ion/Salt" % "Targ. Conc." % "Chem. Ex." % "Chem. Pot.";
+#TODO# print >>aos,std::string (52, '-') << "\n";
+#TODO# print >>aos,free_summary_table.str ();
+#TODO# # Need to scan species again as we needed to set anion concentration in first loop
+#TODO# for (auto ispec = species_.begin (); ispec != species_.end (); ++ispec)
+#TODO# {
+#TODO#   if (ispec.is_free() and ispec.is_cation ())
+#TODO#     {
+#TODO#       # -----salt chemical potentials-----------------------------
+#TODO#       const int iv = std::nearbyint(ispec.valency ());
+#TODO#       const double chexs = ispec.chemical_excess () + iv * anion->chemical_excess();
+#TODO#       const double rtargi = (ispec.concentration ()/ionch::constants::to_SI ())
+#TODO#                             * std::pow (anion->concentration ()/ionch::constants::to_SI (), iv);
+#TODO#       const double chemps = std::log(rtargi) + chexs;
+#TODO#       print >>aos,boost::format(salt_summary_format) % (ispec.name() + anion->name())
+#TODO#                          % ispec.concentration () % chexs % chemps;
+#TODO#     }
+#TODO#   }
+#TODO# 
+#TODO# 
+#TODO# print >>aos,ionch::strngs::horizontal_bar << "\n";
+#TODO# print >>aos,"Total Ionic Strength: " << ionic_strength () << "\n";
+#TODO# print >>aos,ionch::strngs::horizontal_bar << "\n";
+#TODO# print >>aos,"Interpreted specie and salt sections of input\n";
+#TODO# print >>aos,ionch::strngs::horizontal_bar << "\n";
+#TODO# 
+#TODO# for (auto ispec = species_.begin (); ispec != species_.end (); ++ispec)
+#TODO# {
+#TODO#   ispec.write_input (aos);
+#TODO# }
+#TODO# print >>aos,ionch::strngs::horizontal_bar << "\n";
+#TODO# 
+#TODO# 
+#TODO# print >>aos," Regions for specie and salt insertion/deletion\n";
+#TODO# print >>aos,strngs::strngs::horizontal_bar << "\n";
+#TODO# {
+#TODO#   const boost::format fmt_ (" %1$6s %2$6s %3$10.2g %4$10.2g %5$10.2g %6$14.4g");
+#TODO#   print >>aos,boost::format (fmt_)
+#TODO#                     % "Spec./salt" % "Region" % "Left Z" % "Right Z" % "Radius" % "Vol. Fact." << "\n";
+#TODO#   print >>aos,strngs::strngs::horizontal_bar << "\n";
+#TODO#   for (int ispec = spec::chloride_index (); ispec != spec::spec_size (); ++ispec)
+#TODO#   {
+#TODO#     for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+#TODO#     {
+#TODO#       print >>aos,boost::format (fmt_) % spec::fspc(ispec) % freg_[ireg] % -zreg_[ispec][ireg] % zreg_[ispec][ireg]
+#TODO#                         % rreg_[ispec][ireg] % vreg_[ispec][ireg] << "\n";
+#TODO#     }
+#TODO#   }
+#TODO#   for (int igc = 0; igc!= spec::nsalt; ++igc)
+#TODO#   {
+#TODO#     const int ispec = spec::isalt(igc);
+#TODO#     const int iv = std::nearbyint(spec::xz(ispec));
+#TODO#     for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+#TODO#     {
+#TODO#       double vol_ (vreg_[ispec][ireg]);
+#TODO#       switch (iv)
+#TODO#       {
+#TODO#       default:
+#TODO#       case 3:
+#TODO#         vol_ *= vreg_[spec::chloride_index ()][constants::ibulk];
+#TODO#       case 2:
+#TODO#         vol_ *= vreg_[spec::chloride_index ()][constants::ibulk];
+#TODO#       case 1:
+#TODO#         vol_ *= vreg_[spec::chloride_index ()][constants::ibulk];
+#TODO#       }
+#TODO#       print >>aos,boost::format (fmt_) % spec::fsalt(igc) % freg(ireg)
+#TODO#                         % -zreg_[ispec][ireg] % zreg_[ispec][ireg]
+#TODO#                         % rreg_[ispec][ireg] % vol_ << "\n";
+#TODO#     }
+#TODO#   }
+#TODO# }
+#TODO# 
+#TODO# 
+!!!1573167.cpp!!!	do_saves(inout a_os : ostream) : void
+    // Specie data
+    /*<       write(2,'(12x,"   N   ","  q [e]  ","  d [A]  ")') >*/
+    a_os << "               N\t\t q [e]  \t\t  d [A]  \n";
+    /*<       do i=1,nspec >*/
+    const uint8_type nspec_ = parent_.get_specie ().count ();
+
+    for (uint8_type i_ = 0; i_ < nspec_; ++i_)
+    {
+        /*<        >*/
+        a_os << parent_.get_specie ().name (i_) << " ion: " << int (count (i_))
+             << "\t" << parent_.get_specie ().valency (i_)
+             << "\t" << parent_.get_specie ().diameter (i_) << "\n";
+    }
+!!!1573295.cpp!!!	do_wrcf(inout a_os : ostream, in a_spec : uint8_type) : void
+    move_printer pp;
+//    // Particle data
+//    const uint8_type npart_ = count (a_spec);
+//    /*<             do i=1,n(ispec) >*/
+//    for (uint16_type i_ = 0; i_ < npart_; ++i_)
+//    {
+//        /*<                   ii=indspc(ispec,i) >*/
+//        const uint16_type ii_ = global_index (a_spec, i_);
+//        /*<                   write(2,*)rx(ii),ry(ii),rz(ii) >*/
+//        a_os << xyzr[ii_].x << "\t" << xyzr[ii_].y << "\t" << xyzr[ii_].z << "\n";
+//    }
+//    /*<       write(2,*) >*/
+//    a_os << "\n";
+!!!1335983.python!!!	write_xyz(in self : state_manager, in aos : )
+# Create an XYZ from coordinates
+print >>aos, str(len(coordset))
+print >>aos,"Translated coordinate set to XYZ"
+  
+aos.write("".join( [ "".join( ( pt.specie().label[0]," ",str(pt.position()[0])," ",str(pt.position()[1])," ",str(pt.position()[2]),"\n") ) for pt in self ] ) )
+!!!752687.cpp!!!	write_input_section(inout a_os : ostream) : void
+a_os << strngs::fschnl << "\n";
+a_os << strngs::fscgin << " " << strngs::str (this->calgin) << "\n";
+a_os << strngs::fscrdf << " " << strngs::str (this->calrdf) << "\n";
+a_os << strngs::fsclac << " " << strngs::str (this->calacc) << "\n";
+a_os << strngs::fsclmb << " " << strngs::str (this->calmob) << "\n";
+a_os << strngs::fswidm << " " << strngs::str (trial::calwid ()) << "\n";
+a_os << strngs::fsiwid << " " << trial::widom_trials() << "\n";
+a_os << strngs::fsdrg  << " " << this->drg_ << "\n";
+a_os << strngs::fsgzoc << " " << this->zocc_ << "\n";
+a_os << strngs::fsisav << " " << this->isave_ << "\n";
+a_os << strngs::fsnstp << " " << this->steps_simulation_ << "\n";
+a_os << strngs::fsnavr << " " << this->steps_thermalisation_ << "\n";
+a_os << strngs::fstsi  << " " << this->temperature_kelvin_ << "\n";
+a_os << strngs::fsname << " \"" << this->run_title_ << "\"\n";
+a_os << strngs::fschpt << " " << strngs::str(this->usechm) << "\n";
+a_os << strngs::fsnmcf << " " << strngs::str(this->byiter) << "\n";
+a_os << strngs::fsend << "\n\n";
+!!!707631.cpp!!!	checkpoint(in is_main : bool) : void
+// LOCALS
+double conductances[constants::nspcmx][2];
+
+IONCH_CHECK (0 != this->acharge_.size (), "Attempt to save results before accumulating any");
+
+constants::os_log << "\n\n\nBEGIN SAVES FOR STEP " << istep << "\n";
+++this->ksub_;
+
+std::ofstream os_ooo;
+{
+    const std::string file_name ("res/o." + this->run_.firun ());
+    os_ooo.open (file_name.c_str ());
+}
+
+os_ooo << " STEP    = " << istep << "\n";
+os_ooo << " RUN     = " << this->run_.firun () << "\n";
+os_ooo << " zl4 [A] = " << geom::zl (4) << "\n";
+os_ooo << " rl5 [A] = " << geom::rl (5) << "\n";
+os_ooo << " rl1 [A] = " << geom::rl (1) << "\n";
+os_ooo << " epspr   = " << patch::epspr() << "\n";
+os_ooo << " epsw    = " << patch::epsw() << "\n";
+os_ooo << "\n";
+
+for (int igc = 0; igc != spec::nsalt; ++igc)
+{
+    const static boost::format fmt_ (" %1$4s: ctarg = %2$11.8g, chemp = %3$10.5g, excess = %4$10.6g");
+    os_ooo << boost::format (fmt_) % spec::fsalt (igc) % spec::ctargs (igc) % spec::chemps (igc) % spec::chexs (igc) << "\n";
+}
+
+os_ooo << "\n";
+{
+    const static boost::format fmt_ ("%1$4s  %2$7d  %3$6.2g  %4$8.4g");
+
+    os_ooo << boost::format (fmt_) % "ION" % "N" % "q [e]" % "d [A]" << "\n";
+
+    for (int ispec = 0; ispec != spec::spec_size (); ++ispec)
+    {
+        os_ooo << boost::format (fmt_) % spec::fspc (ispec) % conf::ni (ispec) % spec::xz (ispec) % (spec::xri (ispec) * 2) << "\n";
+    }
+}
+
+// ----- Calculate and write out concentration profiles -------
+if (calgin)
+{
+    for (int ispec = 0; ispec != spec::spec_size (); ++ispec)
+    {
+        if (DEBUG) { constants::os_log << "#DEBUG gin profile for " << spec::fspc (ispec) << "\n"; }
+
+        const std::string file_name ("res/gin-" + spec::fspc (ispec) + "." + this->run_.firun ());
+
+        std::ofstream os (file_name.c_str());
+
+        const std::size_t k_end (this->nrgz_);
+
+        const std::size_t idx_end (this->nrgr_);
+
+        for (std::size_t k_ = 0; k_ != k_end; ++k_)
+        {
+            // histogram z coord
+            const double zri = this->zinlft_ + (k_ * this->drg_) + (this->drg_ / 2);
+
+            for (std::vector< size_t > idx = { k_, 0 }; idx[1] != idx_end; ++idx[1])
+            {
+                const double cin = constants::to_SI () * this->gin_[ispec].mean (idx) / (this->vjin (idx[1]));
+                // histogram r coord
+                const double rrj = (idx[1] * this->drg_) + (this->drg_ / 2);
+                os << zri << "\t" << rrj << "\t" <<  cin << "\t" << this->vjin (idx[1]) << "\n";
+            }
+
+            os << "\n";
+        }
+
+        os.close();
+    }
+
+    // Output charge distribution
+    {
+        if (DEBUG) { constants::os_log << "#DEBUG gin profile for charges\n"; }
+
+        const std::string file_name ("res/gin-charge." + this->run_.firun ());
+
+        std::ofstream os (file_name.c_str());
+
+        const std::size_t k_end (this->nrgz_);
+
+        const std::size_t idx_end (this->nrgr_);
+
+        for (size_t k_ = 0; k_ != k_end; ++k_)
+        {
+            // histogram z coord
+            const double zri = this->zinlft_ + (k_ * this->drg_) + (this->drg_ / 2);
+
+            for (std::vector< size_t > idx = { k_, 0 }; idx[1] != idx_end; ++idx[1])
+            {
+                const double cin = constants::to_SI () * this->chgdist_.mean (idx) / (this->vjin (idx[1]));
+                // histogram r coord
+                const double rrj = (idx[1] * this->drg_) + (this->drg_ / 2);
+                os << zri << "\t" << rrj << "\t" <<  cin << "\t" << this->vjin (idx[1]) << "\n";
+            }
+
+            os << "\n";
+        }
+
+        os.close();
+    }
+}
+
+if (DEBUG) { constants::os_log << "#DEBUG gin profiles complete\n"; }
+
+for (int ispec = 0; ispec != spec::spec_size (); ++ispec) // k8a2o9
+{
+    const double zocspc = zocc_ - spec::xri (ispec);
+    const int strgn3 = geom::gz_bin (-geom::zreg (constants::ichan, ispec));
+    const int strgn2 = geom::gz_bin (-geom::zreg (constants::ifilt, ispec));
+    const int strgn1 = geom::gz_bin (-zocspc);
+    const int enrgn1 = geom::gz_bin (zocspc);;
+    const int enrgn2 = geom::gz_bin (geom::zreg (constants::ifilt, ispec));
+    const int enrgn3 = geom::gz_bin (geom::zreg (constants::ichan, ispec));
+    std::bitset< 3 > usecd;
+    usecd.set ();
+    conductances[ispec][constants::izlim] = 0.0; // Actually this is for zocc not zlim
+    conductances[ispec][constants::ifilt] = 0.0;
+    conductances[ispec][constants::ichan] = 0.0;
+
+    {
+        std::ofstream os;
+        const std::string file_name ("res/gz-" + spec::fspc (ispec) + "." + this->run_.firun ());
+        os.open (file_name.c_str ());
+
+        for (int i_ = 0; i_ != geom::gz_max(); ++i_)
+        {
+            double concentration (0.0); // concentration
+            const double average_particle_number (this->gz_[ispec].mean (i_));
+
+            if (constants::feq (average_particle_number, 0.0))
+            {
+                if (i_ >= strgn3 and i_ < enrgn3)
+                {
+                    usecd.set (constants::ichan, false);
+
+                    if (i_ >= strgn2 and i_ < enrgn2)
+                    {
+                        usecd.set (constants::ifilt, false);
+
+                        if (i_ >= strgn1 and i_ < enrgn1)
+                        {
+                            usecd.set (constants::izlim, false);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                concentration = (constants::to_SI () * average_particle_number) / geom::gz_vol (ispec, i_);
+
+                if (i_ >= strgn3 and i_ < enrgn3)
+                {
+                    conductances[ispec][constants::ichan] += 1.0 / average_particle_number;
+
+                    if (i_ >= strgn2 and i_ < enrgn2)
+                    {
+                        conductances[ispec][constants::ifilt] += 1.0 / average_particle_number;
+
+                        if (i_ >= strgn1 and i_ < enrgn1)
+                        {
+                            conductances[ispec][constants::izlim] += 1.0 / average_particle_number;
+                        }
+                    }
+                }
+            }
+
+            os << geom::gz_mid (i_) << "  " << concentration << "  " << (average_particle_number * constants::to_SI ())
+               << "  " << geom::gz_vol (ispec, i_) << "  " << geom::gzwdth() << "\n";
+        } // t2q4q1
+    }
+
+    // finalise conductances for specie
+    for (int ireg = constants::izlim; ireg <= constants::ichan; ++ireg)
+    {
+        conductances[ispec][ireg] = (usecd[ireg] ? 1.0 / conductances[ispec][ireg] : 0.0);
+    }
+
+}  // end ispec loop k8a2o9
+
+if (DEBUG) { constants::os_log << "#DEBUG gz profiles complete\n"; }
+
+// Calculate radial distribution of ions near channel
+if (calrdf)
+{
+    static const boost::format rdf_row ("%1$8.4g %2$8.4g %3$8.4g %4$16.10g %5$16.10g");
+    const std::size_t spec_end (spec::spec_size ());
+    for (size_t ispec = 0; ispec != spec_end; ++ispec)
+    {
+        for (size_t jspec = 0; jspec != spec_end; ++jspec)
+        {
+            const std::vector< size_t > idx = { ispec, jspec };
+            // inter-particle distances
+            const double ddi = spec::dd_get (ispec, jspec);
+
+            const std::string file_name ("res/rdf-" + spec::fspc (ispec) + "-" + spec::fspc (jspec) + "." + this->run_.firun ());
+            std::ofstream os (file_name.c_str ());
+            const int j_end (this->nrdf_);
+
+            for (int j_ = 0; j_ != j_end; ++j_)
+            {
+                // histogram bin data
+                const double rlow = ddi + j_ * this->drdf_;
+                const double rhigh = rlow + this->drdf_;
+                const double ri   = rlow + this->drdf_ / 2;
+                const double vshell = 4 * constants::pi * (rhigh * rhigh * rhigh - rlow * rlow * rlow) / 3.0;
+
+                // radial dist. counts
+                const double rdfi1 = this->rdf_zlim_ (idx).mean (j_);
+                const double rdfi2 = this->rdf_chan_ (idx).mean (j_);
+
+                // dist. density
+                const double rdf1vs = rdfi1 / vshell;
+                const double rdf2vs = rdfi2 / vshell;
+
+                os << boost::format (rdf_row) % ri % rdfi1 % rdfi2 % rdf1vs % rdf2vs << "\n";
+            }
+        }
+    }
+}
+
+if (DEBUG) { constants::os_log << "#DEBUG rdf profiles complete\n"; }
+
+// ----- Output conductances -------------------------------
+
+for (int ispec = spec::chloride_index (); ispec != spec::spec_size (); ++ispec)
+{
+    for (int ireg = constants::izlim; ireg <= constants::ifilt; ++ireg)
+    {
+        const std::string file_name ("res/g" + geom::freg (ireg) + "-" + spec::fspc (ispec) + "." + this->run_.firun ());
+        std::ofstream os (file_name.c_str (), (this->ksub_ == 1 ? std::ifstream::trunc : std::ifstream::ate));
+        os << this->ksub_ << " " << conductances[ispec][ireg] << "\n";
+    }
+}
+
+// ----- Write out particle counts and chem. pot. comparison
+this->particle_count_distribution ();
+{
+    std::stringstream os;
+    this->particle_counts (os);
+    this->chemical_potentials (os);
+    const std::string report (os.str ());
+    constants::os_log << report;
+    constants::os_log << strngs::horizontal_bar << "\n";
+    os_ooo << report;
+}
+
+// Calculate chem. pot. if calwid
+if (trial::calwid ())
+{
+    trial::trywd (this->ksub_);
+    trial::savewd ();
+}
+
+// ----- Acceptance ratios --------------------------------
+for (int ispec = spec::chloride_index (); ispec != spec::spec_size (); ++ ispec)
+{
+    trial::avergi (ispec);
+}
+
+trial::zeroav ();
+
+if (calacc)
+{
+    trial::accrat (constants::os_log);
+    trial::accrat (os_ooo);
+}
+
+// ----- Co-occupancies
+{
+    const std::string file_name ("res/occ." + this->run_.firun ());
+    std::ofstream os (file_name.c_str());
+
+    for (int ireg = constants::izlim; ireg <= constants::ichan; ++ireg)
+    {
+        int k_end = 1;
+        int l_end = 1;
+
+        switch (spec::spec_size () - spec::nstr)
+        {
+        default:
+        case 4:
+            l_end = noccmx + 1;
+        case 3:
+            k_end = noccmx + 1;
+        case 2:
+        case 1:
+
+            for (int g_ = 0; g_ != noccmx + 1; ++g_)
+                for (int h_ = 0; h_ != noccmx + 1; ++h_)
+                    for (int k_ = 0; k_ != k_end; ++k_)
+                        for (int l_ = 0; l_ != l_end; ++l_)
+                        {
+                            os << g_ << " " << h_ << " " << k_ << " " << l_ << " " << this->aocc_[ireg][g_][h_][k_][l_] / acharge_.size () << "\n";
+                        }
+
+            break;
+        }
+
+        os << "\n";
+    }
+
+    os << strngs::horizontal_bar << "\n";
+
+    for (int ireg = constants::izlim; ireg <= constants::ichan; ++ireg)
+    {
+        // chloride co-occupancy sum
+        int k_end = 1;
+        int l_end = 1;
+
+        switch (spec::spec_size () - spec::nstr)
+        {
+        default:
+        case 4:
+            l_end = noccmx + 1;
+        case 3:
+            k_end = noccmx + 1;
+        case 2:
+        case 1:
+        {
+            double azcl = 0;
+
+            for (int h_ = 0; h_ != noccmx + 1; ++h_)
+                for (int k_ = 0; k_ != k_end; ++k_)
+                    for (int l_ = 0; l_ != l_end; ++l_)
+                    {
+                        for (int g_ = 0; g_ != noccmx + 1; ++g_)
+                        {
+                            azcl += this->aocc_[ireg][g_][h_][k_][l_];
+                        }
+
+                        os << h_ << " " << k_ << " " << l_ << " " << azcl / this->acharge_.size () << "\n";
+                    }
+        }
+        break;
+        }
+
+        os << "\n";
+    }
+}
+
+// 'h' vector
+{
+    const std::string file_name ("res/h." + this->run_.firun ());
+    std::ofstream os (file_name.c_str());
+
+    for (int ipch = 0; ipch != patch::npatch (); ++ipch)
+    {
+        os << ipch << " " << this->ah_.mean (ipch) << "\n";
+    }
+}
+
+// write out statistics about the movement of 'mobile' structural ions
+if (spec::nmob != 0) { amobsv (); }
+
+// write out details of volumes occupied by the ions
+if (spec::nstr != 0 and spec::nfix != spec::nstr) { conf::volslb (constants::os_log, 10, istep); }
+!!!752943.cpp!!!	main(in argc : int, inout argv : char) : int
+// Output information about the program and host
+this->print_copyright ();
+
+this->initialise (argc, argv);
+
+if (this->checkpoint_filename_.empty ())
+  {
+    // Read input
+    std::string input_file_name ("channel."+this->run_suffix_+".inp");
+    if (not boost::filesystem::exists(input_file_name)
+      {
+	input_file_name = "channel.inp";
+	UTILITY_INPUT(boost::filesystem::exists(input_file_name), "Unable to find input file named \"channel.inp\" or \"channel."+this->run_suffix_+".inp\".",constants::fschnl());
+      }
+      ionch::core::input_reader scnr_ (input_file_name);
+      enum
+      {
+        INPUT_CHANNEL
+        , INPUT_SAMPLER
+        , INPUT_GEOMETRY
+        , INPUT_PATCH
+        , INPUT_PARTICLES
+        , INPUT_SPECIE
+        , INPUT_SALT
+    };
+      std::bitset< 10 > required_sections_;
+      required_sections_.set();
+    while (scnr_.next () )
+    {
+      if (scnr_.name () == constants::fschnl())
+        {
+	  this->read_input_section (scnr_);
+	  required_sections_.reset(INPUT_CHANNEL);
+        }
+      else if (scnr_.name () == constants::fsaccm())
+	{
+	  // TODO get_sampler().do_readin (scnr_);
+	  required_sections_.reset(INPUT_SAMPLER);
+        }
+        else if (scnr_.name () == constants::geometry_label)
+        {
+	  // TODO get_environment().do_readin (scnr_);
+            required_sections_.reset(INPUT_GEOMETRY);
+        }
+        else if (scnr_.name () == constants::patch_label)
+        {
+	  // TODO get_patch().do_readin (scnr_);
+	    required_sections_.reset(INPUT_PATCH);
+        }
+        else if (scnr_.name () == constants::particles_label)
+        {
+	  // TODO get_particles().do_readin (scnr_);
+            required_sections_.reset(INPUT_PARTICLES);
+        }
+        else if (scnr_.name () == constants::specie_label)
+        {
+	  std::unique_ptr< ionch::particles::specie > current (new ionch::particles::specie);
+	  current->read_input (scnr_, this->current_state_);
+	  this->specie_set_.push_back (current.release());
+	  required_sections_.reset(INPUT_SPECIE);
+        }
+        else if (scnr_.name () == constants::salt_label)
+        {
+            get_salt().do_readin (scnr_);
+            required_sections_.reset(INPUT_SALT);
+        }
+        else
+        {
+            GRS400_ALWAYS (scnr_.at_end (), ("unrecognised tag in input file " + scnr_.name () ).c_str () );
+            break;
+        }
+    }
+    // Finalise setting of variables
+    GRS400_ALWAYS((required_sections_ xor All) == 0
+                  , "Main input file incomplete, must have all of the sections (accu,channel,conf.geom,patch,salt,specie)");
+    
+    std::cout << " Read of master input file " << filename << " complete.\n";
+    // Objects that have dependents
+    get_environment().do_readin ();
+    std::cout << " Geometry definition complete.\n";
+    
+    // Dependent objects
+    get_particles().do_readin ();
+    get_salt().do_readin ();
+    get_sampler().do_readin ();
+    get_patch ().do_readin ();
+    std::cout  << constants::output_divider << "\n MC environment definition complete.\n" << constants::output_divider << "\n";
+
+
+    // Finalise input
+    
+  }
+ else
+   {
+     // Read from checkpoint.
+
+
+// Use input chem potentials or generate them
+if (this->is_bulk_)
+  {
+    constants::os_log << strngs::horizontal_bar << "\n";
+    constants::os_log << "Computing chemical potentials.\n";
+    constants::os_log << "Bulk simulation volume and length: " << geom::volblk() << " " << geom::lenblk() << "\n";
+    conf::genrbk ();
+
+    this->run_bulk ();
+    //   reset statistics
+    this->reset ();
+  }
+!!!911535.cpp!!!	initialize(in argc : int, inout argv : char) : int
+// Process command line and read program input
+std::vector< std::string > command_line_arguments (&argv[1], &argv[argc]);
+IONCH_INPUT (not arguments.empty ()
+             , "The ionch program requires at least one command line argument");
+
+// Command line arguments
+for (size_t idx = 0; idx < command_line_arguments.size (); ++idx)
+{
+  constants::os_log << "COMMAND LINE ARGUMENT[" << idx << "]: \"" << command_line_arguments[idx] << "\"\n";
+}
+// ------------------------------------------------------------
+// First argument should be run number between 1 and 1000. Use
+// simple logic to avoid converting string to a number just to
+// check size.
+firun_.assign (command_line_arguments.at (0));
+// An empty string is a program error!
+IONCH_CHECK (not firun_.empty ()
+             , "command line argument cannot be an empty string");
+
+// Check the run id is less than 4 characters: if not assume it is a
+// larger number in error message
+IONCH_INPUT (firun_.size() < 4, "Run number must be less than 1000 (and more than 0)");
+// This counter is used to check that input value was not all '0'
+std::size_t idx = 0;
+
+// Loop over the string to check that it contains only digits we do
+// not check for minus sign or decimal separator as these are not
+// valid.
+for (std::size_t i = 0; i != firun_.size (); ++i)
+{
+  IONCH_INPUT (std::isdigit (firun_[i]), "Run identifier must be a number in range 1 to 999");
+
+  if (idx == i and firun_[i] == '0')
+  {
+    ++idx;
+  }
+}
+
+IONCH_INPUT (idx != firun_.size ()
+             , "Run number cannot be zero (and must be less than 1000)");
+
+// Here we know that the run id contains only digits and they are
+// not all '0's. As we want to make a three letter suffix we can now
+// just insert '0's at the beginning.
+if (3 != firun_.size ())
+{
+  firun_.insert (0, 3 - firun_.size (), '0');
+}
+
+// Generate the UUID string
+{
+  uuid_t val;
+  uuid_generate(val);
+  char p[3];
+  this->run_uuid_ = std::string(32, ' ');
+  for (int i = 0; i != 16; ++i)
+  {
+    std::sprintf(&p[0], "%02X", val[i]);
+    this->run_uuid_[2*i] = p[0];
+    this->run_uuid_[2*i + 1] = p[1];
+  }
+}
+
+
+
+// if a second argument is present use it as random seed else use
+// first value to initialise the random number generator
+//
+// default_random_seed
+static const uint64_t default_random_seed = uint64_t (12584210);
+
+ranff.seed (default_random_seed + boost::lexical_cast< uint64_t > (command_line_arguments.at (1 < command_line_arguments.size () ? 1 : 0)));
+constants::os_log << strngs::horizontal_bar << "\n\n\n";
+
+this->checkpoint_file_ = this->make_checkpoint_filename ("conf.") + ".inp";
+
+// ---------------
+// read input file
+this->read_input_file ();
+
+conf::generate (this->checkpoint_file_);
+
+// make initial patch
+if (not patch::homog)
+{
+  patch::genrch ();
+}
+
+!!!754223.cpp!!!	reset_statistics() : void
+trial_.zeroav ();
+trial_.zerotr ();
+
+for (auto ispec = spec::begin (); ispec != spec::end (); ++ispec)
+{
+  if (ispec->is_mobile ())
+  {
+    this->amobdl_[ispec->index ()].reset ();
+    this->amobdx_[ispec->index ()].reset ();
+    this->amobdy_[ispec->index ()].reset ();
+    this->amobdz_[ispec->index ()].reset ();
+  }
+   this->gin_[ispec->index ()].reset ();
+    this->gz_[ispec->index ()].reset ();
+
+  if (ispec->is_free ())
+  {
+     for (int ireg = constants::izlim; ireg <= constants::isample; ++ireg)
+    {
+        const std::vector< std::size_t > idx_ = { ispec->index (), ireg };
+        this->anin_ (idx_).reset ();
+    }
+
+    for (auto jspec = spec::begin (); jspec != spec::end (); ++jspec)
+    {
+        const std::vector< std::size_t > idx_ = { ispec->index (), jspec->index () };
+        this->rdf_zlim_ (idx_).reset ();
+        this->rdf_chan_ (idx_).reset ();
+    }
+  }
+}
+
+std::fill(&this->aocc_[0][0], &this->aocc_[3][0], 0);
+
+this->chgdist_.reset ();
+this->acharge_.reset ();
+this->ah_.reset ();
+
+!!!762159.cpp!!!	channel_simulator()
+: steps_simulation_ (1000)
+, steps_thermalisation_ (100)
+, run_title_ ("ion channel")
+, directory_ ("dat")
+, filename_ ()
+, byiter (false)
+, usechm (true)
+, stats_ (*this)
+, beta_ (2.41440919407021130E20) // Value for 300K
+, q_star_factor_ ()
+, temperature_kelvin_ (0.0)
+, filcur_ (1) // assume input is first input version
+{
+  the_run_ = this;
+}
+!!!715055.cpp!!!	compute_volslb(inout fid : ostream, in nival : int, in istep : int) : void
+  const boost::format table_ (" [%1$8.3f:%2$8.3f] %3$10.3f %%");
+  const boost::format tablefoot_ (" %1$10.3f %% %2$10.3f %%");
+  constants::os_log << "\nPercentage of filter region volume occupied by structural particles\n";
+  constants::os_log << strngs::horizontal_bar << "\n";
+  constants::os_log << boost::format (table_) % "Left" % "Right" % "Occupied" << "\n";
+  constants::os_log << strngs::horizontal_bar << "\n";
+
+  std::string filename_ ("res/occvol." + constants::firun () + ".dat");
+  std::ofstream os_vol (filename_, (istep == 0 ? std::fstream::trunc : std::fstream::ate));
+
+  os_vol << " " << std::setw (8) << istep;
+
+  ionch::observable< double > occl_stats;
+  // slices
+  {
+    double left = 0 - geom::zlimit();
+    const double width = (2 * geom::zlimit() / nival);
+    const double slice_volume = constants::pi * constants::sqr (geom::rl (1)) * width;
+
+    for (int idx = 0; idx != nival; ++idx)
+      {
+	// left=0-zocc+idx*width
+	const double right = left + width;
+	const double val = sphvol (left, right, true) / slice_volume;
+	occl_stats << val;
+	constants::os_log << boost::format (table_) % left % right % (100.0 * val) << "\n";
+	os_vol << " " << std::setw (13) << std::setprecision (6) << val;
+	left = right;
+      }
+  }
+  // total
+  {
+    const double left  = 0 - geom::zlimit();
+    const double right = geom::zlimit();
+    const double width = 2 * geom::zlimit();
+    const double slice_volume = constants::pi * constants::sqr (geom::rl (1)) * width;
+
+    const double val = sphvol (left, right, true) / slice_volume;
+    constants::os_log << strngs::horizontal_bar << "\n";
+    constants::os_log << boost::format (table_) % left % right % (100.0 * val) << "\n";
+    os_vol << " " << std::setw (13) << std::setprecision (6) << val;
+  }
+
+  constants::os_log << boost::format (tablefoot_) % "Mean" % "Std. Dev." << "\n";
+  constants::os_log << boost::format (tablefoot_) % (100.0*occl_stats.mean()) % (100.0*occl_stats.stddev()) << "\n";
+  os_vol << " " << std::setw (13) << std::setprecision (6) <<  occl_stats.mean();
+  os_vol << " " << std::setw (13) << std::setprecision (6) <<  occl_stats.stddev();
+  constants::os_log << strngs::horizontal_bar << "\n";
+!!!715183.cpp!!!	sphvol(in left : double, in right : double, in ignorefree : bool) : double
+// assumes that spheres do not overlap with
+// each other and with curved cylinder walls
+double Result = 0.0;
+
+// foreach particle
+for (int gidx = 0; gidx != nactv_; ++gidx)
+{
+  const int ispec = ispcbk(gidx); // sphere specie
+
+  // ignore unsused particles
+  if (ispec == constants::invspc)
+  {
+    continue;
+  }
+
+  // ignore free species?
+  if (ignorefree and spec::isfree (ispec))
+  {
+    continue;
+  }
+
+  const double zcentr = rz (gidx);   // sphere centre
+
+  const double spcrad = spec::xri (ispec); // sphere radii
+
+  const double leftmx = zcentr - spcrad;
+
+  const double rigtmx = zcentr + spcrad;
+
+  //double h      = 0.0;
+
+  if ( (left < rigtmx) and (leftmx < right))
+  {
+    // sphere in region, start with total volume
+    double partvl = 4 * constants::pi * (std::pow (spcrad, 3)) / 3;
+
+    // volume of sphere in cylinder
+    // check for partial overlap
+    if (leftmx < left)
+    {
+      // overlap to left
+      if (zcentr > left)
+      {
+        // overlap from inside: delete extra volume
+        const double h = left - leftmx;
+        partvl -= constants::pi * constants::sqr (h) * (3 * spcrad - h) / 3;
+      }
+      else
+      {
+        // overlap from outside: delete sphere and add extra volume
+        const double h = rigtmx - left;
+        partvl = constants::pi * constants::sqr (h) * (3 * spcrad - h) / 3;
+      }
+    }
+
+    // note: we use separate if for right-side overlap so we
+    // handle case where a sphere overlaps both boundaries.
+    if (rigtmx > right)
+    {
+      // overlap to right
+      if (zcentr < right)
+      {
+        // overlap from inside: delete extra volume
+        const double h = rigtmx - right;
+        partvl -= constants::pi * constants::sqr (h) * (3 * spcrad - h) / 3;
+      }
+      else
+      {
+        // overlap from outside: delete sphere and add extra volume
+        const double h = right - leftmx;
+        partvl = constants::pi * constants::sqr (h) * (3 * spcrad - h) / 3;
+      }
+    }
+
+    Result += partvl;
+  }
+}
+
+return Result;
+!!!751279.cpp!!!	on_cmt() : void
+// Drift test variables
+if (not isamov())
+{
+    struct anon_
+    {
+        static int setx0()
+        {
+            const double rmolar = geom::ntargt() / spec::ionstr();
+            double Result = 0.0;
+
+            for (int igc = 0; igc != spec::nsalt; ++igc)
+            {
+                Result += spec::ctargs (igc) * rmolar * (1.0 + spec::xz (spec::isalt (igc)));
+            }
+
+            return static_cast< int > (Result);
+        }
+    };
+    // initialise x0
+    static const int x0 (anon_::setx0());
+    static ionch::implementation::observable< double > skew_test_;
+    static const int cutoff_ (x0 * x0);
+    static uint64_t off_ = 0;
+    skew_test_ << std::pow (static_cast< double > (conf::ntot() - x0), 3u);
+
+
+    if (cutoff_ < std::abs (skew_test_.mean ()))
+    {
+        if (skew_test_.size () > off_)
+        {
+            constants::os_log << "WARNING: Significant skewness in population number:  "
+                              << (skew_test_.mean () / std::sqrt (double (x0)))
+                              << "\nWARNING: Original and current population: "
+                              << x0 << ", " << conf::ntot() << "\nWARNING: Accepted MCsteps: "
+                              << static_cast< int > (skew_test_.size ()) << "\n";
+            off_ = skew_test_.size () + 1000.0;
+        }
+    }
+}
+
+switch (istate[0])
+{
+case addslt:
+    ++acreat_[igcnw][iregnw][1];
+    break;
+case add1_l:
+    ++acrea1_[ispcnw[0]][iregnw][1];
+    break;
+case move_l:
+
+    switch (istate[1])
+    {
+    case sphr_l:
+        ++amove_[ispcnw[0]][1];
+        break;
+    case jump_l:
+        ++ajump_[ispcnw[0]][1];
+        break;
+    case jmpin_:
+        ++ajin_[ispcnw[0]][1];
+        break;
+    case jmpou_:
+        ++ajout_[ispcnw[0]][1];
+        break;
+    default:
+        const bool invalid_move_type = false;
+        IONCH_ALWAYS (invalid_move_type, "Invalid istate[1] attribute");
+        break;
+    }
+
+case rem1_l:
+    ++adest1_[ispcnw[0]][iregnw][1];
+    break;
+case remslt:
+    ++adest_[igcnw][iregnw][1];
+    break;
+default:
+    const bool invalid_trial_type = false;
+    IONCH_ALWAYS (invalid_trial_type, "Invalid istate[0] attribute");
+    break;
+}
+!!!1575599.cpp!!!	verify_invariants() : void
+    std::cout << "Verifying particle set\n";
+
+    if (DEBUG)
+    {
+        uint16_type ncount = 0;
+
+        for (particle_set::const_iterator it_ = pset_->begin (); it_ != pset_->end (); ++it_, ++ncount)
+        {
+            std::cout << "Particle [" << int (it_->gidx) << "] = (" << int (it_->region0)
+                      << ")(" << int (it_->region1)
+                      << ")(" << int (it_->region2)
+                      << ")(" << int (it_->region3) << ")\n";
+        }
+
+        std::cout << "Verify particle count " << int (max_count ()) << " = " << int (ncount) << "\n";
+        GRS400_ALWAYS (max_count() == ncount, "particle count and particle map size are not equal");
+    }
+
+    std::cout << "Verify particle count " << int (max_count ()) << " = " << pset_->size () << "\n";
+    const ion_specie & spec_1 = parent_.get_specie ();
+    {
+        // Check specie counts
+        uint16_type specie_count[SpecieSize + 2];
+        std::char_traits< uint16_type >::assign (&specie_count[0], SpecieSize + 2, 0u);
+
+        for (uint16_type i = 0; i < ispcbk.size(); ++i)
+        {
+            ++specie_count [ispcbk[i]];
+        }
+
+        for (uint8_type j = 0; j < spec_1.count (); ++j)
+        {
+            std::cout << "Verifying specie[" << int (j) << "] count: object = " << int (n[j]) << ", counted = " << int (specie_count[j]) << "\n";
+            std::cout << "Verifying specie[" << int (j) << "] count: object = " << int (n[j]) << ", pset = " << int (pset_->count (j)) << "\n";
+            GRS400_ALWAYS (n[j] == specie_count[j], "Recorded specie count does not match real count");
+            GRS400_ALWAYS (pset_->count (j) == specie_count[j], "Map specie count does not match real count");
+        }
+
+        std::cout << "Verifying deleted particle count: object = " << deletion_list_.size () << ", counted = " << specie_count[SpecieSize] << "\n";
+        GRS400_ALWAYS (deletion_list_.size () == specie_count[SpecieSize]
+                       , "Size of deleted particle list does not match deleted particles found");
+        std::cout << "Verifying unused particle count: object = " << ispcbk.size() - (max_count ()) << ", counted = " << specie_count[SpecieSize + 1] << "\n";
+        GRS400_ALWAYS (ispcbk.size() - (max_count ()) == specie_count[SpecieSize + 1]
+                       , "Number of unused particles different to found unused particles");
+    }
+    // Check guard status
+    guard_->verify (max_count (), parent_.get_patch ().count ());
+    {
+        // Verify regions
+        const geom & geom_1 = parent_.get_environment ();
+        uint16_type specie_count[RegionSize][SpecieSize];
+        std::char_traits< uint16_type >::assign (&specie_count[0][0], RegionSize * SpecieSize, 0u);
+
+        for (uint16_type ii = 0; ii < max_count (); ++ii)
+        {
+            if (ispcbk[ii] < SpecieSize)
+            {
+                for (uint8_type reg = 0; reg < RegionSize; ++reg)
+                {
+                    if (geom_1.in_region (reg, ispcbk[ii], xyzr[ii].z, xyzr[ii].r))
+                    {
+                        ++specie_count[reg][ispcbk[ii]];
+                    }
+                }
+            }
+        }
+
+        for (uint8_type reg = 0; reg < RegionSize; ++reg)
+        {
+            for (uint8_type j = 0; j < spec_1.count (); ++j)
+            {
+                std::cout << "Verifying region[" << int (reg) << "] + specie[" << int (j) << "] count: object = " << int (pset_->count (reg, j)) << ", counted = " << int (specie_count[reg][j]) << "\n";
+                GRS400_ALWAYS (pset_->count (reg, j) == specie_count[reg][j], "Particle map specie/region count does not match real count");
+            }
+        }
+    }
+
+    // Check distance matrix
+    std::cout << "Verifying interparticle distance matrix:";
+
+    for (uint16_type i = 0; i < max_count (); ++i)
+    {
+        if (SpecieSize == ispcbk[i]) { continue; }
+
+        for (uint16_type j = i; j < max_count (); ++j)
+        {
+            if (SpecieSize == ispcbk[j]) { continue; }
+
+            if (i == j)
+            {
+                if (!feq (0., rii[rii_ (i, i)])) { std::cout << "Non-zero distance [" << rii[rii_ (i, i)] << "] for particle " << i << "\n"; }
+
+                GRS400_ALWAYS (feq (0., rii[rii_ (i, i)]), "particle has non-zero distance from itself!");
+            }
+            else
+            {
+                if (feq (0., rii[rii_ (i, j)])) { std::cout << "Zero distance [" << rii[rii_ (i, i)] << "] for particle " << i << " to " << j << "\n"; }
+
+                GRS400_ALWAYS (!feq (0., rii[rii_ (i, j)]), "rii matrix is invalid");
+                GRS400_ALWAYS (feq (displacement_i (i, j), rii[rii_ (i, j)]), "rii matrix is invalid");
+            }
+        }
+
+        if ( (i % 64) == 0) { std::cout << "."; }
+    }
+
+    std::cout << "\n";
+
+!!!714799.cpp!!!	reset_XXX() : void
+  if (rx_.size () > 0)
+    {
+      boost::multi_array< double, 1 > dzero_(boost::extents[1]);
+      dzero_[0] = 0.0;
+      boost::multi_array< int, 1 > izero_(boost::extents[1]);
+      izero_[0] = 0;
+      std::fill(rqqii_.begin(), rqqii_.end(), dzero_);
+      rx_ = 0.0;
+      ry_ = 0.0;
+      rz_ = 0.0;
+      r2_ = 0.0;
+      rieps_ = 0.0;
+      rsx_ = 0.0;
+      rsy_ = 0.0;
+      rsr_ = 0.0;
+      std::fill(indreg_.begin (), indreg_.end(), izero_);
+      ispcbk_ = INVALID_SPECIE_INDEX;
+      std::fill(idelst_.begin (), idelst_.end(), 0);
+      ni_ = 0;
+      nreg_  = 0;
+      std::fill(nin_.begin (), nin_.end (), izero_);
+      nactv_ = 0;
+      ndel_ = 0;
+    }
+!!!1573423.cpp!!!	energy_change(inout bufer_1 : move_guard, in ispec : uint8_type, inout uii : double, inout uip : double) : bool
+    const ion_specie & spec_1 = parent_.get_specie ();
+    const patch & patch_1 = parent_.get_patch ();
+    move_monitor mm (1);
+    /*<       uii=0.0 >*/
+    uii = 0.;
+    /*<       uip=0.0 >*/
+    uip = 0.;
+    /*<       qi=q(ispec) >*/
+    const double qi = spec_1.charge_factor (ispec);
+    /*<       di=d(ispec) >*/
+    /*<       ri=di/2.0 >*/
+    // const double ri = spec_1.diameter (ispec) / 2.;
+    /*<       ii=indspc(ispec,i) >*/
+    const uint16_type ii = bufer_1.global_index;
+    /*<       epsi=eps(ispec) >*/
+    const double epsi = spec_1.relative_permittivity (ispec);
+
+    /* ____ SUM OVER OTHER FREE CHARGES ________________ */
+
+    /*<       do jspec=1,nspec >*/
+    std::valarray< double > min_ (10., spec_1.count ());
+
+    particle_particle_part< true > (uii, ii, &ispcbk[0], spec_1, min_, qi, 1. / epsi, bufer_1.new_xyz (), &bufer_1.let_.riinew[0][0]
+                                    , &xyzr[0], &xyzr[max_count ()]);
+
+    for (uint8_type jspec = 0; jspec < spec_1.count (); ++jspec)
+    {
+        if (min_[jspec] < spec_1.closest_approach (ispec, jspec))
+        {
+            return false;
+        }
+
+        ++mm;
+    }
+
+    double xyzold[4];
+    particle (ii, &xyzold[0]);
+    // Use const cast because we know that this function will not alter rii with "<false>"
+    particle_particle_part< false > (uii, ii, &ispcbk[0], spec_1, min_, qi, 1. / epsi, &xyzold[0], const_cast<double *>(&rii[rii_ (ii, 0)])
+                                     , &xyzr[0], &xyzr[max_count ()]);
+
+    fp_env::check ("in energy change after particle-particle interaction");
+
+    /*<       if (dabs(deps).lt.1.d-5) return >*/
+    if (! patch_1.in_use ())
+    {
+        return true;
+    }
+
+    /* ____ SUM OVER PATCHES ______________________ */
+    /*<        call calch(ispec,i,rxi,ryi,rzi) >*/
+    if (!patch_1.partial_h (bufer_1, ispec))
+    {
+        return false;
+    }
+
+    /*<        do k=1,npatch >*/
+    particle_patch_part (uip, &ispcbk[0], spec_1, patch_1, bufer_1.let_, &xyzr[0], &xyzr[max_count ()]);
+
+    const uint16_type npatch_ = patch_1.count ();
+
+    for (uint16_type k = 0; k < npatch_; ++k)
+    {
+        /* ____ OLD CONFIGURATION: LOOKUP TABLE ______________ */
+        // remove extra value calculated in the loop
+        // NOTE: use -qj to get reverse of operation in particle_patch_part
+        particle_patch (uip, -qi, bufer_1.let_.get_h (k), patch_1.area (k), bufer_1.let_.patch_separation (ii, k));
+
+        /* ____ NEW CONFIGURATION: FROM RIPNEW CALCULATED IN CALCH ______ */
+        particle_patch (uip, qi, bufer_1.let_.h_trial[k], patch_1.area (k), bufer_1.let_.ripnew[0][k]);
+    }
+
+    return true;
+!!!1573551.cpp!!!	energy_change(inout bufer_ : add_guard, in a_salt : uint8_type, inout uii : double, inout uip : double, in is_create : bool) : bool
+    const bodacea::ion_specie & spec_1 = parent_.get_specie();
+    const bodacea::salt & salt_1 = parent_.get_salt();
+    const uint8_type nspec_ = spec_1.count ();
+
+    /*<       uii=0.0 >*/
+    /*<       uip=0.0 >*/
+    uii = 0.;
+    uip = 0.;
+
+    // -------------
+    // For create and destroy
+    //
+    // calculate the energy between the particles being added or destroyed.
+    // -------------
+
+    /*<       iv=igcval(igc) >*/
+    const uint8_type anions = salt_1.cation_valency (a_salt);
+
+    /*<       do icount1=1,iv >*/
+    for (uint8_type icount1 = 0; icount1 < anions + 1; ++icount1)
+    {
+        /*<         ispec1=specie_cation(igc,icount1) >*/
+        const uint8_type ispec1 = salt_1.get_component (a_salt, icount1);
+        /*<         qi=q(ispec) >*/
+        const double qi = spec_1.charge_factor (ispec1);
+        /*<         epsi=eps(ispec) >*/
+        const double epsi = spec_1.relative_permittivity (ispec1);
+        // Global index only used for destroy, set to "dummy" value for create
+        const uint16_type ii = (is_create ? icount1 : bufer_.out_index (icount1));
+
+        /*<         do icount2=icount1+1,iv+1 >*/
+        for (uint8_type icount2 = icount1 + 1; icount2 < anions + 1; ++icount2)
+        {
+            /*<           ispec2=specie_cation(igc,icount2) >*/
+            const uint8_type ispec2 = salt_1.get_component (a_salt, icount2);
+
+            /*<           rij = ... >*/
+            const double rij = (is_create
+                                ? conf::displacement (bufer_.new_xyz (icount1), bufer_.new_xyz (icount2))
+                                : bufer_.conf_.separation (ii, bufer_.out_index (icount1)));
+
+            /*<           if (rijsq.lt.ddi) then >*/
+            if (is_create)
+            {
+                if (rij < spec_1.closest_approach (ispec1, ispec2))
+                {
+                    return false;
+                }
+
+                /*<           riicrn(icount1,icount2)=rij >*/
+                bufer_.set_rii (icount1, icount2, rij);
+            }
+
+            // NOTE: We do an addition here for both the destroy and create
+            // instead of avoiding particles being removed below.
+            //
+            // ie destroy = - foreach(ion del) sum(f(P[del],P[**all**])
+            //              + foreach_pair(ion del) f(P[deli],P[delj])
+            //
+            // instead of = - foreach(ion del) sum(f(P[del],P[!any ion del])
+
+            /*<        >*/
+            particle_particle (uii, qi, spec_1.charge_factor (ispec2), 1. / epsi, 1. / spec_1.relative_permittivity (ispec2), rij);
+        }
+
+        // ----------------------
+        // For create and destroy
+        //
+        // calculate the energy between all particles and the particles
+        // being added or destroyed .
+        // ----------------------
+
+        std::valarray< double > min_ (10., spec_1.count ());
+
+        if (is_create)
+        {
+            particle_particle_part< true > (uii, max_count (), &ispcbk[0], spec_1, min_, qi, 1. / epsi, bufer_.new_xyz (icount1)
+                                            , &bufer_.let_.riinew[icount1][0], &xyzr[0], &xyzr[max_count ()]);
+
+            for (uint8_type jspec = 0; jspec < nspec_; ++jspec)
+            {
+                if (min_[jspec] < spec_1.closest_approach (ispec1, jspec))
+                {
+                    return false;
+                }
+            }
+        }
+        else
+        {
+            double xyzold[4];
+            particle (ii, &xyzold[0]);
+            // Will not change rii when "<false>" 
+            particle_particle_part< false > (uii, ii, &ispcbk[0], spec_1, min_, qi, 1. / epsi, &xyzold[0]
+                                             , const_cast< double* >(&rii[rii_(ii, 0)]), &xyzr[0], &xyzr[max_count ()]);
+        }
+
+    }
+
+    /*<       if (dabs(deps).lt.1.d-5) return >*/
+    bodacea::patch & patch_ = parent_.get_patch ();
+
+    if (! patch_.in_use ())
+    {
+        return true;
+    }
+
+    /*<       call chcrea(igc) >*/
+    if (! patch_.partial_h (bufer_, a_salt, is_create))
+    {
+        return false;
+    }
+
+    /*<        do k=1,npatch >*/
+    // We calculate for all existing particles, then handle added/deleted
+    particle_patch_part (uip, &ispcbk[0], spec_1, patch_, bufer_.let_, &xyzr[0], &xyzr[max_count ()]);
+
+    const uint16_type npatch_ = patch_.count ();
+
+    for (uint8_type icount1 = 0; icount1 < anions + 1; ++icount1)
+    {
+        /*<         ispec1=specie_cation(igc,icount1) >*/
+        const uint8_type ispec1 = salt_1.get_component (a_salt, icount1);
+        /*<         qi=q(ispec) >*/
+        const double qi = spec_1.charge_factor (ispec1);
+
+        if (is_create)
+        {
+            for (uint16_type k = 0; k < npatch_; ++k)
+            {
+                // Particles not yet in official matrices so no addition alterations for patch_part
+                /* ____ NEW CONFIGURATION: FROM RIPNEW CALCULATED IN CALCH ______ */
+                particle_patch (uip, qi, bufer_.let_.h_trial[k], patch_.area (k), bufer_.let_.ripnew[icount1][k]);
+            }
+        }
+        else
+        {
+            for (uint16_type k = 0; k < npatch_; ++k)
+            {
+                // Remove extra values added in patch_part
+                particle_patch (uip, -qi, bufer_.let_.h_trial[k] - bufer_.let_.get_h(k), patch_.area (k), bufer_.let_.patch_separation (bufer_.out_index (icount1), k));
+                /* ____ OLD CONFIGURATION: LOOKUP TABLE ______________ */
+                particle_patch (uip, -qi, bufer_.let_.h_trial[k], patch_.area (k), bufer_.let_.patch_separation (bufer_.out_index (icount1), k));
+            }
+        }
+    }
+
+
+    return true;
+!!!904751.cpp!!!	compute_metropolis() : bool
+if (this->run ().is_bulk ())
+{
+  return compute_metropolis< true >();
+}
+else
+{
+  return compute_metropolis< false >();
+}
+!!!749487.cpp!!!	compute_metropolis_() : bool
+// riifnc = Function for calculating radial distance between two points
+
+// COULOMB and ICC
+bool ovrlap = true;
+double uii = 0.0;
+double uip = 0.0;
+double umfi = 0.0;
+double umob = 0.0;
+
+// Calculate COULOMB component
+if (not compute_coulomb_energy< riifnc > (uii, umfi)) return false;
+
+// As mobile ions can not be part of a salt, this test
+// will only be true when moving a mobile ion.
+if (steps_.front ().get_specie ().is_mobile ())
+{
+    umob = steps_.front ().get_specie ().move_penalty (steps_.front ());
+}
+
+// Calculate ICC
+if (not isbulk and not get_patch().is_homogeneous ())
+{
+    compute_patch_energy (uip);
+}
+
+//   Update data for predicting the chemical potential
+if (calwid_ and 1 == steps_.size () and not steps_.front ().has_old ())
+{
+    // ignore umob as mobile ions will never be part of widom trial
+    widom_trial (steps_.front (), umfi, uii + uip, uii);
+}
+
+// METROPOLIS energy criteria
+// If the difference between the potential energy of the trial conformation
+// and the energy of the current conformation, $\Delta U$, is negative (i.e. the
+// energy of the resulting conformation is smaller than the energy of the current
+// conformation), then the trial conformation is accepted. If $\Delta U$ is
+// positive the trial conformation is accepted if $e^{- \Delta E / T} > R$ for
+// a random number R in (0,1).
+
+const double deltu = uii + uip + umob - steps_.get_chemical_potential ();
+//   dexp(-115) < 1E-50 (cf ~1E+105 t_univ(in femto s) * N_univ)
+const double bfcr (std::exp (-deltu) * steps_.get_probability_factor ());
+
+// Record acceptance probability value
+record_energy (bfcr);
+
+if (deltu <= 0 or bfcr >= random_float ())
+{
+    // Update statistics for a successful attempt
+    on_cmt ();
+    //   COMMIT changes
+    return true;
+}
+return false;

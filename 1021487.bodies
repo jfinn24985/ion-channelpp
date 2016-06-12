@@ -1,0 +1,180 @@
+class salt_test_suite
+!!!1943343.cpp!!!	test_salt_help() : void
+  ionch::salt::help_information(ionch::input_help::exemplar());
+  TS_ASSERT (ionch::input_help::exemplar().have_section(ionch::constants::fssalt()));
+!!!1943471.cpp!!!	test_salt_ctor() : void
+  ionch::salt var1;
+  TS_ASSERT (not var1.is_valid ());
+
+  TS_ASSERT_EQUALS (var1.chemical_potential (), 0.0);
+  TS_ASSERT_EQUALS (var1.chemical_excess (), 0.0);
+  TS_ASSERT (var1.code_name ().empty ());
+  TS_ASSERT_EQUALS (var1.rate_change (), 0.0);
+  TS_ASSERT_EQUALS (var1.cation_index (), ~0ul);
+  TS_ASSERT_EQUALS (var1.anion_index (), ~0ul);
+  TS_ASSERT_EQUALS (var1.concentration (), 0.0);
+
+  // set methods
+  var1.set_concentration (0.1);
+  TS_ASSERT_EQUALS (var1.concentration (), 0.1);
+
+  var1.set_rate_change(1.0);
+  TS_ASSERT_EQUALS (var1.rate_change (), 1.0);
+
+  var1.normalise_rate_change(2.0);
+  TS_ASSERT_EQUALS (var1.rate_change (), 0.5);
+!!!1943599.cpp!!!	test_salt_echo_input() : void
+  ionch::salt var1;
+  std::stringstream os;
+  var1.echo_input (os);
+  std::string canon_input("salt\nname \"\"\nratgr 0\nctarg 0\nend\n\n");
+  std::string actual_input(os.str());
+  std::pair < std::string::iterator, std::string::iterator > result = std::mismatch(canon_input.begin(), canon_input.end(), actual_input.begin());
+  TS_ASSERT_EQUALS (std::size_t(result.first - canon_input.begin()), canon_input.size());
+  TS_ASSERT_EQUALS (canon_input, actual_input);
+!!!1943727.cpp!!!	test_salt_read_input() : void
+  ionch::salt var1;
+  std::string canon_input("salt\nname NaCl\nratgr 0.1\nctarg 0.05\nend\n\n");
+  std::string alt_input("salt\nname \"NaCl\"\nratgr 0.1\nctarg 0.05\nend\n\n");
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fssalt())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  {
+    std::stringstream os;
+    var1.echo_input (os);
+    std::string actual_input(os.str());
+    std::pair < std::string::iterator, std::string::iterator > result = std::mismatch(canon_input.begin(), canon_input.end(), actual_input.begin());
+    if (result.first != canon_input.end())
+    {
+      std::pair < std::string::iterator, std::string::iterator > result = std::mismatch(alt_input.begin(), alt_input.end(), actual_input.begin());
+      TS_ASSERT_EQUALS (std::size_t(result.first - alt_input.begin()), alt_input.size());
+      TS_ASSERT_EQUALS (alt_input, actual_input);
+    }
+    else
+    {
+      TS_ASSERT_EQUALS (std::size_t(result.first - canon_input.begin()), canon_input.size());
+      TS_ASSERT_EQUALS (canon_input, actual_input);
+    }
+  }
+!!!1943855.cpp!!!	test_salt_copy_ctor() : void
+  ionch::salt var1;
+  std::string canon_input("salt\nname NaCl\nratgr 0.1\nctarg 0.05\nend\n\n");
+  std::string alt_input("salt\nname \"NaCl\"\nratgr 0.1\nctarg 0.05\nend\n\n");
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fssalt())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  ionch::salt var2(var1);
+  {
+    std::stringstream os;
+    var2.echo_input (os);
+    std::string actual_input(os.str());
+    std::pair < std::string::iterator, std::string::iterator > result = std::mismatch(canon_input.begin(), canon_input.end(), actual_input.begin());
+    if (result.first != canon_input.end())
+    {
+      std::pair < std::string::iterator, std::string::iterator > result = std::mismatch(alt_input.begin(), alt_input.end(), actual_input.begin());
+      TS_ASSERT_EQUALS (std::size_t(result.first - alt_input.begin()), alt_input.size());
+      TS_ASSERT_EQUALS (alt_input, actual_input);
+    }
+    else
+    {
+      TS_ASSERT_EQUALS (std::size_t(result.first - canon_input.begin()), canon_input.size());
+      TS_ASSERT_EQUALS (canon_input, actual_input);
+    }
+  }
+!!!1943983.cpp!!!	test_salt_copy_operator() : void
+  ionch::salt var1, var2;
+  std::string canon_input("salt\nname NaCl\nratgr 0.1\nctarg 0.05\nend\n\n");
+  std::string alt_input("salt\nname \"NaCl\"\nratgr 0.1\nctarg 0.05\nend\n\n");
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fssalt())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  {
+    var2 = var1;
+    std::stringstream os;
+    var2.echo_input (os);
+  }
+  {
+    var2 = var1;
+    std::stringstream os;
+    var2.echo_input (os);
+    std::string actual_input(os.str());
+    std::pair < std::string::iterator, std::string::iterator > result = std::mismatch(canon_input.begin(), canon_input.end(), actual_input.begin());
+    if (result.first != canon_input.end())
+    {
+      std::pair < std::string::iterator, std::string::iterator > result = std::mismatch(alt_input.begin(), alt_input.end(), actual_input.begin());
+      TS_ASSERT_EQUALS (std::size_t(result.first - alt_input.begin()), alt_input.size());
+      TS_ASSERT_EQUALS (alt_input, actual_input);
+    }
+    else
+    {
+      TS_ASSERT_EQUALS (std::size_t(result.first - canon_input.begin()), canon_input.size());
+      TS_ASSERT_EQUALS (canon_input, actual_input);
+    }
+  }
+!!!1944111.cpp!!!	test_salt_serialization() : void
+  ionch::salt var1, var2;
+  std::string canon_input("salt\nname NaCl\nratgr 0.1\nctarg 0.05\nend\n\n");
+  std::string alt_input("salt\nname \"NaCl\"\nratgr 0.1\nctarg 0.05\nend\n\n");
+  {
+    boost::shared_ptr< std::istream > is (new std::stringstream (canon_input));
+    ionch::input_reader irdr ("dummy", is);
+    while (irdr.next ())
+    {
+      if (irdr.name() == ionch::constants::fssalt())
+      {
+        var1.read_input (irdr);
+      }
+    }
+  }
+  std::stringstream store;
+  {
+    boost::archive::text_oarchive oa(store);
+    // write class instance to archive
+    oa << var1;
+  }
+  {
+    boost::archive::text_iarchive ia(store);
+    // get class instance from archive
+    ia >> var2;
+  }
+  {
+    std::stringstream os;
+    var2.echo_input (os);
+    std::string actual_input(os.str());
+    std::pair < std::string::iterator, std::string::iterator > result = std::mismatch(canon_input.begin(), canon_input.end(), actual_input.begin());
+    if (result.first != canon_input.end())
+    {
+      std::pair < std::string::iterator, std::string::iterator > result = std::mismatch(alt_input.begin(), alt_input.end(), actual_input.begin());
+      TS_ASSERT_EQUALS (std::size_t(result.first - alt_input.begin()), alt_input.size());
+      TS_ASSERT_EQUALS (alt_input, actual_input);
+    }
+    else
+    {
+      TS_ASSERT_EQUALS (std::size_t(result.first - canon_input.begin()), canon_input.size());
+      TS_ASSERT_EQUALS (canon_input, actual_input);
+    }
+  }

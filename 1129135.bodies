@@ -1,0 +1,1141 @@
+class simulator
+!!!595889.python!!!	__init__(inout self : )
+from random import Random
+self.ranf_ = Random()
+from signals import signal
+self.report_sig_ = signal()
+self.prepare_sig_ = signal()
+self.inner_sig_ = signal()
+self.outer_sig_ = signal()
+# Add simulator signals to signal set
+self.set_signal("report", self.report_sig_)
+self.set_signal("prepare", self.prepare_sig_)
+self.set_signal("inner-loop", self.inner_sig_)
+self.set_signal("outer-loop", self.outer_sig_)
+# Create the ensemble
+from ensemble import ensemble
+self.ensemble_ = ensemble(self)
+
+!!!596017.python!!!	__del__(in self : )
+self.ensemble_ = None
+self.observers_ = None
+if self.report_sig_ != None and len(self.report_sig_) == 0:
+  self.report_sig_.disconnect_all_slots()
+  self.report_sig_ = None
+if self.prepare_sig_ != None and len(self.prepare_sig_) == 0:
+  self.prepare_sig_.disconnect_all_slots()
+  self.prepare_sig_ = None
+if self.inner_sig_ != None and len(self.inner_sig_) == 0:
+  self.inner_sig_.disconnect_all_slots()
+  self.inner_sig_ = None
+if self.outer_sig_ != None and len(self.outer_sig_) == 0:
+  self.outer_sig_.disconnect_all_slots()
+  self.outer_sig_ = None
+
+!!!175409.cpp!!!	simulator()
+: choices_()
+, choosers_()
+, data_source_()
+, evaluators_()
+, observers_()
+, species_()
+, ensemble_( new particle::ensemble )
+, sink_()
+, checkpoint_function_()
+, energy_( 0.0 )
+, equilibration_interval_( 0 )
+, inner_loop_size_( 0 )
+, outer_loop_index_( 0 )
+, production_interval_( 0 )
+, report_interval_( 0 )
+, target_particles_( 0 )
+, temperature_kelvin_( 300.0 )
+, rgen_( new boost::mt19937 )
+, ranf_( rgen_ )
+, inner_sig_()
+, outer_sig_()
+, prepare_sig_()
+, report_sig_()
+, output_dir_fmt_( "%1$03d" )
+, filename_base_( "input.%1$03d.inp" )
+, run_title_()
+, run_uuid_( make_uuid_string() )
+, run_index_( 1 )
+, permittivity_( 80.0 )
+{
+  // Add simulator signals to signal set
+  this->set_signal( "report", &this->report_sig_ );
+  this->set_signal( "prepare", &this->prepare_sig_ );
+  this->set_signal( "inner-loop", &this->inner_sig_ );
+  this->set_signal( "outer-loop", &this->outer_sig_ );
+}
+!!!2154159.cpp!!!	serialize(inout ar : Archive, in version : unsigned int) : void
+ar & choices_;
+ar & choosers_;
+// data_source not archived
+ar & evaluators_;
+ar & observers_;
+ar & species_;
+ar & ensemble_;
+ar & sink_;
+ar & report_interval_;
+ar & energy_;
+ar & equilibration_interval_;
+ar & inner_loop_size_;
+ar & outer_loop_index_;
+ar & production_interval_;
+ar & target_particles_;
+ar & temperature_kelvin_;
+ar & rgen_;
+ar & ranf_;
+// Signals are not archived
+ar & output_dir_fmt_;
+ar & filename_base_;
+ar & run_title_;
+ar & run_uuid_;
+ar & run_index_;
+ar & permittivity_;
+!!!2062127.cpp!!!	description(inout os : ostream) : void
+this->license( os );
+
+// host and environment information
+utility::machine_env::create()->description ( os );
+
+os << "-- LIBRARIES --\n";
+// LIBRARY INFORMATION
+// os << "BLAS/LAPACK LIBRARY" << util::lapack::version () "\n";
+
+// RANDOM NUMBER GENERATOR USED:
+os << "RANDOM NUMBER GENERATOR > " << utility::random_distribution::version () << "\n";
+
+// Print compile time constants
+core::constants::description( os );
+os << core::strngs::horizontal_bar () << "\n";
+
+// The particulars of this simulation object.
+this->do_description( os );
+
+os << core::strngs::horizontal_bar() << "\n";
+for(auto const& spc : this->species_)
+{
+  spc.description( os );
+}
+if ( not this->choosers_.empty() )
+{
+   os << core::strngs::horizontal_bar () << "\n";
+   os << "[choices] trial types and rates\n";
+   static const boost::format choice_header(" %6s %7s");
+   os << boost::format(choice_header) % "type" % "rate(%)" << "\n";
+   for (auto const& chsr : this->choosers_ )
+   {
+      chsr.description( os );
+   }
+   if ( not this->choices_.empty() )
+   {
+      static const boost::format choice_header(" %6s %4s %7s");
+      os << boost::format(choice_header) % "type" % "spc." % "rate(%)" << "\n";
+      static const boost::format choice_row(" %6s %4s %7.2f");
+      for (auto const& choice : this->choices_)
+      {
+         os << boost::format(choice_row) % choice.label() % this->species_[choice.specie_key()].label() % (choice.probability()*100.0) << "\n";
+      }
+   }
+}
+if ( not this->observers_.empty() )
+{
+   os << core::strngs::horizontal_bar () << "\n";
+   for (auto const& obsr : this->observers_)
+   {
+      obsr->description(os);
+   }
+}
+if ( not this->evaluators_.empty() )
+{
+   os << core::strngs::horizontal_bar () << "\n";
+   for (auto const& evltr : this->evaluators_)
+   {
+      evltr.description(os);
+   }
+}
+if (this->ensemble_)
+{
+   os << core::strngs::horizontal_bar () << "\n";
+   this->ensemble_->description( os );
+}
+!!!2062127.python!!!	description(inout os : ostream) : void
+from constants import constants
+constants.description( os )
+print >>os, "[simulation]"
+print >>os, "        volume :", self.cell_region_.volume(-1), "Anstrom{3}"
+print >>os, "  permittivity :", self.cell_region_.permittivity()
+print >>os, " beta (1/k_BT) :", (1.0/(constants.boltzmann_constant()*self.temperature_kelvin_)), " J{-1}"
+print >>os, "  temperature :", self.temperature_kelvin_, " K"
+print >>os, " specie count :", self.specie_count()
+print >>os, " - loop sizes"
+print >>os, "       thermal :", self.equilibration_interval_
+print >>os, "    production :", self.production_interval_
+print >>os, "         inner :", self.inner_loop_size_
+print >>os, " current index :", self.outer_loop_index_
+print >>os, " - other parameters"
+print >>os, " starting particle count :", self.target_number_of_particles()
+print >>os, "          ionic strength :", self.ionic_strength()
+print >>os, "             trial rates :", self.rates_
+print >>os, "              move delta :", self.delta
+for spc in self.species_:
+  spc.description( os )
+print >>os, "[choices] trial types and rates"
+print >>os, " %6s %4s %7s" % ( "type", "spc.", "rate(%)" )
+for choice in self.choices_:
+  print >>os, " %6s %4s %7.2f" % ( choice.label(), self.species_[choice.specie_key()].label(), choice.probability()*100.0 )
+for observer in self.observers_:
+  observer.description( os )
+for potl in self.evaluators_:
+  potl.description( os )
+self.ensemble_.description( os )
+
+!!!201008.cpp!!!	do_description(inout os : ostream) : void
+os << "[simulation]\n- base settings\n";
+os << " beta (1/k_bT) : " << (1.0/(core::constants::boltzmann_constant()*this->temperature_kelvin_)) << " J{-1}\n";
+os << "   temperature : " << this->get_temperature() << " K\n";
+os << "  specie count : " << this->specie_count() << "\n";
+os << "- loop sizes\n";
+os << "       thermal : " << this->equilibration_interval_ << "\n";
+os << "    production : " << this->production_interval_ << "\n";
+os << "         inner : " << this->inner_loop_size_ << "\n";
+os << "        report : " << this->report_interval_ << "\n";
+os << " current index : " << this->outer_loop_index_ << "\n";
+os << "- sample loop sizes\n";
+os << "- other parameters\n";
+os << " starting particle count : " << this->target_count() << "\n"; 
+os << " ionic strngth (Molar)    : " << this->ionic_strength() << "\n"; 
+os << "- Simulation Runtime Settings #\n";
+os << " run UUID                 : " << this->run_uuid_ << "\n";
+os << " run index                : " << this->run_index_ << "\n";
+os << " output directory template: " << this->output_dir_fmt_ << "\n";
+os << " output directory         : " << this->compute_output_dir() << "\n";
+!!!201008.python!!!	do_description(inout os : ostream) : void
+from constants import constants
+constants.description( os )
+print >>os, "[simulation]"
+print >>os, "        volume :", self.cell_region_.volume(-1), "Anstrom{3}"
+print >>os, "  permittivity :", self.cell_region_.permittivity()
+print >>os, " beta (1/k_BT) :", (1.0/(constants.boltzmann_constant()*self.temperature_kelvin_)), " J{-1}"
+print >>os, "  temperature :", self.temperature_kelvin_, " K"
+print >>os, " specie count :", self.specie_count()
+print >>os, " - loop sizes"
+print >>os, "       thermal :", self.equilibration_interval_
+print >>os, "    production :", self.production_interval_
+print >>os, "         inner :", self.inner_loop_size_
+print >>os, " current index :", self.outer_loop_index_
+print >>os, " - other parameters"
+print >>os, " starting particle count :", self.target_number_of_particles()
+print >>os, "          ionic strength :", self.ionic_strength()
+print >>os, "             trial rates :", self.rates_
+print >>os, "              move delta :", self.delta
+for spc in self.species_:
+  spc.description( os )
+print >>os, "[choices] trial types and rates"
+print >>os, " %6s %4s %7s" % ( "type", "spc.", "rate(%)" )
+for choice in self.choices_:
+  print >>os, " %6s %4s %7.2f" % ( choice.label(), self.species_[choice.specie_key()].label(), choice.probability()*100.0 )
+for observer in self.observers_:
+  observer.description( os )
+for potl in self.evaluators_:
+  potl.description( os )
+self.ensemble_.description( os )
+
+!!!577072.cpp!!!	license(inout os : ostream) : void
+this->do_license( os );
+
+os << core::strngs::horizontal_bar () << "\n";
+os << "This source file is free software: you can redistribute it and/or modify\n";
+os << "it under the terms of the GNU General Public License as published by\n";
+os << "the Free Software Foundation, either version 3 of the License, or\n";
+os << "(at your option) any later version.\n";
+os << "\n";
+os << "This program is distributed in the hope that it will be useful,\n";
+os << "but WITHOUT ANY WARRANTY; without even the implied warranty of\n";
+os << "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n";
+os << "GNU General Public License for more details.\n";
+os << "\n";
+os << "You should have received a copy of the GNU General Public License\n";
+os << "along with this program.  If not, see <http://www.gnu.org/licenses/>.\n";
+os << core::strngs::horizontal_bar () << "\n";
+!!!291248.cpp!!!	do_enrol() : void
+for (auto & obs : this->observers_)
+{
+  obs->enrol( *this );
+}
+for (auto & evals : this->evaluators_)
+{
+  evals.enrol( *this );
+}
+!!!502705.cpp!!!	find_input_filename() : std::string
+// Filenames to generate
+//   input.%03d.inp % run_index
+//   input.inp
+std::string Result;
+std::string errmsg ("Unable to find files named:");
+
+if (not this->filename_base_.empty())
+{
+  // Check for '%' to see if filename base is a format string
+  if (std::string::npos != this->filename_base_.find('%'))
+  {
+    // TRY ONE : filename base is format string
+    // -------
+    std::vector< char > fn (this->filename_base_.size() + 8, '\0');
+    std::size_t count = 0ul;
+    do
+    {
+      if (count > fn.size())
+      {
+        fn.resize(count + 1, '\0');
+      }
+      count = std::snprintf(fn.data(), fn.size() - 1, this->filename_base_.c_str(), this->run_index_);
+      UTILITY_ALWAYS (count >= 0, "Encoding error found making a filename from format text [" + this->filename_base_ + "]");
+    }
+    while (count > fn.size());
+    // Remove terminating nul
+    fn.resize(count);
+    Result.assign(fn.begin(),fn.end());
+    // Check if file exists
+    if (boost::filesystem::exists(Result))
+    {
+      return Result;
+    }
+    else
+    {
+      // Filename not found
+      errmsg.append(" ");
+      errmsg.append(Result);
+    }
+    // TRY TWO : remove format code from filename base
+    // -------
+    Result.assign(this->filename_base_);
+    // Remove everything from the '%' to the next '.'
+    std::size_t pos1 = Result.find('%'); // We know this is not npos!
+    std::size_t pos2 = Result.find('.', pos1);
+    if (std::string::npos != pos2)
+    {
+      Result.erase (pos1, pos2 - pos1 + 1);
+    }
+    else
+    {
+      Result.erase (pos1);
+    }
+    // Check if file exists
+    if (boost::filesystem::exists(Result))
+    {
+      return Result;
+    }
+    else
+    {
+      // Filename not found
+      errmsg.append(" ");
+      errmsg.append(Result);
+    }
+    }
+  else
+  {
+    // TRY THREE : filename base is simple string
+    // ---------
+    Result.assign(this->filename_base_);
+    // Check if file exists
+    if (boost::filesystem::exists(Result))
+    {
+      return Result;
+    }
+    else
+    {
+      // Filename not found
+      errmsg.append(" ");
+      errmsg.append(Result);
+    }
+  }
+}
+// If we got here no files where found.
+UTILITY_INPUT(false, errmsg, core::strngs::fschnl());
+Result.clear(); // To stop compiler complaints
+return Result;
+!!!808369.cpp!!!	find_input_filename(in d : int) : std::string
+UTILITY_INPUT (not this->filename_base_.empty()
+               , "No input file name or format text for generating the input file name"
+               , core::strngs::simulator_label());
+// Example filenames to generate
+//   input.%03d.inp % run_index
+//   input.inp
+std::string errmsg ("Unable to find files named:");
+// Assume filename_base is a format string.
+boost::format res(this->filename_base_);
+// Ignore error of too many arguments.
+res.exceptions( boost::io::all_error_bits ^ boost::io::too_many_args_bit  );
+res % this->run_index_;
+std::string Result(res.str());
+// Check if file exists
+if (boost::filesystem::exists(Result))
+{
+  return Result;
+}
+else
+{
+  // Filename not found
+  errmsg.append(" ");
+  errmsg.append(Result);
+}
+// TRY TWO : remove format code from filename base
+// -------
+Result.assign(this->filename_base_);
+// Remove everything from the first '%' to the next '.'
+std::size_t pos1 = Result.find('%');
+while (std::string::npos != pos1)
+{
+  std::size_t pos2 = Result.find('.', pos1);
+  if (std::string::npos != pos2)
+  {
+    Result.erase (pos1, pos2 - pos1 + 1);
+  }
+  else
+  {
+    Result.erase (pos1);
+  }
+  // Check if file exists
+  if (boost::filesystem::exists(Result))
+  {
+    return Result;
+  }
+  else
+  {
+    // Filename not found
+    errmsg.append(" ");
+    errmsg.append(Result);
+  }
+  pos1 = Result.find('%');
+}
+// If we got here no files where found.
+UTILITY_INPUT(false, errmsg, core::strngs::simulator_label());
+// To stop compiler complaints return an empty string
+Result.clear();
+return Result;
+!!!603313.cpp!!!	generate_simulation(inout oslog : ostream) : void
+// Call derived method to prepare itself and create a gridder
+// object for generating the ensemble.
+std::unique_ptr< trial::grid_generator > gridder = this->do_generate_simulation( oslog );
+
+// If the system is not Grand Canonical then we must have the
+// right number and ratio of particles in the simulation from
+// the beginning. In this version we simply test for this
+// condition and raise an error if it fails.
+const bool is_grand_canonical( true ); // TODO
+
+// Number of particles to add
+const std::size_t npart { this->target_count() };
+
+// Calculated target ionic strength.
+const double sumconc { this->ionic_strength() };
+
+// Local reference to the ensemble.
+particle::ensemble &ens( *this->ensemble_ );
+
+// Number of non-solute particles
+std::size_t nonsolute_count { 0 };
+
+// First add any predifined particles to the ensemble
+for (std::size_t ispec { 0 }; ispec != this->species_.size(); ++ispec)
+{
+   auto const& spc = this->species_[ ispec ];
+   const double charge { spc.valency() };
+   if ( spc.count() != 0 )
+   {
+      for (std::size_t idx { 0 }; idx != spc.count(); ++idx)
+      {
+         ens.append_position( ispec, charge, spc.get_position( idx ), this->permittivity_ );
+      }
+      if ( not spc.is_solute() )
+      {
+         nonsolute_count += spc.count();
+      }
+   }
+}
+
+// Print predefined particles
+if (ens.size() != 0)
+{
+   oslog << core::strngs::horizontal_bar() << "\n";
+   oslog << " Predefined particles\n";
+   oslog << core::strngs::horizontal_bar() << "\n";
+   boost::format line( " %|3|  %|3|   %|8|  %|8|  %|8| " );
+   oslog << boost::format(line) % "IDX" % "KEY" % "X" % "Y" % "Z" << "\n";
+   for ( std::size_t idx = 0; idx != ens.size(); ++idx )
+   {
+      oslog << boost::format(line) % (idx + 1) % ens.key( idx )
+            % ens.x( idx ) % ens.y( idx ) % ens.z( idx ) << "\n";
+
+   }
+   oslog << core::strngs::horizontal_bar() << "\n";
+
+   // Check for overlap in predefined particles.
+   bool is_overlap_in_predefined_particles { false };
+   for (std::size_t idx = 0; idx != ens.size() - 1; ++idx)
+   {
+      std::vector< double > rij;
+      this->compute_distances( ens.position( idx ), ens.get_coordinates(), rij, ens.size(), idx + 1 );
+      const double iradius { this->get_specie( ens.key( idx ) ).radius() };
+      for (std::size_t jdx = idx + 1; jdx != rij.size(); ++jdx)
+      {
+         // overlap in initial system.
+         const double min_distance { iradius + this->get_specie( ens.key( jdx ) ).radius() };
+         if( min_distance > rij[ jdx ] )
+         {
+            is_overlap_in_predefined_particles = true;
+            oslog << "OVERLAP: Distance |" << (idx + 1) << ", " << (jdx + 1) << "| (= "
+                  << rij[ jdx ] << " ) needs to be greater than " << min_distance << ".\n";
+         }
+      }
+   }
+   UTILITY_INPUT( not is_overlap_in_predefined_particles, "Overlap between particles in predifined particle set.", core::strngs::fsspec() );
+}
+
+// Randomised list of keys
+std::vector< std::size_t > keys;
+
+if ( ens.size() != 0 )
+{
+   // Have predefined particles.
+   // ==========================
+
+   // Expand ensemble if necessary
+   if ( ens.size() < nonsolute_count + npart )
+   {
+      ens.resize( nonsolute_count + npart );
+      keys.resize( nonsolute_count + npart, particle::ensemble::nkey );
+   }
+
+   // The beginning index of non-predefined particles
+   const std::size_t base_position { ens.size() };
+
+   // How many particles we need to add after removing predefined particles
+   std::size_t adjusted_npart( 0ul );
+
+   // Extra check for non-GC sims.
+   bool incorrect_particle_count_for_non_grand_canonical( false );
+
+   for (std::size_t ispec { 0 }; ispec != this->specie_count(); ++ispec)
+   {
+      std::size_t nspec { std::size_t( npart * this->get_specie( ispec ).concentration() / sumconc ) };
+      if ( adjusted_npart + nspec > npart )
+      {
+         nspec = npart - adjusted_npart;
+      }
+      // If specie has ANY predefined particles then it will not contribute
+      // to randomly generated data set.
+      if ( this->get_specie( ispec ).count() != 0 )
+      {
+         if( not is_grand_canonical and nspec != this->get_specie( ispec ).count())
+         {
+            incorrect_particle_count_for_non_grand_canonical = true;
+            oslog << "Non-grand canonical simulation requires " << nspec << " or zero predefined particles for specie \"" << this->get_specie( ispec ).label() << "\"\n";
+         }
+      }
+      else
+      {
+         // Fill key array
+         std::fill( keys.begin() + base_position + adjusted_npart
+                    , keys.begin() + base_position + adjusted_npart + nspec
+                    , ispec);
+         adjusted_npart += nspec;
+      }
+   }
+   UTILITY_INPUT( not incorrect_particle_count_for_non_grand_canonical, "Non-grand canonical simulations require an exact number of particles for each specie.", core::strngs::fsspec() );
+
+   // If no particles to be added then we are done
+   if ( adjusted_npart == 0 )
+   {
+      return;
+   }
+
+   // Randomly order the specie keys
+   this->get_random().shuffle( keys.begin() + base_position, keys.begin() + base_position + adjusted_npart );
+
+   // Count of particle to add
+   std::size_t idx { 0ul };
+
+   // Inter-particle distances
+   std::vector< double > rij;
+
+   std::vector< std::size_t > added( this->specie_count() );
+   std::fill( added.begin(), added.end(), 0 );
+
+   UTILITY_REQUIRE( gridder, "Could not allocate position generator when needed." );
+   UTILITY_REQUIRE( ens.size() != 0 or gridder->size() > npart, "Gridder object does not have enough grid points for the requested number of particles." );
+
+   // ii effectively only 'index' in the gridder.
+   for (size_t ii = 0; idx != adjusted_npart and ii != npart; ++ii)
+   {
+      const std::size_t ispec { keys[ base_position + idx ] };
+      particle::coordinate pos;
+      UTILITY_CHECK( gridder->next(pos), "Grid exhausted before expected");
+
+      // Check for overlap
+      //
+      this->compute_distances( pos, ens.get_coordinates(), rij, ens.size(), 0 );
+      const double iradius { this->get_specie( ispec ).radius() };
+      bool overlap { false };
+      // Just iterate to the last predefined particle.
+      for (std::size_t jdx = 0; jdx != base_position; ++jdx)
+      {
+         // Skip grid position if overlap.
+         if ( iradius + this->get_specie( ens.key( jdx ) ).radius() > rij[ jdx ] )
+         {
+            overlap = true;
+            break;
+         }
+      }
+      // if overlap skip this grid point
+      if ( overlap ) continue;
+
+      ens.append_position( ispec, this->get_specie( ispec ).valency(), pos, this->permittivity_ );
+      ++added[ispec];
+      ++idx;
+   }
+   // Check that we could add most of the wanted number of particles to within 90% of target
+   UTILITY_INPUT( double(idx)/double(adjusted_npart) > 0.9, "Added less than 90\% of target particles to initial system due to too many overlaps with predefined particles.", core::strngs::fsspec() );
+
+   // If not grand canonical then we must have added exactly the right number
+   UTILITY_INPUT( is_grand_canonical or  idx == adjusted_npart, "Unable to add required number of particles in a non grand canonical simulation due to too many overlaps with predefined particles.", core::strngs::fsspec() );
+
+   // set specie counts
+   for (size_t ispec = 0; ispec != this->specie_count(); ++ispec)
+   {
+      if ( added[ispec] != 0 )
+      {
+         this->get_specie( ispec ).set_count( added[ ispec ] + this->get_specie( ispec ).count() );
+      }
+   }
+}
+else
+{
+   // No predefined particles means we do not worry about overlap here!
+   ens.resize( npart );
+   keys.resize( npart, particle::ensemble::nkey );
+
+   // Current particle index
+   std::size_t cursor { 0 };
+
+   // Build specie key list
+   for (std::size_t ispec = 0; ispec != this->specie_count(); ++ispec)
+   {
+      std::size_t nspec { std::size_t( npart * this->get_specie( ispec ).concentration() / sumconc ) };
+      if ( cursor + nspec > npart )
+      {
+         nspec = npart - cursor;
+      }
+      // Fill key array
+      std::fill( keys.begin() + cursor, keys.begin() + cursor + nspec, ispec);
+      cursor += nspec;
+      this->get_specie( ispec ).set_count( nspec );
+   }
+
+   // Randomly order the specie keys
+   this->get_random().shuffle( keys.begin(), keys.begin() + cursor );
+
+   UTILITY_REQUIRE( gridder, "Could not allocate position generator when needed." );
+   UTILITY_REQUIRE( ens.size() != 0 or gridder->size() > npart, "Gridder object does not have enough grid points for the requested number of particles." );
+
+
+   // Add particles to ensemble
+   for (size_t ii = 0; ii != cursor; ++ii)
+   {
+      particle::coordinate pos;
+      UTILITY_CHECK( gridder->next(pos), "Grid exhausted before expected");
+      const std::size_t ispec { keys[ ii ] };
+      ens.append_position( ispec, this->get_specie( ispec ).valency(), pos, this->permittivity_ );
+   }
+}
+// Check ensemble invariants
+UTILITY_ENSURE( ens.check_invariants( this->species_ ), "Ensemble state is invalid" );
+!!!603313.python!!!	generate_simulation(inout oslog : ostream) : void
+from constants import constants
+## Generate a list of trial types
+self.update_choices()
+sumconc = self.ionic_strength()
+# Use a PBC system.
+from periodic_system import periodic_system
+self.cell_region_ = periodic_system(self.target_particles_ * constants.to_SI() / sumconc)
+# Generate initial ensemble on a grid
+gridder = self.cell_region_.make_grid_generator( self.target_particles_, self.get_random() ) 
+self.ensemble_.generate_ensemble( gridder, self.target_particles_, self.get_random() )
+pass
+!!!223792.python!!!	do_generate_simulation(inout oslog : ostream) : grid_generator
+from constants import constants
+## Generate a list of trial types
+self.update_choices()
+sumconc = self.ionic_strength()
+# Use a PBC system.
+from periodic_system import periodic_system
+self.cell_region_ = periodic_system(self.target_particles_ * constants.to_SI() / sumconc)
+# Generate initial ensemble on a grid
+gridder = self.cell_region_.make_grid_generator( self.target_particles_, self.get_random() ) 
+self.ensemble_.generate_ensemble( gridder, self.target_particles_, self.get_random() )
+pass
+!!!808497.cpp!!!	make_uuid_string() : string
+// Generate the UUID string
+uuid_t val;
+uuid_generate(val);
+char p[3];
+std::string uuid_string(32, ' ');
+for (int i = 0; i != 16; ++i)
+{
+  std::sprintf(&p[0], "%02X", val[i]);
+  uuid_string[2*i] = p[0];
+  uuid_string[2*i + 1] = p[1];
+}
+return uuid_string;
+!!!167344.cpp!!!	random_seed_value() : uint
+// Get random seed value from system's random device:
+// requires #include <boost/random/random_device.hpp>
+boost::random::random_device seedgenr;
+return seedgenr() - seedgenr.min();
+!!!822961.cpp!!!	read_input(inout reader : input_base_reader, inout oslog : ostream) : void
+// Random seed value
+core::input_delegater decoder( this->get_max_input_version() );
+
+this->build_reader( decoder );
+
+decoder.read_input( *this, reader );
+oslog << core::strngs::horizontal_bar() << "\n";
+!!!808753.cpp!!!	set_random_seed(in seedval : uint) : void
+this->rgen_->seed (seedval);
+!!!319664.cpp!!!	compute_distances(in position : coordinate, in coords : coordinate_set, inout rij : simulator::array_type, in endindex : size_t, in startindex : size_t = 0) : void
+endindex = std::min( endindex, coords.size() );
+switch( endindex )
+{
+case 0ul:
+   rij.clear();
+   return;
+case 1ul:
+   rij.resize( 1 );
+   rij[ 0 ] = 0.0;
+   return;
+default:
+   if ( rij.size() != endindex )
+   {
+      rij.resize ( endindex );
+   }
+   std::fill( rij.begin(), rij.end(), 0.0 );
+   this->do_compute_distances( position, coords, rij, endindex, startindex );
+}
+!!!178480.python!!!	do_compute_distances(in position : coordinate, in coords : coordinate_set, inout rij : simulator::array_type, in endindex : size_t, in start_index : size_t = 0) : void
+dx = position[0] - ens.x[start_index:len(ens)]
+dy = position[1] - ens.y[start_index:len(ens)]
+dz = position[2] - ens.z[start_index:len(ens)]
+# Calculate minimum distance in PBC cube
+# using numpy array operations
+import numpy as np
+box = self.length_
+hbox = box/2
+dx = np.where(dx > hbox, dx - box, np.where (dx < -hbox, dx + box, dx))
+dy = np.where(dy > hbox, dy - box, np.where (dy < -hbox, dy + box, dy))
+dz = np.where(dz > hbox, dz - box, np.where (dz < -hbox, dz + box, dz))
+result = np.zeros(len(ens))
+result[start_index:len(ens)] = np.sqrt(dx*dx + dy*dy + dz*dz)
+return result
+!!!177840.python!!!	is_valid_position(inout coord : coordinate, in ispec : size_t) : bool
+box = self.length_
+coord.x += box if coord.x < 0 else (0.0 if coord.x < box else -box)
+coord.y += box if coord.y < 0 else (0.0 if coord.y < box else -box)
+coord.z += box if coord.z < 0 else (0.0 if coord.z < box else -box)
+return True
+
+!!!1747759.cpp!!!	run(inout oslog : ostream) : void
+UTILITY_REQUIRE( not this->species_.empty(), "Can not run simulation with no species" );
+UTILITY_REQUIRE( this->ensemble_, "Can not run simulation with particles" );
+UTILITY_REQUIRE( not this->choosers_.empty(), "Can not run simulation with no trials" );
+UTILITY_REQUIRE( not this->evaluators_.empty(), "Can not run simulation with no energy evaluators" );
+UTILITY_REQUIRE(not this->observers_.empty(), "Can not run simulation with no observers" );
+
+this->do_run( oslog );
+!!!1747759.python!!!	run(inout oslog : ostream) : void
+# do thermalization
+self.run_loop(self.equilibration_interval_, oslog)
+print >>oslog, "\nEND OF THERMALISATION\n"
+self.run_loop(self.production_interval_, oslog)
+print >>oslog, "\nEND OF PRODUCTION\n"
+!!!241328.cpp!!!	do_run(inout oslog : ostream) : void
+// do thermalization
+this->run_loop(this->equilibration_interval_, oslog);
+oslog << "\nEND OF THERMALISATION\n\n";
+// do main simulation
+this->run_loop(this->production_interval_, oslog);
+oslog << "\nEND OF PRODUCTION\n\n";
+!!!602801.cpp!!!	run_loop(in loopcount : size_t, inout out : ostream) : void
+// Get reference to FP environment
+utility::fp_env &env(utility::fp_env::env_);
+// Check for FP error before reporting
+if (not env.no_except())
+{
+   if (0 != ((~env.Inexact) & env.except()))
+   {
+      UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except()),  " Floating point exception : "+ env.error_message ());
+   }
+   env.reset();
+}
+// Send signal to prepare other objects
+this->outer_loop_index_ = 0;
+// Build choices
+this->choices_.clear();
+for (auto &chsr : this->choosers_)
+{
+   chsr.generate_choices( *this, this->choices_ );
+}
+UTILITY_REQUIRE(not this->choices_.empty (), "Can not run simulation with no trials");
+// Ensure sum of probabilities is 1.0
+double sum_choice_rates { 0.0 };
+// reset choice objects
+for (auto &choice : this->choices_)
+{
+   sum_choice_rates += choice.probability();
+   choice.reset();
+}
+if (not utility::feq( sum_choice_rates, 1.0 ) )
+{
+for (auto &choice : this->choices_)
+   {
+      choice.set_probability( choice.probability() / sum_choice_rates );
+   }
+}
+// Randomize choice order
+this->ranf_.shuffle(this->choices_);
+// reset observers
+for (auto &obs : this->observers_)
+{
+   obs->prepare ( *this );
+}
+// reset the evaluators
+for (auto &evltr : this->evaluators_)
+{
+   evltr.prepare ( *this );
+}
+// Raise the prepare signal.
+this->prepare_sig_( *this );
+if ( not env.no_except() )
+{
+   if (0 != ((~env.Inexact) & env.except()))
+   {
+      out << "Floating point exception during simulation preparation \"" << env.error_message () << "\"\n";
+      UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                      , " Floating point exception : "+ env.error_message ());
+   }
+   env.reset();
+}
+// Calculate/reset the system's total energy
+this->total_energy();
+if ( not env.no_except() )
+{
+   if (0 != ((~env.Inexact) & env.except()))
+   {
+      out << "Floating point exception during calculation of initial energy\n \"" << env.error_message () << "\"\n";
+      UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                      , " Floating point exception : "+ env.error_message ());
+   }
+   env.reset();
+}
+// Set report interval to some meaningful default if not set
+if (this->report_interval_ == 0)
+{
+   this->report_interval_ = std::max(1ul, loopcount / 5);
+}
+
+
+// Run the simulation
+for (size_t d9m8h2 = 0; d9m8h2 != loopcount; ++d9m8h2)
+{
+   this->outer_loop_index_ += 1;
+   for ( size_t t1b6b8 = 0; t1b6b8 != this->inner_loop_size_; ++t1b6b8 )
+   {
+      // select a move
+      double sofar = this->ranf_.uniform( 0.0, 1.0 );
+      std::unique_ptr< trial::change_set > trial;
+for ( auto & choice: this->choices_ )
+      {
+         sofar -= choice.probability();
+         if (sofar <= 0.0)
+         {
+            trial = choice.generate( *this );
+            break;
+         }
+      }
+      if ( not trial->fail() )
+      {
+         // Calculate distance vectors.
+for ( auto & atom : *trial )
+         {
+            if (atom.do_old)
+            {
+               this->compute_distances( atom.old_position, this->ensemble_->get_coordinates(), atom.old_rij, this->ensemble_->size(), 0 );
+            }
+            if (atom.do_new)
+            {
+               this->compute_distances( atom.new_position, this->ensemble_->get_coordinates(), atom.new_rij, this->ensemble_->size(), 0 );
+            }
+         }
+         // Calculate energy
+for ( auto const& evaluator : this->evaluators_ )
+         {
+            evaluator.compute_potential( this->species_, *this->ensemble_, *trial, 0 );
+            if ( trial->fail() ) break;
+         }
+         if ( not env.no_except() )
+         {
+            if (0 != ((~env.Inexact) & env.except()))
+            {
+               out << "Floating point exception in computation of trial\n \"" << env.error_message () << "\"\n";
+               out << "Loop [" << d9m8h2 << "][" << t1b6b8 << "]\n";
+               UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                               , " Floating point exception : "+ env.error_message ());
+            }
+            env.reset();
+         }
+
+         if ( not trial->fail() )
+         {
+            trial->set_accept( this->ranf_.uniform(0.0,1.0) <= trial->metropolis_factor() );
+            if (trial->accept())
+            {
+               this->energy_ += trial->energy();
+               this->ensemble_->commit( *trial, this->species_ );
+            }
+         }
+      }
+      this->inner_sig_( *trial );
+      if (not env.no_except())
+      {
+         if (0 != ((~env.Inexact) & env.except()))
+         {
+            out << "Floating point exception in inner sampling\n \"" << env.error_message () << "\"\n";
+            out << "Loop [" << d9m8h2 << "][END]\n";
+            UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                            , " Floating point exception : "+ env.error_message ());
+         }
+         env.reset();
+      }
+   }
+   // Note this->outer_loop_index_ is a 1-based count
+   out << " STEP : " << this->outer_loop_index_ << "\n";
+   this->outer_sig_( *this );
+   if ((this->outer_loop_index_ % this->report_interval_) == 0)
+   {
+      this->do_report( out );
+   }
+   if (not env.no_except())
+   {
+      if (0 != ((~env.Inexact) & env.except()))
+      {
+         out << "Floating point exception in outer sampling\n \"" << env.error_message () << "\"\n";
+         out << "Loop [" << d9m8h2 << "][END]\n";
+         UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                         , " Floating point exception : "+ env.error_message ());
+      }
+      env.reset();
+   }
+   if ((this->outer_loop_index_ % this->report_interval_) == 0)
+   {
+      if (this->checkpoint_function_)
+      {
+         this->checkpoint_function_( this );
+      }
+   }
+}
+!!!602801.python!!!	run_loop(in loopcount : size_t, inout out : ostream) : void
+# Send signal to prepare other objects
+self.do_prepare()
+if self.checkpoint_interval_ == None or self.checkpoint_interval_ == 0:
+  self.checkpoint_interval_ = max(1, loopcount // 5)
+rgen = self.ranf_
+ens = self.ensemble_
+for d9m8h2 in range(loopcount):
+  self.outer_loop_index_ += 1
+  for t1b6b8 in range(self.inner_loop_size_):
+    # select a move
+    the_choice = None
+    sofar = rgen.uniform(0.0,1.0)
+    for choice in self.choices_:
+      sofar -= choice.probability()
+      if sofar <= 0.0:
+        the_choice = choice
+        break
+    with the_choice.generate(self) as trial:
+      if not trial.fail:
+        # Calculate distance vectors.
+        for atom in trial.changes:
+          if atom.do_old:
+            atom.old_rij = self.cell_region_.compute_distances(ens, atom.old_position)
+          if atom.do_new:
+            atom.new_rij = self.cell_region_.compute_distances(ens, atom.new_position)
+        # Calculate energy
+        for evaluator in self.evaluators_:
+          evaluator.compute_potential(self, trial)
+          if trial.fail:
+            break
+        if not trial.fail:
+          trial.accept = rgen.uniform(0.0,1.0) <= trial.metropolis_factor()
+          if trial.accept:
+            self.energy_ += trial.energy()
+            ens.commit( trial )
+      self.inner_sig_( trial )
+  # Note self.outer_loop_index_ is a 1-based count
+  print >>out,"STEP ",self.outer_loop_index_
+  self.outer_sig_(self)
+  if self.outer_loop_index_ % self.checkpoint_interval_ == 0:
+    self.checkpoint_index_ += 1
+    self.do_report( out )
+!!!2147119.cpp!!!	do_report(in self : simulator, inout os : ostream) : void
+// CALLED AT EACH CHECKPOINT
+os << "SIMULATION STAGE: " << this->outer_loop_index_ << "\n";
+// recalculate total energy
+const double ent (this->energy ());
+this->total_energy ();
+os << "  total energy of simulation    : " << this->energy() << "\n";
+if (std::abs(ent - this->energy()) > 1.E-6)
+{
+  os << "  ######### problems energy ################\n";
+  os << "        running energy          : " << ent << "\n";
+}
+os << "        difference to running   : " << this->energy() - ent << "\n";
+
+const size_t trial_count = (this->outer_loop_index_ + 1) * this->inner_loop_size_;
+const static boost::format format_str (" %6s %8s %10s %10s %7s %s");
+os << boost::format(format_str) % "Trial" % "Specie" % "Success" % "Attempt" % "Rate(%)" % "Total(%)" << "\n";
+for (auto const& choice : this->choices_)
+{
+  choice.report(*this, os, trial_count);
+}
+this->report_sig_(*this, os);
+os << core::strngs::horizontal_bar() << "\n";
+!!!2147119.python!!!	do_report(in self : simulator, inout os : ostream) : void
+print >>os, "SIMULATION STAGE:", self.outer_loop_index_
+energy = self.get_energy()
+self.total_energy()
+print >>os, "ENERGY: Running %9.4g, Computed %9.4g, Difference %9.4g" % ( energy, self.energy_, self.energy_ - energy )
+trial_count = (self.outer_loop_index_ + 1) * self.inner_loop_size_
+format_str = " %6s %8s %10s %10s %7s %s"
+print >>os, format_str % ("Trial","Specie","Success","Attempt","Rate(%)","Total(%)")
+for choice in self.choices_:
+  choice.report(self, os, trial_count)
+self.report_sig_(self, os)
+pass
+
+!!!809393.cpp!!!	compute_dir(in fmt : string) : string
+boost::format res(fmt);
+// Ignore error of too many arguments.
+res.exceptions( boost::io::all_error_bits ^ boost::io::too_many_args_bit  );
+res % this->run_index_ % this->run_uuid_;
+return res.str();
+!!!434865.cpp!!!	get_specie_key(in label : string) : size_t
+for (std::size_t ix = 0; ix != this->species_.size(); ++ix)
+{
+  if (label == species_[ix].label ()) return ix;
+}
+throw std::out_of_range(label+" is not a specie label");
+return this->species_.size();
+!!!434865.python!!!	get_specie_key(in label : string) : size_t
+for ispec, spc in enumerate(self.species_):
+  if spc.label() == label:
+    return ispec
+raise KeyError, label+" is not a specie label"
+!!!654897.cpp!!!	has_specie(in name : string) : bool
+for (auto const& spc: this->species_)
+{
+  if (name == spc.label ()) return true;
+}
+return false;
+!!!1756207.cpp!!!	ionic_strength() : double
+double result = 0.0; // ionic strength
+for (auto const& spc: this->species_)
+{
+   result += spc.concentration();
+}
+return result;
+!!!1756207.python!!!	ionic_strength() : double
+result = 0.0 # ionic strength
+for spc in self.species_:
+   result += spc.concentration()
+return result
+!!!1747503.cpp!!!	total_energy() : void
+UTILITY_REQUIRE(not this->evaluators_.empty (), "Can not calculate energy without evaluators.");
+UTILITY_REQUIRE(this->ensemble_, "Can not calculate energy without ensemble.");
+this->energy_ = 0.0;
+for ( auto & potl : this->evaluators_ )
+{
+   potl.prepare( *this );
+   this->energy_ += potl.compute_total_potential( *this );
+}
+!!!1747503.python!!!	total_energy() : void
+self.energy_ = 0.0
+nspec = self.specie_count()
+import change_set
+for ii in range( len( self.ensemble_ ) ):
+  if nspec != self.ensemble_.key[ii]:
+    dummy = change_set.change_set( None )
+    atom = change_set.change_atom()
+    atom.do_new = False
+    atom.index = ii
+    atom.old_position = self.ensemble_.position( ii )
+    atom.key = self.ensemble_.key[ii]
+    atom.old_rij = self.cell_region_.compute_distances(self.ensemble_, atom.old_position, ii + 1)
+    dummy.changes.append( atom )
+    for potl in self.evaluators_:
+      potl.compute_potential(self, dummy, ii);
+    self.energy_ -= dummy.energy ()
+!!!216240.cpp!!!	write_document(inout wr : input_document) : void
+// Add simulator section
+std::size_t ix = wr.add_section( core::strngs::simulator_label() );
+auto &sec = wr[ ix ];
+sec.add_entry( core::strngs::fsntrg(), this->target_count() );
+sec.add_entry( core::strngs::fstsi(), this->get_temperature() );
+sec.add_entry( core::strngs::fsnstp(), this->production_interval() );
+sec.add_entry( core::strngs::fsnavr(), this->equilibration_interval() );
+sec.add_entry( core::strngs::fsisav(), this->report_interval() );
+sec.add_entry( core::strngs::inner_label(), this->inner_loop_size() );
+sec.add_entry( core::strngs::fsname(), " \"" + this->run_title() + "\"" );
+sec.add_entry( core::strngs::outputdir_label(), " \"" + this->output_dir_fmt() + "\"" );
+sec.add_entry( core::strngs::inputpattern_label(), " \"" + this->filename_base() + "\"" );
+this->do_write_document( wr, ix );
+
+// Add specie definitions.
+{
+   // Update specie position information.
+   std::vector< std::size_t > cursors( this->specie_count() );
+   for(std::size_t idx = 0; idx != this->ensemble_->size(); ++ idx)
+   {
+      const std::size_t ispec { this->ensemble_->key( idx ) };
+      if ( ispec != particle::ensemble::nkey )
+      {
+         this->species_[ ispec ].update_position( cursors[ ispec ], this->ensemble_->position( idx ) );
+         ++cursors[ ispec ];
+      }
+   }
+   // Write updated specie definitions.
+   for(std::size_t ispec = 0; ispec != this->specie_count(); ++ ispec)
+   {
+      this->species_[ ispec ].write_document( wr );
+   }
+}
+
+// Add evaluator definitions
+for(auto const& evltr : this->evaluators_)
+{
+   evltr.write_document( wr );
+}
+
+// Add observers
+for(auto const& obsr : this->observers_)
+{
+   obsr->write_document( wr );
+}
+
+// TODO Write choice rates
+for (auto const& choice : this->choosers_)
+{
+   choice.write_document( wr );
+}

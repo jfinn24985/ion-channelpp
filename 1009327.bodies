@@ -1,0 +1,43 @@
+class jump_in_out_particle
+!!!1860399.cpp!!!	do_generate(in fm : formation, inout result : trial_move, inout rgen : mersenne_twister_19937) : void
+  if (not result.is_fail())
+  {
+    const size_t ni (fm.conformation().size(this->specie_index()));
+    if (ni == 0)
+    {
+      result.set_fail ();
+    }
+    else
+    {
+      const size_t lidx (rgen(ni));
+      trial_step t;
+      t.specie_id = this->specie_index();
+      // get global index from specie index
+      t.particle_id = fm.conformation().index_from_specie(t.specie_id, lidx);
+      t.z = fm.conformation().rz(t.particle_id);
+      t.r = fm.conformation().r2(t.particle_id);
+      const double rad (fm.specie_set().get_specie(this->specie_index()).radius());
+      // Discover region
+      t.region_id = 0;
+      // is it in inner region?
+      size_t move_type;
+      if (fm.get_region(inner_region_).in_region(t.z, t.r, rad))
+      {
+        t.region_id = region_index ();
+        move_type = trial_move::JUMP_OUT_MOVE;
+      }
+      else
+      {
+        t.region_id = inner_region_;
+        move_type = trial_move::JUMP_IN_MOVE;
+      }
+      fm.get_region(t.region_id).generate_in_region(t.z, t.r, rad, rgen(), rgen());
+      t.set_xy (rgen());
+      if (not fm.valid_position(t.particle_id, t.specie_id, t.x, t.y, t.z, t.r))
+      {
+        result.set_fail ();
+      }
+      result.add_step (t, 0, move_type);
+      // No change to chemical potential or probability factor
+    }
+  }

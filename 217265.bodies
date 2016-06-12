@@ -1,0 +1,2272 @@
+class core_test_suite
+!!!555312.cpp!!!	test_read_input_buffer() : void
+const std::string dummy_input("\n\n# A comment\nsection # Another comment\nname1 = value1\n1 2.3 4 not a num # 6.2\nname1 value1");
+const std::string  dummy_filename("dummy");
+const boost::filesystem::path dummy_path( boost::filesystem::absolute( "dummy" ) );
+
+{
+   Reader rdr;
+  // TEST reader next part 1
+  rdr.add_buffer( dummy_filename, dummy_input );
+  BOOST_CHECK(rdr.next());
+  BOOST_CHECK_EQUAL( "section # Another comment", rdr.line() );
+  BOOST_CHECK_EQUAL( "section", rdr.name() );
+  BOOST_CHECK_EQUAL( "", rdr.value() );
+  BOOST_CHECK_EQUAL( 4, rdr.current_line_number() );
+  BOOST_CHECK_EQUAL( dummy_path, rdr.current_filename() );
+
+  // TEST reader next part 2
+  BOOST_CHECK(rdr.next());
+  BOOST_CHECK_EQUAL("name1 = value1",rdr.line());
+  BOOST_CHECK_EQUAL("name1",rdr.name());
+  BOOST_CHECK_EQUAL("value1",rdr.value());
+  BOOST_CHECK_EQUAL(5,rdr.current_line_number());
+  BOOST_CHECK_EQUAL(dummy_path,rdr.current_filename());
+
+  // TEST reader next part 3
+  BOOST_CHECK(rdr.next());
+  BOOST_CHECK_EQUAL("1 2.3 4 not a num # 6.2",rdr.line());
+  BOOST_CHECK_EQUAL("1",rdr.name());
+  BOOST_CHECK_EQUAL("2.3 4 not a num",rdr.value());
+  BOOST_CHECK_EQUAL(6,rdr.current_line_number());
+  BOOST_CHECK_EQUAL(dummy_path,rdr.current_filename());
+
+  // TEST reader next part 4
+  BOOST_CHECK(rdr.next());
+  BOOST_CHECK_EQUAL("name1 value1",rdr.line());
+  BOOST_CHECK_EQUAL("name1",rdr.name());
+  BOOST_CHECK_EQUAL("value1",rdr.value());
+  BOOST_CHECK_EQUAL(7,rdr.current_line_number());
+  BOOST_CHECK_EQUAL(dummy_path,rdr.current_filename());
+
+  // TEST reader next part 5
+  BOOST_CHECK(not rdr.next());
+  BOOST_CHECK_EQUAL("",rdr.line());
+  BOOST_CHECK_EQUAL("",rdr.name());
+  BOOST_CHECK_EQUAL("",rdr.value());
+  // zero line number and "" indicate no file.
+  BOOST_CHECK_EQUAL(0,rdr.current_line_number());
+  BOOST_CHECK_EQUAL("",rdr.current_filename());
+  // Check stability of calling next after last element.
+  BOOST_CHECK(not rdr.next());
+  BOOST_CHECK_EQUAL("",rdr.line());
+  BOOST_CHECK_EQUAL("",rdr.name());
+  BOOST_CHECK_EQUAL("",rdr.value());
+  // zero line number and "" indicate no file.
+  BOOST_CHECK_EQUAL(0,rdr.current_line_number());
+  BOOST_CHECK_EQUAL("",rdr.current_filename());
+
+}
+!!!406193.cpp!!!	input_help_test() : void
+std::string section1(core::strngs::fsspec());
+std::string section2(core::strngs::fssalt());
+std::string sectdesc1("Specie definition input section variables and expected values.");
+std::string sectdesc2("Salt definition input section variables and expected values.");
+std::string argname11(core::strngs::fsname());
+std::string argname12(core::strngs::fsrtgr());
+std::string argname21(core::strngs::fsname());
+std::string description11("[required, two letters] specie code name (quotes optional).");
+std::string description12("[\""+core::strngs::fsfree()+"\" type only, required, number > 0] Probability this specie is used in a individual ion grand-canonical trial compared to other species.");
+std::string description21("[required, four letters] salt code name (quotes optional).");
+
+{
+  // We test the default ctor by getting the exemplar
+  core::input_help const& tmp (core::input_help::exemplar());
+
+  BOOST_CHECK(tmp.empty());
+
+  BOOST_CHECK_EQUAL(tmp.size(), 0ul);
+
+  BOOST_CHECK(not tmp.has_section(section1));
+
+}
+{
+  // test adding a section
+  core::input_help & tmp (core::input_help::exemplar());
+
+  BOOST_CHECK(tmp.empty());
+
+  BOOST_CHECK_EQUAL(tmp.size(), 0ul);
+
+  BOOST_CHECK(not tmp.has_section(section1));
+
+  tmp.add_section(section1, sectdesc1);
+
+  BOOST_CHECK(not tmp.empty());
+
+  BOOST_CHECK_EQUAL(tmp.size(), 1ul);
+
+  BOOST_CHECK(tmp.has_section(section1));
+
+}
+{
+  // test getting a description (after add section)
+  core::input_help & tmp (core::input_help::exemplar());
+  BOOST_CHECK(not tmp.empty());
+
+  BOOST_CHECK_EQUAL(tmp.size(), 1ul);
+
+  BOOST_CHECK(tmp.has_section(section1));
+}
+{
+  // test adding an option (1)
+  core::input_help & tmp (core::input_help::exemplar());
+  BOOST_CHECK(not tmp.empty());
+
+  BOOST_CHECK_EQUAL(tmp.size(), 1ul);
+
+  BOOST_CHECK(tmp.has_section(section1));
+
+  tmp.add_option( section1, argname11, description11 );
+
+}
+{
+  // test adding an option (1)
+  core::input_help & tmp (core::input_help::exemplar());
+  BOOST_CHECK(not tmp.empty());
+
+  BOOST_CHECK_EQUAL(tmp.size(), 1ul);
+
+  BOOST_CHECK(not tmp.has_section(section2));
+
+  tmp.add_option( section2, argname21, description21 );
+
+  BOOST_CHECK_EQUAL(tmp.size(), 2ul);
+
+  BOOST_CHECK(tmp.has_section(section2));
+}
+{
+  // test adding a section 2
+  core::input_help & tmp (core::input_help::exemplar());
+
+  BOOST_CHECK_EQUAL(tmp.size(), 2ul);
+
+  BOOST_CHECK(tmp.has_section(section2));
+
+  tmp.add_section(section2, sectdesc2);
+
+  BOOST_CHECK(tmp.has_section(section2));
+
+}
+{
+  // test adding an option (1.2)
+  core::input_help & tmp (core::input_help::exemplar());
+  BOOST_CHECK(not tmp.empty());
+
+  BOOST_CHECK_EQUAL(tmp.size(), 2ul);
+
+  BOOST_CHECK(tmp.has_section(section2));
+  BOOST_CHECK(tmp.has_section(section1));
+
+  tmp.add_option( section1, argname12, description12 );
+}
+{
+  // test of printing a section
+  core::input_help & tmp (core::input_help::exemplar());
+  BOOST_CHECK(not tmp.empty());
+
+  BOOST_CHECK_EQUAL(tmp.size(), 2ul);
+
+  BOOST_CHECK(tmp.has_section(section2));
+  BOOST_CHECK(tmp.has_section(section1));
+
+  std::stringstream os;
+  tmp.print(os, section1);
+  const std::string output(os.str());
+  boost::tokenizer<> tok(output);
+  boost::tokenizer<> toksearch1(sectdesc1);
+  BOOST_CHECK(tok.end() != std::search(tok.begin(), tok.end(), toksearch1.begin(), toksearch1.end()));
+  boost::tokenizer<> toksearch2(sectdesc2);
+  BOOST_CHECK(tok.end() == std::search(tok.begin(), tok.end(), toksearch2.begin(), toksearch2.end()));
+  boost::tokenizer<> toksearch3(description12);
+  BOOST_CHECK(tok.end() != std::search(tok.begin(), tok.end(), toksearch3.begin(), toksearch3.end()));
+  boost::tokenizer<> toksearch4(description21);
+  BOOST_CHECK(tok.end() == std::search(tok.begin(), tok.end(), toksearch4.begin(), toksearch4.end()));
+
+}
+{
+  // test printing everything
+  core::input_help & tmp (core::input_help::exemplar());
+  BOOST_CHECK(not tmp.empty());
+
+  BOOST_CHECK_EQUAL(tmp.size(), 2ul);
+
+  BOOST_CHECK(tmp.has_section(section2));
+  BOOST_CHECK(tmp.has_section(section1));
+
+  std::stringstream os;
+  tmp.print(os);
+  const std::string output(os.str());
+  boost::tokenizer<> tok(output);
+  boost::tokenizer<> toksearch1(sectdesc1);
+  BOOST_CHECK(tok.end() != std::search(tok.begin(), tok.end(), toksearch1.begin(), toksearch1.end()));
+  boost::tokenizer<> toksearch2(sectdesc2);
+  BOOST_CHECK(tok.end() != std::search(tok.begin(), tok.end(), toksearch2.begin(), toksearch2.end()));
+  boost::tokenizer<> toksearch3(description12);
+  BOOST_CHECK(tok.end() != std::search(tok.begin(), tok.end(), toksearch3.begin(), toksearch3.end()));
+  boost::tokenizer<> toksearch4(description21);
+  BOOST_CHECK(tok.end() != std::search(tok.begin(), tok.end(), toksearch4.begin(), toksearch4.end()));
+}
+!!!405297.cpp!!!	dictionary_test() : void
+BOOST_CHECK_EQUAL(core::strngs::fsaccu(), "accum");
+BOOST_CHECK_EQUAL(core::strngs::fsadd(),  "add");
+BOOST_CHECK_EQUAL(core::strngs::fscgin(), "calgin");
+BOOST_CHECK_EQUAL(core::strngs::fschex(), "chex");
+BOOST_CHECK_EQUAL(core::strngs::fschnl(), "channel");
+BOOST_CHECK_EQUAL(core::strngs::fschon(), "chonly");
+BOOST_CHECK_EQUAL(core::strngs::fschpt(), "usepot");
+BOOST_CHECK_EQUAL(core::strngs::fsclac(), "calacc");
+BOOST_CHECK_EQUAL(core::strngs::fsclmb(), "calmob");
+BOOST_CHECK_EQUAL(core::strngs::fsconf(), "conf");
+BOOST_CHECK_EQUAL(core::strngs::fscrdf(), "calrdf");
+BOOST_CHECK_EQUAL(core::strngs::fsctrg(), "ctarg");
+BOOST_CHECK_EQUAL(core::strngs::fsd(),    "d");
+BOOST_CHECK_EQUAL(core::strngs::fsdrg(),  "drg");
+BOOST_CHECK_EQUAL(core::strngs::fsdrmi(), "drmaxin");
+BOOST_CHECK_EQUAL(core::strngs::fsdrmo(), "drmaxout");
+BOOST_CHECK_EQUAL(core::strngs::fsdxf(),  "dxf");
+BOOST_CHECK_EQUAL(core::strngs::fsdxw(),  "dxw");
+BOOST_CHECK_EQUAL(core::strngs::fsdzg(),  "dzg");
+BOOST_CHECK_EQUAL(core::strngs::fsend(),  "end");
+BOOST_CHECK_EQUAL(core::strngs::fsenth(), "enthalpy");
+BOOST_CHECK_EQUAL(core::strngs::fsentr(), "entropy");
+BOOST_CHECK_EQUAL(core::strngs::fsepsc(), "epsch");
+BOOST_CHECK_EQUAL(core::strngs::fsepsp(), "epspr");
+BOOST_CHECK_EQUAL(core::strngs::fsepsw(), "epsw");
+BOOST_CHECK_EQUAL(core::strngs::fsexct(), "excited");
+BOOST_CHECK_EQUAL(core::strngs::fsflxd(), "flex");
+BOOST_CHECK_EQUAL(core::strngs::fsfree(), "free");
+BOOST_CHECK_EQUAL(core::strngs::fsfver(), "fileversion");
+BOOST_CHECK_EQUAL(core::strngs::fsgeom(), "geom");
+BOOST_CHECK_EQUAL(core::strngs::fsgrid(), "usegrid");
+BOOST_CHECK_EQUAL(core::strngs::fsgrl1(), "rl1");
+BOOST_CHECK_EQUAL(core::strngs::fsgrl4(), "rl4");
+BOOST_CHECK_EQUAL(core::strngs::fsgrl5(), "rl5");
+BOOST_CHECK_EQUAL(core::strngs::fsgrlc(), "rlcurv");
+BOOST_CHECK_EQUAL(core::strngs::fsgrlv(), "rlvest");
+BOOST_CHECK_EQUAL(core::strngs::fsgrnd(), "ground");
+BOOST_CHECK_EQUAL(core::strngs::fsgzl1(), "zl1");
+BOOST_CHECK_EQUAL(core::strngs::fsgzl4(), "zl4");
+BOOST_CHECK_EQUAL(core::strngs::fsgzlm(), "zlimit");
+BOOST_CHECK_EQUAL(core::strngs::fsgzoc(), "zocc");
+BOOST_CHECK_EQUAL(core::strngs::fsincl(), "include");
+BOOST_CHECK_EQUAL(core::strngs::fsisav(), "isave");
+BOOST_CHECK_EQUAL(core::strngs::fsislt(), "cation");
+BOOST_CHECK_EQUAL(core::strngs::fsiwid(), "iwidom");
+BOOST_CHECK_EQUAL(core::strngs::fskmob(), "mobk");
+BOOST_CHECK_EQUAL(core::strngs::fsmobl(), "mob");
+BOOST_CHECK_EQUAL(core::strngs::fsname(), "name");
+BOOST_CHECK_EQUAL(core::strngs::fsnavr(), "naver");
+BOOST_CHECK_EQUAL(core::strngs::fsnmcf(), "multiconf");
+BOOST_CHECK_EQUAL(core::strngs::fsn(),    "n");
+BOOST_CHECK_EQUAL(core::strngs::fsnoch(), "nocharge");
+BOOST_CHECK_EQUAL(core::strngs::fsnsrt(), "oldreg");
+BOOST_CHECK_EQUAL(core::strngs::fsnstp(), "nstep");
+BOOST_CHECK_EQUAL(core::strngs::fsnsub(), "nsub");
+BOOST_CHECK_EQUAL(core::strngs::fsntrg(), "ntarg");
+BOOST_CHECK_EQUAL(core::strngs::fsptch(), "patch");
+// BOOST_CHECK_EQUAL(core::strngs::fsread(), "readit");
+BOOST_CHECK_EQUAL(core::strngs::fsregn(), "region");
+BOOST_CHECK_EQUAL(core::strngs::fsrtex(), "ratexc");
+BOOST_CHECK_EQUAL(core::strngs::fsrtgr(), "ratgr");
+BOOST_CHECK_EQUAL(core::strngs::fsrtid(), "ratind");
+BOOST_CHECK_EQUAL(core::strngs::fsrtjp(), "ratjmp");
+BOOST_CHECK_EQUAL(core::strngs::fsrtmv(), "ratmov");
+BOOST_CHECK_EQUAL(core::strngs::fsrtrg(), "ratreg");
+BOOST_CHECK_EQUAL(core::strngs::fsrtsl(), "ratslt");
+BOOST_CHECK_EQUAL(core::strngs::fsrtsp(), "ratspc");
+BOOST_CHECK_EQUAL(core::strngs::fsrtsw(), "ratswap");
+BOOST_CHECK_EQUAL(core::strngs::fssalt(), "salt");
+BOOST_CHECK_EQUAL(core::strngs::fsspec(), "specie");
+BOOST_CHECK_EQUAL(core::strngs::fssubs(), "subspecie");
+BOOST_CHECK_EQUAL(core::strngs::fstry(),  "trial");
+BOOST_CHECK_EQUAL(core::strngs::fstsi(),  "kelvin");
+BOOST_CHECK_EQUAL(core::strngs::fstype(), "type");
+BOOST_CHECK_EQUAL(core::strngs::fswidm(), "calwid");
+BOOST_CHECK_EQUAL(core::strngs::fsz(),    "z");
+// B
+BOOST_CHECK_EQUAL(core::strngs::bulk_label(), "bulk");
+// C
+BOOST_CHECK_EQUAL(core::strngs::comment_begin(), "#");
+BOOST_CHECK_EQUAL(core::strngs::comment_end(), "");
+// E
+BOOST_CHECK_EQUAL(core::strngs::evaluator_label(), "evaluator");
+// H
+BOOST_CHECK_EQUAL(core::strngs::horizontal_bar(), "----------------------------------------------------------------------");
+// I
+BOOST_CHECK_EQUAL(core::strngs::imc_label(), "super-looper");
+BOOST_CHECK_EQUAL(core::strngs::inner_label(), "inner");
+BOOST_CHECK_EQUAL(core::strngs::inputpattern_label(), "input");
+// L
+BOOST_CHECK_EQUAL(core::strngs::localizer_label(), "localize");
+// O
+BOOST_CHECK_EQUAL(core::strngs::outputdir_label(), "outputdir");
+// R
+BOOST_CHECK_EQUAL(core::strngs::rate_label(), "rate");
+// S
+BOOST_CHECK_EQUAL(core::strngs::sampler_label(), "sampler");
+BOOST_CHECK_EQUAL(core::strngs::simulator_label(), "simulator");
+!!!405425.cpp!!!	numerical_constants_test() : void
+// Invariant : file_version always less/equal to file_version_max
+BOOST_CHECK_EQUAL(core::constants::filver, 1);
+BOOST_CHECK_EQUAL(core::constants::fvermx, 1);
+BOOST_CHECK_LE(core::constants::filver, core::constants::fvermx);
+// TEST CONSTANTS HAVE FIXED VALUES
+BOOST_CHECK_EQUAL(core::constants::angstrom(), 1.0E-10);
+BOOST_CHECK_EQUAL(core::constants::avogadro_number(), 6.02214E23);
+BOOST_CHECK_EQUAL(core::constants::boltzmann_constant(), 1.3806E-23);
+BOOST_CHECK_EQUAL(core::constants::electron_charge(), 1.6021917E-19);
+BOOST_CHECK_EQUAL(core::constants::epsilon_0(), 8.8542E-12);
+BOOST_CHECK_EQUAL(core::constants::pi(), 3.141592653589793);
+BOOST_CHECK_EQUAL(core::constants::to_SI(), 1660.539276735512625080121);
+// Program constants that may be deprecated in future.
+BOOST_CHECK_EQUAL(static_cast< int >(core::constants::ibulk), 3);
+BOOST_CHECK_EQUAL(static_cast< int >(core::constants::ichan), 2);
+BOOST_CHECK_EQUAL(static_cast< int >(core::constants::ifilt), 1);
+BOOST_CHECK_EQUAL(static_cast< int >(core::constants::izlim), 0);
+BOOST_CHECK_EQUAL(static_cast< int >(core::constants::mag), 12584210);
+BOOST_CHECK_EQUAL(static_cast< int >(core::constants::nionmx), 2048);
+BOOST_CHECK_EQUAL(static_cast< int >(core::constants::nnewmx), 4);
+BOOST_CHECK_EQUAL(static_cast< int >(core::constants::npchmx), 2048);
+BOOST_CHECK_EQUAL(static_cast< int >(core::constants::nrgnmx), 4);
+BOOST_CHECK_EQUAL(static_cast< int >(core::constants::nsltmx), 4);
+BOOST_CHECK_EQUAL(static_cast< int >(core::constants::nspcmx), 16);
+BOOST_CHECK_EQUAL(static_cast< int >(core::constants::ntotmx), 8192);
+BOOST_CHECK_EQUAL(static_cast< int >(core::constants::nzgmx), 4096);
+
+!!!405553.cpp!!!	input_delegater_test() : void
+//platform::application appl;
+//{
+//  core::input_delegater var1(1ul);
+//  BOOST_CHECK_EQUAL(var1.size (), 0ul);
+//  BOOST_CHECK_EQUAL(var1.read_version (), 0ul);
+//  BOOST_CHECK_EQUAL(var1.max_version (), 1ul);
+//  BOOST_CHECK_THROW(var1.read_input_file (appl, "test"), std::runtime_error);
+//}
+//{
+//  boost::shared_ptr< core::input_base_meta > dobj (new test_meta("test"));
+//  
+//  core::input_delegater var1(1ul);
+//  
+//  BOOST_CHECK_EQUAL(var1.size (), 0ul);
+//  BOOST_CHECK_EQUAL(var1.read_version (), 0ul);
+//  BOOST_CHECK_EQUAL(var1.max_version (), 1ul);
+//  
+//  var1.add_input_delegate (dobj);
+//  BOOST_CHECK_EQUAL(var1.size (), 1ul);
+//  BOOST_CHECK(var1.has_section("test"));
+//  BOOST_CHECK_THROW(var1.read_input_file (appl, "test"), std::runtime_error);
+//}
+//{
+//  boost::shared_ptr< core::input_base_meta > dobj (new test_meta("test"));
+//  
+//  const std::string canon_input ("fileversion 1\n");
+//  
+//  core::input_delegater var1(1ul);
+//  
+//  BOOST_CHECK_EQUAL(var1.size (), 0ul);
+//  BOOST_CHECK_EQUAL(var1.read_version (), 0ul);
+//  BOOST_CHECK_EQUAL(var1.max_version (), 1ul);
+//  
+//  var1.add_input_delegate (dobj);
+//  
+//  BOOST_CHECK_EQUAL(var1.size (), 1ul);
+//  
+//  boost::shared_ptr< std::istream > imp (new std::stringstream (canon_input));
+//  
+//  BOOST_CHECK_NO_THROW(var1.read_input_file (appl, "test", imp));
+//  BOOST_CHECK_EQUAL(var1.read_version (), 1ul);
+//  
+//
+//}
+//{
+//  boost::shared_ptr< core::input_base_meta > dobj (new test_meta("test"));
+//  const std::string canon_input ("fileversion 2\n");
+//  core::input_delegater var1(1ul);
+//  BOOST_CHECK_EQUAL(var1.size (), 0ul);
+//  BOOST_CHECK_EQUAL(var1.read_version (), 0ul);
+//  BOOST_CHECK_EQUAL(var1.max_version (), 1ul);
+//  var1.add_input_delegate (dobj);
+//  BOOST_CHECK_EQUAL(var1.size (), 1ul);
+//  boost::shared_ptr< std::istream > imp (new std::stringstream (canon_input));
+//  BOOST_CHECK_THROW(var1.read_input_file (appl, "test", imp), std::runtime_error);
+//  
+//
+//}
+//{
+//  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test1"));
+//  boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test2"));
+//  boost::shared_ptr< core::input_base_meta > dobj3 (new test_meta("test3"));
+//  
+//  const std::string canon_input ("fileversion 1\ntest1\nend\ntest2\n\nend\n");
+//  core::input_delegater var1(1ul);
+//  
+//  var1.add_input_delegate (dobj1);
+//  var1.add_input_delegate (dobj2);
+//  var1.add_input_delegate (dobj3);
+//  
+//  BOOST_CHECK_EQUAL(var1.size (), 3ul);
+//  
+//  BOOST_CHECK(var1.has_section("test1"));
+//  BOOST_CHECK(var1.has_section("test2"));
+//  BOOST_CHECK(var1.has_section("test3"));
+//  BOOST_CHECK(not var1.has_section("test4"));
+//  
+//  boost::shared_ptr< std::istream > imp (new std::stringstream (canon_input));
+//  BOOST_CHECK_NO_THROW(var1.read_input_file (appl, "test", imp));
+//
+//}
+//{
+//  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test1"));
+//  boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test2"));
+//  boost::shared_ptr< core::input_base_meta > dobj3 (new test_meta("test3"));
+//  
+//  const std::string canon_input ("fileversion 1\ntest1\nend\ntest4\n\nend\n");
+//  core::input_delegater var1(1ul);
+//  
+//  var1.add_input_delegate (dobj1);
+//  var1.add_input_delegate (dobj2);
+//  var1.add_input_delegate (dobj3);
+//  
+//  BOOST_CHECK_EQUAL(var1.size (), 3ul);
+//  boost::shared_ptr< std::istream > imp (new std::stringstream (canon_input));
+//  BOOST_CHECK_THROW(var1.read_input_file (appl, "test", imp), std::runtime_error);
+//  
+//
+//}
+//{
+//  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test1"));
+//  boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test2"));
+//  boost::shared_ptr< core::input_base_meta > dobj3 (new test_meta("test3", true));
+//  
+//  const std::string canon_input ("fileversion 1\ntest1\nend\ntest2\n\nend\n");
+//  core::input_delegater var1(1ul);
+//  
+//  var1.add_input_delegate (dobj1);
+//  var1.add_input_delegate (dobj2);
+//  var1.add_input_delegate (dobj3);
+//  
+//  boost::shared_ptr< std::istream > imp (new std::stringstream (canon_input));
+//  
+//  BOOST_CHECK_THROW(var1.read_input_file (appl, "test", imp), std::runtime_error);
+//  
+//
+//}
+//{
+//  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test1"));
+//  boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test2"));
+//  
+//  const std::string canon_input ("fileversion 1\ntest1\nend\ntest2\n\nend\ntest2\n\nend\n");
+//  core::input_delegater var1(1ul);
+//  
+//  var1.add_input_delegate (dobj1);
+//  var1.add_input_delegate (dobj2);
+//  
+//  boost::shared_ptr< std::istream > imp (new std::stringstream (canon_input));
+//  
+//  BOOST_CHECK_THROW(var1.read_input_file (appl,"test", imp), std::runtime_error);
+//  
+//
+//}
+//{
+//  std::stringstream store;
+//  {
+//    boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test1"));
+//    boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test2"));
+//  
+//    const std::string canon_input ("fileversion 1\ntest1\nend\ntest2\n\nend\ntest2\n\nend\n");
+//    core::input_delegater var1(1ul);
+//  
+//    var1.add_input_delegate (dobj1);
+//    var1.add_input_delegate (dobj2);
+//  
+//    boost::shared_ptr< std::istream > imp (new std::stringstream (canon_input));
+//  
+//    BOOST_CHECK_THROW(var1.read_input_file (appl, "test", imp), std::runtime_error);
+//    boost::archive::text_oarchive oa(store);
+//    // write class instance to archive
+//    oa << var1;
+//  }
+//  {
+//    core::input_delegater var1(1ul);
+//    boost::archive::text_iarchive ia(store);
+//    // get class instance from archive
+//    ia >> var1;
+//  
+//  }
+//
+//}
+!!!554672.cpp!!!	input_base_reader_test() : void
+class test_reader: public core::input_base_reader
+{
+public:
+   bool do_next()
+   {
+      return false;
+   };
+   boost::filesystem::path current_filename() const
+   {
+      return boost::filesystem::path();
+   }
+   std::size_t current_line_number() const
+   {
+      return 0;
+   }
+   void add_buffer(const boost::filesystem::path &, std::string) {}
+   void add_include(const boost::filesystem::path &) {}
+};
+//--template < class Archive >
+//--void serialize( Archive &ar, input_base_reader &rr, const int version = 0)
+//--{
+//--   rr.serialize( ar );
+//--};
+{
+   // TEST BOOL CONVERTERS
+   {
+      // Converting string to bool
+      // Converting string to bool: true -> true
+      const std::string test ("true");
+      bool pass = false;
+      pass = core::input_base_reader::read_as_bool(test);
+      BOOST_CHECK_EQUAL(pass, true);
+   }
+   {
+      // Converting string to bool
+      // Converting string to bool: false -> false
+      const std::string test ("false");
+      bool pass = true;
+      pass = core::input_base_reader::read_as_bool(test);
+      BOOST_CHECK_EQUAL(pass, false);
+   }
+   {
+      // Converting string to bool
+      // Converting string to bool: 0 -> false
+      const std::string test ("0");
+      bool pass = true;
+      pass = core::input_base_reader::read_as_bool(test);
+      BOOST_CHECK_EQUAL(pass, false);
+   }
+   {
+      // Converting string to bool
+      // Converting string to bool: 1 -> true
+      const std::string test ("1");
+      bool pass = false;
+      pass = core::input_base_reader::read_as_bool(test);
+      BOOST_CHECK_EQUAL(pass, true);
+
+   }
+   {
+      // Converting string to bool
+      // Converting string to bool: .false. -> false
+      const std::string test (".false.");
+      bool pass = true;
+      pass = core::input_base_reader::read_as_bool(test);
+      BOOST_CHECK_EQUAL(pass, false);
+   }
+   {
+      // Converting string to bool
+      // Converting string to bool: 2.0 -> ?true?
+      const std::string test ("2.0");
+      bool pass = true;
+      BOOST_CHECK_THROW(pass = core::input_base_reader::read_as_bool(test), boost::bad_lexical_cast);
+      BOOST_CHECK_EQUAL(pass, true);
+   }
+   {
+      // Converting string to bool
+      // Converting string to bool: 2 -> ?true?
+      const std::string test ("2");
+      bool pass = true;
+      BOOST_CHECK_THROW(pass = core::input_base_reader::read_as_bool(test), boost::bad_lexical_cast);
+      BOOST_CHECK_EQUAL(pass, true);
+   }
+
+}
+{
+   // Test of dequoting
+   {
+      const std::string expect("abc  ");
+      const std::string input1("'abc  '");   // -> |abc  |
+      const std::string input2("\"abc  \""); // -> |abc  |
+      const std::string input3("\"abc  '");  // unchanged
+      const std::string input4("\"abc  \" ");// -> |abc  |
+      const std::string input5("\"abc  ' "); // unchanged
+      std::string result;
+
+      result = core::input_base_reader::dequote(input1);
+      BOOST_CHECK_EQUAL(result, expect);
+
+      result = core::input_base_reader::dequote(input2);
+      BOOST_CHECK_EQUAL(result, expect);
+
+      result = core::input_base_reader::dequote(input3);
+      BOOST_CHECK_EQUAL(result, input3);
+
+      result = core::input_base_reader::dequote(input4);
+      BOOST_CHECK_EQUAL(result, expect);
+
+      result = core::input_base_reader::dequote(input5);
+      BOOST_CHECK_EQUAL(result, input5);
+   }
+   {
+      // No quotes
+      // Unquoted text: unchanged
+      std::string result = "The lazy dog.";
+      const std::string pass = "The lazy dog.";
+      result = core::input_base_reader::dequote(result);
+      BOOST_CHECK_EQUAL(result, pass);
+   }
+   {
+      // Uneven quoted (front) text: unchanged
+      std::string result = "\"The lazy dog.";
+      const std::string pass = "\"The lazy dog.";
+      result = core::input_base_reader::dequote(result);
+      BOOST_CHECK_EQUAL(result, pass);
+   }
+   {
+      // Uneven quotes (back) text: unchanged
+      std::string result = "The lazy dog.\"";
+      const std::string pass = "The lazy dog.\"";
+      result = core::input_base_reader::dequote(result);
+      BOOST_CHECK_EQUAL(result, pass);
+   }
+   {
+      // Matched quotes [\"] text: strip quotes
+      std::string result = "\"The lazy dog.\"";
+      const std::string pass = "The lazy dog.";
+      result = core::input_base_reader::dequote(result);
+      BOOST_CHECK_EQUAL(result, pass);
+   }
+   {
+      // Matched multi-quoted text: strip one set of quotes
+      std::string result = "\"\"The lazy dog.\"\"";
+      const std::string pass = "\"The lazy dog.\"";
+      result = core::input_base_reader::dequote(result);
+      BOOST_CHECK_EQUAL(result, pass);
+   }
+   {
+      // Matched quoted with one end embedded in text: unchanged
+      std::string result = "\"The\" lazy dog.";
+      const std::string pass = "\"The\" lazy dog.";
+      result = core::input_base_reader::dequote(result);
+      BOOST_CHECK_EQUAL(result, pass);
+   }
+   {
+      // Matched quoted ['] text: strip quotes
+      std::string result = "'The lazy dog.'";
+      const std::string pass = "The lazy dog.";
+      result = core::input_base_reader::dequote(result);
+      BOOST_CHECK_EQUAL(result, pass);
+   }
+   {
+      // Mismatched quoted [\"...'] text: unchanged
+      std::string result = "\"The lazy dog.'";
+      const std::string pass = "\"The lazy dog.'";
+      result = core::input_base_reader::dequote(result);
+      BOOST_CHECK_EQUAL(result, pass);
+   }
+   {
+      // Matched quoted [\"] text with external spacing: strip quotes and
+      // whitespace
+      std::string result = "\"The lazy dog. \" ";
+      const std::string pass = "The lazy dog. ";
+      result = core::input_base_reader::dequote(result);
+      BOOST_CHECK_EQUAL(result, pass);
+   }
+   {
+      // Matched quoted [\"] text with internal spacing: strip quotes, leave
+      // internal whitespace
+      std::string result = "\"The lazy dog. \"";
+      const std::string pass = "The lazy dog. ";
+      result = core::input_base_reader::dequote(result);
+      BOOST_CHECK_EQUAL(result, pass);
+   }
+
+}
+{
+   // TEST Decommenting
+   const std::string input1("#abc  '"); // empty
+
+   const std::string expect2(" ");
+   const std::string input2(" #abc  "); // -> | |
+
+   const std::string expect3("abc  ");
+   const std::string input3("abc  # "); // -> |abc  |
+
+   const std::string input4("abc   ");  // unchanged
+
+   const std::string input5("abc  \\# "); // unchanged
+
+   const std::string input6("\"abc  # \""); // unchanged
+
+   const std::string expect7("\'abc\'  ");
+   const std::string input7("\'abc\'  # ");
+
+   const std::string input8("\"abc\"  \"# "); // -> unchanged
+
+   const std::string expect9("\"abc\'  \"");
+   const std::string input9("\"abc\'  \"# ");
+
+   const std::string expectA("abc  \\\\");
+   const std::string inputA("abc  \\\\# ");
+   std::string result;
+
+   result = core::input_base_reader::decomment(input1);
+   BOOST_CHECK(result.empty());
+
+   result = core::input_base_reader::decomment(input2);
+   BOOST_CHECK_EQUAL(result, expect2);
+
+   result = core::input_base_reader::decomment(input3);
+   BOOST_CHECK_EQUAL(result, expect3);
+
+   result = core::input_base_reader::decomment(input4);
+   BOOST_CHECK_EQUAL(result, input4);
+
+   result = core::input_base_reader::decomment(input5);
+   BOOST_CHECK_EQUAL(result, input5);
+
+   result = core::input_base_reader::decomment(input6);
+   BOOST_CHECK_EQUAL(result, input6);
+
+   result = core::input_base_reader::decomment(input7);
+   BOOST_CHECK_EQUAL(result, expect7);
+
+   result = core::input_base_reader::decomment(input8);
+   BOOST_CHECK_EQUAL(result, input8);
+
+   result = core::input_base_reader::decomment(input9);
+   BOOST_CHECK_EQUAL(result, expect9);
+
+   result = core::input_base_reader::decomment(inputA);
+   BOOST_CHECK_EQUAL(result, expectA);
+
+}
+// READ AS FLOATS
+{
+   std::vector< double > result;
+   core::input_base_reader::read_as_floats("-1.0 2.4 1.3", result);
+   BOOST_CHECK_EQUAL( result.size(), 3 );
+   BOOST_CHECK_EQUAL( result[0], -1.0 );
+   BOOST_CHECK_EQUAL( result[1], 2.4 );
+   BOOST_CHECK_EQUAL( result[2], 1.3 );
+}
+
+{
+   std::vector< double > result;
+   core::input_base_reader::read_as_floats("1 2 3 ABC", result);
+   BOOST_CHECK_EQUAL( result.size(), 3 );
+   BOOST_CHECK_EQUAL( result[0], 1.0 );
+   BOOST_CHECK_EQUAL( result[1], 2.0 );
+   BOOST_CHECK_EQUAL( result[2], 3.0 );
+}
+
+{
+   std::vector< double > result;
+   core::input_base_reader::read_as_floats("1", result);
+   BOOST_CHECK_EQUAL(result.size(),1);
+   BOOST_CHECK_EQUAL(result[0],1.0);
+}
+
+{
+   // TEST reader ctor
+   test_reader test;
+   BOOST_CHECK_EQUAL( test.line().size(), 0 );
+   BOOST_CHECK_EQUAL( test.name().size(), 0 );
+   BOOST_CHECK_EQUAL( test.value().size(), 0 );
+}
+std::stringstream store;
+{
+   // TEST set_line
+   test_reader test;
+
+   // serialization
+   boost::archive::text_oarchive oa( store );
+   {
+      // name only
+      const std::string ll( "section" );
+      BOOST_CHECK( test.set_line( ll ) );
+      BOOST_CHECK_EQUAL( test.line(), ll );
+      BOOST_CHECK_EQUAL( test.name(), ll );
+      BOOST_CHECK_EQUAL( test.value().size(), 0 );
+   }
+   {
+      // name value with '=' separator
+      const std::string ll( "name1 = value1" );
+      BOOST_CHECK( test.set_line( ll ) );
+      BOOST_CHECK_EQUAL( test.line(), ll );
+      BOOST_CHECK_EQUAL( test.name(), "name1" );
+      BOOST_CHECK_EQUAL( test.value(), "value1" );
+      oa << test;
+   }
+   {
+      // name value with ' ' separator
+      const std::string ll( "name2    value2" );
+      BOOST_CHECK( test.set_line( ll ) );
+      BOOST_CHECK_EQUAL( test.line(), ll );
+      BOOST_CHECK_EQUAL( test.name(), "name2" );
+      BOOST_CHECK_EQUAL( test.value(), "value2" );
+      oa << test;
+   }
+   {
+      // comment line
+      const std::string ll( "# section" );
+      BOOST_CHECK( not test.set_line( ll ) );
+      BOOST_CHECK_EQUAL( test.line(), ll );
+      BOOST_CHECK_EQUAL( test.name().size(), 0 );
+      BOOST_CHECK_EQUAL( test.value().size(), 0 );
+   }
+   {
+      // empty line
+      const std::string ll( "" );
+      BOOST_CHECK( not test.set_line( ll ) );
+      BOOST_CHECK_EQUAL( test.line(), ll );
+      BOOST_CHECK_EQUAL( test.name().size(), 0 );
+      BOOST_CHECK_EQUAL( test.value().size(), 0 );
+   }
+   {
+      // line with values separated by spaces and a comment
+      const std::string ll( "1 2.3 4 not a num # COMMENT" );
+      BOOST_CHECK( test.set_line( ll ) );
+      BOOST_CHECK_EQUAL( test.line(), ll );
+      BOOST_CHECK_EQUAL( test.name(), "1" );
+      BOOST_CHECK_EQUAL( test.value(), "2.3 4 not a num" );
+   }
+   {
+      // name only with a comment
+      const std::string ll( "section # COMMENT" );
+      BOOST_CHECK( test.set_line( ll ) );
+      BOOST_CHECK_EQUAL( test.line(), ll );
+      BOOST_CHECK_EQUAL( test.name(), "section" );
+      BOOST_CHECK_EQUAL( test.value().size(), 0 );
+   }
+   {
+      // value only ??
+      const std::string ll( " = section" );
+      BOOST_CHECK( test.set_line( ll ) );
+      BOOST_CHECK_EQUAL( test.line(), ll );
+      BOOST_CHECK_EQUAL( test.name().size(), 0  );
+      BOOST_CHECK_EQUAL( test.value(), "section" );
+   }
+
+}
+{
+
+   boost::archive::text_iarchive ia( store );
+   {
+      test_reader test;
+      ia >> test;
+      BOOST_CHECK_EQUAL( test.line(), "name1 = value1" );
+      BOOST_CHECK_EQUAL( test.name(), "name1" );
+      BOOST_CHECK_EQUAL( test.value(), "value1" );
+   }
+   {
+      test_reader test;
+      ia >> test;
+      BOOST_CHECK_EQUAL( test.line(), "name2    value2" );
+      BOOST_CHECK_EQUAL( test.name(), "name2" );
+      BOOST_CHECK_EQUAL( test.value(), "value2" );
+   }
+}
+!!!554800.cpp!!!	input_preprocess_test() : void
+
+{
+   // TEST reader ctor
+   core::input_preprocess test;
+   BOOST_CHECK_EQUAL( "", test.line() );
+   BOOST_CHECK_EQUAL( "", test.name() );
+   BOOST_CHECK_EQUAL( "", test.value() );
+   BOOST_CHECK_EQUAL( 0, test.current_line_number() );
+   BOOST_CHECK_EQUAL( "", test.current_filename() );
+}
+{
+   core_test_suite::test_read_input_buffer< core::input_preprocess >();
+}
+// test serialization
+std::stringstream store;
+const std::string dummy_input("\n\n# A comment\nsection # Another comment\nname1 = value1\n1 2.3 4 not a num # 6.2\nname1 value1");
+const std::string  dummy_filename("dummy");
+const boost::filesystem::path dummy_path( boost::filesystem::absolute( "dummy" ) );
+{
+   core::input_preprocess test;
+   test.add_buffer( dummy_filename, dummy_input );
+   boost::archive::text_oarchive oa( store );
+   oa << test;
+   
+   BOOST_CHECK_EQUAL( dummy_path, test.current_filename() );
+   BOOST_CHECK(test.next());
+   BOOST_CHECK_EQUAL( "section # Another comment", test.line() );
+   BOOST_CHECK_EQUAL( "section", test.name() );
+   BOOST_CHECK_EQUAL( "", test.value() );
+   BOOST_CHECK_EQUAL( 4, test.current_line_number() );
+   BOOST_CHECK_EQUAL( dummy_path, test.current_filename() );
+
+   // TEST reader next part 2
+   BOOST_CHECK(test.next());
+   BOOST_CHECK_EQUAL("name1 = value1",test.line());
+   BOOST_CHECK_EQUAL("name1",test.name());
+   BOOST_CHECK_EQUAL("value1",test.value());
+   BOOST_CHECK_EQUAL(5,test.current_line_number());
+   BOOST_CHECK_EQUAL(dummy_path,test.current_filename());
+
+   // TEST reader next part 3
+   BOOST_CHECK(test.next());
+   BOOST_CHECK_EQUAL("1 2.3 4 not a num # 6.2",test.line());
+   BOOST_CHECK_EQUAL("1",test.name());
+   BOOST_CHECK_EQUAL("2.3 4 not a num",test.value());
+   BOOST_CHECK_EQUAL(6,test.current_line_number());
+   BOOST_CHECK_EQUAL(dummy_path,test.current_filename());
+
+   // TEST reader next part 4
+   BOOST_CHECK(test.next());
+   BOOST_CHECK_EQUAL("name1 value1",test.line());
+   BOOST_CHECK_EQUAL("name1",test.name());
+   BOOST_CHECK_EQUAL("value1",test.value());
+   BOOST_CHECK_EQUAL(7,test.current_line_number());
+   BOOST_CHECK_EQUAL(dummy_path,test.current_filename());
+
+   // TEST reader next part 5
+   BOOST_CHECK(not test.next());
+   BOOST_CHECK_EQUAL("",test.line());
+   BOOST_CHECK_EQUAL("",test.name());
+   BOOST_CHECK_EQUAL("",test.value());
+
+}
+{
+   core::input_preprocess rdr;
+   boost::archive::text_iarchive ia( store );
+   ia >> rdr;
+
+   BOOST_CHECK(rdr.next());
+   BOOST_CHECK_EQUAL( "section # Another comment", rdr.line() );
+   BOOST_CHECK_EQUAL( "section", rdr.name() );
+   BOOST_CHECK_EQUAL( "", rdr.value() );
+   BOOST_CHECK_EQUAL( 4, rdr.current_line_number() );
+   BOOST_CHECK_EQUAL( dummy_path, rdr.current_filename() );
+
+   // TEST reader next part 2
+   BOOST_CHECK(rdr.next());
+   BOOST_CHECK_EQUAL("name1 = value1",rdr.line());
+   BOOST_CHECK_EQUAL("name1",rdr.name());
+   BOOST_CHECK_EQUAL("value1",rdr.value());
+   BOOST_CHECK_EQUAL(5,rdr.current_line_number());
+   BOOST_CHECK_EQUAL(dummy_path,rdr.current_filename());
+
+   // TEST reader next part 3
+   BOOST_CHECK(rdr.next());
+   BOOST_CHECK_EQUAL("1 2.3 4 not a num # 6.2",rdr.line());
+   BOOST_CHECK_EQUAL("1",rdr.name());
+   BOOST_CHECK_EQUAL("2.3 4 not a num",rdr.value());
+   BOOST_CHECK_EQUAL(6,rdr.current_line_number());
+   BOOST_CHECK_EQUAL(dummy_path,rdr.current_filename());
+
+   // TEST reader next part 4
+   BOOST_CHECK(rdr.next());
+   BOOST_CHECK_EQUAL("name1 value1",rdr.line());
+   BOOST_CHECK_EQUAL("name1",rdr.name());
+   BOOST_CHECK_EQUAL("value1",rdr.value());
+   BOOST_CHECK_EQUAL(7,rdr.current_line_number());
+   BOOST_CHECK_EQUAL(dummy_path,rdr.current_filename());
+
+   // TEST reader next part 5
+   BOOST_CHECK(not rdr.next());
+   BOOST_CHECK_EQUAL("",rdr.line());
+   BOOST_CHECK_EQUAL("",rdr.name());
+   BOOST_CHECK_EQUAL("",rdr.value());
+}
+
+!!!550960.cpp!!!	input_node_test() : void
+const std::string dummy_input("\n\n# A comment\nsection # Another comment\nname1 = value1\n1 2.3 4 not a num # 6.2\nname1 value1\n\n");
+const std::string  dummy_filename("dummy");
+const std::vector< std::string > lines = { "", "", "# A comment", "section # Another comment", "name1 = value1", "1 2.3 4 not a num # 6.2", "name1 value1", "", "" };
+
+//--{
+//--  // TEST BOOL CONVERTERS
+//--  {
+//--    // Converting string to bool
+//--    // Converting string to bool: true -> true
+//--    const std::string test ("true");
+//--    bool pass = false;
+//--    pass = core::input_node::read_as_bool(test);
+//--    BOOST_CHECK_EQUAL(pass, true);
+//--  }
+//--  {
+//--    // Converting string to bool
+//--    // Converting string to bool: false -> false
+//--    const std::string test ("false");
+//--    bool pass = true;
+//--    pass = core::input_node::read_as_bool(test);
+//--    BOOST_CHECK_EQUAL(pass, false);
+//--  }
+//--  {
+//--    // Converting string to bool
+//--    // Converting string to bool: 0 -> false
+//--    const std::string test ("0");
+//--    bool pass = true;
+//--    pass = core::input_node::read_as_bool(test);
+//--    BOOST_CHECK_EQUAL(pass, false);
+//--  }
+//--  {
+//--    // Converting string to bool
+//--    // Converting string to bool: 1 -> true
+//--    const std::string test ("1");
+//--    bool pass = false;
+//--    pass = core::input_node::read_as_bool(test);
+//--    BOOST_CHECK_EQUAL(pass, true);
+//--
+//--  }
+//--  {
+//--    // Converting string to bool
+//--    // Converting string to bool: .false. -> false
+//--    const std::string test (".false.");
+//--    bool pass = true;
+//--    pass = core::input_node::read_as_bool(test);
+//--    BOOST_CHECK_EQUAL(pass, false);
+//--  }
+//--  {
+//--    // Converting string to bool
+//--    // Converting string to bool: 2.0 -> ?true?
+//--    const std::string test ("2.0");
+//--    bool pass = true;
+//--    BOOST_CHECK_THROW(pass = core::input_node::read_as_bool(test), boost::bad_lexical_cast);
+//--    BOOST_CHECK_EQUAL(pass, true);
+//--  }
+//--  {
+//--    // Converting string to bool
+//--    // Converting string to bool: 2 -> ?true?
+//--    const std::string test ("2");
+//--    bool pass = true;
+//--    BOOST_CHECK_THROW(pass = core::input_node::read_as_bool(test), boost::bad_lexical_cast);
+//--    BOOST_CHECK_EQUAL(pass, true);
+//--  }
+//--
+//--}
+//--{
+//--  // Test of dequoting
+//--  {
+//--    const std::string expect("abc  ");
+//--    const std::string input1("'abc  '");   // -> |abc  |
+//--    const std::string input2("\"abc  \""); // -> |abc  |
+//--    const std::string input3("\"abc  '");  // unchanged
+//--    const std::string input4("\"abc  \" ");// -> |abc  |
+//--    const std::string input5("\"abc  ' "); // unchanged
+//--    std::string result;
+//--
+//--    result = core::input_node::dequote(input1);
+//--    BOOST_CHECK_EQUAL(result, expect);
+//--
+//--    result = core::input_node::dequote(input2);
+//--    BOOST_CHECK_EQUAL(result, expect);
+//--
+//--    result = core::input_node::dequote(input3);
+//--    BOOST_CHECK_EQUAL(result, input3);
+//--
+//--    result = core::input_node::dequote(input4);
+//--    BOOST_CHECK_EQUAL(result, expect);
+//--
+//--    result = core::input_node::dequote(input5);
+//--    BOOST_CHECK_EQUAL(result, input5);
+//--  }
+//--  {
+//--    // No quotes
+//--    // Unquoted text: unchanged
+//--    std::string result = "The lazy dog.";
+//--    const std::string pass = "The lazy dog.";
+//--    result = core::input_node::dequote(result);
+//--    BOOST_CHECK_EQUAL(result, pass);
+//--  }
+//--  {
+//--    // Uneven quoted (front) text: unchanged
+//--    std::string result = "\"The lazy dog.";
+//--    const std::string pass = "\"The lazy dog.";
+//--    result = core::input_node::dequote(result);
+//--    BOOST_CHECK_EQUAL(result, pass);
+//--  }
+//--  {
+//--    // Uneven quotes (back) text: unchanged
+//--    std::string result = "The lazy dog.\"";
+//--    const std::string pass = "The lazy dog.\"";
+//--    result = core::input_node::dequote(result);
+//--    BOOST_CHECK_EQUAL(result, pass);
+//--  }
+//--  {
+//--    // Matched quotes [\"] text: strip quotes
+//--    std::string result = "\"The lazy dog.\"";
+//--    const std::string pass = "The lazy dog.";
+//--    result = core::input_node::dequote(result);
+//--    BOOST_CHECK_EQUAL(result, pass);
+//--  }
+//--  {
+//--    // Matched multi-quoted text: strip one set of quotes
+//--    std::string result = "\"\"The lazy dog.\"\"";
+//--    const std::string pass = "\"The lazy dog.\"";
+//--    result = core::input_node::dequote(result);
+//--    BOOST_CHECK_EQUAL(result, pass);
+//--  }
+//--  {
+//--    // Matched quoted with one end embedded in text: unchanged
+//--    std::string result = "\"The\" lazy dog.";
+//--    const std::string pass = "\"The\" lazy dog.";
+//--    result = core::input_node::dequote(result);
+//--    BOOST_CHECK_EQUAL(result, pass);
+//--  }
+//--  {
+//--    // Matched quoted ['] text: strip quotes
+//--    std::string result = "'The lazy dog.'";
+//--    const std::string pass = "The lazy dog.";
+//--    result = core::input_node::dequote(result);
+//--    BOOST_CHECK_EQUAL(result, pass);
+//--  }
+//--  {
+//--    // Mismatched quoted [\"...'] text: unchanged
+//--    std::string result = "\"The lazy dog.'";
+//--    const std::string pass = "\"The lazy dog.'";
+//--    result = core::input_node::dequote(result);
+//--    BOOST_CHECK_EQUAL(result, pass);
+//--  }
+//--  {
+//--    // Matched quoted [\"] text with external spacing: strip quotes and whitespace
+//--    std::string result = "\"The lazy dog. \" ";
+//--    const std::string pass = "The lazy dog. ";
+//--    result = core::input_node::dequote(result);
+//--    BOOST_CHECK_EQUAL(result, pass);
+//--  }
+//--  {
+//--    // Matched quoted [\"] text with internal spacing: strip quotes, leave internal whitespace
+//--    std::string result = "\"The lazy dog. \"";
+//--    const std::string pass = "The lazy dog. ";
+//--    result = core::input_node::dequote(result);
+//--    BOOST_CHECK_EQUAL(result, pass);
+//--  }
+//--
+//--}
+//--{
+//--  // TEST Decommenting
+//--  const std::string input1("#abc  '"); // empty
+//--
+//--  const std::string expect2(" ");
+//--  const std::string input2(" #abc  "); // -> | |
+//--
+//--  const std::string expect3("abc  ");
+//--  const std::string input3("abc  # "); // -> |abc  |
+//--
+//--  const std::string input4("abc   ");  // unchanged
+//--
+//--  const std::string input5("abc  \\# "); // unchanged
+//--
+//--  const std::string input6("\"abc  # \""); // unchanged
+//--
+//--  const std::string expect7("\'abc\'  ");
+//--  const std::string input7("\'abc\'  # ");
+//--
+//--  const std::string input8("\"abc\"  \"# "); // -> unchanged
+//--
+//--  const std::string expect9("\"abc\'  \"");
+//--  const std::string input9("\"abc\'  \"# ");
+//--
+//--  const std::string expectA("abc  \\\\");
+//--  const std::string inputA("abc  \\\\# ");
+//--  std::string result;
+//--
+//--  result = core::input_node::decomment(input1);
+//--  BOOST_CHECK(result.empty());
+//--
+//--  result = core::input_node::decomment(input2);
+//--  BOOST_CHECK_EQUAL(result, expect2);
+//--
+//--  result = core::input_node::decomment(input3);
+//--  BOOST_CHECK_EQUAL(result, expect3);
+//--
+//--  result = core::input_node::decomment(input4);
+//--  BOOST_CHECK_EQUAL(result, input4);
+//--
+//--  result = core::input_node::decomment(input5);
+//--  BOOST_CHECK_EQUAL(result, input5);
+//--
+//--  result = core::input_node::decomment(input6);
+//--  BOOST_CHECK_EQUAL(result, input6);
+//--
+//--  result = core::input_node::decomment(input7);
+//--  BOOST_CHECK_EQUAL(result, expect7);
+//--
+//--  result = core::input_node::decomment(input8);
+//--  BOOST_CHECK_EQUAL(result, input8);
+//--
+//--  result = core::input_node::decomment(input9);
+//--  BOOST_CHECK_EQUAL(result, expect9);
+//--
+//--  result = core::input_node::decomment(inputA);
+//--  BOOST_CHECK_EQUAL(result, expectA);
+//--
+//--}
+{
+  // TEST reader ctor
+  core::input_node test;
+  BOOST_CHECK_EQUAL( test.buffer_.size(), 0 );
+  BOOST_CHECK_EQUAL( test.path_.size(), 0 );
+  BOOST_CHECK_EQUAL( test.pos_, 0 );
+  BOOST_CHECK_EQUAL( test.line_no_, -1 );
+}
+//--{
+//--  // TEST process_string
+//--  core::input_node test;
+//--  test.process_string( dummy_filename, dummy_input );
+//--  BOOST_CHECK_EQUAL( test.includes_.size(), 0 );
+//--  BOOST_CHECK_EQUAL( test.buffer_.size(), dummy_input.size() );
+//--  BOOST_CHECK_EQUAL( test.path_, dummy_filename );
+//--  BOOST_CHECK_EQUAL( test.pos_, 0 );
+//--  BOOST_CHECK_EQUAL( test.line_no_, 0 );
+//--}
+//--{
+//--  // TEST bad input (1) for process_string
+//--  core::input_node test;
+//--  try
+//--  {
+//--     const std::string input( "\ninclude    \n\n" );
+//--     test.process_string( dummy_filename, input );
+//--  }
+//--  catch(const std::exception &err)
+//--  {
+//--     std::cerr << err.what() << "\n";
+//--  }
+//--//--  BOOST_CHECK_EQUAL( test.includes_.size(), 0 );
+//--//--  BOOST_CHECK_EQUAL( test.buffer_.size(), input.size() );
+//--//--  BOOST_CHECK_EQUAL( test.path_, dummy_filename );
+//--//--  BOOST_CHECK_EQUAL( test.pos_, 0 );
+//--//--  BOOST_CHECK_EQUAL( test.line_no_, 0 );
+//--}
+//--{
+//--  // TEST bad input (2) process_string
+//--  core::input_node test;
+//--
+//--  const std::string input( "\ninclude \n\n" );
+//--  test.process_string( dummy_filename, input );
+//--  BOOST_CHECK_EQUAL( test.includes_.size(), 0 );
+//--  BOOST_CHECK_EQUAL( test.buffer_.size(), input.size() );
+//--  BOOST_CHECK_EQUAL( test.path_, dummy_filename );
+//--  BOOST_CHECK_EQUAL( test.pos_, 0 );
+//--  BOOST_CHECK_EQUAL( test.line_no_, 0 );
+//--}
+//--{
+//--  // TEST bad input (3) process_string
+//--  core::input_node test;
+//--  const std::string input( "\ninclude=\n\n" );
+//--  test.process_string( dummy_filename, input );
+//--  BOOST_CHECK_EQUAL( test.includes_.size(), 0 );
+//--  BOOST_CHECK_EQUAL( test.buffer_.size(), input.size() );
+//--  BOOST_CHECK_EQUAL( test.path_, dummy_filename );
+//--  BOOST_CHECK_EQUAL( test.pos_, 0 );
+//--  BOOST_CHECK_EQUAL( test.line_no_, 0 );
+//--}
+//--{
+//--  // TEST bad input (4) process_string
+//--  core::input_node test;
+//--  const std::string input( "\ninclude  # some comment \n\n" );
+//--  test.process_string( dummy_filename, input );
+//--  BOOST_CHECK_EQUAL( test.includes_.size(), 0 );
+//--  BOOST_CHECK_EQUAL( test.buffer_.size(), input.size() );
+//--  BOOST_CHECK_EQUAL( test.path_, dummy_filename );
+//--  BOOST_CHECK_EQUAL( test.pos_, 0 );
+//--  BOOST_CHECK_EQUAL( test.line_no_, 0 );
+//--}
+//--{
+//--  // TEST getline
+//--  core::input_node test;
+//--  test.process_string( dummy_filename, dummy_input );
+//--
+//--  int counter = 0;
+//--  for (auto const& cline : lines)
+//--  {
+//--     std::string line;
+//--     BOOST_CHECK( not test.eof() );
+//--     test.getline( line );
+//--     ++counter;
+//--     BOOST_CHECK_EQUAL( cline, line );
+//--     BOOST_CHECK_EQUAL( counter, test.line_no_ );
+//--     BOOST_CHECK( test.pos_ <= test.buffer_.size() or test.eof() ); 
+//--  }
+//--  BOOST_CHECK( test.eof() );
+//--}
+//--{
+//--  // TEST reader next part 1
+//--  boost::shared_ptr< std::istream > input (new std::istringstream(dummy_input));
+//--  core::input_node test(dummy_filename,input);
+//--  BOOST_CHECK(test.next());
+//--  BOOST_CHECK_EQUAL("section",test.line());
+//--  BOOST_CHECK_EQUAL("section",test.name());
+//--  BOOST_CHECK_EQUAL("",test.value());
+//--  BOOST_CHECK_EQUAL(4,test.current_line_number());
+//--  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
+//--
+//--  // TEST reader next part 2
+//--  BOOST_CHECK(test.next());
+//--  BOOST_CHECK_EQUAL("name1 = value1",test.line());
+//--  BOOST_CHECK_EQUAL("name1",test.name());
+//--  BOOST_CHECK_EQUAL("value1",test.value());
+//--  BOOST_CHECK_EQUAL(5,test.current_line_number());
+//--  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
+//--
+//--  // TEST reader next part 3
+//--  BOOST_CHECK(test.next());
+//--  BOOST_CHECK_EQUAL("1 2.3 4 not a num",test.line());
+//--  BOOST_CHECK_EQUAL("1",test.name());
+//--  BOOST_CHECK_EQUAL("2.3 4 not a num",test.value());
+//--  BOOST_CHECK_EQUAL(6,test.current_line_number());
+//--  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
+//--
+//--  {
+//--    std::vector< double > result;
+//--    test.read_as_floats(test.line(), result);
+//--    BOOST_CHECK_EQUAL(result.size(),3);
+//--    BOOST_CHECK_EQUAL(result[0],1.0);
+//--    BOOST_CHECK_EQUAL(result[1],2.3);
+//--    BOOST_CHECK_EQUAL(result[2],4.0);
+//--  }
+//--
+//--  {
+//--    std::vector< double > result;
+//--    test.read_as_floats("-1.0 2.4 1.3", result);
+//--    BOOST_CHECK_EQUAL( result.size(), 3 );
+//--    BOOST_CHECK_EQUAL( result[0], -1.0 );
+//--    BOOST_CHECK_EQUAL( result[1], 2.4 );
+//--    BOOST_CHECK_EQUAL( result[2], 1.3 );
+//--  }
+//--
+//--  {
+//--    std::vector< double > result;
+//--    test.read_as_floats("1 2 3 ABC", result);
+//--    BOOST_CHECK_EQUAL( result.size(), 3 );
+//--    BOOST_CHECK_EQUAL( result[0], 1.0 );
+//--    BOOST_CHECK_EQUAL( result[1], 2.0 );
+//--    BOOST_CHECK_EQUAL( result[2], 3.0 );
+//--  }
+//--
+//--  {
+//--    std::vector< double > result;
+//--    test.read_as_floats("1", result);
+//--    BOOST_CHECK_EQUAL(result.size(),1);
+//--    BOOST_CHECK_EQUAL(result[0],1.0);
+//--  }
+//--
+//--  // TEST reader next part 4
+//--  BOOST_CHECK(test.next());
+//--  BOOST_CHECK_EQUAL("name1 value1",test.line());
+//--  BOOST_CHECK_EQUAL("name1",test.name());
+//--  BOOST_CHECK_EQUAL("value1",test.value());
+//--  BOOST_CHECK_EQUAL(7,test.current_line_number());
+//--  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
+//--
+//--  // TEST reader next part 5
+//--  BOOST_CHECK(not test.next());
+//--  BOOST_CHECK_EQUAL("",test.line());
+//--  BOOST_CHECK_EQUAL("",test.name());
+//--  BOOST_CHECK_EQUAL("",test.value());
+//--  // zero line number and "" indicate no file.
+//--  BOOST_CHECK_EQUAL(0,test.current_line_number());
+//--  BOOST_CHECK_EQUAL("",test.current_filename());
+//--  // Check stability of calling next after last element.
+//--  BOOST_CHECK(not test.next());
+//--  BOOST_CHECK_EQUAL("",test.line());
+//--  BOOST_CHECK_EQUAL("",test.name());
+//--  BOOST_CHECK_EQUAL("",test.value());
+//--  // zero line number and "" indicate no file.
+//--  BOOST_CHECK_EQUAL(0,test.current_line_number());
+//--  BOOST_CHECK_EQUAL("",test.current_filename());
+//--
+//--}
+!!!406065.cpp!!!	input_reader_test() : void
+std::string dummy_input("\n\n# A comment\nsection # Another comment\nname1 = value1\n1 2.3 4 not a num # 6.2\nname1 value1");
+std::string  dummy_filename("dummy");
+//boost::filesystem::path dummy_path( "dummy" );
+
+{
+   core_test_suite::test_read_input_buffer< core::input_reader >();
+}
+{
+  // TEST reader ctor
+  boost::shared_ptr< std::istream > input (new std::istringstream(dummy_input));
+  core::input_reader test(dummy_filename,input);
+  BOOST_CHECK_EQUAL("",test.line());
+  BOOST_CHECK_EQUAL("",test.name());
+  BOOST_CHECK_EQUAL("",test.value());
+  BOOST_CHECK_EQUAL(0,test.current_line_number());
+  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
+
+}
+{
+  // TEST reader next part 1
+  boost::shared_ptr< std::istream > input (new std::istringstream(dummy_input));
+  core::input_reader test(dummy_filename,input);
+  BOOST_CHECK(test.next());
+  BOOST_CHECK_EQUAL("section # Another comment",test.line());
+  BOOST_CHECK_EQUAL("section",test.name());
+  BOOST_CHECK_EQUAL("",test.value());
+  BOOST_CHECK_EQUAL(4,test.current_line_number());
+  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
+
+  // TEST reader next part 2
+  BOOST_CHECK(test.next());
+  BOOST_CHECK_EQUAL("name1 = value1",test.line());
+  BOOST_CHECK_EQUAL("name1",test.name());
+  BOOST_CHECK_EQUAL("value1",test.value());
+  BOOST_CHECK_EQUAL(5,test.current_line_number());
+  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
+
+  // TEST reader next part 3
+  BOOST_CHECK(test.next());
+  BOOST_CHECK_EQUAL("1 2.3 4 not a num # 6.2",test.line());
+  BOOST_CHECK_EQUAL("1",test.name());
+  BOOST_CHECK_EQUAL("2.3 4 not a num",test.value());
+  BOOST_CHECK_EQUAL(6,test.current_line_number());
+  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
+
+  {
+    std::vector< double > result;
+    test.read_as_floats(test.line(), result);
+    BOOST_CHECK_EQUAL(result.size(),3);
+    BOOST_CHECK_EQUAL(result[0],1.0);
+    BOOST_CHECK_EQUAL(result[1],2.3);
+    BOOST_CHECK_EQUAL(result[2],4.0);
+  }
+  // TEST reader next part 4
+  BOOST_CHECK(test.next());
+  BOOST_CHECK_EQUAL("name1 value1",test.line());
+  BOOST_CHECK_EQUAL("name1",test.name());
+  BOOST_CHECK_EQUAL("value1",test.value());
+  BOOST_CHECK_EQUAL(7,test.current_line_number());
+  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
+
+  // TEST reader next part 5
+  BOOST_CHECK(not test.next());
+  BOOST_CHECK_EQUAL("",test.line());
+  BOOST_CHECK_EQUAL("",test.name());
+  BOOST_CHECK_EQUAL("",test.value());
+  // zero line number and "" indicate no file.
+  BOOST_CHECK_EQUAL(0,test.current_line_number());
+  BOOST_CHECK_EQUAL("",test.current_filename());
+  // Check stability of calling next after last element.
+  BOOST_CHECK(not test.next());
+  BOOST_CHECK_EQUAL("",test.line());
+  BOOST_CHECK_EQUAL("",test.name());
+  BOOST_CHECK_EQUAL("",test.value());
+  // zero line number and "" indicate no file.
+  BOOST_CHECK_EQUAL(0,test.current_line_number());
+  BOOST_CHECK_EQUAL("",test.current_filename());
+
+}
+!!!412721.cpp!!!	input_meta_test() : void
+//// CTOR TESTS
+//// ----------
+//const std::string label ("name");
+//{
+//  std::unique_ptr< core::input_base_meta > dobj (new test_meta(label));
+//  // test_meta(str,bool=false) --> input_base_meta(str,1,false,bool) 
+//  BOOST_CHECK_EQUAL(dobj->section_label (), label);
+//  BOOST_CHECK_EQUAL(dobj->finalize_priority(), 1);
+//  BOOST_CHECK_EQUAL(dobj->multiple(),false);
+//  BOOST_CHECK_EQUAL(dobj->required(),false);
+//}
+//{
+//  std::unique_ptr< core::input_base_meta > dobj (new test_meta(label,2,true,false));
+//  // test_meta(str,size_t,bool,bool) --> input_base_meta(str,size_t,bool,bool) 
+//  BOOST_CHECK_EQUAL(dobj->section_label (), label);
+//  BOOST_CHECK_EQUAL(dobj->finalize_priority(), 2);
+//  BOOST_CHECK_EQUAL(dobj->multiple(),true);
+//  BOOST_CHECK_EQUAL(dobj->required(),false);
+//}
+//{
+//  std::unique_ptr< core::input_base_meta > dobj (new test_meta(label,1000,false,true));
+//  // test_meta(str,size_t,bool,bool) --> input_base_meta(str,size_t,bool,bool) 
+//  BOOST_CHECK_EQUAL(dobj->section_label (), label);
+//  BOOST_CHECK_EQUAL(dobj->finalize_priority(), 1000);
+//  BOOST_CHECK_EQUAL(dobj->multiple(),false);
+//  BOOST_CHECK_EQUAL(dobj->required(),true);
+//}
+//std::stringstream store;
+//{
+//  std::unique_ptr< core::input_base_meta > dobj (new test_meta(label,10,true,true));
+//  // test_meta(str,size_t,bool,bool) --> input_base_meta(str,size_t,bool,bool) 
+//  BOOST_CHECK_EQUAL(dobj->section_label (), label);
+//  BOOST_CHECK_EQUAL(dobj->finalize_priority(), 10);
+//  BOOST_CHECK_EQUAL(dobj->multiple(),true);
+//  BOOST_CHECK_EQUAL(dobj->required(),true);
+//
+//  // TEST SERIALIZATION
+//  // ------------------
+//  boost::archive::text_oarchive oa(store);
+//  // write class instance to archive
+//  oa << dobj;
+//}
+//{
+//  std::unique_ptr< core::input_base_meta > dobj;
+//  boost::archive::text_iarchive ia(store);
+//  // get class instance from archive
+//  ia >> dobj;
+//  BOOST_CHECK_EQUAL(dobj->section_label (), label);
+//  BOOST_CHECK_EQUAL(dobj->finalize_priority(), 10);
+//  BOOST_CHECK_EQUAL(dobj->multiple(),true);
+//  BOOST_CHECK_EQUAL(dobj->required(),true);
+//}
+!!!477616.cpp!!!	output_field_test() : void
+// CTOR TESTS
+// ----------
+std::string emptr_str;
+const std::string label1( "name" );
+const std::string label2( "day" );
+const std::string label3( "month" );
+const std::string label4( "year" );
+const std::string unit1( "label" );
+const std::string unit2( "ordinal1" );
+const std::string unit3( "ordinal2" );
+const std::string unit4( "ordinal3" );
+
+{
+   core::output_field aset;
+   BOOST_CHECK_EQUAL( aset.label(), emptr_str );
+   BOOST_CHECK_EQUAL( aset.unit(), emptr_str );
+   BOOST_CHECK_EQUAL( aset.valid(), false );
+   // Output error if no entries
+   BOOST_CHECK_THROW( aset.write( std::cout, 0 ), std::runtime_error );
+
+   aset.set_label( label1 );
+   BOOST_CHECK_EQUAL( aset.label(), label1 );
+   BOOST_CHECK_EQUAL( aset.unit(), emptr_str );
+   BOOST_CHECK_EQUAL( aset.valid(), false );
+
+   aset.set_unit( unit1 );
+   BOOST_CHECK_EQUAL( aset.unit(), unit1 );
+   BOOST_CHECK_EQUAL( aset.label(), label1 );
+   BOOST_CHECK_EQUAL( aset.valid(), false );
+   
+   aset.set_format_function( [](std::ostream& os, std::size_t i){ os << i; } );
+   BOOST_CHECK_EQUAL( aset.unit(), unit1 );
+   BOOST_CHECK_EQUAL( aset.label(), label1 );
+   BOOST_CHECK_EQUAL( aset.valid(), true );
+   {
+      // Output should work
+      std::stringstream store;
+      BOOST_CHECK_NO_THROW( aset.write( store, 0 ) );
+      const std::string output( store.str() );
+      BOOST_CHECK( not output.empty() );
+      BOOST_CHECK_EQUAL( output.size(), 1 );
+      BOOST_CHECK_EQUAL( output, "0" );
+   }
+   {
+      // Output should work
+      std::stringstream store;
+      BOOST_CHECK_NO_THROW( aset.write( store, 101 ) );
+      const std::string output( store.str() );
+      BOOST_CHECK( not output.empty() );
+      BOOST_CHECK_EQUAL( output.size(), 3 );
+      BOOST_CHECK_EQUAL( output, "101" );
+   }
+    core::output_field bset;
+   BOOST_CHECK_EQUAL( bset.label(), emptr_str );
+   BOOST_CHECK_EQUAL( bset.unit(), emptr_str );
+   BOOST_CHECK_EQUAL( bset.valid(), false );
+
+   bset = aset;
+   BOOST_CHECK_EQUAL( bset.unit(), unit1 );
+   BOOST_CHECK_EQUAL( bset.label(), label1 );
+   BOOST_CHECK_EQUAL( bset.valid(), true );
+
+   BOOST_CHECK_EQUAL( aset.unit(), unit1 );
+   BOOST_CHECK_EQUAL( aset.label(), label1 );
+   BOOST_CHECK_EQUAL( aset.valid(), true );
+
+   core::output_field cset( aset );
+   BOOST_CHECK_EQUAL( cset.unit(), unit1 );
+   BOOST_CHECK_EQUAL( cset.label(), label1 );
+   BOOST_CHECK_EQUAL( cset.valid(), true );
+
+   BOOST_CHECK_EQUAL( aset.unit(), unit1 );
+   BOOST_CHECK_EQUAL( aset.label(), label1 );
+   BOOST_CHECK_EQUAL( aset.valid(), true );
+
+   aset = aset;
+   BOOST_CHECK_EQUAL( aset.unit(), unit1 );
+   BOOST_CHECK_EQUAL( aset.label(), label1 );
+   BOOST_CHECK_EQUAL( aset.valid(), true );
+
+   core::output_field dset( std::move( aset ) );
+   BOOST_CHECK_EQUAL( dset.unit(), unit1 );
+   BOOST_CHECK_EQUAL( dset.label(), label1 );
+   BOOST_CHECK_EQUAL( dset.valid(), true );
+
+   BOOST_CHECK_EQUAL( aset.unit(), emptr_str );
+   BOOST_CHECK_EQUAL( aset.label(), emptr_str );
+   BOOST_CHECK_EQUAL( aset.valid(), false );
+
+   core::output_field eset;
+   BOOST_CHECK_EQUAL( eset.label(), emptr_str );
+   BOOST_CHECK_EQUAL( eset.unit(), emptr_str );
+   BOOST_CHECK_EQUAL( eset.valid(), false );
+
+   std::swap( eset, bset );
+   BOOST_CHECK_EQUAL( eset.unit(), unit1 );
+   BOOST_CHECK_EQUAL( eset.label(), label1 );
+   BOOST_CHECK_EQUAL( eset.valid(), true );
+
+   BOOST_CHECK_EQUAL( bset.unit(), emptr_str );
+   BOOST_CHECK_EQUAL( bset.label(), emptr_str );
+   BOOST_CHECK_EQUAL( bset.valid(), false );
+
+}   
+!!!484912.cpp!!!	output_series_test() : void
+// CTOR TESTS
+// ----------
+std::string emptr_str;
+const std::string test_fname{ "result.dat" };
+const std::string test_uuid{ "1a2b3c4d" };
+const std::string test_title{ "Something or other." };
+{
+   core::output_series aset;
+   BOOST_CHECK_EQUAL( aset.title(), emptr_str );
+   BOOST_CHECK_EQUAL( aset.uuid(), emptr_str );
+   BOOST_CHECK_EQUAL( aset.size(), 0 );
+   BOOST_CHECK_EQUAL( aset.empty(), true );
+   BOOST_CHECK( aset.begin() == aset.end() );
+
+   aset.set_uuid( test_uuid );
+   BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
+   BOOST_CHECK_EQUAL( aset.title(), emptr_str );
+   
+   aset.set_title( test_title );
+   BOOST_CHECK_EQUAL( aset.title(), test_title );
+   BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
+   BOOST_CHECK_EQUAL( aset.size(), 0 );
+   BOOST_CHECK_EQUAL( aset.empty(), true );
+   BOOST_CHECK( aset.begin() == aset.end() );
+
+   core::output_series bset;
+   BOOST_CHECK_EQUAL( bset.title(), emptr_str );
+   BOOST_CHECK_EQUAL( bset.uuid(), emptr_str );
+   BOOST_CHECK_EQUAL( aset.size(), 0 );
+   BOOST_CHECK_EQUAL( aset.empty(), true );
+   BOOST_CHECK( aset.begin() == aset.end() );
+
+   bset = aset;
+   BOOST_CHECK_EQUAL( bset.title(), test_title );
+   BOOST_CHECK_EQUAL( bset.uuid(), test_uuid );
+   BOOST_CHECK_EQUAL( aset.size(), 0 );
+   BOOST_CHECK_EQUAL( aset.empty(), true );
+   BOOST_CHECK( aset.begin() == aset.end() );
+
+   core::output_series cset( aset );
+   BOOST_CHECK_EQUAL( cset.title(), test_title );
+   BOOST_CHECK_EQUAL( cset.uuid(), test_uuid );
+   BOOST_CHECK_EQUAL( aset.size(), 0 );
+   BOOST_CHECK_EQUAL( aset.empty(), true );
+   BOOST_CHECK( aset.begin() == aset.end() );
+
+   aset = aset;
+   BOOST_CHECK_EQUAL( aset.title(), test_title );
+   BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
+   BOOST_CHECK_EQUAL( aset.size(), 0 );
+   BOOST_CHECK_EQUAL( aset.empty(), true );
+   BOOST_CHECK( aset.begin() == aset.end() );
+
+   core::output_series dset( std::move( aset ) );
+   BOOST_CHECK_EQUAL( dset.title(), test_title );
+   BOOST_CHECK_EQUAL( dset.uuid(), test_uuid );
+   BOOST_CHECK_EQUAL( aset.size(), 0 );
+   BOOST_CHECK_EQUAL( aset.empty(), true );
+   BOOST_CHECK( aset.begin() == aset.end() );
+
+   // Output error if no entries
+   BOOST_CHECK_THROW( dset.do_header( std::cout ), std::runtime_error );
+   BOOST_CHECK_THROW( dset.do_body( std::cout ), std::runtime_error );
+   utility::memory_sink sink;
+   BOOST_CHECK_THROW( dset.write( test_fname, sink, true ), std::runtime_error );
+   BOOST_CHECK_THROW( dset.write( test_fname, sink, false ), std::runtime_error );
+}   
+struct person                                                                                                    
+{                                                                                                                
+  std::string name;                                                                                              
+  std::size_t day_of_birth;                                                                                      
+  std::size_t month_of_birth;                                                                                    
+  std::size_t year_of_birth;                                                                                     
+};
+
+struct family
+{
+   std::vector< person > ppl;
+   std::size_t day( std::size_t i ) const { return ppl[ i ].day_of_birth; }
+   std::size_t month( std::size_t i ) const { return ppl[ i ].month_of_birth; }
+   std::size_t year( std::size_t i ) const { return ppl[ i ].year_of_birth; }
+   std::string name( std::size_t i ) const { return ppl[ i ].name; }
+   std::size_t size() const { return ppl.size(); }
+};
+
+const std::string label1( "name" );
+const std::string label2( "day" );
+const std::string label3( "month" );
+const std::string label4( "year" );
+const std::string unit1( "label" );
+const std::string unit2( "ordinal1" );
+const std::string unit3( "ordinal2" );
+const std::string unit4( "ordinal3" );
+{
+   person me{ "justin", 17, 4, 1965 };
+
+   core::output_series dset( test_uuid );
+   dset.set_title( test_title );
+   dset.push_back_entry( core::output_field( label1, unit1, [&me](std::ostream& os, std::size_t){ os << me.name; } ) );
+   dset.push_back_entry( core::output_field( label2, unit2, [&me](std::ostream& os, std::size_t){ os << me.day_of_birth; } ) );
+   dset.push_back_entry( core::output_field( label3, unit3, [&me](std::ostream& os, std::size_t){ os << me.month_of_birth; } ) );
+   dset.push_back_entry( core::output_field( label4, unit4, [&me](std::ostream& os, std::size_t){ os << me.year_of_birth; } ) );
+
+   {
+      std::stringstream store;
+      dset.do_header( store );
+      const std::string output{ store.str() };
+      BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
+      BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
+      BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
+      BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
+   }
+   {
+      std::stringstream store;
+      dset.do_body( store );
+      const std::string output{ store.str() };
+      BOOST_CHECK_EQUAL( output.find( test_uuid ), std::string::npos );
+      BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
+      BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
+      BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
+   }
+}
+!!!471728.cpp!!!	output_dataset_test() : void
+// CTOR TESTS
+// ----------
+std::string emptr_str;
+const std::string test_fname{ "result.dat" };
+const std::string test_uuid{ "1a2b3c4d" };
+const std::string test_title{ "Something or other." };
+{
+   core::output_dataset aset;
+   BOOST_CHECK_EQUAL( aset.title(), emptr_str );
+   BOOST_CHECK_EQUAL( aset.uuid(), emptr_str );
+   BOOST_CHECK_EQUAL( aset.size(), 0 );
+   BOOST_CHECK_EQUAL( aset.empty(), true );
+   BOOST_CHECK( aset.begin() == aset.end() );
+
+   aset.set_uuid( test_uuid );
+   BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
+   BOOST_CHECK_EQUAL( aset.title(), emptr_str );
+   
+   aset.set_title( test_title );
+   BOOST_CHECK_EQUAL( aset.title(), test_title );
+   BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
+   BOOST_CHECK_EQUAL( aset.size(), 0 );
+   BOOST_CHECK_EQUAL( aset.empty(), true );
+   BOOST_CHECK( aset.begin() == aset.end() );
+
+   core::output_dataset bset;
+   BOOST_CHECK_EQUAL( bset.title(), emptr_str );
+   BOOST_CHECK_EQUAL( bset.uuid(), emptr_str );
+   BOOST_CHECK_EQUAL( aset.size(), 0 );
+   BOOST_CHECK_EQUAL( aset.empty(), true );
+   BOOST_CHECK( aset.begin() == aset.end() );
+
+   bset = aset;
+   BOOST_CHECK_EQUAL( bset.title(), test_title );
+   BOOST_CHECK_EQUAL( bset.uuid(), test_uuid );
+   BOOST_CHECK_EQUAL( aset.size(), 0 );
+   BOOST_CHECK_EQUAL( aset.empty(), true );
+   BOOST_CHECK( aset.begin() == aset.end() );
+
+   core::output_dataset cset( aset );
+   BOOST_CHECK_EQUAL( cset.title(), test_title );
+   BOOST_CHECK_EQUAL( cset.uuid(), test_uuid );
+   BOOST_CHECK_EQUAL( aset.size(), 0 );
+   BOOST_CHECK_EQUAL( aset.empty(), true );
+   BOOST_CHECK( aset.begin() == aset.end() );
+
+   aset = aset;
+   BOOST_CHECK_EQUAL( aset.title(), test_title );
+   BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
+   BOOST_CHECK_EQUAL( aset.size(), 0 );
+   BOOST_CHECK_EQUAL( aset.empty(), true );
+   BOOST_CHECK( aset.begin() == aset.end() );
+
+   core::output_dataset dset( std::move( aset ) );
+   BOOST_CHECK_EQUAL( dset.title(), test_title );
+   BOOST_CHECK_EQUAL( dset.uuid(), test_uuid );
+   BOOST_CHECK_EQUAL( aset.size(), 0 );
+   BOOST_CHECK_EQUAL( aset.empty(), true );
+   BOOST_CHECK( aset.begin() == aset.end() );
+
+   // Output error if no entries
+   BOOST_CHECK_THROW( dset.do_header( std::cout ), std::runtime_error );
+   BOOST_CHECK_THROW( dset.do_body( std::cout ), std::runtime_error );
+   utility::memory_sink sink;
+   BOOST_CHECK_THROW( dset.write( test_fname, sink ), std::runtime_error );
+}   
+struct person                                                                                                    
+{                                                                                                                
+  std::string name;                                                                                              
+  std::size_t day_of_birth;                                                                                      
+  std::size_t month_of_birth;                                                                                    
+  std::size_t year_of_birth;                                                                                     
+};
+
+struct family
+{
+   std::vector< person > ppl;
+   std::size_t day( std::size_t i ) const { return ppl[ i ].day_of_birth; }
+   std::size_t month( std::size_t i ) const { return ppl[ i ].month_of_birth; }
+   std::size_t year( std::size_t i ) const { return ppl[ i ].year_of_birth; }
+   std::string name( std::size_t i ) const { return ppl[ i ].name; }
+   std::size_t size() const { return ppl.size(); }
+};
+
+const std::string label1( "name" );
+const std::string label2( "day" );
+const std::string label3( "month" );
+const std::string label4( "year" );
+const std::string unit1( "label" );
+const std::string unit2( "ordinal1" );
+const std::string unit3( "ordinal2" );
+const std::string unit4( "ordinal3" );
+{
+   person me{ "justin", 17, 4, 1965 };
+
+   core::output_dataset dset( { test_uuid }, [](){ return 1; } );
+   dset.set_title( test_title );
+   dset.push_back_entry( core::output_field( label1, unit1, [&me](std::ostream& os, std::size_t){ os << me.name; } ) );
+   dset.push_back_entry( core::output_field( label2, unit2, [&me](std::ostream& os, std::size_t){ os << me.day_of_birth; } ) );
+   dset.push_back_entry( core::output_field( label3, unit3, [&me](std::ostream& os, std::size_t){ os << me.month_of_birth; } ) );
+   dset.push_back_entry( core::output_field( label4, unit4, [&me](std::ostream& os, std::size_t){ os << me.year_of_birth; } ) );
+
+   {
+      std::stringstream store;
+      dset.do_header( store );
+      const std::string output{ store.str() };
+      BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
+      BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
+      BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
+      BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
+   }
+   {
+      std::stringstream store;
+      dset.do_body( store );
+      const std::string output{ store.str() };
+      BOOST_CHECK_EQUAL( output.find( test_uuid ), std::string::npos );
+      BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
+      BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
+      BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
+   }
+}
+
+{
+   family myfamily;
+   myfamily.ppl.push_back( { "justin", 17, 4, 1965 } );
+   myfamily.ppl.push_back( { "sean", 15, 4, 1969 } );
+   myfamily.ppl.push_back( { "debi", 8, 2, 1963 } );
+   myfamily.ppl.push_back( { "susan", 19, 6, 1953 } );
+   myfamily.ppl.push_back( { "peabody", 1, 1, 2012 } );
+   core::output_dataset dset( { test_uuid }, [&myfamily](){ return myfamily.size(); } );
+   dset.push_back_entry( core::output_field( label1, unit1, [&myfamily](std::ostream& os, std::size_t i){ os << myfamily.name( i ); } ) );
+   dset.push_back_entry( core::output_field( label2, unit2, [&myfamily](std::ostream& os, std::size_t i){ os << myfamily.ppl[ i ].day_of_birth; } ) );
+   dset.push_back_entry( core::output_field( label3, unit3, [&myfamily](std::ostream& os, std::size_t i){ os << myfamily.month( i ); } ) );
+   dset.push_back_entry( core::output_field( label4, unit4, [&myfamily](std::ostream& os, std::size_t i){ os << myfamily.year( i ); } ) );
+
+   {
+      std::stringstream store;
+      dset.do_header( store );
+      const std::string output{ store.str() };
+      BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
+      BOOST_CHECK_EQUAL( output.find( "TITLE" ), std::string::npos );
+      BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
+      BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
+      BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
+   }
+   dset.set_title( test_title );
+   {
+      std::stringstream store;
+      dset.do_header( store );
+      const std::string output{ store.str() };
+      BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
+      BOOST_CHECK_NE( output.find( "TITLE" ), std::string::npos );
+      BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
+      BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
+      BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
+   }
+   {
+      std::stringstream store;
+      dset.do_body( store );
+      const std::string output{ store.str() };
+      BOOST_CHECK_EQUAL( output.find( test_uuid ), std::string::npos );
+      BOOST_CHECK_EQUAL( output.find( "TITLE" ), std::string::npos );
+      BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
+      BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
+      BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
+      BOOST_CHECK_NE( output.find( "peabody" ), std::string::npos );
+      BOOST_CHECK_EQUAL( std::count( output.begin(), output.end(), '\n' ), 5 );
+   }
+}
+!!!484528.cpp!!!	input_section_test() : void
+// CTOR TESTS
+// ----------
+const std::string empty_str;
+const std::string label1 { "label1" };
+const std::string name1 { "name1" };
+const std::string name2 { "name2" };
+const std::string name3 { "name3" };
+const std::string name4 { "name4" };
+const std::string value1 { "value1" };
+const double value2 { 1.25 };
+const std::string svalue2 { "1.250000" };
+const std::size_t value3 { 125ul };
+const std::string svalue3 { "125" };
+const bool value4 { true };
+const std::string svalue4 { "true" };
+std::stringstream store;
+{
+   // default empty ctor
+   core::input_section isec;
+   BOOST_CHECK_EQUAL( isec.label(), empty_str );
+   BOOST_CHECK_EQUAL( isec.size(), 0 );
+   BOOST_CHECK_EQUAL( isec.empty(), true );
+
+   isec.set_label( label1 );
+   BOOST_CHECK_EQUAL( isec.label(), label1 );
+   BOOST_CHECK_EQUAL( isec.size(), 0 );
+   BOOST_CHECK_EQUAL( isec.empty(), true );
+
+   BOOST_CHECK_EQUAL( isec.has_entry( name1 ), false );
+   isec.add_entry( name1, value1 );
+   BOOST_CHECK_EQUAL( isec.label(), label1 );
+   BOOST_CHECK_EQUAL( isec.has_entry( name1 ), true );
+   BOOST_CHECK_EQUAL( isec.get_entry( name1 ), value1 );
+   BOOST_CHECK_EQUAL( isec.size(), 1 );
+   BOOST_CHECK_EQUAL( isec.empty(), false );
+
+   BOOST_CHECK_EQUAL( isec.has_entry( name2 ), false );
+   isec.add_entry( name2, value2 );
+   BOOST_CHECK_EQUAL( isec.has_entry( name2 ), true );
+   BOOST_CHECK_EQUAL( isec.get_entry( name2 ), svalue2 );
+   BOOST_CHECK_EQUAL( isec.size(), 2 );
+
+   BOOST_CHECK_EQUAL( isec.has_entry( name3 ), false );
+   isec.add_entry( name3, value3 );
+   BOOST_CHECK_EQUAL( isec.has_entry( name3 ), true );
+   BOOST_CHECK_EQUAL( isec.get_entry( name3 ), svalue3 );
+   BOOST_CHECK_EQUAL( isec.size(), 3 );
+
+   BOOST_CHECK_EQUAL( isec.has_entry( name4 ), false );
+   isec.add_entry( name4, value4 );
+   BOOST_CHECK_EQUAL( isec.has_entry( name4 ), true );
+   BOOST_CHECK_EQUAL( isec.get_entry( name4 ), svalue4 );
+   BOOST_CHECK_EQUAL( isec.size(), 4 );
+
+   {
+      // serialization
+      boost::archive::text_oarchive oa( store );
+      oa << isec;
+      BOOST_CHECK_EQUAL( isec.label(), label1 );
+      BOOST_CHECK_EQUAL( isec.has_entry( name1 ), true );
+      BOOST_CHECK_EQUAL( isec.get_entry( name1 ), value1 );
+      BOOST_CHECK_EQUAL( isec.has_entry( name2 ), true );
+      BOOST_CHECK_EQUAL( isec.get_entry( name2 ), svalue2 );
+      BOOST_CHECK_EQUAL( isec.has_entry( name3 ), true );
+      BOOST_CHECK_EQUAL( isec.get_entry( name3 ), svalue3 );
+      BOOST_CHECK_EQUAL( isec.has_entry( name4 ), true );
+      BOOST_CHECK_EQUAL( isec.get_entry( name4 ), svalue4 );
+      BOOST_CHECK_EQUAL( isec.size(), 4 );
+      BOOST_CHECK_EQUAL( isec.empty(), false );
+   }
+
+   {
+      // copy ctor
+      core::input_section isec_copy( isec );
+      BOOST_CHECK_EQUAL( isec_copy.label(), label1 );
+      BOOST_CHECK_EQUAL( isec_copy.has_entry( name1 ), true );
+      BOOST_CHECK_EQUAL( isec_copy.get_entry( name1 ), value1 );
+      BOOST_CHECK_EQUAL( isec_copy.has_entry( name2 ), true );
+      BOOST_CHECK_EQUAL( isec_copy.get_entry( name2 ), svalue2 );
+      BOOST_CHECK_EQUAL( isec_copy.has_entry( name3 ), true );
+      BOOST_CHECK_EQUAL( isec_copy.get_entry( name3 ), svalue3 );
+      BOOST_CHECK_EQUAL( isec_copy.has_entry( name4 ), true );
+      BOOST_CHECK_EQUAL( isec_copy.get_entry( name4 ), svalue4 );
+      BOOST_CHECK_EQUAL( isec_copy.size(), 4 );
+      BOOST_CHECK_EQUAL( isec_copy.empty(), false );
+   }
+   {
+      // assignment
+      core::input_section isec_copy;
+      BOOST_CHECK_EQUAL( isec_copy.label(), empty_str );
+      BOOST_CHECK_EQUAL( isec_copy.size(), 0 );
+      BOOST_CHECK_EQUAL( isec_copy.empty(), true );
+
+      isec_copy = isec;
+
+      BOOST_CHECK_EQUAL( isec_copy.label(), label1 );
+      BOOST_CHECK_EQUAL( isec_copy.has_entry( name1 ), true );
+      BOOST_CHECK_EQUAL( isec_copy.get_entry( name1 ), value1 );
+      BOOST_CHECK_EQUAL( isec_copy.has_entry( name2 ), true );
+      BOOST_CHECK_EQUAL( isec_copy.get_entry( name2 ), svalue2 );
+      BOOST_CHECK_EQUAL( isec_copy.has_entry( name3 ), true );
+      BOOST_CHECK_EQUAL( isec_copy.get_entry( name3 ), svalue3 );
+      BOOST_CHECK_EQUAL( isec_copy.has_entry( name4 ), true );
+      BOOST_CHECK_EQUAL( isec_copy.get_entry( name4 ), svalue4 );
+      BOOST_CHECK_EQUAL( isec_copy.size(), 4 );
+      BOOST_CHECK_EQUAL( isec_copy.empty(), false );
+   }
+
+   {
+      // move
+      core::input_section isec_copy( isec );
+      core::input_section isec_move( std::move( isec_copy ) );
+      BOOST_CHECK_EQUAL( isec_copy.label(), empty_str );
+      BOOST_CHECK_EQUAL( isec_copy.size(), 0 );
+      BOOST_CHECK_EQUAL( isec_copy.empty(), true );
+
+      BOOST_CHECK_EQUAL( isec_move.label(), label1 );
+      BOOST_CHECK_EQUAL( isec_move.has_entry( name1 ), true );
+      BOOST_CHECK_EQUAL( isec_move.get_entry( name1 ), value1 );
+      BOOST_CHECK_EQUAL( isec_move.has_entry( name2 ), true );
+      BOOST_CHECK_EQUAL( isec_move.get_entry( name2 ), svalue2 );
+      BOOST_CHECK_EQUAL( isec_move.has_entry( name3 ), true );
+      BOOST_CHECK_EQUAL( isec_move.get_entry( name3 ), svalue3 );
+      BOOST_CHECK_EQUAL( isec_move.has_entry( name4 ), true );
+      BOOST_CHECK_EQUAL( isec_move.get_entry( name4 ), svalue4 );
+      BOOST_CHECK_EQUAL( isec_move.size(), 4 );
+      BOOST_CHECK_EQUAL( isec_move.empty(), false );
+   }
+
+   {
+      // swap
+      core::input_section isec_copy( isec );
+      core::input_section isec_move;
+
+      std::swap( isec_move, isec_copy );
+
+      BOOST_CHECK_EQUAL( isec_copy.label(), empty_str );
+      BOOST_CHECK_EQUAL( isec_copy.size(), 0 );
+      BOOST_CHECK_EQUAL( isec_copy.empty(), true );
+
+      BOOST_CHECK_EQUAL( isec_move.label(), label1 );
+      BOOST_CHECK_EQUAL( isec_move.has_entry( name1 ), true );
+      BOOST_CHECK_EQUAL( isec_move.get_entry( name1 ), value1 );
+      BOOST_CHECK_EQUAL( isec_move.has_entry( name2 ), true );
+      BOOST_CHECK_EQUAL( isec_move.get_entry( name2 ), svalue2 );
+      BOOST_CHECK_EQUAL( isec_move.has_entry( name3 ), true );
+      BOOST_CHECK_EQUAL( isec_move.get_entry( name3 ), svalue3 );
+      BOOST_CHECK_EQUAL( isec_move.has_entry( name4 ), true );
+      BOOST_CHECK_EQUAL( isec_move.get_entry( name4 ), svalue4 );
+      BOOST_CHECK_EQUAL( isec_move.size(), 4 );
+      BOOST_CHECK_EQUAL( isec_move.empty(), false );
+   }
+}
+{
+   // test add_entry
+   // add_entry(string)  ABOVE
+   // add_entry(unsigned long) as size_t ABOVE
+   // add_entry(double) ABOVE
+   {
+      // add_entry(bool)
+      core::input_section isec;
+      isec.add_entry( name1, true );
+      isec.add_entry( name2, false );
+      BOOST_CHECK_EQUAL( isec.get_entry( name1 ), "true" );
+      BOOST_CHECK_EQUAL( isec.get_entry( name2 ), "false" );
+   }
+   {
+      // add_entry(int)
+      core::input_section isec;
+      int value { -170465 };
+      isec.add_entry( name1, value );
+      BOOST_CHECK_EQUAL( isec.get_entry( name1 ), "-170465" );
+   }
+   {
+      // add_entry(long)
+      core::input_section isec;
+      int64_t value { -17046500000000000L };
+      isec.add_entry( name1, value );
+      BOOST_CHECK_EQUAL( isec.get_entry( name1 ), "-17046500000000000" );
+   }
+   {
+      // add_entry(long long)
+      core::input_section isec;
+      long long value { -1704650000000000000LL };
+      isec.add_entry( name1, value );
+      BOOST_CHECK_EQUAL( isec.get_entry( name1 ), "-1704650000000000000" );
+   }
+   {
+      // add_entry(uint)
+      core::input_section isec;
+      uint32_t value { 170465 };
+      isec.add_entry( name1, value );
+      BOOST_CHECK_EQUAL( isec.get_entry( name1 ), "170465" );
+   }
+   {
+      // add_entry(unsigned long long)
+      core::input_section isec;
+      unsigned long long value { 170465000000000000ULL };
+      isec.add_entry( name1, value );
+      BOOST_CHECK_EQUAL( isec.get_entry( name1 ), "170465000000000000" );
+   }
+   {
+      // add_entry(float)
+      core::input_section isec;
+      float value { 1.125E15F };
+      isec.add_entry( name1, value );
+      BOOST_CHECK_EQUAL( isec.get_entry( name1 ), "1.125e+15" );
+   }
+   {
+      // add_entry(long double)
+      core::input_section isec;
+      long double value { 1.125E500L };
+      isec.add_entry( name1, value );
+      BOOST_CHECK_EQUAL( isec.get_entry( name1 ), "1.125e+500" );
+   }
+   {
+      // template< class T > add_entry(T)
+      core::input_section isec;
+      particle::coordinate value { 17.0, 4.0, 1965.0 };
+      isec.add_entry( name1, value );
+      BOOST_CHECK_EQUAL( isec.get_entry( name1 ), "17 4 1965" );
+   }
+}
+{
+   // deserialization
+   core::input_section isec;
+   boost::archive::text_iarchive ia( store );
+   ia >> isec;
+
+   BOOST_CHECK_EQUAL( isec.label(), label1 );
+   BOOST_CHECK_EQUAL( isec.has_entry( name1 ), true );
+   BOOST_CHECK_EQUAL( isec.get_entry( name1 ), value1 );
+   BOOST_CHECK_EQUAL( isec.has_entry( name2 ), true );
+   BOOST_CHECK_EQUAL( isec.get_entry( name2 ), svalue2 );
+   BOOST_CHECK_EQUAL( isec.has_entry( name3 ), true );
+   BOOST_CHECK_EQUAL( isec.get_entry( name3 ), svalue3 );
+   BOOST_CHECK_EQUAL( isec.has_entry( name4 ), true );
+   BOOST_CHECK_EQUAL( isec.get_entry( name4 ), svalue4 );
+   BOOST_CHECK_EQUAL( isec.size(), 4 );
+   BOOST_CHECK_EQUAL( isec.empty(), false );
+
+   // Write test
+   {
+      std::stringstream output;
+      isec.write( output );
+      const std::string result { output.str() };
+      boost::tokenizer< boost::escaped_list_separator< char > > tok(result, { "\\", " \n\t", "\"\'" } );
+      std::vector< std::string > wordlist = { label1, name1, value1, name2, svalue2, name3, svalue3, name4, svalue4, "end" };
+      BOOST_CHECK( std::equal( wordlist.begin(), wordlist.end(), tok.begin() ) );
+      auto t_iter = tok.begin();
+      for (auto w_iter = wordlist.begin(); w_iter != wordlist.end(); ++w_iter, ++t_iter)
+      {
+         BOOST_CHECK_EQUAL( *t_iter, *w_iter );
+      }
+   }
+}
+!!!471856.cpp!!!	input_document_test() : void
+// CTOR TESTS
+// ----------
+const std::size_t version{ 21 };
+std::stringstream store;
+const std::string label1 { "label1" };
+const std::string label2 { "label2" };
+{
+   // default
+   core::input_document idoc( version );
+   BOOST_CHECK_EQUAL( idoc.size(), 0 );
+   BOOST_CHECK_EQUAL( idoc.empty(), true );
+   BOOST_CHECK_EQUAL( idoc.version(), version );
+
+   std::size_t idx;
+   idx = idoc.add_section( label1 );
+
+   BOOST_CHECK_EQUAL( idx, 0 );
+   BOOST_CHECK_EQUAL( idoc[ idx ].label(), label1 );
+   BOOST_CHECK_EQUAL( idoc.size(), 1 );
+   BOOST_CHECK_EQUAL( idoc.empty(), false );
+   BOOST_CHECK_EQUAL( idoc.version(), version );
+
+   idx = idoc.add_section( label2 );
+
+   BOOST_CHECK_EQUAL( idx, 1 );
+   BOOST_CHECK_EQUAL( idoc[ idx ].label(), label2 );
+   BOOST_CHECK_EQUAL( idoc.size(), 2 );
+
+   boost::archive::text_oarchive oa( store );
+   oa << idoc;
+
+   {
+      // copy ctor
+      core::input_document idoc2( idoc );
+      BOOST_CHECK_EQUAL( idoc2.version(), version );
+      BOOST_CHECK_EQUAL( idoc2[ 0 ].label(), label1 );
+      BOOST_CHECK_EQUAL( idoc2[ 1 ].label(), label2 );
+      BOOST_CHECK_EQUAL( idoc2.size(), 2 );
+      BOOST_CHECK_EQUAL( idoc2.empty(), false );
+      // check idoc unchanged
+      BOOST_CHECK_EQUAL( idoc.version(), version );
+      BOOST_CHECK_EQUAL( idoc[ 0 ].label(), label1 );
+      BOOST_CHECK_EQUAL( idoc[ 1 ].label(), label2 );
+      BOOST_CHECK_EQUAL( idoc.size(), 2 );
+      BOOST_CHECK_EQUAL( idoc.empty(), false );
+   }
+
+   {
+      // assignement
+      core::input_document idoc2( 1 );
+      BOOST_CHECK_EQUAL( idoc2.size(), 0 );
+      BOOST_CHECK_EQUAL( idoc2.empty(), true );
+      BOOST_CHECK_EQUAL( idoc2.version(), 1 );
+
+      idoc2 = idoc;
+      BOOST_CHECK_EQUAL( idoc2.version(), version );
+      BOOST_CHECK_EQUAL( idoc2[ 0 ].label(), label1 );
+      BOOST_CHECK_EQUAL( idoc2[ 1 ].label(), label2 );
+      BOOST_CHECK_EQUAL( idoc2.size(), 2 );
+      BOOST_CHECK_EQUAL( idoc2.empty(), false );
+      // check idoc unchanged
+      BOOST_CHECK_EQUAL( idoc.version(), version );
+      BOOST_CHECK_EQUAL( idoc[ 0 ].label(), label1 );
+      BOOST_CHECK_EQUAL( idoc[ 1 ].label(), label2 );
+      BOOST_CHECK_EQUAL( idoc.size(), 2 );
+      BOOST_CHECK_EQUAL( idoc.empty(), false );
+   }
+
+   {
+      // move
+      core::input_document idoc2( idoc );
+      core::input_document idoc3( std::move( idoc2 ) );
+      BOOST_CHECK_EQUAL( idoc2.size(), 0 );
+      BOOST_CHECK_EQUAL( idoc2.empty(), true );
+      // value of idoc2.version is probably implementation dependent
+
+      BOOST_CHECK_EQUAL( idoc3.version(), version );
+      BOOST_CHECK_EQUAL( idoc3[ 0 ].label(), label1 );
+      BOOST_CHECK_EQUAL( idoc3[ 1 ].label(), label2 );
+      BOOST_CHECK_EQUAL( idoc3.size(), 2 );
+      BOOST_CHECK_EQUAL( idoc3.empty(), false );
+   }
+}
+{
+   core::input_document idoc( 0 );
+   boost::archive::text_iarchive ia( store );
+   ia >> idoc;
+
+   // check idoc unchanged
+   BOOST_CHECK_EQUAL( idoc.version(), version );
+   BOOST_CHECK_EQUAL( idoc[ 0 ].label(), label1 );
+   BOOST_CHECK_EQUAL( idoc[ 1 ].label(), label2 );
+   BOOST_CHECK_EQUAL( idoc.size(), 2 );
+   BOOST_CHECK_EQUAL( idoc.empty(), false );
+   // Write test
+   {
+      std::stringstream output;
+      idoc.write( output );
+      const std::string result { output.str() };
+      boost::tokenizer< boost::escaped_list_separator< char > > tok(result, { "\\", " \n\t", "\"\'" } );
+      std::vector< std::string > wordlist = { core::strngs::fsfver(), "21", "", label1, "end", "", label2, "end" };
+      BOOST_CHECK( std::equal( wordlist.begin(), wordlist.end(), tok.begin() ) );
+      auto t_iter = tok.begin();
+      for (auto w_iter = wordlist.begin(); w_iter != wordlist.end(); ++w_iter, ++t_iter)
+      {
+         BOOST_CHECK_EQUAL( *t_iter, *w_iter );
+      }
+   }}

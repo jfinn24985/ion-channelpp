@@ -1,0 +1,44 @@
+class input_help
+!!!1917999.cpp!!!	exemplar() : input_help
+    static std::unique_ptr< input_help > ex_;
+    if (NULL == ex_.get()) ex_.reset(new input_help);
+    return *ex_;
+!!!1918511.cpp!!!	add_section(in section_label : string, in section_desc : string) : void
+    if (this->contents_->sections_.end() == this->contents_->sections_.find(section_label))
+      {
+	// Not present, add description message.
+	this->contents_->sections_.insert(std::make_pair(section_label, boost::program_options::options_description(section_desc)));
+      }
+    else
+      {
+	boost::program_options::options_description newdesc(section_desc);
+	std::vector< boost::shared_ptr< boost::program_options::option_description > > const& options_set_ = this->contents_->sections_[section_label].options();
+	for (std::vector< boost::shared_ptr< boost::program_options::option_description > >::const_iterator it_ = options_set_.begin(); it_ != options_set_.end (); ++it_)
+	  {
+	    newdesc.add(*it_);
+	  }
+	// Erase old element
+	this->contents_->sections_.erase(this->contents_->sections_.find(section_label));
+	// Add new element
+	this->contents_->sections_.insert(std::make_pair(section_label, newdesc));
+      }
+    
+!!!1918639.cpp!!!	add_option(in section_label : string, in option : string, in desc : string) : void
+if (this->contents_->sections_.end() == this->contents_->sections_.find(section_label))
+{
+   // Not present, add description message.
+   this->contents_->sections_.insert(std::make_pair(section_label, boost::program_options::options_description("Parameters of input section \"" + section_label + "\"")));
+}
+this->contents_->sections_.at( section_label ).add_options()( option.c_str(), desc.c_str() );
+!!!1918767.cpp!!!	print(inout os : ostream) : void
+    for (std::map< std::string, boost::program_options::options_description >::iterator it_ = this->contents_->sections_.begin();
+	 it_ != this->contents_->sections_.end(); ++it_)
+      {
+	it_->second.print(os);
+      }
+!!!1919023.cpp!!!	empty() : bool
+    return this->contents_->sections_.empty ();
+!!!1919151.cpp!!!	size() : size_t
+    return this->contents_->sections_.size ();
+!!!1919279.cpp!!!	have_section(in label : string) : bool
+    return (this->contents_->sections_.end() != this->contents_->sections_.find(label));

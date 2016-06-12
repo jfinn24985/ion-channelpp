@@ -1,0 +1,181 @@
+class Selectivity
+!!!1500463.python!!!	_add_result_set(in self : , in aresult : , in processor : )
+import sys
+
+# Check which ions are present with the first data set
+if None == self.occupancies:
+    # check the current settings
+    self.check_ions_to_use(aresult)
+
+result = None
+themin = min(self.zmin, self.zmax)
+themax = max(self.zmin, self.zmax)
+
+for name in self.ion_names:
+    # No result if concentration is zero.
+    bulk_conc = float(aresult.concentration()[name])
+    if 0.0 >= bulk_conc:
+        print >>sys.stderr,"Concentration for",name,"less than 0:", bulk_conc
+        return
+    key = ( 'gz', name )
+    # Check if available
+    if aresult.available(key):
+        # select occupancy in the interval
+        occupancy_value = processor(aresult[key].select(lambda z: z >= themin and z <= themax))
+        # occupancy is the simple mean
+        if result == None:
+            result = [ bulk_conc, occupancy_value, 0.0 ]
+        else:
+            import math
+            result[0] = math.log10(bulk_conc/result[0])
+            result[2] = occupancy_value
+    else:
+        # none available, cancel all additions
+        import sys
+        print >>sys.stderr,"Warning: data set ",key," is not available in simulation ",aresult.uuid()," run ",aresult.run()
+        return
+
+# Now results are processed, add to main data set
+if None == self.occupancies:
+    self.occupancies = []
+self.occupancies.append( result )
+!!!1466927.python!!!	add_result_slope_conductance(in self : , in aresult : )
+self._add_result_set(aresult,
+                     lambda df: 0.0 >= df['conc'].min()
+                     and 0.0
+                     or (df.shape[0]*df.shape[0])/(df['conc'].apply(lambda x: 1/x).sum()))
+!!!1474223.python!!!	check_ions_to_use(in self : , in aresult : )
+# Check which ions are present only if no data is present
+if None == self.occupancies:
+    # check the current settings
+    isok = True
+    for ion in self.ion_names:
+        key = ( 'gz', ion )
+        if not aresult.available (key):
+            # Have an incorrect ion
+            isok = False
+	    break
+    if not isok:
+	key = ( 'gz', 'Na' )
+	if aresult.available (key):
+	    ion1 = 'Na'
+	else:
+	    ion1 = None
+        ion2 = None
+        import simdict
+        for ion in simdict.SummaryReader.ion_names:
+            if ion in ( 'Cl', 'Na' ):
+                continue
+            key = ( 'gz', ion )
+            if aresult.available (key):
+                if ion1 == None:
+                    ion1 = ion
+                elif ion2 == None:
+                    ion2 = ion
+                else:
+                    import sys
+                    print >>sys.stderr,"Warning: Third cation ignored: (",ion1,", ",ion2,", ",ion,")"
+        if ion1 != None and ion2 != None:
+            import sys
+            print >>sys.stderr,"Info: using ions ",ion1,", ",ion2
+            self.ion_names = ( ion1, ion2 )
+        else:
+            if ion1 == None:
+                raise simdict.MissingData("Have no cations present out of "+str(simdict.SummaryReader.ion_names))
+            else:
+                raise simdict.MissingData("Have one ("+ion1+") cation present out of "+str(simdict.SummaryReader.ion_names))
+!!!1466671.python!!!	compute(in self : , in results :  = None)
+if None != results:
+    for result in results:
+        self.add_result_set(result)
+
+##########
+# at this point the results from the various simulations should be in self.occupancies
+##########
+# check that there are some results
+if self.occupancies == None:
+    raise RuntimeError("Unable to perform fit as no data is present")
+if len(self.occupancies) < 2:
+    raise RuntimeError("Unable to perform fit with less than three trial data sets")
+# use numpy.ndarray so we can slice results by column. We do not want to sort the
+# array by logratio in this case.
+import numpy
+df = numpy.array(self.occupancies)
+assert df.shape[0] != 0
+
+#########
+# Do regression
+#########
+import scipy.optimize as optimize
+
+param_guess = [ 0.0, 1.0 ]
+if self.fits == None:
+    self.fits = dict()
+
+# We have two functions to fit because we report the ratio as [M(one)]/[M(two)]
+# which means we need to have an altered dore-response function for M(two).
+
+# The sum of the squares of the residuals is the function we're trying to minimize
+# for M(one)
+def residuals_ion_one(params,logratio,trial_value):
+    return trial_value - params[0]/(1 + pow(10.0,logratio-params[1]))
+
+name = self.ion_names[0]
+self.fits[name] = optimize.leastsq(residuals_ion_one,param_guess,args=(df.T[0],df.T[1]),full_output=True)
+if self.fits[name][4] < 1 or self.fits[name][4] > 4:
+    raise RuntimeError("Unable to fit data to ",name,": " + self.fits[name][3])
+
+# The sum of the squares of the residuals is the function we're trying to minimize
+# for M(two)
+def residuals_ion_two(params,logratio,trial_value):
+    return trial_value - params[0]/(1 + pow(10.0,params[1]-logratio))
+    
+name = self.ion_names[1]
+self.fits[name] = optimize.leastsq(residuals_ion_two,param_guess,args=(df.T[0],df.T[2]),full_output=True)
+if self.fits[name][4] < 1 or self.fits[name][4] > 4:
+    raise RuntimeError("Unable to fit data to ",name,": " + self.fits[name][3])
+
+########
+# Solve for occ_1 = occ_2 to get selectivity ratio
+########
+m_occmax, m_er50 = self.fits[self.ion_names[0]][0]
+n_occmax, n_er50 = self.fits[self.ion_names[1]][0]
+a = -n_occmax / pow(10, m_er50)
+b = m_occmax - n_occmax
+c = m_occmax * pow(10,n_er50)
+self.selectivity = (numpy.sqrt((b * b) - (4 * a * c)) + b) / (-2.0 * a)
+!!!1467567.python!!!	get_occupancies(in self : )
+if self.occupancies == None:
+    return None
+occ_copy = self.occupancies
+if len(occ_copy) > 1:
+    occ_copy.sort(lambda a,b: a[0] == b[0] and 0 or (a[0]<b[0] and -1 or 1))
+    # use numpy.ndarray so we can slice results by column
+    import numpy
+    return numpy.array(occ_copy)
+else:
+    return occ_copy
+!!!1467439.python!!!	get_predicted(in self : )
+# Check for fitted values
+df = self.get_occupancies()
+if None == df:
+    return None
+assert df.shape[0] != 0
+import numpy
+return numpy.column_stack ( [ df, [ self.predicted(lr) for lr in df.T[0] ] ] )
+!!!1467183.python!!!	predicted(in self : , in logratio : )
+if None == self.fits:
+   return None
+m_occmax, m_er50 = self.fits[self.ion_names[0]][0]
+n_occmax, n_er50 = self.fits[self.ion_names[1]][0]
+return ( m_occmax/(1 + pow(10.0,logratio - m_er50)),
+         n_occmax/(1 + pow(10.0,n_er50 - logratio)) )
+!!!1467055.python!!!	reset(in self : )
+self.fits = None
+self.selectivity = None
+self.occupancies = None
+!!!1474095.python!!!	set_occupancy_range(in self : , in amin : float, in amax : float)
+if None != self.occupancies:
+    raise RuntimeError("You must change occupancy range before adding any result sets.")
+self.zmin = min(amin, amax)
+self.zmax = max(amin, amax)

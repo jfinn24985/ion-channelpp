@@ -1,0 +1,208 @@
+class coulomb_evaluator
+!!!1833519.cpp!!!	operator ()(in conf : formation, inout trial : trial_move) : double
+  if (conf.is_bulk ())
+  {
+    return cergit< ionch::dispbc >(conf.geometry().bulk_geometry().length (), conf, trial);
+  }
+  else
+  {
+    return cergit< ionch::disbox >(0.0, conf, trial);
+  }
+!!!1833647.cpp!!!	on_update(in conf : formation, in trial : trial_move) : void
+  if (trial.is_add() or trial.is_amove())
+  {
+    // ADD or MOVE
+    for (size_t ichg = 0; ichg != trial.size(); ++ichg)
+    {
+      if (trial.is_add() and ichg > 0)
+      {
+        for (size_t jj = 0; jj != ichg; ++jj)
+        {
+          trial_rii_[trial[jj].particle_id][ichg] = local_rii_[jj][ichg];
+        }
+
+      }
+      // Do not need to update position for swap
+      if (not trial.is_swap())
+      {
+        // update rqqii_ matrix
+        const size_t ii (trial[ichg].particle_id);
+        const double qi (conf.specie_set().get_specie(trial[ichg].specie_id).reduced_charge());
+        for (size_t jj = 0; jj != conf.conformation().active_size(); ++jj)
+        {
+          if (jj == ii)
+          {
+            continue;
+          }
+          const size_t jspec (conf.conformation().specie_index(jj));
+          if (jspec == ~0ul)
+          {
+            continue;
+          }
+          const double qj (conf.specie_set().get_specie(jspec).reduced_charge());
+
+          if (not (utility::feq(qi,0.0) or utility::feq(qj,0.0)))
+          {
+            rqqii_[jj][ii] = qj * qi / trial_rii_[jj][ichg];
+          }
+          else
+          {
+            rqqii_[jj][ii] = local_rii_[jj][ichg];
+          }
+          rqqii_[ii][jj] = rqqii_[jj][ii];
+        }
+        rqqii_[ii][ii] = 0.0;
+      }
+    }
+  }
+!!!1833775.cpp!!!	initialise(in conf : formation) : void
+  //  use spec
+  //  implicit none
+  // LOCALS
+  //    double rxi,ryi,rzi;  // particle coords
+  //double rijsq,ri,ddi; // inter-particle or patch data
+  //    int ispec,jspec; // particle indices
+
+  // Array of square minimum distances
+  boost::multi_array< double, 2 > cutoffsq_(boost::extents[conf.specie_set ().size ()][conf.specie_set ().size ()]);
+  for (int jspec_ = 0; jspec_ != conf.specie_set ().size (); ++jspec_)
+  {
+    const double jrad = conf.specie_set ().get_specie(jspec_).radius();
+    cutoffsq_[jspec_][jspec_] = utility::sqr (2 * jrad);
+    for (int ispec_ = jspec_ + 1; ispec_ != conf.specie_set ().size (); ++ispec_)
+    {
+      cutoffsq_[jspec_][ispec_] = utility::sqr (jrad + conf.specie_set ().get_specie(ispec_).radius());
+      cutoffsq_[ispec_][jspec_] = cutoffsq_[jspec_][ispec_];
+    }
+  }
+
+  for (size_t ii = 0; ii != conf.conformation ().active_size(); ++ii)
+  {
+    const int ispec = conf.conformation ().specie_index(ii);
+
+    if (~0ul == ispec)
+    {
+      continue;
+    }
+    const double rxi  (conf.conformation ().rx(ii));
+    const double ryi  (conf.conformation ().ry(ii));
+    const double rzi  (conf.conformation ().rz(ii));
+
+    const double iq   (conf.specie_set ().get_specie(ispec).reduced_charge());
+
+    //   Only need to determine distance to particles higher in array than us
+    for (int jj = ii + 1; jj != conf.conformation ().active_size(); ++jj)
+    {
+      const int jspec = conf.conformation ().specie_index(ii);
+
+      if (~0ul == jspec)
+      {
+        continue;
+      }
+
+      disbox_sq fn;
+      // If rqqii is not zero then assume it is correct
+      if (utility::feq (rqqii_[ii][jj], 0.0))
+      {
+        const double rijsq = fn.displacement_sq (0.0, rxi, ryi, rzi, conf.conformation ().rx(jj), conf.conformation ().ry(jj), conf.conformation ().rz(jj));
+        IONCH_INPUT (rijsq >= cutoffsq_[ispec][jspec]
+                     , "Particle " + (boost::lexical_cast< std::string >(ii)) + " ("
+                     + conf.specie_set ().get_specie(ispec).code_name () + ") only " + (boost::lexical_cast< std::string >(std::sqrt(rijsq)))
+                     + "(" + (boost::lexical_cast< std::string >(std::sqrt(cutoffsq_[ispec][jspec])))
+                     + ") from " + (boost::lexical_cast< std::string >(jj)) + " (" + conf.specie_set ().get_specie (jspec).code_name() + ")"
+                     , constants::fsform());
+
+        rqqii_[ii][jj] = rqqii_[jj][ii] = iq * conf.specie_set ().get_specie(jspec).reduced_charge() / (2 * std::sqrt (rijsq));
+      }
+    }
+  }
+!!!1833903.cpp!!!	cergit(in len : double, in conf : formation, inout trial : trial_move) : double
+  double uiinw  = 0.0;
+  double uiiold = 0.0;
+  bool ovrlap   = false;
+  double umfi   = 0.0;
+  for (size_t icount = 0; icount != trial.size (); ++icount)
+  {
+    const size_t ispec = trial[icount].specie_id;
+
+    // SEC1: Energy change from new particle + new particle
+    if (trial.is_salt() and trial.is_add() and icount + 1 != trial.size ())
+    {
+      bool uiitmp = 0.0;
+      local_rii_[icount][icount] = 0.0;
+      for (int i = icount + 1; i != trial.size (); ++i)
+      {
+        local_rii_[icount][i] = dist::displacement(len, trial[i].x, trial[i].y, trial[i].z
+                                , trial[icount].x, trial[icount].y,trial[icount].z);
+        // Check if local_rii_ indicates overlap
+        if (local_rii_[icount][i] <= conf.specie_set ().dd_get(ispec, trial[i].specie_id))
+        {
+          trial.set_fail();
+          return 0.0;
+        }
+        else
+        {
+          local_rii_[i][icount] = local_rii_[icount][i];
+          uiitmp += conf.specie_set ().get_specie(trial[i].specie_id).reduced_charge () * (1/trial[icount].eps+1/trial[i].eps) / trial_rii_[icount][i];
+        }
+      }
+      // apply constant factor
+      uiinw += uiitmp * conf.specie_set ().get_specie(ispec).reduced_charge ()/2;
+    }
+
+    // SEC2: Energy change from new particle/position + existing particles
+    if (trial.is_move() or trial.is_add ())
+    {
+      double uiitmp = 0.0;
+      for (int i = 0; i != conf.conformation ().active_size (); ++i)
+      {
+        const int jspec = conf.conformation ().specie_index(i);
+        if (trial[icount].particle_id != i and jspec != ~0ul)
+        {
+          trial_rii_[icount][i] = dist::displacement(len, conf.conformation ().rx(i),conf.conformation ().ry(i),conf.conformation ().rz(i),trial[icount].x,trial[icount].y,trial[icount].z);
+          // Check if riinw indicates overlap
+          if (trial_rii_[icount][i] <= conf.specie_set ().dd_get(ispec, jspec))
+          {
+            trial.set_fail();
+            return 0.0;
+          }
+          uiitmp += conf.specie_set ().get_specie(jspec).reduced_charge()*(1/trial[icount].eps+1/trial[i].eps)/trial_rii_[i][icount];
+
+          // calculate mean field
+          //if (mean_field_)
+          //{
+          //  umfi += conf.specie_set ().get_specie(trial[icount].specie).reduced_charge () *
+          //          conf.conformation ().rieps(trial[icount].index) / trial_rii_[icount][i];
+          //}
+        }
+        else
+        {
+          trial_rii_[icount][i] = 0.0;
+        }
+      }
+
+      // apply constant factor
+      uiinw += uiitmp * conf.specie_set ().get_specie(ispec).reduced_charge ()/2;
+    }
+
+    // SEC3: Energy from particle in old position
+    if (trial.is_amove() or trial.is_remove())
+    {
+      double uiitmp = 0.0;
+      for (int i = 0; i != conf.conformation ().active_size (); ++i) // p8l3k4
+      {
+        if (trial[icount].particle_id != i and conf.conformation ().specie_index(i) != ~0ul)
+        {
+          uiitmp += rqqii_ [trial[icount].particle_id][i] *
+                    (conf.conformation ().rieps(trial[icount].particle_id) + conf.conformation ().rieps(i));
+        }
+      }
+      uiiold += uiitmp/2;
+    }
+  }
+  //if (mean_field_)
+  //{
+  //  mean_field_->mean_field (umfi);
+  //  mean_field_->particle_coulomb (uiinw - uiiold);
+  //}
+  return uiinw - uiiold;

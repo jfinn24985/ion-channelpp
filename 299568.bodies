@@ -1,0 +1,192 @@
+class archive_file_2
+!!!518960.cpp!!!	archive_file_2(in path : string)
+int error;
+this->arch_ = ::zip_open( this->path_.c_str(), ZIP_CREATE, &error);
+
+      
+if (nullptr == this->arch_)
+{
+   throw archive_error( error );
+}
+!!!519088.cpp!!!	~archive_file_2()
+if (this->arch_)
+{
+   if (0 != ::zip_close( this->arch_ ))
+   {
+      archive_error err( ::zip_error_code_zip( this->arch_ ) );
+      ::zip_discard( this->arch_ );
+      throw err;
+   }
+}
+!!!519600.cpp!!!	append(in subpath : string, in content : string) : void
+std::string oldcontent;
+if (this->read( subpath, oldcontent ))
+{
+   oldcontent += content;
+   std::swap( content, oldcontent );
+}
+this->write( subpath, content );
+!!!519728.cpp!!!	exists(in subpath : string) : bool
+//::archive * archive;
+//::archive_entry * entry;
+//// automatic clean up code
+//struct scope_exit
+//{
+//   ::archive * a_;
+//   ::archive_entry * e_;
+//   scope_exit( archive * a, archive_entry *e ): a_(a), e_(e) {}
+//   ~scope_exit()
+//   {
+//      if (this->a_)
+//      {
+//         ::archive_write_close( this->a_ );
+//         ::archive_write_free( this->a_ );
+//      }
+//      if (this->e_)
+//      {
+//         ::archive_entry_free(this->e_);
+//      }
+//   }
+//} tmp( archive, entry );
+//
+//archive = archive_read_new();
+//if (not archive)
+//{
+//   throw std::bad_alloc;
+//}
+//
+//entry = archive_entry_new();
+//if (not entry)
+//{
+//   throw std::bad_alloc;
+//}
+//
+//return this->find( subpath, entry );
+return false;
+!!!519856.cpp!!!	find(in subpath : string, inout entry : entry_t) : bool
+//UTILITY_REQUIRE( entry, "Entry must be allocated outside the 'find' function");
+//
+//// Write header, over writing any existing data.
+//int repeats = 0;
+//bool at_eof = false
+//while(not at_eof)
+//{
+//   switch(::archive_read_next_header2( this->arch_, entry ))
+//   {
+//      case ARCHIVE_OK:
+//      case ARCHIVE_WARN:
+//         {
+//            if (subpath == ::archive_entry_pathname( entry ))
+//            {
+//               return true;
+//            }
+//         }
+//         break;
+//      case ARCHIVE_RETRY:
+//         {
+//            ++repeats;
+//            if (repeats > 100)
+//            {
+//               throw archive_error( this->arch_ );
+//            }
+//         }
+//         break;
+//      case ARCHIVE_FATAL:
+//            {
+//               throw archive_error( this->arch_ );
+//            }
+//         break;
+//      case ARCHIVE_EOF:
+//         {
+//            at_eof = true;
+//         }
+//         break;
+//      default:
+//         {
+//            UTILITY_ALWAYS( false, "Unknown return value from archive_read_next_header2" );
+//         }
+//         break;
+//   }
+return false;
+!!!519984.cpp!!!	read(in subpath : string, inout content : string) : bool
+::zip_int64_t idx = ::zip_name_locate( this->arch_, subpath.c_str(), ZIP_FL_ENC_GUESS );
+if (idx == -1)
+{
+   // file not found?
+   if (ZIP_ER_NOENT != ::zip_error_code_zip( this->arch_ ))
+   {
+       throw archive_error( ::zip_error_code_zip( this->arch_ ) );
+   }
+   return false;
+}
+
+zip_file_t * target = ::zip_fopen_index( this->arch_, idx );
+if (not target)
+{
+    throw archive_error( ::zip_error_code_zip( this->arch_ ) );
+}
+struct onexit
+{
+   zip_file_t * t_;
+   onexit( zip_file_t * t ): t_( t ) {}
+   ~onexit() {
+      if (t_)
+      {
+        int err = ::zip_fclose( t_ );
+        if (err != 0)
+        {
+           throw archive_error( err );
+        }
+      }
+   }
+} tmp( target );
+
+bool at_eof = false;
+std::vector< char > buffer;
+buffer.resize( 4096 );
+content.clear();
+while(not at_eof)
+{
+   zip_int64_t size = ::zip_fread( target, buffer.data(), 4096 );
+   if (size > 0)
+   {
+      const std::size_t sz = content.size();
+      content.resize( sz + size );
+      std::copy( buffer.begin(), buffer.begin() + size, content.begin() + sz);
+   }
+   at_eof = (size != 4096);
+}
+return true;
+!!!520112.cpp!!!	write(in subpath : string, in content : string) : void
+// Create character buffer for file content.
+char * sbuf = ::malloc( content.size() );
+if (sbuf == nullptr)
+{
+   throw std::bad_alloc();
+}
+std::copy(content.begin(), content.end(), sbuf);
+::zip_source_t * buf = ::zip_source_buffer( this->arch_, sbuf, content.size(), 1);
+
+// check if filename already exists
+::zip_int64_t idx = ::zip_name_locate( this->arch_, subpath.c_str(), ZIP_FL_ENC_GUESS );
+if (idx == -1)
+{
+   // file not found?
+   if (ZIP_ER_NOENT != ::zip_error_code_zip( this->arch_ ))
+   {
+       throw archive_error( ::zip_error_code_zip( this->arch_ ) );
+   }
+   idx = ::zip_file_add( this->arch_, subpath.c_str(), buf, ZIP_FL_ENC_GUESS );
+}
+else
+{
+    // Replace existing content
+    idx = ::zip_file_replace( this->arch_, idx, buf, ZIP_FL_ENC_GUESS );
+}
+if (idx == -1)
+{
+   // Zip operation failed, decrement count on buf.
+   ::zip_source_free( buf );
+   throw archive_error( ::zip_error_code_zip( this->arch_ ) );
+}
+

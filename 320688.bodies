@@ -1,0 +1,132 @@
+class datum_type
+!!!565680.cpp!!!	datum_type(in other : ::datum)
+this->dptr = nullptr;
+this->dsize = 0;
+if (other.dsize > 0)
+{
+   this->dptr = static_cast< char* >( ::malloc( other.dsize ) );
+   if ( nullptr == this->dptr )
+   {
+      throw std::bad_alloc();
+   }
+   ::memcpy( this->dptr, other.dptr, other.dsize );
+   this->dsize = other.dsize;
+}
+
+!!!568112.cpp!!!	datum_type(inout other : ::datum)
+this->dptr = nullptr;
+this->dsize = 0;
+std::swap( this->dptr, other.dptr );
+std::swap( this->dsize, other.dsize );
+
+!!!565808.cpp!!!	datum_type(in other : gdbm_sink::datum_type)
+this->dptr = nullptr;
+this->dsize = 0;
+if (other.dsize > 0)
+{
+   this->dptr = static_cast< char* >( ::malloc( other.dsize ) );
+   if ( nullptr == this->dptr )
+   {
+      throw std::bad_alloc();
+   }
+   ::memcpy( this->dptr, other.dptr, other.dsize );
+   this->dsize = other.dsize;
+}
+
+
+!!!567984.cpp!!!	datum_type(out other : gdbm_sink::datum_type)
+this->dptr = nullptr;
+this->dsize = 0;
+std::swap( this->dptr, other.dptr );
+std::swap( this->dsize, other.dsize );
+!!!565936.cpp!!!	~datum_type()
+if ( this->dptr )
+{
+  ::free( this->dptr );
+}
+!!!566064.cpp!!!	buffer(in a_buffer : string) : void
+// a_buffer is empty
+if ( a_buffer.empty() )
+{
+   if ( this->dsize > 0 )
+   {
+      ::free( this->dptr );
+      this->dptr = nullptr;
+      this->dsize = 0;
+   }
+   return;
+}
+else
+{
+   if ( this->dsize > 0 )
+   {
+      // Check if buffer contents are not the same.
+      if (0 != a_buffer.compare( 0, a_buffer.size(), this->dptr, this->dsize ) )
+      {
+         // conversion of dsize is safe as we have tested it is greater than 0
+         if ( a_buffer.size() != std::size_t( this->dsize ) )
+         {
+            // current buffer is different size
+            //
+            // * If realloc fails then newptr is nul and dptr is untouched.
+            //
+            // * If realloc succeeds and newptr /= dptr then realloc has called free( dptr ).
+            //
+            // This requires using newptr to check for nul return before assigning
+            // the value to dptr. In this way a failure leaves the object in a valid state.
+            char * newptr = static_cast< char* >( ::realloc( this->dptr, a_buffer.size() * sizeof( char ) ) );
+            if ( nullptr == newptr )
+            {
+               throw std::bad_alloc();
+            }
+            std::swap( newptr, this->dptr );
+         }
+      }
+   }
+   else
+   {
+      this->dptr = static_cast< char* >( ::malloc( a_buffer.size() * sizeof( char ) ) );
+      if ( nullptr == this->dptr )
+      {
+         throw std::bad_alloc();
+      }
+   }
+   ::memcpy( this->dptr, a_buffer.data(), a_buffer.size() * sizeof( char ) );
+   this->dsize = a_buffer.size();
+}
+!!!568240.cpp!!!	append(in a_buffer : string) : void
+// a_buffer is empty is valid input, just ignore
+if ( a_buffer.empty() )
+{
+   return;
+}
+else
+{
+   if ( this->dsize > 0 )
+   {
+           // current buffer exists
+            //
+            // * If realloc fails then newptr is nul and dptr is untouched.
+            //
+            // * If realloc succeeds and newptr /= dptr then realloc has called free( dptr ).
+            //
+            // This requires using newptr to check for nul return before assigning
+            // the value to dptr. In this way a failure leaves the object in a valid state.
+            char * newptr = static_cast< char* >( ::realloc( this->dptr, this->dsize + a_buffer.size() * sizeof( char ) ) );
+            if ( nullptr == newptr )
+            {
+               throw std::bad_alloc();
+            }
+            std::swap( newptr, this->dptr );
+   }
+   else
+   {
+      this->dptr = static_cast< char* >( ::malloc( a_buffer.size() * sizeof( char ) ) );
+      if ( nullptr == this->dptr )
+      {
+         throw std::bad_alloc();
+      }
+   }
+   ::memcpy( this->dptr + this->dsize, a_buffer.data(), a_buffer.size() * sizeof( char ) );
+   this->dsize = this->dsize + a_buffer.size();
+}

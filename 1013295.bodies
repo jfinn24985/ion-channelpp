@@ -1,0 +1,171 @@
+class subspecie
+!!!1893935.cpp!!!	echo_input(inout fid : ostream) : void
+  fid << constants::fssubs() << "\n";
+  fid << constants::fsname() << " \"" << code_name_ << "\"\n";
+  fid << constants::fsrtsw() << " " << rate_swap_ << "\n";
+  for (std::vector< substate >::const_iterator idx = states_.begin(); idx != states_.end(); ++idx)
+  {
+    fid << constants::fssubn() << " \"" << idx->code_name () << "\"\n";
+    fid << constants::fsenth() << " " << idx->enthalpy () << "\n";
+    fid << constants::fsentr() << " " << idx->entropy () << "\n";
+    fid << constants::fsrtsw() << " " << idx->rate_swap () << "\n";
+    fid << constants::fsend() << "\n";
+  }
+  fid << constants::fsend() << "\n\n";
+!!!1895087.cpp!!!	swap(inout other : subspecie) : void
+  std::swap(states_, other.states_);
+  std::swap(rate_swap_, other.rate_swap_);
+  std::swap(code_name_, other.code_name_);
+!!!1895343.cpp!!!	read_input(inout parser : input_reader) : void
+  IONCH_REQUIRE(parser.name() == constants::fssubs(), "Input section is not for a subspecie");
+
+  std::bitset< 3 > mask_ (true);
+  enum  // bit set indices
+  {
+    MASK_LABEL = 0,
+    MASK_RATE_CHG = 1,
+    SUBMASK_ENTHALPY = 1,
+    MASK_CONCENTRATION = 2,
+    SUBMASK_ENTROPY = 2
+  };
+
+  // no optional argument to subspecie
+  IONCH_INPUT(parser.value().empty(), "Subspecie takes no arguments", constants::fssubs());
+
+  // process section
+  while (parser.next())
+  {
+    if (parser.name() == constants::fsend())
+      break;
+
+    try
+    {
+      // looking for ctarg, name, ratgr
+      if (parser.name() == constants::fsname())
+      {
+        this->code_name_ = parser.value();
+        parser.dequote(this->code_name_);
+        IONCH_INPUT(this->code_name_.size() == 2, "Bad specie code name, 2 letters required", constants::fssubs());
+        mask_.reset(MASK_LABEL);
+      }
+      else if  (parser.name() == constants::fsrtsw())
+      {
+        this->rate_swap_ = boost::lexical_cast< double >(parser.value());
+        IONCH_INPUT(this->rate_swap_ >= 0.0, "Probability rates must be greater than zero", constants::fssubs());
+        mask_.reset(MASK_RATE_CHG);
+      }
+      else if  (parser.name() == constants::fssubn())
+      {
+        // Substate parser loop
+        substate self;
+        self.read_input(parser);
+        this->states_.push_back (self);
+      }
+      else
+      {
+        static const bool recognised_option (false);
+        IONCH_INPUT(recognised_option, "Option "+parser.name()+" is not valid at this point in a subspecie section", constants::fssubs());
+      }
+    }
+    catch (boost::bad_lexical_cast &e)
+    {
+      const bool convert_succeed(false);
+      IONCH_INPUT(convert_succeed, e.what(), constants::fssubs());
+    }
+  }
+  if (mask_.any())
+  {
+    static const bool all_options_found (false);
+    IONCH_INPUT(all_options_found, "Not all required tags were present.", constants::fssubs());
+  }
+  // Normalise substate rates if subspecie is valid.
+  IONCH_INPUT(this->is_valid(), "Missing entries or incorrect entries in input.", constants::fssubs());
+
+  double rate_sum (0.0);
+  for (const_iterator idx = begin(); idx != end(); ++idx)
+  {
+    rate_sum += idx->rate_swap ();
+  }
+  IONCH_CHECK(rate_sum > 0.0, "Should never have sum less-equal than zero for valid subspecie.");
+  for (std::vector< substate >::iterator idx = states_.begin(); idx != states_.end(); ++idx)
+  {
+    idx->normalise_rate_swap (rate_sum);
+  }
+!!!1895471.cpp!!!	associate(in fm : formation, in beg : std::vector<specie>::const_iterator, in end : std::vector<specie>::const_iterator) : void
+  double population_total = 0.0;
+  for (std::vector< subspecie::substate >::iterator state = states_.begin();
+       state != states_.end(); ++state)
+  {
+    const std::string ion (state->code_name ());
+    bool not_found (true);
+    size_t counter = 0;
+    // Find specie for each substate of the subspecie
+    for (std::vector<specie>::const_iterator ispec = beg; ispec != end and (not_found); ++ispec, ++counter)
+    {
+      if (ion == ispec->code_name())
+      {
+        IONCH_INPUT (ispec->is_solute(), "Ion specie found for subspecie " + state->code_name() + " was not a solute specie.",
+                     constants::fssalt());
+        IONCH_INPUT (ispec->valency() > 0.0 or ispec->valency() < 0.0, "Subspecie ion should have non-zero valency.",
+                     constants::fssalt());
+        state->set_ion_index (counter);
+        not_found = false;
+      }
+    }
+    // Check ion found
+    IONCH_INPUT (not not_found, "Could not find substate ion " + ion + " for " + state->code_name(),
+                 constants::fssubs());
+    // calculate the sub-population
+    double exponent(state->enthalpy () * 1000.0 - state->entropy () * fm.temperature());
+    IONCH_INPUT (not std::isnan(exponent), "Invalid enthalpy and entropy values.", constants::fssubs());
+    exponent *= fm.beta() / constants::avogadro_number();
+    state->set_relative_population (1.0 / (1.0 + std::exp(exponent)));
+    population_total += state->relative_population ();
+  }
+  // Normalise population
+  for (std::vector< subspecie::substate >::iterator state = states_.begin();
+       state != states_.end(); ++state)
+  {
+    state->normalise_relative_population(population_total);
+  }
+!!!1895599.cpp!!!	help_information(inout exemplar : input_help) : void
+  // ----------------------------------------
+  // add section
+  // ----------------------------------------
+
+  const std::string seclabel (constants::fssubs());
+  //   Specie input section definition
+  exemplar.add_section (seclabel, "Subspecie input section definition");
+
+  // ----------------------------------------
+  // add parameters
+  // ----------------------------------------
+  {
+    const std::string description("[required, number] The name of the sub-specie.");
+    exemplar.description(seclabel).add_options()(constants::fsname().c_str(), description.c_str());
+  }
+  {
+    const std::string description("[required, two letter specie code] The beginning of a state definition. There must be at least two states defined. A state definition continues from this label to an end label. This specie code must match one of the species defined elsewhere.");
+    exemplar.description(seclabel).add_options()(constants::fssubn().c_str(), description.c_str());
+  }
+  {
+    const std::string description("(in "+constants::fssubn()+")[optional, default = 0, number] The enthalpy of difference between subspecies (in kJ/mol units).");
+    exemplar.description(seclabel).add_options()(constants::fsenth().c_str(), description.c_str());
+  }
+  {
+    const std::string description("(in "+constants::fssubn()+")[optional, default = 0, number] The entropy of difference between subspecies (in J/mol/K units).");
+    exemplar.description(seclabel).add_options()(constants::fsentr().c_str(), description.c_str());
+  }
+  {
+    std::stringstream description;
+    description << "(in " << constants::fssubs();
+    description << ")[required, number] The probability of this subspecie ";
+    description << "group being selected for an exchange between substates, ";
+    description << "compared to other subspecie groups.\n\n";
+    description << "(in " << constants::fssubn();
+    description << ")[required, number] The probability of this substate ";
+    description << "being selected for an exchange between substates,";
+    description << "compared to other substates in this group.";
+    exemplar.description(seclabel).add_options()(constants::fstype().c_str(), description.str().c_str());
+  }
+

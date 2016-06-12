@@ -1,0 +1,187 @@
+class d3_distribution
+!!!487985.cpp!!!	description(inout os : ostream) : void
+os << "SAMPLER [" << this->type_label_() << "]\n";
+os << " Collect sample 3D density distribution of each specie.\n";
+for (auto const& val : this->parameters_)
+{
+  os << " - " << val.first << "  : " << val.second << "\n";
+}
+!!!365617.cpp!!!	make_sampler(in paramset : string, in simtype : string) : void
+std::unique_ptr<d3_distribution> result (new d3_distribution);
+result->parameters_ = paramset;
+return result.release();
+!!!365873.cpp!!!	on_checkpoint(in sim : simulator) : void
+// Write out 3D data
+for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
+{
+  if (this->distributions_[ispec].count() > 0)
+  {
+    // TODO sim.checkpoint_directory()
+    std::stringstream ofs;
+    ofs << core::strngs::comment_begin();
+    ofs << " TITLE \"3D density distribution histogram for specie ";
+    ofs << sim.get_specie(ispec).label() << "\"\n";
+    //ofs << core::strngs::comment_begin() << " UUID ";
+    //ofs << sim.uuid() << "\n";
+    ofs << core::strngs::comment_begin();
+    ofs << " LABELS X(Y,Z)*(MEAN)\n";
+    ofs << core::strngs::comment_begin();
+    ofs << " UNITS *ATOMS\n";
+    ofs << std::fixed;
+    ofs.precision(6);
+    for (auto XYZ: this->distributions_[ispec])
+    {
+      for (auto YZ: XYZ)
+      {
+        for (auto Z: YZ)
+        {
+          ofs << " " << std::setw(10) << Z.mean();
+        }
+        ofs << "\n";
+      }
+      ofs << "\n";
+    }
+    sim.get_sink().write( "d3df-"+sim.get_specie(ispec).label()+".dat", ofs.str() );
+  }
+}
+
+!!!366001.cpp!!!	on_sample(in sys : simulator, inout log : ostream) : void
+const particle::conf &ens(sys.get_ensemble());
+for (std::size_t ith = 0; ith != ens.size(); ++ith)
+{
+  const std::size_t ispec (ens.key(ith));
+  if (ispec != particle::ensemble::nkey)
+  {
+    this->samplers_[ispec].insert(ens.x(ith),ens.y(ith),ens.z(ith));
+  }
+}
+// Move data from samplers to histogram
+for (std::size_t ispec = 0; ispec != sys.specie_count(); ++ispec)
+{
+  auto &smplr = this->samplers_[ispec];
+  this->distributions_[ispec].append (smplr.begin(), smplr.end());
+  smplr.reset();
+}
+!!!365745.cpp!!!	prepare(in sim : simulator, inout trans : stepper) : void
+const static std::string bin_label ("bins");
+const static std::string min_label ("min");
+const static std::string max_label ("max");
+const static std::string step_label ("step");
+if (not this->distributions_.empty())
+{
+  this->distributions_.clear ();
+}
+if (not this->samplers_.empty())
+{
+  this->samplers_.clear ();
+}
+size_t bin_count (0ul);
+double minimum (0.0);
+double maximum (0.0);
+double stepsize (0.0);
+if ("bulk" == sim.type_label())
+{
+  // Build axis and 3d_sampler.
+  // MIN = 0
+  // MAX = box
+  // STEP = box/100
+  bin_count = 20ul;
+  // minimum = 0.0;
+  maximum = std::cbrt(sim.volume());
+  // stepsize = 0.0;
+  if (0 != this->parameters_.count(bin_label))
+  {
+    bin_count = boost::lexical_cast< std::size_t >(this->parameters_[bin_label]);
+  }
+  if (0 != this->parameters_.count(min_label))
+  {
+    minimum = boost::lexical_cast< double >(this->parameters_[min_label]);
+  }
+  if (0 != this->parameters_.count(max_label))
+  {
+    maximum = boost::lexical_cast< std::size_t >(this->parameters_[max_label]);
+  }
+  if (0 != this->parameters_.count(step_label))
+  {
+    stepsize = boost::lexical_cast< std::size_t >(this->parameters_[step_label]);
+    bin_count = 0ul;
+  }
+  utility::digitiser axis;
+  if (0 != bin_count)
+  {
+    axis = {minimum, maximum, bin_count};
+  }
+  else
+  {
+    axis = {minimum, maximum, stepsize};
+  }
+
+  utility::digital_3d_sampler smplr({axis,axis,axis});
+  this->samplers_.resize (sim.specie_count(), smplr);
+
+  utility::estimate_3d data({axis.size(),axis.size(),axis.size()});
+  this->distributions_.resize (sim.specie_count(), data);
+}
+
+// Look for per-specie definitions thar over-ride any default
+// definitions
+for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
+{
+  if (0 != this->parameters_.count(sim.get_specie(ispec).label()))
+  {
+    double smin (minimum);
+    double smax (maximum);
+    double step (0.0);
+    std::size_t scount (0ul);
+    std::stringstream ss (this->parameters_[sim.get_specie(ispec).label()]);
+    while (ss)
+    {
+      std::string name;
+      ss >> name;
+      if (name.empty()) break;
+      if (bin_label == name)
+      {
+        ss >> scount;
+      }
+      else if (min_label == name)
+      {
+        ss >> smin;
+      }
+      else if (max_label == name)
+      {
+        ss >> smax;
+      }
+      else if (step_label == name)
+      {
+        ss >> step;
+      }
+      else
+      {
+        std::string known_value(bin_label);
+        UTILITY_INPUT(name == known_value, "keyword \""+name+"\" from \""+this->parameters_[sim.get_specie(ispec).label()]+"\" is not recognised by the "+d3_distribution::type_label()+" sampler.", core::strngs::sampler_label());
+      }
+    }
+    utility::digitiser saxis;
+    if (0 != scount)
+    {
+      saxis = {smin, smax, scount};
+    }
+    else
+    {
+      saxis = {smin, smax, step};
+    }
+
+    utility::digital_3d_sampler ssmplr({saxis,saxis,saxis});
+    this->samplers_[ispec].swap(ssmplr);
+
+    this->distributions_[ispec].resize({saxis.size(),saxis.size(),saxis.size()});
+  }
+}
+
+// Add sampler only to outer observers.
+trans.add_outer_observer(boost::bind (&d3_distribution::on_sample, this, _1, _2), true);
+trans.add_check_observer(boost::bind (&d3_distribution::on_checkpoint, this, _1), true);
+trans.add_reset_observer(boost::bind (&d3_distribution::on_reset, this));
+
+
+

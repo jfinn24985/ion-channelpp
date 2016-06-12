@@ -1,0 +1,62 @@
+class metropolis_sampler
+!!!487601.cpp!!!	description(inout os : ostream) : void
+os << "[sampler] " << this->type_label_() << "\n";
+os << " Sample the metropolis factor of each trial\n";
+!!!731057.cpp!!!	enrol(inout sim : simulator) : void
+if (not this->report_conx_.connected())
+{
+  auto sig = boost::any_cast< platform::simulator::report_signal_type* >(sim.get_signal("report"));
+  this->report_conx_ = sig->connect(boost::bind(&metropolis_sampler::on_report, this, _1, _2));
+}
+if (not this->sample_conx_.connected())
+{
+  auto sig = boost::any_cast< platform::simulator::inner_loop_signal_type* >(sim.get_signal("inner-loop"));
+  this->sample_conx_ = sig->connect(boost::bind(&metropolis_sampler::on_loop, this, _1));
+}
+
+!!!731057.python!!!	enrol(inout sim : simulator) : void
+if not self.report_conx_ or not self.report_conx.connected():
+  sig = sim.get_signal("report")
+  self.report_conx_ = sig.connect(lambda *args: self.on_report(*args))
+if not self.sample_conx_ or not self.sample_conx_.connected():
+  sig = sim.get_signal("outer-loop")
+  self.sample_conx_ = sig.connect(lambda *args: self.on_sample(*args))
+if not self.mean_signal_:
+  import signals
+  self.mean_signal_ = signals.signal()
+if not sim.has_signal(self.type_label()):
+  sim.set_signal(self.type_label(), self.mean_signal_)
+!!!175025.cpp!!!	make_sampler(in param_set : string, inout sim : simulator) : void
+UTILITY_INPUT(param_set.empty(),"The "+type_label_()+" sampler requires no parameters.",core::strngs::sampler_label());
+boost::shared_ptr< base_sampler > smplr( new metropolis_sampler );
+sim.share_observer( smplr );
+!!!1162543.cpp!!!	on_loop(in a_trial : change_set) : void
+if (not a_trial.fail())
+{
+  // Collect factor for all trials that reached Metropolis/Hastings acceptance
+  // check.
+  this->boltzmann_factor_.append(a_trial.metropolis_factor ());
+  this->energy_change_.append(std::exp(-a_trial.energy ()));
+}
+else
+{
+  // For all trials that failed before Metropolis/Hastings acceptance
+  // check we accept the previous trial again. The failures are due to 
+  // things like particle-particle or cutoff distance overlap.
+  this->boltzmann_factor_.append(0.0);
+  // The difference in energy will be zero:
+  this->energy_change_.append(1.0);
+}
+!!!174769.cpp!!!	on_report(in sys : simulator, inout log : ostream) : void
+log << this->type_label()
+    << " : P_mean       = " << this->boltzmann_factor_.mean() << " var = "
+    << this->boltzmann_factor_.variance() << "\n";
+log << std::string(this->type_label().size(),' ')
+    << " : -log(P_mean) = " << -std::log(this->energy_change_.mean()) << " var = "
+    << std::log(this->energy_change_.variance()) << "\n";
+log << core::strngs::horizontal_bar() << "\n";
+!!!174641.cpp!!!	prepare(inout sim : simulator) : void
+this->boltzmann_factor_.reset();
+this->energy_change_.reset();
+!!!217136.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );

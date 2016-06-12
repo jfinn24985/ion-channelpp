@@ -1,0 +1,40 @@
+class gc_choice_pbc
+!!!2101807.cpp!!!	gc_choice_pbc(in ispec : size_t, in params : string)
+UTILITY_INPUT( params.empty() 
+      or ( 1 == params.size() and 1 == params.count( core::strngs::fsspec() ) ),
+     "Grand Canonical trial requires no extra parameters.", 
+     core::strngs::fstry() );
+!!!2102063.cpp!!!	generate(inout sys : simulator) : change_set
+this->begin_trial();
+// Choose specie to GC.
+return (sys.get_random().randint(0,1) == 0 ? this->adder_.generate(sys) :
+  this->remover_.generate(sys));
+!!!2102063.python!!!	generate(inout sys : simulator) : change_set
+self.begin_trial()
+if sys.get_random().randint(0,1) == 0:
+  # Do add
+  return self.adder_.generate(sys)
+else:
+  # Do delete
+  return self.remover_.generate(sys)
+!!!383793.cpp!!!	report(in sim : simulator, inout out : ostream, in total : size_t) : void
+this->base_choice::report(sim, out, total);
+this->adder_.report(sim, out, total);
+this->remover_.report(sim, out, total);
+!!!587313.cpp!!!	do_reset() : void
+this->adder_.reset();
+this->remover_.reset();
+!!!212144.cpp!!!	make_chooser(in params : string, in rate : double, inout sim : simulator) : void
+for (std::size_t ispec = 0; ispec != sim.specie_count (); ++ispec)
+{
+   // All species with non-zero specie rate can have a GC move
+   // in a PBC simulation
+   auto const& spec = sim.get_specie( ispec );
+   const double choice_rate { rate * spec.rate() };
+   if ( not utility::feq( choice_rate, 0.0 ) )
+   {
+      std::unique_ptr< base_choice > choice_ptr( new gc_choice_pbc( ispec ) );
+      choice_ptr->set_probability( choice_rate );
+      //sim.add_chooser( choice_ptr.release() );
+   }
+}

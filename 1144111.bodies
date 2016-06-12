@@ -1,0 +1,58 @@
+class sampler_meta
+!!!2166703.cpp!!!	sampler_meta()
+if (0 == counter_)
+{
+   const std::string seclabel( core::strngs::sampler_label() );
+   // ----------------------------------------
+   // add section
+   // ----------------------------------------
+
+   //   Specie input section definition
+   core::input_help::exemplar().add_section( seclabel,
+         "Sampler input section definition.  In addition to the listed options, each individual "
+         "sampler subtype may have its own specific options." );
+
+   // ----------------------------------------
+   // add parameters
+   // ----------------------------------------
+
+   //  type : [required] trial subtype
+   {
+      const std::string description("[required, string] sampler subtype (see documentation for valid subtypes).");
+      core::input_help::exemplar().add_option( seclabel, core::strngs::fstype(), description);
+   }
+}
+++counter_;
+
+!!!204208.cpp!!!	do_read_entry(inout reader : input_reader) : bool
+if (reader.name().find(core::strngs::fstype()) == 0)
+{
+   // --------------------
+   // Evaluator type
+   UTILITY_INPUT(not reader.value().empty(), "Sampler type must have a value.", this->section_label());
+   std::string val (reader.dequote(reader.value()));
+   UTILITY_INPUT(type_to_object_.count(val) != 0, "Sampler type ["+val+"] does not name a valid sampler for this application (see documentation).", this->section_label());
+   this->type_ = val;
+   missing_required_tags_.reset(SAMPLER_TYPE);
+}
+else
+{
+   // --------------------
+   // Choice specific parameters
+   UTILITY_INPUT (0 == this->parameter_set_.count (reader.name()), ("keyword \""+reader.name()+"\" appears more than once in a single in specie section"), core::strngs::fsspec());
+   this->parameter_set_.insert (std::make_pair(reader.name(), reader.value()));
+}
+return true;
+!!!204336.cpp!!!	do_read_end(inout sim : simulator) : void
+UTILITY_INPUT (not this->missing_required_tags_.any(), "Not all required tags were present.", this->section_label());
+
+// Call functor method to create sampler and add to simulator
+this->type_to_object_[ this->type_ ]( this->parameter_set_, sim );
+
+// Reset meta data
+this->missing_required_tags_ = std::bitset< SAMPLER_TAG_COUNT >( true );
+this->parameter_set_.clear();
+this->type_.clear();
+!!!268336.cpp!!!	do_reset() : void
+this->parameter_set_.clear();
+this->missing_required_tags_.reset();

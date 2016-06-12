@@ -1,0 +1,71 @@
+class formation_test_suite
+!!!1939503.cpp!!!	test_formation_help() : void
+  ionch::formation::help_information(ionch::input_help::exemplar());
+  TS_ASSERT (ionch::input_help::exemplar().have_section (ionch::constants::fsform()));
+!!!1939631.cpp!!!	canonical_geom_input() : string
+  static const std::string canon_input (
+    "geom\nzl1 5.30\nzl4 152.2\n"
+    "rl1 8.80\nrl4 30.00\nrl5 68.5\nrlvest 10.00\nrlcurv 5.00\n"
+    "\n\t\nend\nformation\nkelvin 300\nregion  \"zlim\" zl1 rl1 0.5\n"
+    "region  \"filt\" zl1 rl1 0.5\nregion  \"chan\" zl2 rl2 0.5\n"
+    "region  \"bulk\" zl4 rl5 2.0\nntarg  500\nend\n\n");
+  return canon_input;
+!!!1939759.cpp!!!	canonical_salt_input() : string
+  static const std::string canon_input (
+    "salt\nname \"KaCl\"\n"
+    "ratgr 1.00\nctarg 0.11\nend\n\n");
+  return canon_input;
+!!!1939887.cpp!!!	canonical_specie_input() : string
+  static const std::string canon_input (
+    "specie\nname \"GL\"\nratspc 0.166666666666667\n"
+    "ratmov 1.00\nratexc 0.00\nratgr 0.00\nratreg 0.00 0.00 0.00 0.00\nz -1.00\nd 2.78\n"
+    "chex 0.00\ntype mob\nn    4\n5.5585 -0.8635 -1.3775 2.52 5.5585 -0.8635 -1.3775 \n"
+    "0.787 5.511 -1.3895 2.57 0.787 5.511 -1.3895 \n-5.5585 0.8635 -1.3775 2.52 -5.5585 0.8635 -1.3775 \n"
+    "-0.787 -5.511 -1.3895 2.57 -0.787 -5.511 -1.3895 \nend\n\nspecie\nname \"GO\"\n"
+    "ratspc 0.166666666666667\nratmov 1.00\nratexc 0.00\nratgr 0.00\nratreg 0.00 0.00 0.00 0.00\n"
+    "z -0.10\nd 2.78\nchex 0.00\ntype mob\nn    4\n4.838 -4.2005 -0.119 2.42 4.838 -4.2005 -0.119 \n"
+    "4.237 4.6885 -0.142 2.38 4.237 4.6885 -0.142 \n-4.838 4.2005 -0.119 2.42 -4.838 4.2005 -0.119 \n"
+    "-4.237 -4.6885 -0.142 2.38 -4.237 -4.6885 -0.142 \nend\n\nspecie\nname \"LU\"\n"
+    "ratspc 0.166666666666667\nratmov 1.00\nratexc 0.00\nratgr 0.00\nratreg 0.00 0.00 0.00 0.00\n"
+    "z -0.10\nd 2.78\nchex 0.00\ntype mob\nn    4\n1.911 -4.3515 2.889 2.38 1.911 -4.3515 2.889 \n"
+    "4.517 1.8605 2.782 2.42 4.517 1.8605 2.782 \n-1.911 4.3515 2.889 2.38 -1.911 4.3515 2.889 \n"
+    "-4.517 -1.8605 2.782 2.42 -4.517 -1.8605 2.782 \nend\n\nspecie\nname \"SR\"\nratspc 0.166666666666667\n"
+    "ratmov 1.00\nratexc 0.00\nratgr 0.00\nratreg 0.00 0.00 0.00 0.00\n"
+    "z -0.10\nd 2.78\nchex 0.00\ntype mob\nn    4\n3.159 -2.3765 -2.889 2.42 3.159 -2.3765 -2.889 \n"
+    "2.351 3.0535 -2.852 2.45 2.351 3.0535 -2.852 \n-3.159 2.3765 -2.889 2.42 -3.159 2.3765 -2.889 \n"
+    "-2.351 -3.0535 -2.852 2.45 -2.351 -3.0535 -2.852 \nend\n\nspecie\nname \"Cl\"\n"
+    "ratspc 0.166666666666667\nratmov 0.50\nratexc 0.50\nratgr 0.50\nratreg 0.25 0.25 0.25 0.25\n"
+    "z -1.00\nd 3.60\nchex -0.227\ntype free\nend\n\nspecie\nname \"Ka\"\n"
+    "ratspc 0.166666666666667\nratmov 0.50\nratexc 0.50\nratgr 0.50\nratreg 0.2 0.2 0.2 0.2\n"
+    "z 1.00\nd 2.82\nchex 0.355\ntype free\nend\n\n");
+  return canon_input;
+!!!1940015.cpp!!!	make_formation(in state : formation_test_suite::FORM_STATE) : formation
+  ionch::formation var1;
+  if (state != DEFAULT_CTOR)
+  {
+    ionch::input_delegater var2(1ul);
+    var1.register_input_readers(var2);
+    boost::shared_ptr< std::iostream > imp (new std::stringstream);
+    switch (state)
+    {
+      // Use fall through semantics to build up input stream.
+    case BASIC_CONF_SET:
+      // no break
+    case BASIC_SALT_SET:
+      (*imp) << canonical_salt_input ();
+      // no break
+    case BASIC_SPECIE_SET:
+      (*imp) << canonical_specie_input ();
+      // no break
+    case BASIC_GEOM_SET:
+      (*imp) << canonical_geom_input ();
+      // no break
+    }
+    var2.read_input_file ("test", imp);
+    if (state == BASIC_CONF_SET)
+    {
+      std::stringstream nul_os;
+      var1.read_finalise(nul_os);
+    }
+  }
+  return var1;

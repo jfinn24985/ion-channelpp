@@ -1,0 +1,116 @@
+class gz_geometry
+!!!1646127.cpp!!!	serialize(inout ar : Archive, in version : unsigned int) : void
+    int nspec = spec_1.count ();
+    ar & nspec;
+    for (int spc = 0; spc < nspec; ++spc)
+    {
+        ar & hist[spc];
+    }
+!!!1646255.cpp!!!	gz_geometry(in a_env : geom, in a_spec : ion_specie)
+    nzireg.push_back (uint8_type(BulkRegion));
+    nzireg.push_back (uint8_type(ChannelRegion));
+!!!1647023.cpp!!!	do_readin() : void
+    const uint8_type nspec_ = spec_1.count ();
+
+    if (filename_.empty () || ! boost::filesystem::exists (filename_))
+    {
+        // define zzreg
+        for (uint8_type ispec_ = 0; ispec_ < nspec_; ++ispec_)
+        {
+            //
+            // Define sections using geom region boundaries
+            //
+            uint8_type ii = 0;
+            std::set< double > zzreg;
+
+            for (std::vector< uint8_type >::const_iterator ireg = nzireg.begin (); ireg != nzireg.end () && ii < Bins; ++ireg, ++ii)
+            {
+                zzreg.insert (geom_1.region_left (*ireg, ispec_));
+                zzreg.insert (geom_1.region_right (*ireg, ispec_));
+            }
+
+            /*<
+             write(*,*)"zzreg 012345 =", zzreg(0,i), zzreg(1,i), zzreg(2,i), zzreg(3,i), zzreg(4,i), zzreg(5,i)
+             >*/
+            if (DEBUG)
+            {
+                uint8_type i_ = 0;
+                std::set< double >::const_iterator ireg = zzreg.begin ();
+                double region_start_ = *ireg;
+                std::clog << "For specie: " << spec_1.name(ispec_) << " zzreg:\n";
+                for (++ireg; ireg != zzreg.end (); ++i_, ++ireg)
+                {
+                    if (DEBUG)
+                    {
+                        std::clog << " [" << int (i_) << "] = (" << region_start_ << ", " << *ireg << ")\n";
+                    }
+                    region_start_ = *ireg;
+                }
+                std::clog << "\n";
+            }
+            uint8_type i_ = 0;
+            std::set< double >::const_iterator ireg = zzreg.begin ();
+            double region_start_ = *ireg;
+
+            for (++ireg; ireg != zzreg.end (); ++i_, ++ireg)
+            {
+                hist[ispec_].push_back (histogram_type (dzgtarget , region_start_, *ireg, ispec_, geom_1));
+
+                region_start_ = *ireg;
+            }
+            
+        }
+
+        if (!filename_.empty ())
+        {
+            std::ofstream ofs (filename_.c_str ());
+            GRS400_ALWAYS (ofs, ("unable to open GZ geometry file " + filename_ + " for writing").c_str ());
+            boost::archive::text_oarchive oa (ofs);
+            oa << *this;
+        }
+    }
+    else
+    {
+        std::ifstream ifs (filename_.c_str ());
+        GRS400_ALWAYS (ifs, ("unable to open GZ geometry file " + filename_ + " for reading").c_str ());
+        boost::archive::text_iarchive ia (ifs);
+        ia >> *this;
+    }
+    nzireg.clear ();
+!!!1647151.cpp!!!	do_readin(inout scnr : reader) : void
+    GRS400_REQUIRE (scnr.name () == dictionary::gz_geometry_label, "incorrect section label");
+    bool dzg_target_defined = false;
+
+    while (scnr.next ())
+    {
+        if (scnr.name () == dictionary::region_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file gz." + dictionary::region_label + " tag in gz section with region number").c_str ());
+            int reg_;
+            scnr.get_content (reg_);
+            GRS400_ALWAYS (0 <= reg_ && reg_ < RegionSize
+                           , "invalid input file with invalid region index gz section");
+            nzireg.push_back (reg_);
+        }
+        else if (scnr.name () == dictionary::dzg_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::dzg_label + " tag with no content").c_str ());
+            scnr.get_content (dzgtarget);
+            dzg_target_defined = true;
+        }
+        else if (scnr.name () == dictionary::filename_label)
+        {
+            GRS400_ALWAYS (scnr.has_content ()
+                           , ("invalid input file " + dictionary::filename_label + " tag with no content").c_str ());
+            scnr.get_content (filename_);
+        }
+        else
+        {
+            GRS400_ALWAYS (scnr.at_end (), ("unrecognised tag in input file " + scnr.name ()).c_str ());
+            break;
+        }
+    }
+
+    GRS400_ALWAYS (dzg_target_defined, "Sampler 'gz' requires target division width (drg) in input file ");

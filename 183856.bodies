@@ -1,0 +1,41 @@
+class cylinder
+!!!253104.cpp!!!	contains(in pos : coordinate) : bool
+if ( this->half_length_ < std::abs( pos.y ) )
+{
+   return false;
+}
+if ( this->radius_ * this->radius_ < (pos.x * pos.x + pos.y * pos.y) )
+{
+   return false;
+}
+return true;
+!!!252336.cpp!!!	generate(inout pos : coordinate, inout rgen : random_distribution) : void
+// A random position within cylinder
+const double r{ rgen.uniform( this->radius_ ) };
+const double phi{ rgen.uniform( 0.0, core::constants::pi() * 2 ) };
+pos.x = r * std::cos( phi );
+pos.y = r * std::sin( phi );
+pos.z = rgen.uniform( -this->half_length_, this->half_length_ );
+
+!!!252336.python!!!	generate(inout pos : coordinate, inout rgen : random_distribution) : void
+self.begin_trial()
+ens = sys.get_ensemble()
+genr = sys.get_random()
+import change_set
+resultset = change_set.change_set( self )
+result = change_set.change_atom()
+resultset.add_atom( result )
+result.key = self.specie_key()
+if sys.get_specie( result.key ).count() == 0:
+  resultset.fail = True # No particles of this specie
+  return resultset
+elif sys.get_specie( result.key ).count() == 1:
+  result.index = ens.nth_specie_index( result.key, 0 )
+else:
+  result.index = ens.nth_specie_index( result.key, genr.randint( 0, sys.get_specie( result.key ).count() - 1) )
+result.old_position = ens.position ( result.index )
+sys.get_cell_region().new_position( result.new_position, result.key, genr )
+if not sys.get_cell_region().is_valid_position( result.new_position, result.key ):
+  resultset.fail = True # not a valid position
+return resultset
+

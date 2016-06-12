@@ -1,0 +1,32 @@
+class alternater_chooser
+!!!233392.cpp!!!	generate_choices(in sim : simulator, inout choices : base_choice) : void
+for (std::size_t ispec = 0; ispec != sim.specie_count (); ++ispec)
+{
+   // All species with non-zero specie rate can have a displacement move
+   auto const& spec = sim.get_specie( ispec );
+   const double choice_rate { this->rate_ * spec.rate() };
+   if ( not utility::feq( choice_rate, 0.0 ) )
+   {
+      std::unique_ptr< alternater_choice > choice_ptr( new alternater_choice( ispec ) );
+      choice_ptr->set_probability( choice_rate );
+      // To be able to share sampler_, "this" needs to be non-constant.
+      // This should be okay as what sampler_ points to is not changed
+      // execpt to increase the reference count.
+      choice_ptr->set_observer( const_cast< alternater_chooser* >(this)->sampler_ );
+      choices.push_back( choice_ptr.release() );
+   }
+}
+!!!232368.cpp!!!	make_chooser(in params : string, in type : string, in rate : double, inout sim : simulator) : void
+UTILITY_INPUT( params.empty(), "Accept trial requires no extra parameters", core::strngs::fstry() );
+
+std::unique_ptr< alternater_chooser > choice_ptr( new alternater_chooser( rate ) );
+choice_ptr->sampler_.reset( new periodic_cube::alternater_sampler );
+sim.add_chooser( choice_ptr.release() );
+boost::shared_ptr< observer::base_sampler > result( choice_ptr->sampler_ );
+sim.share_observer( result );
+!!!241072.cpp!!!	description(inout os : ostream) : void
+static const boost::format header(" %6s %7.2f");
+os << boost::format(header) % core::strngs::fstype() % (100.0*this->rate_) << "\n";
+!!!241200.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_ );
+wr[ ix ].add_entry( core::strngs::rate_label(), this->rate_ );

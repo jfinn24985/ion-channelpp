@@ -1,0 +1,44 @@
+class cubic_grid
+!!!1988527.cpp!!!	__init__(in self : , in length : double, in npart : size_t, inout rgen : random_distribution)
+: steps_ (std::ceil(std::cbrt(npart - 1))) // *
+, delta_ (length / float(this->steps_))
+, sequence_(std::pow(this->steps_, 3))
+{
+  while (std::pow(this->steps_, 3) < npart)
+  {
+    // (*)handle possible off-by-one case that may come from 
+    // converting to to floating point and back when npart is
+    // a cube of an integer.
+    ++this->steps_;
+  }
+  for (size_t ii = 0; ii != sequence_.size(); ++ii) sequence_[ii] = ii;
+  rgen.shuffle(sequence_);
+}
+!!!1988527.python!!!	__init__(in self : , in length : double, in npart : size_t, inout rgen : random_distribution)
+self.sequence_ = [x for x in range(pow(self.steps_, 3))]
+rgen.shuffle(self.sequence_)
+!!!1531055.cpp!!!	next(inout pnt : coordinate) : bool
+if (this->sequence_.empty())
+{
+  return false;
+}
+else
+{
+  lldiv_t part;
+  part = std::lldiv(std::int64_t(this->sequence_.back()), std::int64_t(this->steps_));
+  const std::size_t zi (part.rem);
+  part = std::lldiv(part.quot, std::int64_t(this->steps_));
+  const std::size_t xi (part.quot);
+  const std::size_t yi (part.rem);
+  pnt = particle::coordinate( this->delta_ * (xi + 0.5), this->delta_ * (yi + 0.5), this->delta_ * (zi + 0.5) );
+  this->sequence_.pop_back();
+  return true;
+}
+!!!1531055.python!!!	next(inout pnt : coordinate) : bool
+if len(self.sequence_) == 0:
+  raise StopIteration
+else:
+  xi, zi = divmod(self.sequence_.pop(), self.steps_)
+  xi, yi = divmod(xi, self.steps_)
+  from coordinate import coordinate
+  return coordinate( self.delta_ * (xi + 0.5), self.delta_ * (yi + 0.5), self.delta_ * (zi + 0.5) );

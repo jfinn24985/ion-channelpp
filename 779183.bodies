@@ -1,0 +1,226 @@
+class coulomb
+!!!594737.python!!!	__init__(inout self : , inout sim : simulator)
+sim.add_evaluator( self )
+pass
+!!!247985.cpp!!!	compute_potential(in spcs : specie, in ens : ensemble, inout changes : change_set, in start_index : size_t) : void
+// For each atom
+for (auto &atom : changes)
+{
+  const std::size_t idx = atom.index;
+  double energy_old = 0.0;
+  double energy_new = 0.0;
+  // Cache minimum inter-particle distances
+  const double ri =  spcs[ atom.key ].radius();
+  for (std::size_t j = start_index; j != ens.size(); ++j)
+  {
+    // Only use active particles.
+    if (j != idx and particle::ensemble::nkey != ens.key (j))
+    {
+      if (atom.do_new)
+      {
+        // NEW
+        // --------------------------------
+        // Check for overlap
+        if ( atom.new_rij[j] < spcs[ ens.key (j) ].radius() + ri )
+        {
+          changes.set_fail();
+          return;
+        }
+        // Use atom.new_rij
+        energy_new += (spcs[ ens.key (j) ].valency() / atom.new_rij[j]);
+      }
+      if (atom.do_old)
+      {
+        // OLD
+        // --------------------------------
+        // Use atom.old_rij
+        energy_old += (spcs[ ens.key (j) ].valency() / atom.old_rij[j]);
+      }
+    }
+  }
+  atom.energy_old += energy_old * spcs[ atom.key ].valency() * this->scalar_;
+  atom.energy_new += energy_new * spcs[ atom.key ].valency() * this->scalar_;
+}
+
+// auto &ens (sys.get_ensemble());
+// auto &spcs (sys.get_species());
+// 
+// // For each atom
+// for (auto &atom : changes)
+// {
+//   // split in to two loops if necessary
+//   std::size_t start (atom.index == start_index ? atom.index + 1 : start_index);
+//   std::size_t end (atom.index > start_index ? atom.index : ens.size());
+//   double energy_old = 0.0;
+//   double energy_new = 0.0;
+//   // Cache minimum inter-particle distances
+//   std::vector< double > cutoff (sys.specie_count(), spcs[ atom.key ].radius());
+//   for (size_t ispec = 0; ispec != sys.specie_count(); ++ispec)
+//   {
+//     cutoff[ispec] += spcs[ ispec ].radius();
+//   }
+//   while (start < end)
+//   {
+//     for (std::size_t j = start; j < end; ++j)
+//     {
+//       // Only use active particles.
+//       const size_t jkey (ens.key (j));
+//       if (particle::ensemble::nkey != jkey)
+//       {
+//         if (atom.do_new)
+//         {
+//           // NEW
+//           // --------------------------------
+//           // Check for overlap
+//           if (atom.new_rij[j] < cutoff[jkey])
+//           {
+//             changes.set_fail();
+//             return;
+//           }
+//           // Use atom.new_rij
+//           energy_new += spcs[jkey].valency() / atom.new_rij[j];
+//         }
+//         if (atom.do_old)
+//         {
+//           // OLD
+//           // --------------------------------
+//           // Use atom.old_rij
+//           energy_old += spcs[jkey].valency() / atom.old_rij[j];
+//         }
+//       }
+//     }
+//     if (end == atom.index)
+//     {
+//       start = atom.index + 1;
+//       end = ens.size();
+//     }
+//     else
+//     {
+//       break;
+//     }
+//   }
+//   atom.energy_old += energy_old*spcs[ atom.key ].valency()*this->scalar_;
+//   atom.energy_new += energy_new*spcs[ atom.key ].valency()*this->scalar_;
+// }
+// 
+!!!247985.python!!!	compute_potential(in spcs : specie, in ens : ensemble, inout changes : change_set, in start_index : size_t) : void
+if changes.fail:
+  return
+import numpy as np
+ens = sys.get_ensemble()
+nspec = sys.specie_count ()
+spcs = sys.get_species()
+## valency = np.array([x.valency for x in spcs]+[0,])
+## radius = np.array([x.radius for x in spcs]+[0,])
+for atom in changes.changes:
+  idx = atom.index
+  energy_old = 0.0
+  energy_new = 0.0
+  ri = spcs[ atom.key ].radius()
+  ## if atom.do_new:
+  ##   select_indices = np.where(np.logical_and(ens.key[start_index:len(ens)] != nspec, atom.new_rij[start_index:len(ens)] != 0.0))
+  ##   changes.fail = np.any(atom.new_rij[select_indices] < radius[ ens.key[select_indices] ] + ri)
+  ##   if changes.fail:
+  ##     return
+  ##   energy_new += np.sum(valency[ ens.key[select_indices] ] / atom.new_rij[select_indices])
+  ## if atom.do_old:
+  ##   select_indices = np.where(np.logical_and(ens.key[start_index:len(ens)] != nspec, atom.old_rij[start_index:len(ens)] != 0.0))
+  ##   energy_old += np.sum(valency[ ens.key[select_indices] ] / atom.old_rij[select_indices])
+  for jj, jspec in enumerate(ens.key[start_index:len(ens)], start_index):
+    if jj != idx and jspec != nspec:
+      if atom.do_new:
+        if atom.new_rij[jj] < spcs[ jspec ].radius() + ri:
+          changes.fail = True # set fail on overlap
+          return
+        # New energy
+        energy_new += (spcs[ jspec ].valency() / atom.new_rij[jj])
+      if atom.do_old:
+        # Old energy
+        energy_old += (spcs[ jspec ].valency() / atom.old_rij[jj])
+  # scale the energy by constants and add to atom
+  atom.energy_old += energy_old * spcs[ atom.key ].valency() * self.scalar_
+  atom.energy_new += energy_new * spcs[ atom.key ].valency() * self.scalar_
+!!!538800.cpp!!!	compute_total_potential(in sim : simulator) : double
+// Calculate the pairwise coulomb energies between
+// all charged particles.
+double energy = 0.0;
+auto const& ens = sim.get_ensemble();
+std::vector< double > rij( ens.size(), 0.0 );
+for (std::size_t idx = 0; idx != ens.size() - 1; ++idx)
+{
+   const std::size_t ispec = ens.key( idx );
+   if (particle::ensemble::nkey == ispec)
+   {
+      continue;
+   }
+   const double qi = sim.get_specie( ispec ).valency();
+   // calculate rij vector
+   sim.compute_distances( ens.position( idx ), ens.get_coordinates(), rij, ens.size(), idx + 1 );
+   
+   for (std::size_t jdx = idx + 1; jdx != ens.size(); ++jdx)
+   {
+      const std::size_t jspec = ens.key( jdx );
+      if (particle::ensemble::nkey == jspec)
+      {
+         continue;
+      }
+      energy += qi * sim.get_specie( jspec ).valency() / rij[ jdx ];
+   }
+}
+// scale energy
+energy *= this->scalar_;
+return energy;
+!!!538800.python!!!	compute_total_potential(in sim : simulator) : double
+if changes.fail:
+  return
+import numpy as np
+ens = sys.get_ensemble()
+nspec = sys.specie_count ()
+spcs = sys.get_species()
+## valency = np.array([x.valency for x in spcs]+[0,])
+## radius = np.array([x.radius for x in spcs]+[0,])
+for atom in changes.changes:
+  idx = atom.index
+  energy_old = 0.0
+  energy_new = 0.0
+  ri = spcs[ atom.key ].radius()
+  ## if atom.do_new:
+  ##   select_indices = np.where(np.logical_and(ens.key[start_index:len(ens)] != nspec, atom.new_rij[start_index:len(ens)] != 0.0))
+  ##   changes.fail = np.any(atom.new_rij[select_indices] < radius[ ens.key[select_indices] ] + ri)
+  ##   if changes.fail:
+  ##     return
+  ##   energy_new += np.sum(valency[ ens.key[select_indices] ] / atom.new_rij[select_indices])
+  ## if atom.do_old:
+  ##   select_indices = np.where(np.logical_and(ens.key[start_index:len(ens)] != nspec, atom.old_rij[start_index:len(ens)] != 0.0))
+  ##   energy_old += np.sum(valency[ ens.key[select_indices] ] / atom.old_rij[select_indices])
+  for jj, jspec in enumerate(ens.key[start_index:len(ens)], start_index):
+    if jj != idx and jspec != nspec:
+      if atom.do_new:
+        if atom.new_rij[jj] < spcs[ jspec ].radius() + ri:
+          changes.fail = True # set fail on overlap
+          return
+        # New energy
+        energy_new += (spcs[ jspec ].valency() / atom.new_rij[jj])
+      if atom.do_old:
+        # Old energy
+        energy_old += (spcs[ jspec ].valency() / atom.old_rij[jj])
+  # scale the energy by constants and add to atom
+  atom.energy_old += energy_old * spcs[ atom.key ].valency() * self.scalar_
+  atom.energy_new += energy_new * spcs[ atom.key ].valency() * self.scalar_
+!!!489137.cpp!!!	do_description(inout os : ostream) : void
+os << " Compute the change in pair-wise Coulomb potential\n";
+os << " Scale factor: " << this->factor_ << " / ( permittivity * T )\n";
+!!!489137.python!!!	do_description(inout os : ostream) : void
+print >>os, "[evaluator] coulomb"
+print >>os, " Calculate the change in interparticle Coulomb"
+print >>os, " potential."
+print >>os, " Independent scale factor: ", self.factor_
+print >>os, " Temperature dep. factor : ", self.scalar_
+pass
+!!!248241.cpp!!!	type_label_() : string
+  return std::string("coulomb");
+!!!248113.cpp!!!	make_evaluator(in param_set : std::map< std::string, std::string >, inout sim : simulator) : void
+// Check no parameters have been set
+UTILITY_INPUT(param_set.empty(),"Coulomb evaluator requires no input parameters.",core::strngs::evaluator_label());
+std::unique_ptr< coulomb > cc(new coulomb);
+sim.add_evaluator( cc.release() );

@@ -1,0 +1,408 @@
+class chempot_estimator
+!!!747311.cpp!!!	get_add_remove_ratio(in ispec : int) : double
+IONCH_REQUIRE (spec::isfree (ispec), "Error: specie index out of range");
+// Calculate the change in the number of attempts since the last
+// time this method was called.  ncret and ndest hold the count
+// from the last call.
+uint64_t create_count_ (0);
+uint64_t destroy_count_ (0);
+// Return 0 if no trials have been recorded
+double Result (0.0);
+
+for (int ireg = constants::izlim; ireg <= constants::ibulk; ++ireg)
+{
+    create_count_ += acrea1_[ispec][ireg][0];
+    destroy_count_ += adest1_[ispec][ireg][0];
+}
+
+if (ncret_[ispec] != create_count_ or ndest_[ispec] != destroy_count_)
+{
+    // When only one of the numerator or denominator is zero we
+    // arbitrarily return -1 or 1.
+    if (ncret_[ispec] == create_count_)
+    {
+        Result = -1.0;
+    }
+    else if (destroy_count_ == ndest_[ispec])
+    {
+        Result = 1.0;
+    }
+    else
+    {
+        // here we get dx = NEWx - OLDx
+        const double numer (create_count_ - ncret_[ispec]);
+        const double denom (destroy_count_ - ndest_[ispec]);
+        Result = std::log (numer / denom);
+    }
+}
+
+// Save current counts
+ncret_[ispec] = create_count_;
+ndest_[ispec] = destroy_count_;
+return Result;
+!!!1170351.cpp!!!	generate_choices() : void
+// Generate normalisation value for top-level items
+const double norm0 = this->independent_->rate_move () + this->independent_->rate_gc_salt () + this->independent_->rate_gc_individual ();
+
+// Reset the choice range.
+this->choice_range_ = 0.0;
+
+if (not bal::math::feq(this->independent_->rate_move (),0.0))
+{
+  // -----------------------
+  // making movement choices
+  // -----------------------
+  const double movescale = this->independent_->rate_move () / norm0;
+
+  double norm1; // Generate normalisation values across species
+  for (auto ispec = this->independent_->get_configuration ().specie_begin ();
+       ispec != this->independent_->get_configuration ().specie_end ();
+       ++ispec)
+  {
+    if (not bal::math::feq(ispec->rate_specie (), 0.0))
+    {
+      if (not (bal::math::feq(ispec->rate_move (),0.0) and bal::math::feq(ispec->rate_exchange (),0.0)))
+      {
+        norm1 += ispec->rate_specie ();
+      }
+    }
+  }
+
+  for (auto ispec = this->independent_->get_configuration ().specie_begin ();
+       ispec != this->independent_->get_configuration ().specie_end ();
+       ++ispec)
+  {
+    if (not bal::math::feq(ispec->rate_specie (), 0.0))
+    {
+      const double norm2 = (ispec->rate_move () + ispec->rate_exchange ());
+      if (not bal::math::feq(norm2, 0.0))
+      {
+        const double speciescale = movescale * ispec->rate_specie () / norm1;
+
+        const double dispmove = speciescale * ispec->rate_move () / norm2 * 0.5;
+        if (not bal::math::feq(dispmove, 0.0))
+        {
+          this->choices_.push_back (choice (dispmove, new small_displacement (*iter)));
+          this->choices_.push_back (choice (dispmove, new region_displacement (*iter)));
+        }
+        const double jumpmove = speciescale * ispec->rate_exchange () / norm2;
+        if (not bal::math::feq(jumpmove, 0.0))
+        {
+          this->choices_.push_back (choice (jumpmove, new jump_displacement (*iter)));
+          this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+        }
+      }
+    }
+  }
+}
+if (not bal::math::feq(this->independent_->rate_salt (),0.0))
+{
+  // ----------------------
+  // making salt GC choices
+  // ----------------------
+  auto anion = this->independent_->get_configuration ().specie_end (); // find the anion specie
+  const double saltscale = this->independent_->rate_salt () / norm0;
+
+  double norm1; // Generate normalisation values across species
+  for (auto ispec = this->independent_->get_configuration ().specie_begin ();
+       ispec != this->independent_->get_configuration ().specie_end ();
+       ++ispec)
+  {
+    if (ispec->is_free ())
+    {
+      if (ispec->is_cation ())
+      {
+        if (not bal::math::feq(ispec->rate_gc_salt (), 0.0))
+        {
+          double norm2 = 0.0;
+          for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+          {
+            norm2 += ispec->rate_region (ireg);
+          }
+          if (not (bal::math::feq(norm2,0.0)))
+          {
+            norm1 += ispec->rate_gc_salt ();
+          }
+        }
+      }
+      else
+      {
+        IONCH_INPUT(anion == this->independent_->get_configuration ().specie_end ()
+                    , "There may only be one free anion specie in the input");
+        anion = iter;
+      }
+    }
+  }
+  IONCH_INPUT(anion != this->independent_->get_configuration ().specie_end ()
+              , "There must be one free anion specie in the input");
+
+  for (auto ispec = this->independent_->get_configuration ().specie_begin ();
+       ispec != this->independent_->get_configuration ().specie_end ();
+       ++ispec)
+  {
+    if (ispec->is_cation ())
+    {
+      if (not bal::math::feq(ispec->rate_gc_salt (), 0.0))
+      {
+        double norm2 = 0.0;
+        for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+        {
+          norm2 += ispec->rate_region (ireg);
+        }
+        if (not (bal::math::feq(norm2,0.0)))
+        {
+          const double speciescale = saltscale * ispec->rate_gc_salt () / norm1;
+
+          for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+          {
+            const double regionrate = speciescale * ispec->rate_region (ireg) / (2 + norm2);
+            if (not bal::math::feq(regionrate, 0.0))
+            {
+              // add salt
+              this->choices_.push_back (choice (regionrate, new add_particle (*iter)));
+              for (int iv = 0; iv != std::nearbyint(iter->valency ()); ++iv)
+              {
+                this->choices_.back ().add_child (new add_particle (*anion));
+              }
+              this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+              // remove salt
+              this->choices_.push_back (choice (regionrate, new remove_particle (*iter)));
+              for (int iv = 0; iv != std::nearbyint(iter->valency ()); ++iv)
+              {
+                this->choices_.back ().add_child (new remove_particle (*anion));
+              }
+              this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+if (not bal::math::feq(this->independent_->rate_move (),0.0))
+{
+  // ----------------------------
+  // making individual gc choices
+  // ----------------------------
+  const double indvscale = this->independent_->rate_gc_individual () / norm0;
+
+  double norm1; // Generate normalisation values across species
+  for (auto ispec = this->independent_->get_configuration ().specie_begin ();
+       ispec != this->independent_->get_configuration ().specie_end ();
+       ++ispec)
+  {
+    if (ispec->is_free ())
+    {
+      if (not bal::math::feq(ispec->rate_gc_individual (), 0.0))
+      {
+        double norm2 = 0.0;
+        for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+        {
+          norm2 += ispec->rate_region (ireg);
+        }
+        if (not (bal::math::feq(norm2,0.0)))
+        {
+          norm1 += ispec->rate_gc_individual ();
+        }
+      }
+    }
+  }
+
+  for (auto ispec = this->independent_->get_configuration ().specie_begin ();
+       ispec != this->independent_->get_configuration ().specie_end ();
+       ++ispec)
+  {
+    if (ispec->is_free ())
+    {
+      if (not bal::math::feq(ispec->rate_gc_individual (), 0.0))
+      {
+        double norm2 = 0.0;
+        for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+        {
+          norm2 += ispec->rate_region (ireg);
+        }
+        if (not (bal::math::feq(norm2,0.0)))
+        {
+          const double speciescale = indvscale * ispec->rate_gc_salt () / norm1;
+
+          for (auto ireg = ionch::constants::izlim; ireg != ionch::constants::ibulk + 1; ++ireg)
+          {
+            const double regionrate = speciescale * ispec->rate_region (ireg) / (2 + norm2);
+            if (not bal::math::feq(regionrate, 0.0))
+            {
+              // add individual
+              this->choices_.push_back (choice (regionrate, new add_particle (*iter)));
+              this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+              // remove individual
+              this->choices_.push_back (choice (regionrate, new remove_particle (*iter)));
+              this->choice_range_ = this->choices_.back ().set_start (this->choice_range_);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+!!!707119.cpp!!!	iterate_chemical_potential() : void
+const int cpmeth (this->is_bulk () ? accum::malas1: this->cpmeth_);
+if (0 != cpmeth) // zero means do not adjust chemical potential.
+{
+  return;
+}
+
+// Constant for non-zero charge.
+const static double csloth (2 * (6 * std::log (2 + std::sqrt (3.0)) - constants::pi));
+const static double chcons = csloth * constants::sqr (this->run_.qstar() / patch::epsw()) / (8 * geom::lenblk());
+
+// current particle count in "bulk" sampling subregion of channel sim
+// or all particles in 'bulk' simulation
+std::vector< int > ncurr (spec::size (), 0);
+
+// Volume to use in calculations
+const double volume (this->is_bulk () ? geom::volblk() : geom::bulk_sample_volume());
+
+// Current per-specie concentration in bulk
+std::vector< double > cbulk (spec::size ());
+
+// malas2: Result vector and Success/failure of dgesv routine
+std::vector< double > rhs (spec::size ());
+
+constants::os_log << strngs::horizontal_bar << "\n";
+constants::os_log << " Chem. Pot. estimation iteration [over " << acharge_.size() << " trials]\n";
+constants::os_log << strngs::horizontal_bar << "\n";
+
+const double avchg = this->acharge_.mean ();
+constants::os_log << "Average system charge: " << avchg << "\n";
+
+// The number of free species
+std::size_t nfree = 0;
+
+for (auto ispec = spec::begin (); ispec != spec::end (); ++ispec)
+{
+  if (ispec->is_free ())
+  {
+    if (this->is_bulk ())
+    {
+      // In periodic boundary bulk simulation the number of particles
+      // is the total number for a specie (saved in anin[ibulk])
+      cbulk [ispec->index ()] = (this->anin_ [ispec->index ()][constants::ibulk].mean () * constants::to_SI ())
+                                / volume;
+      ncurr [ispec->index ()] = ispec->particles ().size ();
+    }
+    else
+    {
+      // In cylindrical cell simulation the bulk concentration comes
+      // from the 'bulk' sampling region
+      cbulk [ispec->index ()] = (this->anin_ [ispec->index ()][constants::isample].mean () * constants::to_SI ())
+                                / volume;
+
+      ncurr [ispec->index ()] = ispec->particles_in (constants::isample).size ();
+    }
+    ++nfree;
+  }
+}
+
+// For malas2 solve the fluctuation equations.
+if (cpmeth == malas2)
+{
+  double fluctn [nfree][nfree];
+  double navrg [nfree];
+  {
+    std::size_t index = 0;
+    for (auto ispec = spec::begin (); ispec != spec::end (); ++ispec)
+    {
+      if (ispec->is_free ())
+      {
+        rhs [index] = ispec->concentration () - cbulk [ispec->index ()];
+        navrg [index] = this->anin_ [ispec->index ()][constants::ibulk].mean ();
+        ++index;
+      }
+    }
+  }
+  for (std::size_t index = 0; index != nfree; ++index)
+  {
+    for (std::size_t jndex = 0; jndex != nfree; ++jndex)
+    {
+      fluctn [jndex][index] = (navrg [index] + navrg [jndex] - (navrg[index] * navrg[jndex]))
+                              / (this->beta() * volume);
+    }
+  }
+
+  int info = 0;
+  int ipiv [nfree]; // solver data
+  ionch::dgesv (nfree, 1, &fluctn[0][0], nfree, &ipiv[0], &rhs[0], 1, &info);
+  IONCH_ALWAYS (0 == info, "Matrix inversion in malasic's method 2 chemical potential iteration failed");
+}
+
+// ------------------------------------------------------------
+// INDIVIDUAL CHEMICAL POTENTIALS
+{
+  std::size_t index = 0;
+  for (auto ispec = spec::begin (); ispec != spec::end (); ++ispec)
+  {
+    if (ispec->is_free ())
+    {
+      // The changed chemical potentials
+      double new_chemical_potential (ispec->chemical_potential ());
+
+      // mu_i(n) = kT.log(rho^targ_i)+mu_ex(n)
+      //
+      // mu^ex_i(n) = mubar^ex_i(n-1)
+      // mubar^ex_i(n-1)=mu_i(n) - kT log(rhobar_i(n))
+      //
+      // chempi(n)*beta()={dlog(ctargi(ispec)) - dlog(tosi) + chexi(ispec)*beta() - dlog(cbulk(ispec)) + dlog(tosi)}
+      // chempi(n)       ={dlog(ctargi(ispec)/cbulk(ispec))/beta() + chempi(ispec)}
+
+      switch (cpmeth)
+      {
+      case malas1:
+        // change in chemical potential is ratio of target and
+        // current densities use average density when close to
+        // convergence concentration in current system
+        new_chemical_potential += std::log (ispec->concentration () / cbulk [ispec->index ()]);
+        break;
+
+      case malas2:
+        // Will only update if info was zero
+        new_chemical_potential -= rhs [index];
+        ++index;
+        break;
+
+      case acept1:
+        // Approximate density ratio with energy difference
+        // Approximating with bfdr-bfcr/(bfdr+bfcr)
+        new_chemical_potential += trial_->avgget (ispec->index ());
+        break;
+
+      case acept2:
+        // Approximate density ratio with trial ratios log(try(+)/try(-))
+        new_chemical_potential += trial_->accget (ispec->index ());
+        break;
+
+      default:
+        IONCH_CHECK (0 <= cpmeth and cpmeth <= acept2, "Unknown chemical potential update method");
+        break;
+      }
+
+      // non-zero charge correction
+      new_chemical_potential -= (ispec->valency() * avchg * chcons);
+
+      // Print some statistics
+      trial_->avergi (ispec->index ());
+
+      // Apply calculated chemical potentials
+      ispec->set_chemical_potential (new_chemical_potential);
+    }
+  }
+}
+
+
+// -----------------------------------------------------------------
+// Print simulation statistics
+trial_->accrat (constants::os_log);
+
+// Reset statistic counters in trial and acharge
+this->acharge_.reset ();
+trial_->zeroav();

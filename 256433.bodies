@@ -1,0 +1,94 @@
+class malasics_igcmc
+!!!488241.cpp!!!	description(inout os : ostream) : void
+os << "SAMPLER [" << this->type_label_() << "]\n";
+os << " Super-observer: used to perform iterative GCMC simulations.\n";
+os << " Use IGCMC to estimate the excess chemical potentials required\n";
+os << " to maintain the target concentrations of solute species.\n";
+os << "   Attila Malasics, Dirk Gillespie and Dezso¨ Boda \"Simulating\n";
+os << "   prescribed particle densities in the grand canonical\n";
+os << "   ensemble using iterative algorithms\", The Journal of Chemical\n";
+os << "   Physics, 2008, 128, 124102\n";
+this->igcmc::description(os);
+!!!488241.python!!!	description(inout os : ostream) : void
+print >>os, "[observer]",self.type_label()
+print >>os, " Iteratively estimate the excess chemical potential"
+print >>os, " of each specie in the cell."
+print >>os, "   Attila Malasics, Dirk Gillespie and Dezso Boda 'Simulating"
+print >>os, "   prescribed particle densities in the grand canonical"
+print >>os, "   ensemble using iterative algorithms', The Journal of Chemical "
+print >>os, "   Physics, 2008, 128, 124102"
+super( malasics_igcmc, self ).description( os )
+pass
+
+
+!!!458801.cpp!!!	do_on_super_loop(inout sys : simulator) : void
+for (size_t ispec = 0; ispec != sys.specie_count(); ++ispec)
+{
+  particle::specie & spcobj = sys.get_specie(ispec);
+  // only solute species have interesting chemical potentials
+  //if (spcobj.is_solute())
+  //{
+    double bulk_density = this->bulk_count_[ispec]/sys.volume(ispec);
+    if (not utility::feq(bulk_density,0.0))
+    {
+      spcobj.set_excess_potential(spcobj.chemical_potential() - std::log(bulk_density));
+    }
+  //}
+} 
+!!!458801.python!!!	do_on_super_loop(inout sys : simulator) : void
+import math
+for ispec, (mean, spc) in enumerate(zip(self.bulk_count_,sys.get_species())):
+  bulk_density = mean/sys.get_cell_region().volume(ispec)
+  if bulk_density != 0.0:
+    # ignore species with zero average density
+    spc.set_excess_potential( spc.chemical_potential() - math.log(bulk_density) )
+
+!!!459441.cpp!!!	make_super_looper(in params : string, inout sim : simulator) : void
+// Only generate for bulk simulations
+std::unique_ptr< malasics_igcmc > smplr(new malasics_igcmc);
+// Check parameters for usable values
+if (not params.empty())
+{
+  size_t count = 0;
+  if (params.end() != params.find (core::strngs::fsnstp()))
+  {
+    smplr->set_loop_size(boost::lexical_cast< std::size_t >(params.at(core::strngs::fsnstp())));
+    ++count;
+  }
+  UTILITY_INPUT(params.size() == count,
+                "Unused parameter for sampler type ["+malasics_igcmc::type_label_()+"]",
+                core::strngs::sampler_label ());
+}
+boost::shared_ptr< periodic_cube::igcmc > result( smplr.release() );
+dynamic_cast< periodic_cube::periodic_system& >( sim ).set_super_looper( result );
+!!!459185.cpp!!!	on_specie_count_signal(in means : estimater) : void
+for (size_t ispec = 0; ispec != this->bulk_count_.size(); ++ispec)
+{
+  this->bulk_count_[ispec] = means [ispec].mean();
+}
+!!!595633.python!!!	__init__(inout self : , in sim : simulator)
+open("chex.dat","w").truncate()
+!!!595505.python!!!	__del__(in self : )
+if self.specie_count_conx_ != None and self.specie_count_conx_.connected():
+  self.specie_count_conx_.disconnect()
+  self.specie_count_conx_ = None
+pass
+!!!457521.cpp!!!	do_prepare(inout sim : simulator) : void
+this->bulk_count_.clear();
+this->bulk_count_.resize(sim.specie_count());
+// Set up signal/slot to set specie means list
+if (not this->specie_count_conx_.connected())
+{
+  auto sig = boost::any_cast< boost::signals2::signal<void (const std::vector<utility::estimater>&) >* >(sim.get_signal("specie-count"));
+  // Need to cast signal from Any object
+  this->specie_count_conx_ = sig->connect(boost::bind(&malasics_igcmc::on_specie_count_signal, this, _1));
+}
+!!!457521.python!!!	do_prepare(inout sim : simulator) : void
+super( malasics_igcmc, self ).prepare( sim )
+# Set up signal/slot to set specie means list
+if self.specie_count_conx_ == None or not self.specie_count_conx_.connected():
+  sig = sim.get_signal("specie-count")
+  self.specie_count_conx_ = sig.connect(lambda *args: self.on_specie_count_signal(*args))
+pass
+!!!217776.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );

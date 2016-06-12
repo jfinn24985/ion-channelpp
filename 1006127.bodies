@@ -1,0 +1,135 @@
+class occluded_volume_observer
+!!!1837871.cpp!!!	clone(in params : string) : boost::shared_ptr< occluded_volume_observer >
+  std::stringstream input (params);
+  size_t n, rg;
+  std::string tmp;
+  bool ignore;
+  input >> n;
+  input >> rg;
+  input >> tmp;
+  IONCH_INPUT (input_reader::read_as_bool(tmp, ignore),
+               "Unable to read "+tmp+" as true or false as parameter to "+label (),
+               constants::fsaccu());
+  boost::shared_ptr < occluded_volume_observer > result (new occluded_volume_observer(n, rg, ignore));
+  return result;
+!!!1838127.cpp!!!	on_save(in form : formation, inout rep : report) : void
+  boost::shared_ptr< report::report_logger > logptr (rep.get_log (label ()));
+  report::report_logger &logger (*logptr.get());
+  logger << "\nPercentage of first region volume occupied by structural particles\n";
+  logger << constants::horizontal_bar() << "\n";
+  logger <<  " [    Left:   Right]   Occupied % \n";
+  logger << constants::horizontal_bar() << "\n";
+
+  std::string filename_ ("res/" + label() + "." + constants::firun () + ".dat");
+  std::ofstream os_vol (filename_.c_str(), (rep.step () == 0 ? std::fstream::trunc : std::fstream::ate));
+
+  os_vol << " " << std::setw (8) << rep.step ();
+
+  region const& target (form.get_region (reg_));
+  utility::estimate< utility::base_mean < double > > occl_stats;
+  // slices
+  {
+    double left = 0 - target.zlimit ();
+    double total_vol = 0.0;
+    const double width = (2 * target.zlimit() / nival_);
+    const double slice_volume = constants::pi() * utility::sqr (target.rlimit()) * width;
+
+    for (size_t idx = 0; idx != nival_; ++idx)
+    {
+      const double right = left + width;
+      double val = 0.0;
+      for (size_t idx = 0; idx != form.conformation().active_size(); ++idx)
+      {
+        const int ispec = form.conformation().specie_index(idx); // sphere specie
+
+        // ignore unused particle positions
+        if (ispec == ~0ul)
+        {
+          continue;
+        }
+
+        // ignore free species?
+        if (ignore_free_ and form.specie_set().get_specie(ispec).is_solute())
+        {
+          continue;
+        }
+
+        val += sphvol (left, right, form.conformation().rz (idx), form.specie_set().get_specie (ispec).radius());
+      }
+      total_vol += val;
+      val /= slice_volume;
+      occl_stats.append (val);
+      logger << " [" << std::setw (8) << std::setprecision (3) << left;
+      logger << ":" << std::setw (8) << std::setprecision (3) <<  right;
+      logger << "] " << std::setw (8) << std::setprecision (4) <<  (100.0 * val) << " %\n";
+      os_vol << " " << std::setw (13) << std::setprecision (9) << val;
+
+      // set left for next iteration
+      left = right;
+    }
+    // total
+    const double total_width = 2 * target.zlimit ();
+    const double total_volume = constants::pi() * utility::sqr (target.rlimit ()) * width;
+    total_vol /= total_volume;
+    logger << constants::horizontal_bar() << "\n";
+    logger << " [" << std::setw (8) << std::setprecision (3) << (0 - target.zlimit ());
+    logger << ":" << std::setw (8) << std::setprecision (3) <<  target.zlimit ();
+    logger << "] " << std::setw (8) << std::setprecision (4) <<  (100.0 * total_vol) << " %\n";
+  }
+  logger << " " << std::setw (19) << "Mean";
+  logger << " " << std::setw (8) <<  std::setprecision (4) << (100.0*occl_stats.mean()) << " %\n";
+  logger << " " << std::setw (19) << "Standard Deviation";
+  logger << " " << std::setw (8) << std::setprecision (4) << (100.0*std::sqrt(occl_stats.variance())) << " %\n";
+  logger << constants::horizontal_bar() << "\n";
+!!!1838255.cpp!!!	sphvol(in left : double, in right : double, in centre : double, in radius : double) : double
+  // assumes that spheres do not overlap with
+  // each other and with curved cylinder walls
+  const double leftmx = centre - radius;
+  const double rigtmx = centre + radius;
+
+  if (left < rigtmx and leftmx < right)
+  {
+    // sphere in region, start with total volume
+    double partvl = 4 * constants::pi() * (std::pow (radius, 3)) / 3;
+
+    // volume of sphere in cylinder
+    // check for partial overlap
+    if (leftmx < left)
+    {
+      // overlap to left
+      if (centre > left)
+      {
+        // overlap from inside: delete extra volume
+        const double h = left - leftmx;
+        partvl -= constants::pi() * utility::sqr (h) * (3 * radius - h) / 3;
+      }
+      else
+      {
+        // overlap from outside: delete sphere and add extra volume
+        const double h = rigtmx - left;
+        partvl = constants::pi() * utility::sqr (h) * (3 * radius - h) / 3;
+      }
+    }
+
+    // note: we use separate if for right-side overlap so we
+    // handle case where a sphere overlaps both boundaries.
+    if (rigtmx > right)
+    {
+      // overlap to right
+      if (centre < right)
+      {
+        // overlap from inside: delete extra volume
+        const double h = rigtmx - right;
+        partvl -= constants::pi() * utility::sqr (h) * (3 * radius - h) / 3;
+      }
+      else
+      {
+        // overlap from outside: delete sphere and add extra volume
+        const double h = right - leftmx;
+        partvl = constants::pi() * utility::sqr (h) * (3 * radius - h) / 3;
+      }
+    }
+
+    return partvl;
+  }
+  return 0.0;

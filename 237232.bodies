@@ -1,0 +1,374 @@
+class bloat
+!!!366000.cpp!!!	compute_potential(in spcs : specie, in ens : ensemble, inout changes : change_set, in start_index : size_t) : void
+//
+// Calculate the electric field at each tile. This
+//   should be the same as the previous field adjusted
+//   for the changes. We also calculate ripnew 
+//   distance arrays for any changes with new positions
+//
+// O(changes.size() * icc.size())
+this->cnew_ = this->c_;
+
+// Check size of ripnew
+if ( this->ripnew_.size() < changes.size() )
+{
+   this->ripnew_.resize( changes.size(), std::vector< double >( this->size() ) );
+}
+
+//
+//   C = (1/4.pi.eps) SUM{ (q_i dot(r_ip,u_i) / ||r_ip||^3 ) }
+//
+for (std::size_t cursor = 0; cursor != changes.size(); ++cursor)
+{
+   auto const& atom = changes[ cursor ];
+   const double valence = spcs[ atom.key ].valency();
+   const double q_alfa = valence * this->alfa_;
+   std::array< std::size_t, 2 > idx;
+   if ( atom.do_old )
+   {
+      // Subtract field from old position from cnew
+      idx[ 0 ] = atom.index;
+      for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
+      {
+          idx[ 1 ] = ipch;
+         const double rxki = this->grid_->x( ipch ) - atom.old_position.x;
+         const double ryki = this->grid_->y( ipch ) - atom.old_position.y;
+         const double rzki = this->grid_->z( ipch ) - atom.old_position.z;
+         const double rip  = this->rip_( idx );
+         const double rki  = rxki * this->grid_->ux( ipch ) 
+   	                     + ryki * this->grid_->uy( ipch )
+                           + rzki * this->grid_->uz( ipch );
+         this->cnew_[ ipch ] -= q_alfa * rki / std::pow( rip, 3 );
+      }
+   }
+   if ( atom.do_new )
+   {
+      // Add field from new position to cnew 
+      idx[ 0 ] = cursor;
+      for (std::size_t ipch = 0; ipch != this->size(); ++ipch )
+      {
+          idx[ 1 ] = ipch;
+         const double rxki = this->grid_->x( ipch ) - atom.new_position.x;
+         const double ryki = this->grid_->y( ipch ) - atom.new_position.y;
+         const double rzki = this->grid_->z( ipch ) - atom.new_position.z;
+         const double rip  = std::sqrt( std::pow( rxki, 2 ) + std::pow( ryki, 2 ) + std::pow( rzki, 2 ) );
+         const double rki  = rxki * this->grid_->ux( ipch ) 
+   	                     + ryki * this->grid_->uy( ipch )
+                           + rzki * this->grid_->uz( ipch );
+         this->cnew_[ ipch ] -= q_alfa * rki / std::pow( rip, 3 );
+         // Calculate and store distances between patches and particle
+         this->ripnew_[ cursor ][ ipch ] = rip;
+      }
+   }
+}
+      
+//
+// Calculate the new H
+//
+this->hnew_ = this->cnew_;
+{
+   const utility::lapack::int_type info_dgetrs = utility::lapack::dgetrs( this->amx_, this->indx_, this->hnew_ );
+   UTILITY_ALWAYS( info_dgetrs == 0, "DGETSV routine returned error number " + std::to_string( info_dgetrs ) );
+}
+//
+// Calculate new potential
+//
+//   U = (1/4.pi.eps) SUM{ q_i . icc_p . area_p / 2 ||r_ip||
+//
+// O(ens.size() * icc.size())
+//
+double old_potential = 0.0;
+double new_potential = 0.0;
+// POTENTIAL OPENMP LOOP
+for (std::size_t ii = 0; ii != ens.size(); ++ii)
+{
+   const std::size_t ispec( ens.key( ii ) );
+   if (ispec != particle::ensemble::nkey )
+   {
+      std::array< std::size_t, 2 > idx;
+      idx[ 0 ] = ii;
+      const particle::specie & spc = spcs[ ispec ];
+      const double q_alfa = spc.valency() * this->alfa_;
+      for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
+      {
+         idx[ 1 ] = ipch;
+         old_potential += q_alfa * this->h_[ ipch ] * this->grid_->area( ipch ) / ( 2 * this->rip_( idx ) );
+         new_potential += q_alfa * this->hnew_[ ipch ] * this->grid_->area( ipch ) / ( 2 * this->rip_( idx ) );
+      }
+   }
+}
+// Remove effect of changes from new_potential
+for (std::size_t cursor = 0; cursor != changes.size(); ++cursor)
+{
+   auto const& atom = changes[ cursor ];
+   const double q_alfa = spcs[ atom.key ].valency() * this->alfa_;
+   std::array< std::size_t, 2 > idx;
+   if ( atom.do_old )
+   {
+      // Subtract potential from old position
+      idx[ 0 ] = atom.index;
+      for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
+      {
+         idx[ 1 ] = ipch;
+         new_potential -= q_alfa * this->hnew_[ ipch ] * this->grid_->area( ipch ) / (2 * this->rip_( idx ) );
+      }
+   }
+   if ( atom.do_new )
+   {
+      // Add potential from new position 
+      for (std::size_t ipch = 0; ipch != this->size(); ++ipch )
+      {
+         new_potential += q_alfa * this->hnew_[ ipch ] * this->grid_->area( ipch ) / (2 * this->ripnew_[ cursor ][ ipch ] );
+      }
+   }
+}
+// Split potential energy over atoms in change set
+old_potential /= changes.size();
+new_potential /= changes.size();
+for (auto & atom : changes)
+{
+   atom.energy_old += old_potential;
+   atom.energy_new += new_potential;
+}
+!!!366128.cpp!!!	compute_initial_c_h(in spcs : specie, in ens : ensemble) : void
+//
+// Calculate the electric field at each tile.
+//
+// O(ens.size() * icc.size())
+//
+// Convert energy units
+// Check size of rip
+if (this->rip_.shape()[0] < ens.max_size() or
+      this->rip_.shape()[1] < this->size())
+{
+   std::array< std::size_t, 2 > idx = { { ens.max_size(), this->size() } };
+   this->rip_.resize( idx );
+}
+
+//
+//   C = (1/4.pi.eps) SUM{ (q_i dot(r_ip,u_i) / ||r_ip||^3 ) }
+//
+for (std::size_t ii = 0; ii != ens.size(); ++ii)
+{
+   const std::size_t ispec = ens.key( ii );
+   if (ispec == particle::ensemble::nkey)
+   {
+      continue;
+   }
+   const double q_alfa = spcs[ ispec ].valency() * this->alfa_;
+   const particle::coordinate pos( ens.position( ii ) );
+   std::array< std::size_t, 2 > idx;
+   idx[ 0 ] = ii;
+   for (std::size_t ipch = 0; ipch != this->size(); ++ipch )
+   {
+      idx[ 1 ] = ipch;
+      const double rxki = this->grid_->x( ipch ) - pos.x;
+      const double ryki = this->grid_->y( ipch ) - pos.y;
+      const double rzki = this->grid_->z( ipch ) - pos.z;
+      const double rip  = std::sqrt( std::pow( rxki, 2 ) + std::pow( ryki, 2 ) + std::pow( rzki, 2 ) );
+      const double rki  = rxki * this->grid_->ux( ipch )
+                          + ryki * this->grid_->uy( ipch )
+                          + rzki * this->grid_->uz( ipch );
+      this->c_[ ipch ] += q_alfa * rki / std::pow( rip, 3 );
+      // Calculate and store distances between patches and particle
+      this->rip_( idx ) = rip;
+   }
+}
+
+//
+// Calculate the new H
+//
+this->h_ = this->c_;
+{
+   const utility::lapack::int_type info_dgetrs = utility::lapack::dgetrs( this->amx_, this->indx_, this->h_ );
+   UTILITY_ALWAYS( info_dgetrs == 0, "DGETSV routine returned error number " + std::to_string( info_dgetrs ) );
+}
+
+!!!366256.cpp!!!	compute_total_surface_charge(out charget : double, out areat : double) : void
+ areat = 0.0;
+ charget = 0.0;
+ for (std::size_t ipch = 0, ipch != this->size(); ++ipch)
+ {
+   const double area =  grid.area( ipch );
+   areat += area;
+   charget += area * this->_h[ipch];
+ }
+ charget /= this->alfa_;
+!!!366384.cpp!!!	create_amx(in sim : channel_system, inout os_log : ostream) : void
+UTILITY_CHECK( this->empty(), "Cannot define grid twice");
+
+//       |theta1 = pi/2
+// theta2|     theta0 = 0.0
+//  ---- z ----- theta4 = 2pi
+// = pi  |
+//       | theta3 = 3/2 pi
+// d_theta = pi/2
+const double theta0( 0.0);
+const double theta1( core::constants::pi() / 2);
+const double theta2( core::constants::pi() );
+const double theta3( core::constants::pi() * 3.0/2.0 );
+const double theta4( 2 * core::constants::pi() );
+
+// Get geometry data
+const double geom_zl1( sim.pore_hlength() );
+const double geom_rl1( sim.pore_radius() );
+const double geom_rl2( sim.pore_radius() + sim.vestibule_arc_radius() );
+const double geom_rlvest( sim.vestibule_arc_radius() );
+const double geom_zl2( sim.pore_hlength() + sim.vestibule_arc_radius() );
+const double geom_rl3( sim.protein_radius() - sim.membrane_arc_radius() );
+const double geom_zl3( sim.pore_hlength() + sim.vestibule_arc_radius() - sim.membrane_arc_radius() );
+const double geom_rl4( sim.protein_radius() );
+const double geom_rlcurv( sim.membrane_arc_radius() );
+
+// Delta permittivity in channel and elsewhere
+const double channel_d_eps( 2 * (sim.protein_permittivity() - sim.permittivity()) / (sim.protein_permittivity() + sim.permittivity() ) );
+const double outer_d_eps( channel_d_eps );
+// Minimum number of tiles along z dimension
+const int channel_min_z_tiles (16);
+const int outer_min_z_tiles (8);
+
+// Channel pore cylinder
+this->grid_->add_line( -geom_zl1, geom_zl1, geom_rl1, channel_d_eps, channel_min_z_tiles, true, os_log );
+// Hi-z inner arc
+this->grid_->add_arc( geom_zl1, geom_rl2, geom_rlvest, theta3, theta4, outer_d_eps, outer_min_z_tiles, true, os_log );
+
+// hi-z wall
+this->grid_->add_wall( geom_zl2, geom_rl2, geom_rl3, outer_d_eps, outer_min_z_tiles, channel_min_z_tiles, false, os_log );
+
+// Hi-z outer arc
+this->grid_->add_arc( geom_zl3, geom_rl3, geom_rlcurv, theta0, theta1, outer_d_eps, outer_min_z_tiles, false, os_log );
+
+// Channel protein outer cylinder
+this->grid_->add_line( -geom_zl3, geom_zl3, geom_rl4, outer_d_eps, outer_min_z_tiles, false, os_log );
+
+// lo-z outer arc
+this->grid_->add_arc( -geom_zl3, geom_rl3, geom_rlcurv, theta1, theta2, outer_d_eps, outer_min_z_tiles, false, os_log );
+
+// lo-z wall
+this->grid_->add_wall( -geom_zl2, geom_rl2, geom_rl3, outer_d_eps, outer_min_z_tiles, channel_min_z_tiles, true, os_log );
+
+// lo-z inner arc
+this->grid_->add_arc( -geom_zl1, geom_rl2, geom_rlvest, theta2, theta3, outer_d_eps, outer_min_z_tiles, false, os_log );
+
+os_log << "Grid builder complete\n";
+
+// get grid size
+this->resize( this->grid_->size() );
+
+// generate the A matrix
+this->grid_->generate_matrix( this->amx_, os_log );
+
+// (NOTE : HAVE SPECIAL CASE FOR DEPS=CONSTANT)
+if (channel_d_eps == outer_d_eps)
+{
+   std::array< std::size_t, 2 > idx;
+   for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+   {
+      idx[ 0 ] = ipch;
+      for (std::size_t jpch = 0; jpch != this->size(); ++jpch)
+      {
+         idx[ 1 ] = jpch;
+         this->amx_( idx ) *= channel_d_eps;
+      }
+   }
+}
+else
+{
+   std::array< std::size_t, 2 > idx;
+   for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+   {
+      idx[ 0 ] = ipch;
+      const double deps_ = this->grid_->deps( ipch );
+      for (std::size_t jpch = 0; jpch != this->size(); ++jpch)
+      {
+         idx[ 1 ] = jpch;
+         this->amx_( idx ) *= deps_;
+      }
+   }
+}
+{
+   std::array< std::size_t, 2 > idx;
+   for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+   {
+      idx[ 0 ] = ipch;
+      idx[ 1 ] = ipch;
+      this->amx_( idx ) += 1.0;
+   }
+}
+std::fill(this->indx_.begin(), this->indx_.end(), 0);
+
+// -----------------------------------------------------
+// Do LU decomposition of the A matrix
+os_log << "LU decomposing the 'A' matrix (using BLAS)\n";
+{
+   const utility::lapack::int_type info_dgetrf = utility::lapack::dgetrf( this->amx_, this->indx_ );
+
+   UTILITY_ALWAYS( info_dgetrf == 0, "Matrix inversion failed, DGETRF routine returned error number " + std::to_string( info_dgetrf ) );
+}
+
+!!!366640.cpp!!!	prepare(in sim : simulator) : void
+if (this->size() == 0)
+{
+   this->alfa_ = core::constants::boltzmann_constant() * sim.get_temperature() * core::constants::electron_charge() / (4 * core::constants::pi() * core::constants::epsilon_0() * core::constants::angstrom() * sim.get_permittivity() );
+
+   // Evaluator needs to be initialized
+   //
+   std::ostream& os_log( std::cout );
+
+   const ion_channel::channel_system *psim = nullptr;
+   psim = dynamic_cast< const ion_channel::channel_system * >( &sim );
+   UTILITY_REQUIRE( nullptr != psim, "Simulator is not suitable for this evaluator" );
+   const ion_channel::channel_system & cellsim( *psim );
+
+   const boost::filesystem::path dirpath( sim.compute_checkpoint_dir() );
+   // Check for available patch/amx files.
+   bool amx_read = false;
+   {
+      boost::filesystem::path pth;
+      pth = dirpath / this->patch_filename_;
+      if ( boost::filesystem::exists( pth ) )
+      {
+         std::ifstream is_pch( pth.string() );
+         if ( is_pch.good() and this->grid_->read_grid( is_pch ) )
+         {
+            os_log << "Read patch data file " << pth.string() << "\n";
+            pth = dirpath / this->a_matrix_filename_;
+            if( boost::filesystem::exists( pth ) )
+            {
+               std::ifstream is_amx( pth.string() );
+               amx_read = is_amx.good() and this->read_a_matrix( is_amx, cellsim );
+               if (amx_read)
+               {
+                  os_log << "Read A matrix file " << pth.string() << "\n";
+               }
+            }
+         }
+      }
+   }
+
+   // No patch/amx files or not for this sim
+   if ( not amx_read )
+   {
+      os_log << "Unable to read patch data and A matrix from file.\n";
+      // create grid, A' matrix and then invert the matrix
+      this->create_amx( cellsim, os_log );
+
+      // save patch data and amx
+      boost::filesystem::path pth;
+      pth = dirpath / this->patch_filename_;
+      std::ofstream os_pch( pth.string() );
+      if ( os_pch.good() )
+      {
+         this->grid_->write_grid( os_pch );
+      }
+      pth = dirpath / this->a_matrix_filename_;
+      std::ofstream os_amx( pth.string() );
+      if ( os_amx.good() )
+      {
+         this->write_a_matrix( os_amx, cellsim );
+      }
+   }
+}
+// (Re)Generate the initial c and h vectors
+this->compute_initial_c_h( sim.get_species(), sim.get_ensemble() );
+

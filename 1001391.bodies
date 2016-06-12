@@ -1,0 +1,86 @@
+class patch_ring
+!!!1818671.cpp!!!	add_qarc(in direction : uint8_type, in radius : double) : void
+    basic_ring::add_qarc (direction, radius);
+    arcs_.push_back (last_arc_);
+!!!1819055.cpp!!!	arc_at(in piter0 : patch_ring::const_iterator, in piter1 : patch_ring::const_iterator) : arc_type
+    if (DEBUG) { std::clog << "Looking for arc at z = (" << piter0->x() << ", " << piter0->y() << ")\n"; }
+
+    for (std::vector< arc_type >::const_iterator aiter_ = arcs_.begin ()
+            ; aiter_ != arcs_.end (); ++aiter_)
+    {
+        // Cases: Quad 1, 2, 3, 4
+        // Z-axis [quad,dir] [cf last_arc]
+        // (z0)
+        // [1,0] --> +radius [1,1] --> 0
+        // [2,0] --> 0 [2,1] --> -radius
+        // [3,0] --> -radius [3,1] --> 0
+        // [4,0] --> 0 [4,1] --> +radius
+        // (z1)
+        // [1,0] --> 0 [1,1] --> +radius
+        // [2,0] --> -radius [2,1] --> 0
+        // [3,0] --> 0 [3,1] --> -radius
+        // [4,0] --> +radius [4,1] --> 0
+        // R-axis (r0)
+        // [1,0] --> 0 [1,1] --> +radius
+        // [2,0] --> +radius [2,1] --> 0
+        // [3,0] --> 0 [3,1] --> -radius
+        // [4,0] --> -radius [4,1] --> 0
+        // (r1)
+        // [1,0] --> +radius [1,1] --> 0
+        // [2,0] --> 0 [2,1] --> +radius
+        // [3,0] --> -radius [3,1] --> 0
+        // [4,0] --> 0 [4,1] --> -radius
+
+        const double z0 = aiter_->z + ( (1 & (aiter_->quadrant + aiter_->direction)) == 0
+                                        ? 0.
+                                        : (aiter_->quadrant == 2 || aiter_->quadrant == 3
+                                           ? -aiter_->radius : aiter_->radius));
+        const double z1 = aiter_->z + ( (1 & (aiter_->quadrant + aiter_->direction)) == 1
+                                        ? 0.
+                                        : (aiter_->quadrant == 2 || aiter_->quadrant == 3
+                                           ? -aiter_->radius : aiter_->radius));
+        const double r0 = aiter_->r + ( (1 & (aiter_->quadrant + aiter_->direction)) == 1
+                                        ? 0.
+                                        : (aiter_->quadrant > 2
+                                           ? -aiter_->radius : aiter_->radius));
+        const double r1 = aiter_->r + ( (1 & (aiter_->quadrant + aiter_->direction)) == 0
+                                        ? 0.
+                                        : (aiter_->quadrant > 2
+                                           ? -aiter_->radius : aiter_->radius));
+
+        if (DEBUG)
+        {
+            std::clog << "Current arc (" << aiter_->z << ", " << aiter_->r
+                      << ") is between z0 = " << z0 << ", z1 = " << z1
+                      << " and r0 = " << r0 << ", r1 = " << r1
+                      << "; t0 = " << aiter_->t0 << ", t1 = " << aiter_->t1 << "\n";
+        }
+
+        if (in_range (z0, z1, piter0->x ()) && in_range (r0, r1, piter0->y ()))
+        {
+            if (DEBUG) { std::clog << "Got RZ-match\nTesting (i  + 1) z = (" << (piter1)->x () << ")\n"; }
+
+            if (in_range (z0, z1, piter1->x ()))
+            {
+                if (DEBUG) { std::clog << "Confirmed by 2nd iterator (i + 1)\n"; }
+
+                return & (*aiter_);
+            }
+
+            if (DEBUG) { std::clog << "Next iterator did not confirm\n"; }
+        }
+    }
+
+    return NULL;
+!!!1819439.cpp!!!	serialise(inout a_os : ostream) : void
+    a_os << "-- native protein --\n";
+    a_os << boost::geometry::dsv (this->state_) << "\n";
+    a_os << "-- arcs --\n";
+
+    for (std::vector< arc_type >::const_iterator a0 = arcs_.begin (); a0 != arcs_.end (); ++a0)
+    {
+        a_os << "Centre (" << a0->z << ", " << a0->r << ") Radius = " << a0->radius
+             << ", Angles (" << a0->t0 << ", " << a0->t1 << ")\n"
+             << "Quadrant : " << int (a0->quadrant) << "; Direction : " << (0 == a0->direction ? "" : "counter-")
+             << "clockwise.\n";
+    }

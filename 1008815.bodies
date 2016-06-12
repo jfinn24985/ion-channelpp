@@ -1,0 +1,25 @@
+class remove_particle
+!!!1857839.cpp!!!	do_generate(in fm : formation, inout result : trial_move, inout rgen : mersenne_twister_19937) : void
+  if (not result.is_fail())
+  {
+    const size_t nin (fm.region_count(this->specie_index(), this->region_index()));
+    if (nin == 0)
+    {
+      result.set_fail ();
+    }
+    else
+    {
+      const size_t lidx (rgen(nin));
+      trial_step t;
+      t.specie_id = this->specie_index();
+      t.region_id = this->region_index();
+      t.particle_id = fm.index_in_region(t.region_id, t.specie_id, lidx);
+      t.x = fm.conformation().rx(t.particle_id);
+      t.y = fm.conformation().ry(t.particle_id);
+      t.z = fm.conformation().rz(t.particle_id);
+      t.r = fm.conformation().r2(t.particle_id);
+      result.add_step (t, -1, 0);
+      result.update_chemical_potential (-fm.specie_set().get_specie(this->specie_index()).chemical_potential ());
+      result.update_probability_factor (nin / fm.get_region(this->region_index()).volume (fm.specie_set().get_specie(this->specie_index()).radius()));
+    }
+  }
