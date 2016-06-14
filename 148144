@@ -1,6 +1,6 @@
 format 75
 "core_test_build" // build_files::core_build::core_test_build
-  revision 4
+  revision 5
   modified_by 48 "finnerty"
   // class settings
   //class diagram settings
@@ -40,7 +40,7 @@ format 75
 #Butter version 1.2beta.175
 ##END:version
 ##START:date
-#Thu Oct 29 13:59:41 2015
+#Mon Jun 13 18:44:05 2016
 ##END:date
 ##START:preamble
 include $(ROOTDIR)/M_sys.mk
@@ -50,13 +50,13 @@ include $(ROOTDIR)/M_sys.mk
 CORE_TEST_CORE_EXECSRC :=  \\
 	core_test_suite.cpp
 CORE_TEST_CORE_EXEC_DINC := $(filter %$(sufdep), $(CORE_TEST_CORE_EXECSRC:.cpp=$(sufdep))) $(filter %$(sufdep), $(CORE_TEST_CORE_EXECSRC:.c=$(sufdep)))
-core_exec$(sufexe): LDFLAGS+= $(BOOST_LIB) -lboost_system -lboost_random -lboost_unit_test_framework -lboost_date_time -lboost_serialization -lboost_program_options -lboost_filesystem
+core_exec$(sufexe): LDFLAGS+= $(BOOST_LIB) -lboost_program_options -lboost_system -lboost_filesystem -lboost_serialization -lboost_random -lboost_unit_test_framework -lboost_date_time
 core_exec$(sufexe) $(CORE_TEST_CORE_EXEC_DINC) : CPPFLAGS+=-I$(BOOST_INC) -DBOOST_TEST_DYN_LINK 
-CORE_TEST_CORE_EXEC_OBJ+=$(ROOTDIR)/src/platform/libionch_platform$(suflib)
-CORE_TEST_CORE_EXEC_OBJ+=$(ROOTDIR)/src/utility/libionch_utility$(suflib)
-CORE_TEST_CORE_EXEC_OBJ+=$(ROOTDIR)/src/core/libionch_core$(suflib)
 CORE_TEST_CORE_EXEC_OBJ+=$(ROOTDIR)/src/particle/libionch_particle$(suflib)
+CORE_TEST_CORE_EXEC_OBJ+=$(ROOTDIR)/src/core/libionch_core$(suflib)
 CORE_TEST_CORE_EXEC_OBJ+=$(ROOTDIR)/src/trial/libionch_trial$(suflib)
+CORE_TEST_CORE_EXEC_OBJ+=$(ROOTDIR)/src/utility/libionch_utility$(suflib)
+CORE_TEST_CORE_EXEC_OBJ+=$(ROOTDIR)/src/platform/libionch_platform$(suflib)
 
 CORE_TEST_CORE_EXEC_OBJ+=$(filter %$(sufobj), $(CORE_TEST_CORE_EXECSRC:.cpp=$(sufobj)))
 USEROBJ+=$(CORE_TEST_CORE_EXEC_OBJ)
@@ -77,27 +77,33 @@ TARGETS+=core_exec$(sufexe)
 #Butter version 1.2beta.175
 ##END:version
 ##START:date
-#Fri Oct 2 12:59:42 2015
+#Mon Jun 13 18:46:47 2016
 ##END:date
+##START:preamble
+ALL_LOCATE_TARGET = $(BASE_LOCATE_TARGET)$(SLASH)src$(SLASH)core$(SLASH)core_test ;
+
+SubDir TOP src core core_test ;
+
+##END:preamble
 ##START:target core_exec
-exe core_exec :
-	/pnp/core//libionch_core
-	/pnp/trial//libionch_trial
-	/boost//program_options
-	/boost//serialization
-	/boost//filesystem
-	/boost//unit_test_framework
-	/pnp/particle//libionch_particle
-	/boost//date_time
-	/pnp/utility//libionch_utility
-	/pnp/platform//libionch_platform
-	/boost//random
-	core_test_suite.cpp
-	/boost//system
-	:
-	<cxxflags>\"-DBOOST_TEST_DYN_LINK\" <cflags>\"-DBOOST_TEST_DYN_LINK\"
+CORE_TEST_CORE_EXEC_SRC =
+	<src!core!core_test>core_test_suite.cpp
 	;
 
+Main <src!core!core_test>core_exec$(SUFEXE) :
+	$(CORE_TEST_CORE_EXEC_SRC) ;
+
+LINKLIBS on <src!core!core_test>core_exec$(SUFEXE) += $(BOOST_LIB) -lboost_program_options -lboost_system -lboost_filesystem -lboost_serialization -lboost_random $(PARTICLE_LIBIONCH_PARTICLE_LDFLAGS)  -lboost_unit_test_framework -lboost_date_time $(CORE_LIBIONCH_CORE_LDFLAGS)  $(TRIAL_LIBIONCH_TRIAL_LDFLAGS)  $(UTILITY_LIBIONCH_UTILITY_LDFLAGS)  $(PLATFORM_LIBIONCH_PLATFORM_LDFLAGS)  ;
+LinkLibraries <src!core!core_test>core_exec$(SUFEXE) :
+	 <src!particle>libionch_particle$(SUFLIB) 
+	 <src!core>libionch_core$(SUFLIB) 
+	 <src!trial>libionch_trial$(SUFLIB) 
+	 <src!utility>libionch_utility$(SUFLIB) 
+	 <src!platform>libionch_platform$(SUFLIB) 
+	;
+ObjectCcFlags $(CORE_TEST_CORE_EXEC_SRC) : -DBOOST_TEST_DYN_LINK ;
+ObjectC++Flags $(CORE_TEST_CORE_EXEC_SRC) : -DBOOST_TEST_DYN_LINK ;
+ObjectHdrs $(CORE_TEST_CORE_EXEC_SRC) : $(BOOST_INC) ;
 ##END:target core_exec
 "
     end

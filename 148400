@@ -1,6 +1,6 @@
 format 75
 "evaluator_test_build" // build_files::evaluator_build::evaluator_test_build
-  revision 4
+  revision 5
   modified_by 48 "finnerty"
   // class settings
   //class diagram settings
@@ -38,35 +38,39 @@ format 75
 #Butter version 1.2beta.175
 ##END:version
 ##START:date
-#Fri Oct 2 12:59:42 2015
+#Mon Jun 13 18:46:47 2016
 ##END:date
+##START:preamble
+ALL_LOCATE_TARGET = $(BASE_LOCATE_TARGET)$(SLASH)src$(SLASH)evaluator$(SLASH)evaluator_test ;
+
+SubDir TOP src evaluator evaluator_test ;
+
+##END:preamble
 ##START:target evaluator_exec
-exe evaluator_exec :
-	/pnp/core//libionch_core
-	/pnp/trial//libionch_trial
-	/mkl//clapack
-	/pnp/platform_test//libtest_platform
-	/boost//program_options
-	/boost//serialization
-	/boost//filesystem
-	/pnp/observer//libionch_observer
-	/boost//unit_test_framework
-	/pnp/utility//libionch_lapack
-	/pnp/particle//libionch_particle
-	/boost//date_time
-	/pnp/cscchannel//libionch_cell
-	/pnp/utility//libionch_utility
-	/pnp/platform//libionch_platform
-	/boost//random
-	evaluator_test.cpp
-	/pnp/evaluator//libionch_evaluator
-	/boost//system
-	/system//uuid
-	evaluator_fixture.cpp
-	:
-	<cxxflags>\"-DBOOST_TEST_DYN_LINK\" <cflags>\"-DBOOST_TEST_DYN_LINK\"
+EVALUATOR_TEST_EVALUATOR_EXEC_SRC =
+	<src!evaluator!evaluator_test>evaluator_fixture.cpp
+	<src!evaluator!evaluator_test>evaluator_test.cpp
 	;
 
+Main <src!evaluator!evaluator_test>evaluator_exec$(SUFEXE) :
+	$(EVALUATOR_TEST_EVALUATOR_EXEC_SRC) ;
+
+LINKLIBS on <src!evaluator!evaluator_test>evaluator_exec$(SUFEXE) +=  $(UTILITY_LIBIONCH_LAPACK_LDFLAGS)  $(BOOST_LIB) -lboost_program_options -lboost_system -lboost_filesystem $(CSCCHANNEL_LIBIONCH_CELL_LDFLAGS)  -luuid -lboost_serialization $(PARTICLE_LIBIONCH_PARTICLE_LDFLAGS)  -lboost_random -lboost_unit_test_framework $(LAPACKLIB) $(OBSERVER_LIBIONCH_OBSERVER_LDFLAGS)  -lboost_date_time $(CORE_LIBIONCH_CORE_LDFLAGS)  $(PLATFORM_TEST_LIBTEST_PLATFORM_LDFLAGS)  $(EVALUATOR_LIBIONCH_EVALUATOR_LDFLAGS)  $(TRIAL_LIBIONCH_TRIAL_LDFLAGS)  $(UTILITY_LIBIONCH_UTILITY_LDFLAGS)  $(PLATFORM_LIBIONCH_PLATFORM_LDFLAGS)  ;
+LinkLibraries <src!evaluator!evaluator_test>evaluator_exec$(SUFEXE) :
+	 <src!utility>libionch_lapack$(SUFLIB) 
+	 <src!cscchannel>libionch_cell$(SUFLIB) 
+	 <src!particle>libionch_particle$(SUFLIB) 
+	 <src!observer>libionch_observer$(SUFLIB) 
+	 <src!core>libionch_core$(SUFLIB) 
+	 <src!platform!platform_test>libtest_platform$(SUFLIB) 
+	 <src!evaluator>libionch_evaluator$(SUFLIB) 
+	 <src!trial>libionch_trial$(SUFLIB) 
+	 <src!utility>libionch_utility$(SUFLIB) 
+	 <src!platform>libionch_platform$(SUFLIB) 
+	;
+ObjectCcFlags $(EVALUATOR_TEST_EVALUATOR_EXEC_SRC) : $(LAPACKINC) -DBOOST_TEST_DYN_LINK ;
+ObjectC++Flags $(EVALUATOR_TEST_EVALUATOR_EXEC_SRC) : $(LAPACKINC) -DBOOST_TEST_DYN_LINK ;
+ObjectHdrs $(EVALUATOR_TEST_EVALUATOR_EXEC_SRC) : $(BOOST_INC) ;
 ##END:target evaluator_exec
 "
     end
@@ -77,7 +81,7 @@ exe evaluator_exec :
 #Butter version 1.2beta.175
 ##END:version
 ##START:date
-#Thu Oct 29 13:59:41 2015
+#Mon Jun 13 18:44:05 2016
 ##END:date
 ##START:preamble
 include $(ROOTDIR)/M_sys.mk
@@ -88,18 +92,18 @@ EVALUATOR_TEST_EVALUATOR_EXECSRC :=  \\
 	evaluator_fixture.cpp \\
 	evaluator_test.cpp
 EVALUATOR_TEST_EVALUATOR_EXEC_DINC := $(filter %$(sufdep), $(EVALUATOR_TEST_EVALUATOR_EXECSRC:.cpp=$(sufdep))) $(filter %$(sufdep), $(EVALUATOR_TEST_EVALUATOR_EXECSRC:.c=$(sufdep)))
-evaluator_exec$(sufexe): LDFLAGS+= $(BOOST_LIB) -lboost_system -lboost_random -lboost_unit_test_framework -lboost_date_time -lboost_serialization $(LAPACKLIB) -lboost_program_options -lboost_filesystem -luuid
+evaluator_exec$(sufexe): LDFLAGS+= $(BOOST_LIB) -lboost_program_options -lboost_system -lboost_filesystem -luuid -lboost_serialization -lboost_random -lboost_unit_test_framework $(LAPACKLIB) -lboost_date_time
 evaluator_exec$(sufexe) $(EVALUATOR_TEST_EVALUATOR_EXEC_DINC) : CPPFLAGS+=-I$(BOOST_INC) $(LAPACKINC) -DBOOST_TEST_DYN_LINK 
-EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/platform/libionch_platform$(suflib)
-EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/evaluator/libionch_evaluator$(suflib)
-EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/observer/libionch_observer$(suflib)
-EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/utility/libionch_utility$(suflib)
-EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/core/libionch_core$(suflib)
 EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/utility/libionch_lapack$(suflib)
-EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/particle/libionch_particle$(suflib)
-EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/platform/platform_test/libtest_platform$(suflib)
-EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/trial/libionch_trial$(suflib)
 EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/cscchannel/libionch_cell$(suflib)
+EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/particle/libionch_particle$(suflib)
+EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/observer/libionch_observer$(suflib)
+EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/core/libionch_core$(suflib)
+EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/platform/platform_test/libtest_platform$(suflib)
+EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/evaluator/libionch_evaluator$(suflib)
+EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/trial/libionch_trial$(suflib)
+EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/utility/libionch_utility$(suflib)
+EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(ROOTDIR)/src/platform/libionch_platform$(suflib)
 
 EVALUATOR_TEST_EVALUATOR_EXEC_OBJ+=$(filter %$(sufobj), $(EVALUATOR_TEST_EVALUATOR_EXECSRC:.cpp=$(sufobj)))
 USEROBJ+=$(EVALUATOR_TEST_EVALUATOR_EXEC_OBJ)

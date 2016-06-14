@@ -1,6 +1,6 @@
 format 75
 "periodic_cube_build" // build_files::periodic_cube_build
-  revision 4
+  revision 5
   modified_by 48 "finnerty"
   // class settings
   //class diagram settings
@@ -38,84 +38,90 @@ format 75
 #Butter version 1.2beta.175
 ##END:version
 ##START:date
-#Fri Oct 2 12:59:42 2015
+#Mon Jun 13 18:46:48 2016
 ##END:date
+##START:preamble
+ALL_LOCATE_TARGET = $(BASE_LOCATE_TARGET)$(SLASH)src$(SLASH)cscpbc ;
+
+SubDir TOP src cscpbc ;
+
+##END:preamble
 ##START:target libionch_pbc
-lib libionch_pbc :
-	periodic_system.cpp
-	alternater_choice.cpp
-	remove_specie_pbc.cpp
-	imc_meta.cpp
-	widom.cpp
-	bulk_simulator_meta.cpp
-	malasics_igcmc.cpp
-	lamperski_igcmc.cpp
-	gc_choice_pbc.cpp
-	jump_choice_pbc.cpp
-	accept_igcmc.cpp
-	alternater_chooser.cpp
-	add_specie_pbc.cpp
-	igcmc.cpp
-	:
-	<link>static
-	: :
+CSCPBC_LIBIONCH_PBC_SRC =
+	<src!cscpbc>alternater_chooser.cpp
+	<src!cscpbc>accept_igcmc.cpp
+	<src!cscpbc>jump_choice_pbc.cpp
+	<src!cscpbc>widom.cpp
+	<src!cscpbc>malasics_igcmc.cpp
+	<src!cscpbc>bulk_simulator_meta.cpp
+	<src!cscpbc>periodic_system.cpp
+	<src!cscpbc>imc_meta.cpp
+	<src!cscpbc>igcmc.cpp
+	<src!cscpbc>gc_choice_pbc.cpp
+	<src!cscpbc>remove_specie_pbc.cpp
+	<src!cscpbc>lamperski_igcmc.cpp
+	<src!cscpbc>alternater_choice.cpp
+	<src!cscpbc>add_specie_pbc.cpp
 	;
 
-install install_libionch_pbc : libionch_pbc : <variant>release:<location>$(INSTALL_PREFIX)/$(LIBDIR) 
-		<variant>debug:<location>$(DEBUG_PREFIX)/\"src/cscpbc\" ;
+Library <src!cscpbc>libionch_pbc$(SUFLIB) :
+	$(CSCPBC_LIBIONCH_PBC_SRC) ;
+
+CSCPBC_LIBIONCH_PBC_LDFLAGS =  ;
+InstallLib $(LIBDIR) : <src!cscpbc>libionch_pbc$(SUFLIB) ;
 ##END:target libionch_pbc
 ##START:target cscbulk
-exe cscbulk :
-	/pnp/core//libionch_core
-	/pnp/trial//libionch_trial
-	/mkl//clapack
-	/boost//program_options
-	/boost//serialization
-	cscmc_bulk.cpp
-	/pnp/observer//libionch_observer
-	/pnp/utility//libionch_lapack
-	/pnp/particle//libionch_particle
-	/boost//date_time
-	/pnp/utility//libionch_gdbm_sink
-	/pnp/utility//libionch_utility
-	/pnp/platform//libionch_platform
-	/boost//random
-	/pnp/evaluator//libionch_evaluator
-	/boost//system
-	/pnp/cscpbc//libionch_pbc
-	/system//uuid
-	:
+CSCPBC_CSCBULK_SRC =
+	<src!cscpbc>cscmc_bulk.cpp
 	;
 
-install install_cscbulk : cscbulk : <variant>release:<location>$(INSTALL_PREFIX)/$(BINDIR) 
-		<variant>debug:<location>$(DEBUG_PREFIX)/\"src/cscpbc\" ;
+Main <src!cscpbc>cscbulk$(SUFEXE) :
+	$(CSCPBC_CSCBULK_SRC) ;
+
+LINKLIBS on <src!cscpbc>cscbulk$(SUFEXE) +=  $(UTILITY_LIBIONCH_LAPACK_LDFLAGS)  $(BOOST_LIB) -lboost_program_options -lboost_system -lboost_filesystem $(UTILITY_LIBIONCH_GDBM_SINK_LDFLAGS)  $(CSCPBC_LIBIONCH_PBC_LDFLAGS)  -luuid -lboost_serialization -lboost_random $(PARTICLE_LIBIONCH_PARTICLE_LDFLAGS)  $(LAPACKLIB) $(OBSERVER_LIBIONCH_OBSERVER_LDFLAGS)  -lboost_date_time $(CORE_LIBIONCH_CORE_LDFLAGS)  $(EVALUATOR_LIBIONCH_EVALUATOR_LDFLAGS)  $(TRIAL_LIBIONCH_TRIAL_LDFLAGS)  $(UTILITY_LIBIONCH_UTILITY_LDFLAGS)  $(PLATFORM_LIBIONCH_PLATFORM_LDFLAGS)  ;
+LinkLibraries <src!cscpbc>cscbulk$(SUFEXE) :
+	 <src!utility>libionch_lapack$(SUFLIB) 
+	 <src!utility>libionch_gdbm_sink$(SUFLIB) 
+	 <src!cscpbc>libionch_pbc$(SUFLIB) 
+	 <src!particle>libionch_particle$(SUFLIB) 
+	 <src!observer>libionch_observer$(SUFLIB) 
+	 <src!core>libionch_core$(SUFLIB) 
+	 <src!evaluator>libionch_evaluator$(SUFLIB) 
+	 <src!trial>libionch_trial$(SUFLIB) 
+	 <src!utility>libionch_utility$(SUFLIB) 
+	 <src!platform>libionch_platform$(SUFLIB) 
+	;
+ObjectCcFlags $(CSCPBC_CSCBULK_SRC) : $(LAPACKINC) ;
+ObjectC++Flags $(CSCPBC_CSCBULK_SRC) : $(LAPACKINC) ;
+ObjectHdrs $(CSCPBC_CSCBULK_SRC) : $(BOOST_INC) ;
+InstallBin $(BINDIR) : <src!cscpbc>cscbulk$(SUFEXE) ;
 ##END:target cscbulk
 ##START:target cscbulk_mpi
-exe cscbulk_mpi :
-	/pnp/core//libionch_core
-	/pnp/trial//libionch_trial
-	/mkl//clapack
-	/boost//program_options
-	/boost//serialization
-	/pnp/observer//libionch_observer
-	cscmc_bulk_mpi.cpp
-	/pnp/utility//libionch_lapack
-	/pnp/particle//libionch_particle
-	/boost//mpi
-	/boost//date_time
-	/pnp/utility//libionch_gdbm_sink
-	/pnp/utility//libionch_utility
-	/pnp/platform//libionch_platform
-	/boost//random
-	/pnp/evaluator//libionch_evaluator
-	/boost//system
-	/pnp/cscpbc//libionch_pbc
-	/system//uuid
-	:
+CSCPBC_CSCBULK_MPI_SRC =
+	<src!cscpbc>cscmc_bulk_mpi.cpp
 	;
 
-install install_cscbulk_mpi : cscbulk_mpi : <variant>release:<location>$(INSTALL_PREFIX)/$(BINDIR) 
-		<variant>debug:<location>$(DEBUG_PREFIX)/\"src/cscpbc\" ;
+Main <src!cscpbc>cscbulk_mpi$(SUFEXE) :
+	$(CSCPBC_CSCBULK_MPI_SRC) ;
+
+LINKLIBS on <src!cscpbc>cscbulk_mpi$(SUFEXE) +=  $(UTILITY_LIBIONCH_LAPACK_LDFLAGS)  $(BOOST_LIB) -lboost_program_options -lboost_system -lboost_filesystem $(UTILITY_LIBIONCH_GDBM_SINK_LDFLAGS)  $(CSCPBC_LIBIONCH_PBC_LDFLAGS)  -luuid -lboost_serialization $(PLATFORM_LIBIONCH_PLATFORM_MPI_LDFLAGS)  -lboost_random $(PARTICLE_LIBIONCH_PARTICLE_LDFLAGS)  $(LAPACKLIB) $(OBSERVER_LIBIONCH_OBSERVER_LDFLAGS)  -lboost_date_time $(CORE_LIBIONCH_CORE_LDFLAGS)  -lboost_mpi -L$(MPI_LIB) -lmpi -lmpi_cxx $(EVALUATOR_LIBIONCH_EVALUATOR_LDFLAGS)  $(TRIAL_LIBIONCH_TRIAL_LDFLAGS)  $(UTILITY_LIBIONCH_UTILITY_LDFLAGS)  $(PLATFORM_LIBIONCH_PLATFORM_LDFLAGS)  ;
+LinkLibraries <src!cscpbc>cscbulk_mpi$(SUFEXE) :
+	 <src!utility>libionch_lapack$(SUFLIB) 
+	 <src!utility>libionch_gdbm_sink$(SUFLIB) 
+	 <src!cscpbc>libionch_pbc$(SUFLIB) 
+	 <src!platform>libionch_platform_mpi$(SUFLIB) 
+	 <src!particle>libionch_particle$(SUFLIB) 
+	 <src!observer>libionch_observer$(SUFLIB) 
+	 <src!core>libionch_core$(SUFLIB) 
+	 <src!evaluator>libionch_evaluator$(SUFLIB) 
+	 <src!trial>libionch_trial$(SUFLIB) 
+	 <src!utility>libionch_utility$(SUFLIB) 
+	 <src!platform>libionch_platform$(SUFLIB) 
+	;
+ObjectCcFlags $(CSCPBC_CSCBULK_MPI_SRC) : $(LAPACKINC) ;
+ObjectC++Flags $(CSCPBC_CSCBULK_MPI_SRC) : $(LAPACKINC) ;
+ObjectHdrs $(CSCPBC_CSCBULK_MPI_SRC) : $(BOOST_INC) $(MPI_INC) ;
+InstallBin $(BINDIR) : <src!cscpbc>cscbulk_mpi$(SUFEXE) ;
 ##END:target cscbulk_mpi
 "
     end
@@ -126,7 +132,7 @@ install install_cscbulk_mpi : cscbulk_mpi : <variant>release:<location>$(INSTALL
 #Butter version 1.2beta.175
 ##END:version
 ##START:date
-#Thu Oct 29 13:59:41 2015
+#Mon Jun 13 18:44:05 2016
 ##END:date
 ##START:preamble
 include $(ROOTDIR)/M_sys.mk
@@ -134,20 +140,20 @@ include $(ROOTDIR)/M_sys.mk
 ##END:preamble
 ##START:target libionch_pbc
 CSCPBC_LIBIONCH_PBCSRC :=  \\
-	bulk_simulator_meta.cpp \\
-	igcmc.cpp \\
-	imc_meta.cpp \\
-	gc_choice_pbc.cpp \\
-	widom.cpp \\
-	jump_choice_pbc.cpp \\
-	malasics_igcmc.cpp \\
-	add_specie_pbc.cpp \\
-	alternater_choice.cpp \\
 	alternater_chooser.cpp \\
 	accept_igcmc.cpp \\
+	jump_choice_pbc.cpp \\
+	widom.cpp \\
+	malasics_igcmc.cpp \\
+	bulk_simulator_meta.cpp \\
+	periodic_system.cpp \\
+	imc_meta.cpp \\
+	igcmc.cpp \\
+	gc_choice_pbc.cpp \\
 	remove_specie_pbc.cpp \\
 	lamperski_igcmc.cpp \\
-	periodic_system.cpp
+	alternater_choice.cpp \\
+	add_specie_pbc.cpp
 CSCPBC_LIBIONCH_PBC_DINC := $(filter %$(sufdep), $(CSCPBC_LIBIONCH_PBCSRC:.cpp=$(sufdep))) $(filter %$(sufdep), $(CSCPBC_LIBIONCH_PBCSRC:.c=$(sufdep)))
 CSCPBC_LIBIONCH_PBC_OBJ+=$(filter %$(sufobj), $(CSCPBC_LIBIONCH_PBCSRC:.cpp=$(sufobj)))
 USEROBJ+=$(CSCPBC_LIBIONCH_PBC_OBJ)
@@ -165,18 +171,18 @@ $(eval $(call do_install,libionch_pbc$(suflib),LIB))
 CSCPBC_CSCBULKSRC :=  \\
 	cscmc_bulk.cpp
 CSCPBC_CSCBULK_DINC := $(filter %$(sufdep), $(CSCPBC_CSCBULKSRC:.cpp=$(sufdep))) $(filter %$(sufdep), $(CSCPBC_CSCBULKSRC:.c=$(sufdep)))
-cscbulk$(sufexe): LDFLAGS+= -lgdbm $(BOOST_LIB) -lboost_system -lboost_random -lboost_date_time -lboost_serialization $(LAPACKLIB) -lboost_program_options -lboost_filesystem -luuid
+cscbulk$(sufexe): LDFLAGS+= $(BOOST_LIB) -lboost_program_options -lboost_system -lboost_filesystem -lgdbm -luuid -lboost_serialization -lboost_random $(LAPACKLIB) -lboost_date_time
 cscbulk$(sufexe) $(CSCPBC_CSCBULK_DINC) : CPPFLAGS+=-I$(BOOST_INC) $(LAPACKINC) 
-CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/utility/libionch_gdbm_sink$(suflib)
-CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/platform/libionch_platform$(suflib)
-CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/observer/libionch_observer$(suflib)
-CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/utility/libionch_utility$(suflib)
-CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/evaluator/libionch_evaluator$(suflib)
-CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/core/libionch_core$(suflib)
 CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/utility/libionch_lapack$(suflib)
-CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/particle/libionch_particle$(suflib)
-CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/trial/libionch_trial$(suflib)
+CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/utility/libionch_gdbm_sink$(suflib)
 CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/cscpbc/libionch_pbc$(suflib)
+CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/particle/libionch_particle$(suflib)
+CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/observer/libionch_observer$(suflib)
+CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/core/libionch_core$(suflib)
+CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/evaluator/libionch_evaluator$(suflib)
+CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/trial/libionch_trial$(suflib)
+CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/utility/libionch_utility$(suflib)
+CSCPBC_CSCBULK_OBJ+=$(ROOTDIR)/src/platform/libionch_platform$(suflib)
 
 CSCPBC_CSCBULK_OBJ+=$(filter %$(sufobj), $(CSCPBC_CSCBULKSRC:.cpp=$(sufobj)))
 USEROBJ+=$(CSCPBC_CSCBULK_OBJ)
@@ -194,19 +200,19 @@ $(eval $(call do_install,cscbulk$(sufexe),BIN))
 CSCPBC_CSCBULK_MPISRC :=  \\
 	cscmc_bulk_mpi.cpp
 CSCPBC_CSCBULK_MPI_DINC := $(filter %$(sufdep), $(CSCPBC_CSCBULK_MPISRC:.cpp=$(sufdep))) $(filter %$(sufdep), $(CSCPBC_CSCBULK_MPISRC:.c=$(sufdep)))
-cscbulk_mpi$(sufexe): LDFLAGS+= -lgdbm $(BOOST_LIB) -lboost_system -lboost_random -lboost_date_time -lboost_serialization -lboost_mpi -L$(MPI_LIB) -lmpi -lmpi_cxx $(LAPACKLIB) -lboost_program_options -lboost_filesystem -luuid
+cscbulk_mpi$(sufexe): LDFLAGS+= $(BOOST_LIB) -lboost_program_options -lboost_system -lboost_filesystem -lgdbm -luuid -lboost_serialization -lboost_random $(LAPACKLIB) -lboost_date_time -lboost_mpi -L$(MPI_LIB) -lmpi -lmpi_cxx
 cscbulk_mpi$(sufexe) $(CSCPBC_CSCBULK_MPI_DINC) : CPPFLAGS+=-I$(BOOST_INC) -I$(MPI_INC) $(LAPACKINC) 
-CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/utility/libionch_gdbm_sink$(suflib)
-CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/platform/libionch_platform$(suflib)
-CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/observer/libionch_observer$(suflib)
-CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/utility/libionch_utility$(suflib)
-CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/platform/libionch_platform_mpi$(suflib)
-CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/evaluator/libionch_evaluator$(suflib)
-CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/core/libionch_core$(suflib)
 CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/utility/libionch_lapack$(suflib)
-CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/particle/libionch_particle$(suflib)
-CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/trial/libionch_trial$(suflib)
+CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/utility/libionch_gdbm_sink$(suflib)
 CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/cscpbc/libionch_pbc$(suflib)
+CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/platform/libionch_platform_mpi$(suflib)
+CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/particle/libionch_particle$(suflib)
+CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/observer/libionch_observer$(suflib)
+CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/core/libionch_core$(suflib)
+CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/evaluator/libionch_evaluator$(suflib)
+CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/trial/libionch_trial$(suflib)
+CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/utility/libionch_utility$(suflib)
+CSCPBC_CSCBULK_MPI_OBJ+=$(ROOTDIR)/src/platform/libionch_platform$(suflib)
 
 CSCPBC_CSCBULK_MPI_OBJ+=$(filter %$(sufobj), $(CSCPBC_CSCBULK_MPISRC:.cpp=$(sufobj)))
 USEROBJ+=$(CSCPBC_CSCBULK_MPI_OBJ)
