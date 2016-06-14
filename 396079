@@ -1,6 +1,6 @@
 format 75
 "observer" // observer
-  revision 158
+  revision 160
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -425,7 +425,7 @@ connect if necessary"
       operation 647473 "enrol"
 	cpp_virtual public explicit_return_type "void"
 	nparams 1
-	  param inout name "sim" type class_ref 1129135 // simulator
+	  param inout name "reporter" type class_ref 340656 // report_manager
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} {}
 "
 	
@@ -435,8 +435,8 @@ ${docstring}pass
 "
 	
 	comment "Register any signals output by the object with 
-the simulator and optionally connect to any 
-simulator specific signals. The object is responsible
+the reporter and optionally connect to any 
+reporter specific signals. The object is responsible
 for testing if a signal with the same label has been
 registered.
 
@@ -587,7 +587,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Update wr[ix] section with information from the derived class"
+	comment " Update wr[ix] section with information from the derived class."
       end
     end
 
@@ -644,6 +644,20 @@ be reconnected using 'do_enrol' and 'do_prepare'
 after deserialization.)"
       end
 
+      classrelation 405168 // observers_ (<directional aggregation>)
+	relation 404528 o-->
+	  stereotype "vector"
+	  a role_name "observers_" multiplicity "*" private
+	    comment " All the known observers"
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${association}< ${type} > > ${name}${value};
+"
+	    python "${comment}${self}${name} = ${stereotype}()
+"
+	    classrelation_ref 405168 // observers_ (<directional aggregation>)
+	  b parent class_ref 1144367 // base_sampler
+	  association_explicit_type "shared_ptr"
+      end
+
       classrelation 391472 // inner_observers_ (<directional aggregation>)
 	relation 391088 o-->
 	  stereotype "vector"
@@ -674,11 +688,12 @@ after deserialization.)"
 
       classrelation 391856 // sink_ (<directional composition>)
 	relation 391344 *-->
-	  a role_name "sink_" multiplicity "1" private
+	  stereotype "shared_ptr"
+	  a role_name "sink_" multiplicity "1..*" private
 	    comment "Manages serialization of output data to long-term storage."
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
 "
-	    python "${comment}${self}${name} = ${type}()
+	    python "${comment}${self}${name} = ${stereotype}()
 "
 	    classrelation_ref 391856 // sink_ (<directional composition>)
 	  b parent class_ref 313520 // base_sink
@@ -780,16 +795,6 @@ ${docstring}${body}
 	  b parent class_ref 912431 // access
       end
 
-      extra_member 310448 "friend"
-	
-	cpp "
-  friend class boost::serialization::access;" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
       operation 606128 "serialize"
 	stereotype "template"
 	cpp_inline private explicit_return_type "void"
@@ -800,6 +805,7 @@ ${docstring}${body}
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
   // data_source_ not serialized.
+  ar & observers_;
   ar & inner_observers_;
   ar & outer_observers_;
 }
@@ -825,13 +831,13 @@ ${docstring}${body}
 	idl ""
       end
 
-      operation 605744 "description"
-	const public explicit_return_type "void"
+      operation 621488 "add_once"
+	private explicit_return_type "void"
 	nparams 1
-	  param inout name "out" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	  param inout name "obs" type class_ref 1144367 // base_sampler
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}boost::shared_ptr< ${t0} >& ${p0}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -842,7 +848,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment "Log message descibing the observer and its parameters"
+	comment " Ensure observer is only added to observer_ once."
       end
 
       operation 605872 "enrol"
@@ -862,13 +868,8 @@ ${docstring}${body}
 ${docstring}pass
 "
 	
-	comment "Register any signals output by the object with 
-the simulator and optionally connect to any 
-simulator specific signals. The object is responsible
-for testing if a signal with the same label has been
-registered.
-
-The base class method does nothing."
+	comment " Get all samplers to register any signals they output.
+"
       end
 
       operation 605232 "on_inner_loop"
@@ -894,7 +895,7 @@ ${docstring}${body}
       operation 605360 "on_outer_loop"
 	public explicit_return_type "void"
 	nparams 1
-	  param in name "sym" type class_ref 1129135 // simulator
+	  param in name "sim" type class_ref 1129135 // simulator
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
@@ -929,7 +930,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment "Save statistical data to permanent storage"
+	comment " Get all samplers to save statistical data to permanent storage"
       end
 
       operation 606000 "prepare"
@@ -947,9 +948,9 @@ ${docstring}${body}
 	
 	
 	
-	comment "Prepare the evaluator for use with the given simulator and
-stepper. Check for connection to signals of interest and 
-connect if necessary"
+	comment " Get all samplers to prepare themselves for a simulation. Check for
+ connection to signals of interest and connect if necessary.
+"
       end
 
       operation 603057 "set_signal"
@@ -961,7 +962,7 @@ connect if necessary"
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, const ${t1} ${p1}${)}${const}${volatile}${throw}${staticnl}
 {
-  this->data_source_.insert( std::make_pair(${p0}, ${p1}) );
+  this->data_source_.insert( std::make_pair( ${p0}, ${p1} ) );
 }
 "
 	
@@ -989,7 +990,8 @@ silently overrides any previous value"
 ${docstring}${body}
 "
 	
-	comment "Set the object that manages where the output data goes."
+	comment " Set the object that manages where the output data goes. Silently
+ overwrites any previous value."
       end
 
       operation 606512 "share_inner_observer"
@@ -998,7 +1000,8 @@ ${docstring}${body}
 	  param inout name "obs" type class_ref 1144367 // base_sampler
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-   this->inner_observers_.push_back ( ${p0} );
+   this->outer_observers_.push_back( ${p0} );
+   this->add_once( ${p0} );
 }
 "
 	
@@ -1007,13 +1010,16 @@ ${docstring}${body}
 ${docstring}self.observers_.append( ${p0} )
 "
 	
-	comment " Share ownership of a data observer with our observer list.
+	comment " Share ownership of a data observer with our inner loop 
+ observer list.
 
  Unlike the evaluator, chooser and specie objects, observer
  objects may have shared ownership. This allows observers to
  be children of other objects, such as chooser or evaluator
  objects.
-"
+
+NOTE: It is valid to share a single sampler as both an
+inner and outer observer"
       end
 
       operation 613936 "share_outer_observer"
@@ -1022,7 +1028,8 @@ ${docstring}self.observers_.append( ${p0} )
 	  param inout name "obs" type class_ref 1144367 // base_sampler
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-   this->outer_observers_.push_back ( ${p0} );
+   this->outer_observers_.push_back( ${p0} );
+   this->add_once( ${p0} );
 }
 "
 	
@@ -1031,12 +1038,15 @@ ${docstring}self.observers_.append( ${p0} )
 ${docstring}self.observers_.append( ${p0} )
 "
 	
-	comment " Share ownership of a data observer with our observer list.
+	comment " Share ownership of a data observer with our outer loop observer list.
 
  Unlike the evaluator, chooser and specie objects, observer
  objects may have shared ownership. This allows observers to
  be children of other objects, such as chooser or evaluator
  objects.
+
+NOTE: It is valid to share a single sampler as both an
+inner and outer observer
 "
       end
 
@@ -1053,6 +1063,26 @@ ${docstring}self.observers_.append( ${p0} )
 	idl ""
       end
 
+      operation 605744 "description"
+	const public explicit_return_type "void"
+	nparams 1
+	  param inout name "out" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get all samplers to write their descriptions."
+      end
+
       operation 606256 "get_sink"
 	const public return_type class_ref 313520 // base_sink
 	nparams 0
@@ -1067,6 +1097,7 @@ ${docstring}self.observers_.append( ${p0} )
 ${docstring}${body}
 "
 	
+	comment " Get reference to the data output sink"
       end
 
       operation 602929 "get_signal"
@@ -1086,7 +1117,7 @@ ${docstring}return self.data_source_[${p0}]
 	
 	comment " Get a signal from the dictionary
 
-/pre has_signal(label)"
+ /pre has_signal(label)"
       end
 
       operation 647345 "has_signal"
@@ -1108,67 +1139,6 @@ ${docstring}return label in self.data_source_.keys()
  exists in the signal dictionery"
       end
 
-      operation 614960 "on_inner_loop"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "trial" type class_ref 986543 // change_set
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment "Accumulate data after every trial"
-      end
-
-      operation 614832 "on_outer_loop"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "sym" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment "Accumulate data after a sequence of trials"
-      end
-
-      operation 614704 "on_report"
-	public explicit_return_type "void"
-	nparams 2
-	  param in name "sim" type class_ref 1129135 // simulator
-	  param inout name "out" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment "Save statistical data to permanent storage"
-      end
-
       operation 605616 "write_document"
 	const public explicit_return_type "void"
 	nparams 1
@@ -1186,16 +1156,8 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Add an input file section to wr.
-
- Output of this method is something like
-
- sampler
- <call do_write_input_section>
- end
-"
+	comment " Get all samplers to write their input information."
       end
-
     end
 
     classdiagram 491695 "Trial sampler classes"
@@ -1429,11 +1391,11 @@ ${docstring}${body}
 and average specie counts to out."
       end
 
-      operation 304177 "on_sample"
+      operation 304177 "on_outer_loop"
 	public explicit_return_type "void"
 	nparams 1
-	  param in name "sys" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	  param in name "sim" type class_ref 1129135 // simulator
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
 {
@@ -2013,32 +1975,6 @@ gives better detail but requires longer runs."
 	comment "The width of the total RDF histogram"
       end
 
-      attribute 429105 "report_conx_"
-	private type class_ref 206255 // connection
-	init_value "None"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "Connection to 'report' signal"
-      end
-
-      attribute 428977 "sample_conx_"
-	private type class_ref 206255 // connection
-	init_value "None"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "Connection to 'inner-loop' signal"
-      end
-
       operation 487729 "description"
 	const public explicit_return_type "void"
 	nparams 1
@@ -2061,24 +1997,25 @@ ${docstring}${body}
 TODO: describe specific RDF functions (if not default)"
       end
 
-      operation 731185 "enrol"
-	cpp_virtual public explicit_return_type "void"
-	nparams 1
-	  param inout name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+      operation 217264 "do_write_document"
+	const cpp_virtual private explicit_return_type "void"
+	nparams 2
+	  param inout name "wr" type class_ref 163632 // input_document
+	  param in name "ix" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
 {
   ${body}
 }
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
 ${docstring}${body}
 "
 	
-	comment "Connect on_loop and on_report to simulator signals"
+	comment " Add sampler type, width and stepsize to wr[ix]"
       end
 
       operation 336305 "make_sampler"
@@ -2105,12 +2042,13 @@ parameters : \"width\" \"stepsize\""
 
       operation 336049 "on_report"
 	public explicit_return_type "void"
-	nparams 2
+	nparams 3
 	  param in name "sim" type class_ref 1129135 // simulator
 	  param inout name "os" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	  param inout name "reporter" type class_ref 340656 // report_manager
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${throw}
 {
   ${body}
 }
@@ -2124,11 +2062,11 @@ ${docstring}${body}
 	comment "Report density profiles"
       end
 
-      operation 499120 "on_sample"
+      operation 499120 "on_outer_loop"
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
 {
@@ -2245,27 +2183,6 @@ ${docstring}${body}
 "
 	
 	comment "Type label is \"rdf-specie\""
-      end
-
-      operation 217264 "do_write_document"
-	const cpp_virtual private explicit_return_type "void"
-	nparams 2
-	  param inout name "wr" type class_ref 163632 // input_document
-	  param in name "ix" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment " Add sampler type, width and stepsize to wr[ix]"
       end
     end
 
@@ -5475,6 +5392,56 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
+    artifact 351792 "report_manager"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// Manual includes
+#include \"core/strngs.hpp\"
+// -
+
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 340656 // report_manager
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
     artifact 200881 "rdf_sampler"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -5509,6 +5476,59 @@ ${namespace_end}
 BOOST_CLASS_EXPORT_GUID(observer::rdf_sampler, \"observer::rdf_observer\");"
       associated_classes
 	class_ref 167729 // rdf_sampler
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 789807 "sampler_meta"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// Manual incls
+#include <sstream>
+#include <bitset>
+#include \"core/strngs.hpp\"
+#include \"core/input_help.hpp\"
+#include \"utility/utility.hpp\"
+${namespace_start}
+${members}
+${namespace_end}
+"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 1144111 // sampler_meta
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
@@ -5585,12 +5605,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     artifact 769583 "libionch_observer"
       stereotype "library"
       associated_artifacts
-	artifact_ref 181041 // specie_count
-	artifact_ref 200881 // rdf_sampler
 	artifact_ref 135345 // metropolis_sampler
-	artifact_ref 789807 // sampler_meta
-	artifact_ref 275248 // density_zaxis
+	artifact_ref 351792 // report_manager
 	artifact_ref 631215 // base_sampler
+	artifact_ref 275248 // density_zaxis
+	artifact_ref 181041 // specie_count
+	artifact_ref 789807 // sampler_meta
+	artifact_ref 200881 // rdf_sampler
       end
     end
 
@@ -5678,108 +5699,6 @@ BOOST_CLASS_EXPORT_GUID(observer::energy_distribution, \"observer::energy_distri
 "
       associated_classes
 	class_ref 1129775 // energy_distribution
-      end
-      comment "----------------------------------------------------------------------
-This source file is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-----------------------------------------------------------------------
-"
-    end
-
-    artifact 351792 "report_manager"
-      stereotype "source"
-      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
-#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
-
-${comment}
-${includes}
-${declarations}
-${namespace_start}
-${definition}
-${namespace_end}
-#endif
-"
-      cpp_src "${comment}
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
-
-${includes}
-// Manual includes
-// -
-
-${namespace_start}
-${members}
-${namespace_end}"
-      python_src "${comment}
-${import}
-${definition}"
-      associated_classes
-	class_ref 340656 // report_manager
-      end
-      comment "----------------------------------------------------------------------
-This source file is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-----------------------------------------------------------------------
-"
-    end
-
-    artifact 789807 "sampler_meta"
-      stereotype "source"
-      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
-#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
-
-${comment}
-${includes}
-${declarations}
-${namespace_start}
-${definition}
-${namespace_end}
-#endif
-"
-      cpp_src "${comment}
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
-
-${includes}
-// Manual incls
-#include <sstream>
-#include <bitset>
-#include \"core/strngs.hpp\"
-#include \"core/input_help.hpp\"
-#include \"utility/utility.hpp\"
-${namespace_start}
-${members}
-${namespace_end}
-"
-      python_src "${comment}
-${import}
-${definition}"
-      associated_classes
-	class_ref 1144111 // sampler_meta
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify

@@ -29,7 +29,7 @@ if not sim.has_signal(self.type_label()):
 !!!365361.cpp!!!	make_sampler(in paramset : string, inout sim : simulator) : void
 UTILITY_INPUT( paramset.empty(), "The "+specie_count::type_label_()+" sampler takes no parameters.", core::strngs::sampler_label() );
 boost::shared_ptr< base_sampler > smplr( new specie_count );
-sim.share_observer( smplr );
+sim.get_reporter().share_outer_observer( smplr );
 !!!594865.cpp!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
 if (not this->count_.empty())
 {
@@ -98,9 +98,9 @@ if self.count_ != None:
         print >>out," %3s %7d %8.4f %8.4f %8.4f %8.4f"% (spc.label(),spc.count(),(spc.count()*count_to_conc),runr.mean(),(runr.mean()*count_to_conc),runr.variance())
 pass
 
-!!!304177.cpp!!!	on_sample(in sys : simulator) : void
+!!!304177.cpp!!!	on_outer_loop(in sim : simulator) : void
 size_t ispec = 0;
-for (auto const& spc : sys.get_species())
+for (auto const& spc : sim.get_species())
 {
   this->count_[ispec].append( spc.count() );
   ++ispec;
@@ -109,7 +109,7 @@ if (not this->mean_signal_.empty())
 {
   this->mean_signal_(this->count_);
 }
-!!!304177.python!!!	on_sample(in sys : simulator) : void
+!!!304177.python!!!	on_outer_loop(in sim : simulator) : void
 for m, s in zip( self.count_, sys.get_species() ):
   m.append( s.count() )
 # publish data

@@ -5,31 +5,23 @@ class report_manager
 , outer_observers_()
 , sink_()
 {}
-!!!605744.cpp!!!	description(inout out : ostream) : void
-if ( not this->inner_observers_.empty() )
+!!!621488.cpp!!!	add_once(inout obs : base_sampler) : void
+bool in_set{ false };
+for (auto const& ptr : this->observers_ )
 {
-   os << core::strngs::horizontal_bar () << "\n";
-   for (auto const& obsr : this->inner_observers_)
-   {
-      obsr->description(os);
-   }
+  if (ptr.get() == obs.get())
+  {
+    in_set = true;
+  }
 }
-if ( not this->outer_observers_.empty() )
+if (not in_set)
 {
-   os << core::strngs::horizontal_bar () << "\n";
-   for (auto const& obsr : this->outer_observers_)
-   {
-      obsr->description(os);
-   }
+  this->observers_.push_back ( obs );
 }
 !!!605872.cpp!!!	enrol(inout sim : simulator) : void
-for (auto & obs : this->inner_observers_)
+for (auto & obs : this->observers_)
 {
-  obs->enrol(sim);
-}
-for (auto & obs : this->outer_observers_)
-{
-  obs->enrol(sim);
+  obs->enrol( *this );
 }
 !!!605232.cpp!!!	on_inner_loop(in trial : change_set) : void
 for (auto & obs : this->inner_observers_)
@@ -37,21 +29,35 @@ for (auto & obs : this->inner_observers_)
   obs->on_inner_loop(trial);
 }
 
-!!!605360.cpp!!!	on_outer_loop(in sym : simulator) : void
+!!!605360.cpp!!!	on_outer_loop(in sim : simulator) : void
 for (auto & obs : this->outer_observers_)
 {
   obs->on_outer_loop(sim);
 }
 !!!607024.cpp!!!	on_report(in sim : simulator, inout out : ostream) : void
-for (auto & obs : this->inner_observers_)
-{
-  obs->on_report(sim, out, *this);
-}
-for (auto & obs : this->outer_observers_)
+for (auto & obs : this->observers_)
 {
   obs->on_report(sim, out, *this);
 }
 
+!!!606000.cpp!!!	prepare(inout sim : simulator) : void
+for (auto & obs : this->observers_)
+{
+  obs->prepare( sim );
+}
+
+!!!605744.cpp!!!	description(inout out : ostream) : void
+if (not this->inner_observers_.empty())
+{
+   out << core::strngs::horizontal_bar () << "\n";
+   for (auto const& obsr : this->observers_)
+   {
+      obsr->description( out );
+   }
+}
 !!!605616.cpp!!!	write_document(inout wr : input_document) : void
-std::size_t ix = wr.add_section( core::strngs::sampler_label() );
-this->do_write_document( wr, ix );
+for (auto const& obsr : this->observers_)
+{
+  obsr->write_document( wr );
+}
+

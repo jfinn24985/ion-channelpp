@@ -3,30 +3,10 @@ class rdf_sampler
 os << "[sampler] " << this->type_label_() << "\n";
 os << " Collect and report one dimensional density profiles of species\n";
 os << " - Default histogram bin width   : " << this->stepsize_ << "\n";
-!!!731185.cpp!!!	enrol(inout sim : simulator) : void
-if (not this->report_conx_.connected())
-{
-  auto sig = boost::any_cast< platform::simulator::report_signal_type* >(sim.get_signal("report"));
-  this->report_conx_ = sig->connect(boost::bind(&rdf_sampler::on_report, this, _1, _2));
-}
-if (not this->sample_conx_.connected())
-{
-  auto sig = boost::any_cast< platform::simulator::sampler_signal_type* >(sim.get_signal("outer-loop"));
-  this->sample_conx_ = sig->connect(boost::bind(&rdf_sampler::on_sample, this, _1));
-}
-
-!!!731185.python!!!	enrol(inout sim : simulator) : void
-if not self.report_conx_ or not self.report_conx.connected():
-  sig = sim.get_signal("report")
-  self.report_conx_ = sig.connect(lambda *args: self.on_report(*args))
-if not self.sample_conx_ or not self.sample_conx_.connected():
-  sig = sim.get_signal("outer-loop")
-  self.sample_conx_ = sig.connect(lambda *args: self.on_sample(*args))
-if not self.mean_signal_:
-  import signals
-  self.mean_signal_ = signals.signal()
-if not sim.has_signal(self.type_label()):
-  sim.set_signal(self.type_label(), self.mean_signal_)
+!!!217264.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
+wr[ ix ].add_entry( "width", this->width_ );
+wr[ ix ].add_entry( "stepsize", this->stepsize_ );
 !!!336305.cpp!!!	make_sampler(in param_set : string, inout sim : simulator) : void
 double width = 15.0;
 double stepsize = 0.2;
@@ -59,8 +39,8 @@ std::unique_ptr< rdf_sampler > result(new rdf_sampler);
 result->width_ = width;
 result->stepsize_ = stepsize;
 boost::shared_ptr< base_sampler > tmp( result.release() );
-sim.share_observer( tmp );
-!!!336049.cpp!!!	on_report(in sim : simulator, inout os : ostream) : void
+sim.get_reporter().share_outer_observer( tmp );
+!!!336049.cpp!!!	on_report(in sim : simulator, inout os : ostream, inout reporter : report_manager) : void
 // Write out RDF data
 for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
 {
@@ -110,11 +90,11 @@ for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
             os << std::sqrt(data.variance( ii ));
          } ) );
 
-         dset.write( filename, sim.get_sink() );
+         dset.write( filename, reporter.get_sink() );
       }
    }
 }
-!!!499120.cpp!!!	on_sample(in sim : simulator) : void
+!!!499120.cpp!!!	on_outer_loop(in sim : simulator) : void
 {
   // rij index
   const particle::ensemble &ens( sim.get_ensemble() );
@@ -204,7 +184,3 @@ if (this->samplers_.size() < sim.specie_count()*sim.specie_count())
 }
 
 for (auto &est : this->data_sets_) est.reset();
-!!!217264.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
-wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
-wr[ ix ].add_entry( "width", this->width_ );
-wr[ ix ].add_entry( "stepsize", this->stepsize_ );

@@ -82,13 +82,6 @@ for (auto nvpair : param_set)
 }
 UTILITY_INPUT( unknown_parameter.empty(),"Unknown parameter(s) [" + unknown_parameter + "] for induced charge evaluator.", core::strngs::evaluator_label());
 
-// Connect to inner-loop signal to get notification from every trial
-{
-   auto sig = boost::any_cast< platform::simulator::inner_loop_signal_type* >( sim.get_signal("inner-loop" ) );
-   cc->sample_conx_ = sig->connect(boost::bind(&induced_charge::on_inner_loop, cc.get(), _1));
-}
-
-
 sim.add_evaluator( cc.release() );
 
 !!!352176.cpp!!!	do_description(inout os : ostream) : void
@@ -128,15 +121,6 @@ os << "   complex ionic systems\" Physical Review E, 2004, 69, 046702\n";
 wr[ ix ].add_entry( core::strngs::fsdxf(), this->grid_->get_dxf() );
 wr[ ix ].add_entry( core::strngs::fsdxw(), this->grid_->get_dxw() );
 wr[ ix ].add_entry( core::strngs::fsnsub(), this->grid_->get_nsub0() );
-!!!537520.cpp!!!	enrol(inout sim : simulator) : void
-// Connect to inner-loop signal to get notification from every trial
-if ( not this->sample_conx_.connected() )
-{
-   auto sig = boost::any_cast< platform::simulator::inner_loop_signal_type* >( sim.get_signal("inner-loop" ) );
-   this->sample_conx_ = sig->connect(boost::bind(&induced_charge::on_inner_loop, this, _1));
-}
-
-
 !!!538416.cpp!!!	surface_charge(in idx : size_t) : double
 return this->grid_->area( idx ) * this->h_[ idx ] / this->grid_->deps( idx ) / std::sqrt( core::constants::electron_charge() * this->alfa_ );
 
@@ -146,11 +130,11 @@ return this->grid_->area( idx ) * this->h_[ idx ] / this->grid_->deps( idx ) / s
 // save patch data and amx
 std::stringstream os_pch;
 this->grid_->write_grid( os_pch );
-sim.get_sink().write( this->patch_filename_, os_pch.str() );
+sim.get_reporter().get_sink().write( this->patch_filename_, os_pch.str() );
 
 std::stringstream os_amx;
 this->amx_.write_a_matrix( os_amx );
-sim.get_sink().write( this->a_matrix_filename_, os_amx.str() );
+sim.get_reporter().get_sink().write( this->a_matrix_filename_, os_amx.str() );
 !!!538160.cpp!!!	compute_potential(in spcs : specie, in ens : ensemble, inout changes : change_set, in start_index : size_t) : void
 //
 // Calculate the electric field at each tile. This
@@ -646,7 +630,7 @@ std::swap( this->grid_, grid );
 
 this->amx_.compute_amx( *this->grid_, os_log );
 this->amx_.lu_decompose_amx( os_log );
-!!!538544.cpp!!!	on_inner_loop(in changes : change_set) : void
+!!!538544.cpp!!!	on_conclude_trial(in changes : change_set) : void
 if (changes.accept())
 {
    std::swap(this->h_, this->hnew_);
@@ -701,7 +685,7 @@ UTILITY_REQUIRE(this->size() == 0, "Attempt to overwrite existing A matrix data.
 // Check for available patch/amx files.
 bool amx_read = false;
 {
-   auto & sink = sim.get_sink();
+   auto & sink = sim.get_reporter().get_sink();
    std::string buffer;
    if ( sink.read( this->patch_filename_, buffer ) )
    {

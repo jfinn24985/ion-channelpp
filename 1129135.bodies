@@ -763,11 +763,11 @@ utility::fp_env &env(utility::fp_env::env_);
 // Check for FP error before reporting
 if (not env.no_except())
 {
-   if (0 != ((~env.Inexact) & env.except()))
-   {
-      UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except()),  " Floating point exception : "+ env.error_message ());
-   }
-   env.reset();
+  if (0 != ((~env.Inexact) & env.except()))
+  {
+    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except()),  " Floating point exception : "+ env.error_message ());
+  }
+  env.reset();
 }
 // Send signal to prepare other objects
 this->outer_loop_index_ = 0;
@@ -775,7 +775,7 @@ this->outer_loop_index_ = 0;
 this->choices_.clear();
 for (auto &chsr : this->choosers_)
 {
-   chsr.generate_choices( *this, this->choices_ );
+  chsr.generate_choices( *this, this->choices_ );
 }
 UTILITY_REQUIRE(not this->choices_.empty (), "Can not run simulation with no trials");
 // Ensure sum of probabilities is 1.0
@@ -783,15 +783,15 @@ double sum_choice_rates { 0.0 };
 // reset choice objects
 for (auto &choice : this->choices_)
 {
-   sum_choice_rates += choice.probability();
-   choice.reset();
+  sum_choice_rates += choice.probability();
+  choice.reset();
 }
 if (not utility::feq( sum_choice_rates, 1.0 ) )
 {
-for (auto &choice : this->choices_)
-   {
-      choice.set_probability( choice.probability() / sum_choice_rates );
-   }
+  for (auto &choice : this->choices_)
+  {
+    choice.set_probability( choice.probability() / sum_choice_rates );
+  }
 }
 // Randomize choice order
 this->ranf_.shuffle(this->choices_);
@@ -800,138 +800,143 @@ this->reporter_->prepare( *this );
 // reset the evaluators
 for (auto &evltr : this->evaluators_)
 {
-   evltr.prepare ( *this );
+  evltr.prepare ( *this );
 }
 // Raise the prepare signal.
 this->prepare_sig_( *this );
 if ( not env.no_except() )
 {
-   if (0 != ((~env.Inexact) & env.except()))
-   {
-      out << "Floating point exception during simulation preparation \"" << env.error_message () << "\"\n";
-      UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
-                      , " Floating point exception : "+ env.error_message ());
-   }
-   env.reset();
+  if (0 != ((~env.Inexact) & env.except()))
+  {
+    out << "Floating point exception during simulation preparation \"" << env.error_message () << "\"\n";
+    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                    , " Floating point exception : "+ env.error_message ());
+  }
+  env.reset();
 }
 // Calculate/reset the system's total energy
 this->total_energy();
 if ( not env.no_except() )
 {
-   if (0 != ((~env.Inexact) & env.except()))
-   {
-      out << "Floating point exception during calculation of initial energy\n \"" << env.error_message () << "\"\n";
-      UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
-                      , " Floating point exception : "+ env.error_message ());
-   }
-   env.reset();
+  if (0 != ((~env.Inexact) & env.except()))
+  {
+    out << "Floating point exception during calculation of initial energy\n \"" << env.error_message () << "\"\n";
+    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                    , " Floating point exception : "+ env.error_message ());
+  }
+  env.reset();
 }
 // Set report interval to some meaningful default if not set
 if (this->report_interval_ == 0)
 {
-   this->report_interval_ = std::max(1ul, loopcount / 5);
+  this->report_interval_ = std::max(1ul, loopcount / 5);
 }
 
 
 // Run the simulation
 for (size_t d9m8h2 = 0; d9m8h2 != loopcount; ++d9m8h2)
 {
-   this->outer_loop_index_ += 1;
-   for ( size_t t1b6b8 = 0; t1b6b8 != this->inner_loop_size_; ++t1b6b8 )
-   {
-      // select a move
-      double sofar = this->ranf_.uniform( 0.0, 1.0 );
-      std::unique_ptr< trial::change_set > trial;
-for ( auto & choice: this->choices_ )
+  this->outer_loop_index_ += 1;
+  for ( size_t t1b6b8 = 0; t1b6b8 != this->inner_loop_size_; ++t1b6b8 )
+  {
+    // select a move
+    double sofar = this->ranf_.uniform( 0.0, 1.0 );
+    std::unique_ptr< trial::change_set > trial;
+    for ( auto & choice: this->choices_ )
+    {
+      sofar -= choice.probability();
+      if (sofar <= 0.0)
       {
-         sofar -= choice.probability();
-         if (sofar <= 0.0)
-         {
-            trial = choice.generate( *this );
-            break;
-         }
+        trial = choice.generate( *this );
+        break;
       }
+    }
+    if ( not trial->fail() )
+    {
+      // Calculate distance vectors.
+      for ( auto & atom : *trial )
+      {
+        if (atom.do_old)
+        {
+          this->compute_distances( atom.old_position, this->ensemble_->get_coordinates(), atom.old_rij, this->ensemble_->size(), 0 );
+        }
+        if (atom.do_new)
+        {
+          this->compute_distances( atom.new_position, this->ensemble_->get_coordinates(), atom.new_rij, this->ensemble_->size(), 0 );
+        }
+      }
+      // Calculate energy
+      for ( auto const& evaluator : this->evaluators_ )
+      {
+        evaluator.compute_potential( this->species_, *this->ensemble_, *trial, 0 );
+        if ( trial->fail() ) break;
+      }
+      if ( not env.no_except() )
+      {
+        if (0 != ((~env.Inexact) & env.except()))
+        {
+          out << "Floating point exception in computation of trial\n \"" << env.error_message () << "\"\n";
+          out << "Loop [" << d9m8h2 << "][" << t1b6b8 << "]\n";
+          UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                          , " Floating point exception : "+ env.error_message ());
+        }
+        env.reset();
+      }
+
       if ( not trial->fail() )
       {
-         // Calculate distance vectors.
-for ( auto & atom : *trial )
-         {
-            if (atom.do_old)
-            {
-               this->compute_distances( atom.old_position, this->ensemble_->get_coordinates(), atom.old_rij, this->ensemble_->size(), 0 );
-            }
-            if (atom.do_new)
-            {
-               this->compute_distances( atom.new_position, this->ensemble_->get_coordinates(), atom.new_rij, this->ensemble_->size(), 0 );
-            }
-         }
-         // Calculate energy
-for ( auto const& evaluator : this->evaluators_ )
-         {
-            evaluator.compute_potential( this->species_, *this->ensemble_, *trial, 0 );
-            if ( trial->fail() ) break;
-         }
-         if ( not env.no_except() )
-         {
-            if (0 != ((~env.Inexact) & env.except()))
-            {
-               out << "Floating point exception in computation of trial\n \"" << env.error_message () << "\"\n";
-               out << "Loop [" << d9m8h2 << "][" << t1b6b8 << "]\n";
-               UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
-                               , " Floating point exception : "+ env.error_message ());
-            }
-            env.reset();
-         }
-
-         if ( not trial->fail() )
-         {
-            trial->set_accept( this->ranf_.uniform(0.0,1.0) <= trial->metropolis_factor() );
-            if (trial->accept())
-            {
-               this->energy_ += trial->energy();
-               this->ensemble_->commit( *trial, this->species_ );
-            }
-         }
+        trial->set_accept( this->ranf_.uniform(0.0,1.0) <= trial->metropolis_factor() );
+        if (trial->accept())
+        {
+          this->energy_ += trial->energy();
+          this->ensemble_->commit( *trial, this->species_ );
+        }
       }
-      this->reporter_->on_inner_loop( *trial );
-      if (not env.no_except())
-      {
-         if (0 != ((~env.Inexact) & env.except()))
-         {
-            out << "Floating point exception in inner sampling\n \"" << env.error_message () << "\"\n";
-            out << "Loop [" << d9m8h2 << "][END]\n";
-            UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
-                            , " Floating point exception : "+ env.error_message ());
-         }
-         env.reset();
-      }
-   }
-   // Note this->outer_loop_index_ is a 1-based count
-   out << " STEP : " << this->outer_loop_index_ << "\n";
-   this->reporter_->on_outer_loop( *this );
-   if ((this->outer_loop_index_ % this->report_interval_) == 0)
-   {
-      this->do_report( out );
-   }
-   if (not env.no_except())
-   {
+    }
+    for ( auto const& evaluator : this->evaluators_ )
+    {
+      evaluator.conclude_trial( *trial );
+    }
+    this->reporter_->on_inner_loop( *trial );
+    if (not env.no_except())
+    {
       if (0 != ((~env.Inexact) & env.except()))
       {
-         out << "Floating point exception in outer sampling\n \"" << env.error_message () << "\"\n";
-         out << "Loop [" << d9m8h2 << "][END]\n";
-         UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
-                         , " Floating point exception : "+ env.error_message ());
+        out << "Floating point exception in inner sampling\n \"" << env.error_message () << "\"\n";
+        out << "Loop [" << d9m8h2 << "][END]\n";
+        UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                        , " Floating point exception : "+ env.error_message ());
       }
       env.reset();
-   }
-   if ((this->outer_loop_index_ % this->report_interval_) == 0)
-   {
-      if (this->checkpoint_function_)
-      {
-         this->checkpoint_function_( this );
-      }
-   }
+    }
+  }
+  // Note this->outer_loop_index_ is a 1-based count
+  out << " STEP : " << this->outer_loop_index_ << "\n";
+  this->reporter_->on_outer_loop( *this );
+  if ((this->outer_loop_index_ % this->report_interval_) == 0)
+  {
+    this->do_report( out );
+  }
+  if (not env.no_except())
+  {
+    if (0 != ((~env.Inexact) & env.except()))
+    {
+      out << "Floating point exception in outer sampling\n \"" << env.error_message () << "\"\n";
+      out << "Loop [" << d9m8h2 << "][END]\n";
+      UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                      , " Floating point exception : "+ env.error_message ());
+    }
+    env.reset();
+  }
+  if ((this->outer_loop_index_ % this->report_interval_) == 0)
+  {
+    if (this->checkpoint_function_)
+    {
+      this->checkpoint_function_( this );
+    }
+  }
 }
+
 !!!602801.python!!!	run_loop(in loopcount : size_t, inout out : ostream) : void
 # Send signal to prepare other objects
 self.do_prepare()
