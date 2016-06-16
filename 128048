@@ -1,6 +1,6 @@
 format 75
 "periodic_cube" // periodic_cube
-  revision 57
+  revision 58
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -1028,18 +1028,6 @@ ${docstring}${members}
 	  b parent class_ref 162992 // signal_type
       end
 
-      attribute 192176 "report_conx_"
-	private type class_ref 206255 // connection
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment " Manage the connection to the simulator's report signal"
-      end
-
       operation 212912 "alternater_sampler"
 	public explicit_return_type ""
 	nparams 0
@@ -1087,25 +1075,6 @@ ${docstring}${body}
 	comment " Stop watching a choice."
       end
 
-      operation 213808 "remove_alternater_choice"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "choice" type class_ref 141744 // alternater_choice
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} * ${p0}${v0}${)}${const}${volatile}${throw}${abstract};"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} * ${p0}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Stop watching a chocie."
-      end
-
       operation 212528 "description"
 	const public explicit_return_type "void"
 	nparams 1
@@ -1126,27 +1095,10 @@ ${docstring}${body}
 	comment "Log message descibing the observer and its parameters"
       end
 
-      operation 212656 "prepare"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
-{}
-"
-	
-	
-	
-	
-	comment " Does nothing as this object does not store the observations
- it samples."
-      end
-
       operation 212784 "enrol"
 	cpp_virtual public explicit_return_type "void"
 	nparams 1
-	  param inout name "sim" type class_ref 1129135 // simulator
+	  param inout name "reporter" type class_ref 340656 // report_manager
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
@@ -1169,14 +1121,30 @@ ${docstring}pass
  The base class method does nothing."
       end
 
-      operation 223920 "on_report"
+      operation 212656 "prepare"
 	public explicit_return_type "void"
-	nparams 2
-	  param in name "sim" type class_ref 1129135 // simulator
-	  param inout name "os" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	nparams 1
+	  param inout name "sim" type class_ref 1129135 // simulator
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw} override;
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{}
+"
+	
+	
+	
+	
+	comment " Does nothing as this object does not store the observations
+ it samples."
+      end
+
+      operation 223920 "on_outer_loop"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "sim" type class_ref 1129135 // simulator
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -1187,7 +1155,47 @@ ${docstring}pass
 ${docstring}${body}
 "
 	
-	comment "Report RDFs"
+	comment "Broadcast add trial success probabilities. Does not output
+data anywhere."
+      end
+
+      operation 635824 "on_report"
+	public explicit_return_type "void"
+	nparams 3
+	  param in name "sim" type class_ref 1129135 // simulator
+	  param inout name "os" explicit_type "ostream"
+	  param inout name "reporter" type class_ref 340656 // report_manager
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${throw}
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Does nothing."
+      end
+
+      operation 213808 "remove_alternater_choice"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "choice" type class_ref 141744 // alternater_choice
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} * ${p0}${v0}${)}${const}${volatile}${throw}${abstract};"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} * ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Stop watching a chocie."
       end
 
       operation 213552 "type_label"
@@ -4084,6 +4092,49 @@ ${docstring}${body}
 	comment "Update the chemical potentials (in derived classes)"
       end
 
+      operation 214704 "do_prepare"
+	cpp_virtual private explicit_return_type "void"
+	nparams 1
+	  param inout name "sim" type class_ref 1129135 // simulator
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "Prepare for a main simulation loop"
+      end
+
+      operation 218288 "do_write_document"
+	const cpp_virtual private explicit_return_type "void"
+	nparams 2
+	  param inout name "wr" type class_ref 163632 // input_document
+	  param in name "ix" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "Write an input file section.
+
+only throw possible should be from os.write() operation"
+      end
+
       operation 129465 "make_super_looper"
 	class_operation public explicit_return_type "void"
 	nparams 2
@@ -4103,6 +4154,26 @@ ${docstring}${body}
 "
 	
 	comment "Create a new widom sampler using the given parameter set."
+      end
+
+      operation 214960 "on_update"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "data" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::vector< std::pair < ${t0},  ${t0} > > const& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::vector< std::pair < ${t0},  ${t0} > > const& ${p0}${)}${const}${volatile}${throw}
+{
+  this->choices_ = ${p0};
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get acceptance rate data"
       end
 
       operation 129849 "type_label"
@@ -4170,69 +4241,6 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-      end
-
-      operation 214704 "do_prepare"
-	cpp_virtual private explicit_return_type "void"
-	nparams 1
-	  param inout name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment "Prepare for a main simulation loop"
-      end
-
-      operation 214960 "on_update"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "data" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::vector< std::pair < ${t0},  ${t0} > > const& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::vector< std::pair < ${t0},  ${t0} > > const& ${p0}${)}${const}${volatile}${throw}
-{
-  this->choices_ = ${p0};
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Get acceptance rate data"
-      end
-
-      operation 218288 "do_write_document"
-	const cpp_virtual private explicit_return_type "void"
-	nparams 2
-	  param inout name "wr" type class_ref 163632 // input_document
-	  param in name "ix" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment "Write an input file section.
-
-only throw possible should be from os.write() operation"
       end
     end
   end
@@ -4487,50 +4495,6 @@ of whether the Widom sampler is used or not. "
 	comment "Should we use add attempts from the main simulation?"
       end
 
-      attribute 415409 "report_conx_"
-	private type class_ref 206255 // connection
-	init_value "None"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "Connection to 'report' signal"
-      end
-
-      attribute 428721 "sample_conx_"
-	private type class_ref 206255 // connection
-	init_value "None"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "Connection to 'inner-loop' signal"
-      end
-
-      operation 2146223 "checkpoint"
-	stereotype "EXAMPLE"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "sys" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	
-	
-      end
-
       operation 488113 "description"
 	const public explicit_return_type "void"
 	nparams 1
@@ -4574,31 +4538,11 @@ ${docstring}${body}
 	comment " Add details of widom sampler to wr[ix]."
       end
 
-      operation 717873 "enrol"
-	cpp_virtual public explicit_return_type "void"
-	nparams 1
-	  param inout name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment "Connect on_loop and on_report to simulator signals"
-      end
-
-      operation 434353 "on_loop"
+      operation 434353 "on_inner_loop"
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "cset" type class_ref 986543 // change_set
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
 {
@@ -4614,14 +4558,15 @@ ${docstring}${body}
 	comment "Capture add attempts from the main loop."
       end
 
-      operation 1747631 "on_sample"
+      operation 1747631 "on_report"
 	public explicit_return_type "void"
-	nparams 2
+	nparams 3
 	  param in name "sys" type class_ref 1129135 // simulator
 	  param inout name "log" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	  param inout name "reporter" type class_ref 340656 // report_manager
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${throw}
 {
   ${body}
 }
@@ -4657,25 +4602,6 @@ ${docstring}${body}
  adjust key_labels to contain only used keys. 
  Allocate storage for accumulating data once the
  number of species to observe is known. "
-      end
-
-      operation 139183 "report"
-	private explicit_return_type "void"
-	nparams 2
-	  param in name "sys" type class_ref 1129135 // simulator
-	  param inout name "os" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	
-	
-	comment "Right report"
       end
 
       operation 2138671 "trials"
@@ -4873,6 +4799,19 @@ ${docstring}${body}
 	
 	
 	comment "No copy"
+      end
+
+      operation 635696 "widom"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 135087 // widom
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${v0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	
+	
+	comment "No move"
       end
 
       operation 2102575 "~widom"
@@ -5196,43 +5135,43 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     artifact 302256 "libionch_pbc"
       stereotype "library"
       associated_artifacts
-	artifact_ref 148401 // periodic_system
-	artifact_ref 128176 // add_specie_pbc
-	artifact_ref 128944 // jump_choice_pbc
-	artifact_ref 148784 // bulk_simulator_meta
-	artifact_ref 246961 // igcmc
-	artifact_ref 162480 // alternater_chooser
-	artifact_ref 128048 // gc_choice_pbc
-	artifact_ref 134841 // accept_igcmc
 	artifact_ref 128560 // remove_specie_pbc
-	artifact_ref 651823 // widom
 	artifact_ref 128057 // lamperski_igcmc
-	artifact_ref 247089 // malasics_igcmc
 	artifact_ref 148912 // alternater_choice
+	artifact_ref 128176 // add_specie_pbc
+	artifact_ref 162480 // alternater_chooser
+	artifact_ref 134841 // accept_igcmc
+	artifact_ref 128944 // jump_choice_pbc
+	artifact_ref 651823 // widom
+	artifact_ref 247089 // malasics_igcmc
+	artifact_ref 148784 // bulk_simulator_meta
+	artifact_ref 148401 // periodic_system
 	artifact_ref 155568 // imc_meta
+	artifact_ref 246961 // igcmc
+	artifact_ref 128048 // gc_choice_pbc
       end
     end
 
     artifact 128817 "cscbulk"
       stereotype "executable"
       associated_artifacts
-	artifact_ref 609327 // libionch_core
-	artifact_ref 215983 // program_options
-	artifact_ref 769327 // libionch_platform
-	artifact_ref 617391 // libionch_particle
 	artifact_ref 694959 // libionch_trial
-	artifact_ref 216239 // date_time
-	artifact_ref 281519 // system
-	artifact_ref 651439 // random
-	artifact_ref 332208 // libionch_gdbm_sink
-	artifact_ref 327601 // cscmc_bulk
-	artifact_ref 325552 // libionch_lapack
-	artifact_ref 716335 // libionch_evaluator
-	artifact_ref 334257 // uuid
-	artifact_ref 185007 // serialization
-	artifact_ref 302256 // libionch_pbc
-	artifact_ref 222768 // clapack
+	artifact_ref 215983 // program_options
 	artifact_ref 207919 // libionch_utility
+	artifact_ref 769327 // libionch_platform
+	artifact_ref 185007 // serialization
+	artifact_ref 334257 // uuid
+	artifact_ref 651439 // random
+	artifact_ref 609327 // libionch_core
+	artifact_ref 302256 // libionch_pbc
+	artifact_ref 325552 // libionch_lapack
+	artifact_ref 216239 // date_time
+	artifact_ref 617391 // libionch_particle
+	artifact_ref 222768 // clapack
+	artifact_ref 327601 // cscmc_bulk
+	artifact_ref 332208 // libionch_gdbm_sink
+	artifact_ref 281519 // system
+	artifact_ref 716335 // libionch_evaluator
 	artifact_ref 769583 // libionch_observer
       end
       comment " Program version to be used to create a make, cmake or jam
@@ -5242,25 +5181,25 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     artifact 302128 "cscbulk_mpi"
       stereotype "executable"
       associated_artifacts
-	artifact_ref 609327 // libionch_core
-	artifact_ref 215983 // program_options
-	artifact_ref 769327 // libionch_platform
-	artifact_ref 617391 // libionch_particle
-	artifact_ref 301872 // mpi
 	artifact_ref 694959 // libionch_trial
-	artifact_ref 216239 // date_time
-	artifact_ref 281519 // system
+	artifact_ref 215983 // program_options
+	artifact_ref 207919 // libionch_utility
+	artifact_ref 769327 // libionch_platform
+	artifact_ref 185007 // serialization
+	artifact_ref 334257 // uuid
 	artifact_ref 651439 // random
-	artifact_ref 332208 // libionch_gdbm_sink
+	artifact_ref 609327 // libionch_core
+	artifact_ref 302256 // libionch_pbc
 	artifact_ref 325552 // libionch_lapack
+	artifact_ref 216239 // date_time
+	artifact_ref 617391 // libionch_particle
+	artifact_ref 222768 // clapack
+	artifact_ref 332208 // libionch_gdbm_sink
+	artifact_ref 281519 // system
+	artifact_ref 301872 // mpi
+	artifact_ref 345264 // libionch_platform_mpi
 	artifact_ref 295344 // cscmc_bulk_mpi
 	artifact_ref 716335 // libionch_evaluator
-	artifact_ref 334257 // uuid
-	artifact_ref 185007 // serialization
-	artifact_ref 302256 // libionch_pbc
-	artifact_ref 222768 // clapack
-	artifact_ref 345264 // libionch_platform_mpi
-	artifact_ref 207919 // libionch_utility
 	artifact_ref 769583 // libionch_observer
       end
       comment " Program version to be used to create a make, cmake or jam

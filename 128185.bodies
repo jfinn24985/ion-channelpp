@@ -60,6 +60,19 @@ for (std::size_t ispec = 0; ispec != sys.specie_count(); ++ispec)
    }
    spcobj.set_excess_potential(chempi);
 }
+!!!214704.cpp!!!	do_prepare(inout sim : simulator) : void
+this->igcmc::prepare( sim );
+
+// Connect to signals.
+if (not this->accept_conx_.connected())
+{
+  auto sig = boost::any_cast< periodic_cube::alternater_sampler::signal_type* >( sim.get_reporter().get_signal( periodic_cube::alternater_sampler::type_label() ) );
+  this->accept_conx_ = sig->connect(boost::bind(&accept_igcmc::on_update, this, _1));
+}
+
+!!!218288.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
+wr[ ix ].add_entry( "variant", this->variant_ );
 !!!129465.cpp!!!	make_super_looper(in params : string, in sim : simulator) : void
 bool required_tags_step = false;
 bool required_tags_variant = false;
@@ -98,16 +111,3 @@ if (not required_tags_variant)
 boost::shared_ptr< periodic_cube::igcmc > result( smplr.release() );
 dynamic_cast< periodic_cube::periodic_system& >( sim ).set_super_looper( result );
 
-!!!214704.cpp!!!	do_prepare(inout sim : simulator) : void
-this->igcmc::prepare( sim );
-
-// Connect to signals.
-if (not this->accept_conx_.connected())
-{
-  auto sig = boost::any_cast< periodic_cube::alternater_sampler::signal_type* >( sim.get_signal( periodic_cube::alternater_sampler::type_label() ) );
-  this->accept_conx_ = sig->connect(boost::bind(&accept_igcmc::on_update, this, _1));
-}
-
-!!!218288.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
-wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
-wr[ ix ].add_entry( "variant", this->variant_ );

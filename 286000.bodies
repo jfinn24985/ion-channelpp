@@ -3,36 +3,12 @@ class density_zaxis
 os << "[sampler] " << this->type_label_() << "\n";
 os << " Collect and report radial distribution between ion pairs\n";
 os << " - Default histogram bin width   : " << this->stepsize_ << "\n";
-!!!498736.cpp!!!	enrol(inout sim : simulator) : void
-if (not this->report_conx_.connected())
-{
-  auto sig = boost::any_cast< platform::simulator::report_signal_type* >( sim.get_signal( "report" ) );
-  this->report_conx_ = sig->connect(boost::bind(&density_zaxis::on_report, this, _1, _2));
-}
-if (not this->sample_conx_.connected())
-{
-  auto sig = boost::any_cast< platform::simulator::sampler_signal_type* >( sim.get_signal( "outer-loop" ) );
-  this->sample_conx_ = sig->connect( boost::bind( &density_zaxis::on_sample, this, _1 ) );
-}
-
-!!!498736.python!!!	enrol(inout sim : simulator) : void
-if not self.report_conx_ or not self.report_conx.connected():
-  sig = sim.get_signal("report")
-  self.report_conx_ = sig.connect(lambda *args: self.on_report(*args))
-if not self.sample_conx_ or not self.sample_conx_.connected():
-  sig = sim.get_signal("outer-loop")
-  self.sample_conx_ = sig.connect(lambda *args: self.on_sample(*args))
-if not self.mean_signal_:
-  import signals
-  self.mean_signal_ = signals.signal()
-if not sim.has_signal(self.type_label()):
-  sim.set_signal(self.type_label(), self.mean_signal_)
 !!!498864.cpp!!!	make_sampler(in param_set : string, inout sim : simulator) : void
 double stepsize = 0.2;
 std::size_t known_parameters = 0;
-if (0 != param_set.count("stepsize"))
+if (0 != param_set.count( "stepsize" ))
 {
-  stepsize = boost::lexical_cast< double >(param_set.at("stepsize"));
+  stepsize = boost::lexical_cast< double >( param_set.at( "stepsize" ));
   ++known_parameters;
 }
 if (param_set.size() != known_parameters)
@@ -49,11 +25,11 @@ if (param_set.size() != known_parameters)
    const std::string msg( os.str() );
    UTILITY_INPUT(param_set.size() == known_parameters, msg, core::strngs::sampler_label() );
 }
-std::unique_ptr< density_zaxis > result(new density_zaxis);
+std::unique_ptr< density_zaxis > result( new density_zaxis );
 result->stepsize_ = stepsize;
 boost::shared_ptr< base_sampler > tmp( result.release() );
-sim.share_observer( tmp );
-!!!498992.cpp!!!	on_report(in sim : simulator, inout os : ostream) : void
+sim.get_reporter().share_outer_observer( tmp );
+!!!498992.cpp!!!	on_report(in sim : simulator, inout os : ostream, inout reporter : report_manager) : void
 // Write out gz data
 for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
 {
@@ -99,10 +75,10 @@ for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
          os << std::sqrt(data.variance( ii ));
       } ) );
 
-      dset.write( filename, sim.get_sink() );
+      dset.write( filename, reporter.get_sink() );
    }
 }
-!!!305329.cpp!!!	on_sample(in sim : simulator) : void
+!!!305329.cpp!!!	on_outer_loop(in sim : simulator) : void
 // Sample the z axis
 const particle::ensemble &ens( sim.get_ensemble() );
 for ( std::size_t ith = 0; ith != ens.size(); ++ith )
