@@ -1,63 +1,112 @@
 class report_manager
 !!!614064.cpp!!!	report_manager()
-: data_source_()
-, inner_observers_()
-, outer_observers_()
+: variables_()
+, samples_()
 , sink_()
 {}
-!!!621488.cpp!!!	add_once(inout obs : base_sampler) : void
-bool in_set{ false };
-for (auto const& ptr : this->observers_ )
+!!!672176.cpp!!!	add_sample(inout var : sampled_variable) : void
+UTILITY_REQUIRE(this->samples_.empty() or not this->has_sample(var->get_label()), "Attempt to add two variables with the same name");
+this->samples_.push_back(var);
+
+!!!650544.cpp!!!	add_tracked(inout var : tracked_variable) : void
+UTILITY_REQUIRE(this->variables_.empty() or not this->has_tracked(var->get_label()), "Attempt to add two variables with the same name");
+this->variables_.push_back(var);
+
+!!!605232.cpp!!!	on_trial_end(in trial : change_set) : void
+for (auto & obs : this->variables_)
 {
-  if (ptr.get() == obs.get())
-  {
-    in_set = true;
-  }
-}
-if (not in_set)
-{
-  this->observers_.push_back ( obs );
-}
-!!!605872.cpp!!!	enrol(inout sim : simulator) : void
-for (auto & obs : this->observers_)
-{
-  obs->enrol( *this );
-}
-!!!605232.cpp!!!	on_inner_loop(in trial : change_set) : void
-for (auto & obs : this->inner_observers_)
-{
-  obs->on_inner_loop(trial);
+  obs->on_trial_end(trial);
 }
 
-!!!605360.cpp!!!	on_outer_loop(in sim : simulator) : void
-for (auto & obs : this->outer_observers_)
+!!!605360.cpp!!!	on_sample(in sim : simulator) : void
+for (auto & obs : this->samples_)
 {
-  obs->on_outer_loop(sim);
+  obs->on_sample(sim);
 }
 !!!607024.cpp!!!	on_report(in sim : simulator, inout out : ostream) : void
-for (auto & obs : this->observers_)
+for (auto & obs : this->variables_)
+{
+  obs->on_report(sim, out, *this);
+}
+for (auto & obs : this->samples_)
 {
   obs->on_report(sim, out, *this);
 }
 
 !!!606000.cpp!!!	prepare(inout sim : simulator) : void
-for (auto & obs : this->observers_)
+for (auto & obs : this->variables_)
 {
-  obs->prepare( sim );
+  obs->prepare(sim);
+}
+for (auto & obs : this->samples_)
+{
+  obs->prepare(sim);
+}
+!!!679472.cpp!!!	remove_sample(inout var : sampled_variable) : void
+auto itr = this->get_sample_(var->get_label());
+UTILITY_REQUIRE(this->samples_.end() != itr, "Attempt to remove sample variable that is not in the report manager.");
+UTILITY_REQUIRE(itr->get() == var.get(), "Variable in report manager with matching name does not have the same pointer.");
+this->samples_.erase(itr);
+!!!650672.cpp!!!	remove_tracked(inout var : tracked_variable) : void
+auto itr = this->get_tracked_(var->get_label());
+UTILITY_REQUIRE(this->variables_.end() != itr, "Attempt to remove sample variable that is not in the report manager.");
+UTILITY_REQUIRE(itr->get() == var.get(), "Variable in report manager with matching name does not have the same pointer.");
+this->variables_.erase(itr);
+!!!605744.cpp!!!	description(inout out : ostream) : void
+for (auto & obs : this->variables_)
+{
+  obs->description(out);
+}
+for (auto & obs : this->samples_)
+{
+  obs->description(out);
 }
 
-!!!605744.cpp!!!	description(inout out : ostream) : void
-if (not this->inner_observers_.empty())
-{
-   out << core::strngs::horizontal_bar () << "\n";
-   for (auto const& obsr : this->observers_)
-   {
-      obsr->description( out );
-   }
-}
+!!!672304.cpp!!!	get_sample(in name : string) : sampled_variable
+auto result = this->get_sample_(name);
+UTILITY_REQUIRE(this->samples_.end() != result, "Attempt to retrieve non-existent variable.");
+return *result;
+!!!650288.cpp!!!	get_tracked(in name : string) : tracked_variable
+auto result = this->get_tracked_(name);
+UTILITY_REQUIRE(this->variables_.end() != result, "Attempt to retrieve non-existent variable.");
+return *result;
+!!!672432.cpp!!!	has_sample(in name : string) : bool
+return not this->samples_.empty()
+  and (this->samples_.end() != this->get_sample_(name));
+!!!650416.cpp!!!	has_tracked(in name : string) : bool
+return not this->variables_.empty()
+  and (this->variables_.end() != this->get_tracked_(name));
 !!!605616.cpp!!!	write_document(inout wr : input_document) : void
-for (auto const& obsr : this->observers_)
+for (auto const& obsr : this->variables_)
+{
+  obsr->write_document( wr );
+}
+for (auto const& obsr : this->samples_)
 {
   obsr->write_document( wr );
 }
 
+!!!679600.cpp!!!	get_sample_(in name : string) : sampled_variable
+return std::find_if(this->samples_.begin(),
+        this->samples_.end(), [&name](decltype(*(this->samples_.begin()))& item)->bool
+        {
+          return item->get_label() == name;
+        });
+!!!679856.cpp!!!	get_sample_(in name : string) : sampled_variable
+return std::find_if(this->samples_.begin(),
+        this->samples_.end(), [&name](decltype(*(this->samples_.begin()))& item)->bool
+        {
+          return item->get_label() == name;
+        });
+!!!679728.cpp!!!	get_tracked_(in name : string) : tracked_variable
+return std::find_if(this->variables_.begin(),
+        this->variables_.end(), [&name](decltype(*(this->variables_.begin())) item)->bool
+        {
+          return item->get_label() == name;
+        });
+!!!679984.cpp!!!	get_tracked_(in name : string) : tracked_variable
+return std::find_if(this->variables_.begin(),
+        this->variables_.end(), [&name](decltype(*(this->variables_.begin())) item)->bool
+        {
+          return item->get_label() == name;
+        });

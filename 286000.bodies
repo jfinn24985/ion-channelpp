@@ -1,8 +1,11 @@
 class density_zaxis
-!!!498608.cpp!!!	description(inout os : ostream) : void
-os << "[sampler] " << this->type_label_() << "\n";
-os << " Collect and report radial distribution between ion pairs\n";
-os << " - Default histogram bin width   : " << this->stepsize_ << "\n";
+!!!498608.cpp!!!	description(inout out : ostream) : void
+out << "[sampler] " << this->type_label_() << "\n";
+out << " Collect and report radial distribution between ion pairs\n";
+out << " - Default histogram bin width   : " << this->stepsize_ << "\n";
+!!!672560.cpp!!!	get_value() : boost::any
+boost::any result = &this->data_sets_;
+return result;
 !!!498864.cpp!!!	make_sampler(in param_set : string, inout sim : simulator) : void
 double stepsize = 0.2;
 std::size_t known_parameters = 0;
@@ -27,9 +30,9 @@ if (param_set.size() != known_parameters)
 }
 std::unique_ptr< density_zaxis > result( new density_zaxis );
 result->stepsize_ = stepsize;
-boost::shared_ptr< base_sampler > tmp( result.release() );
-sim.get_reporter().share_outer_observer( tmp );
-!!!498992.cpp!!!	on_report(in sim : simulator, inout os : ostream, inout reporter : report_manager) : void
+boost::shared_ptr< sampled_variable > tmp( result.release() );
+sim.get_reporter().add_sample(tmp);
+!!!498992.cpp!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
 // Write out gz data
 for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
 {
@@ -78,7 +81,7 @@ for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
       dset.write( filename, reporter.get_sink() );
    }
 }
-!!!305329.cpp!!!	on_outer_loop(in sim : simulator) : void
+!!!305329.cpp!!!	on_sample(in sim : simulator) : void
 // Sample the z axis
 const particle::ensemble &ens( sim.get_ensemble() );
 for ( std::size_t ith = 0; ith != ens.size(); ++ith )

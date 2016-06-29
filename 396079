@@ -1,6 +1,6 @@
 format 75
 "observer" // observer
-  revision 161
+  revision 170
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -64,7 +64,7 @@ format 75
       size A4
     end
 
-    classdiagram 206897 "Accessing sampled data"
+    classdiagram 206897 "Class attribute relations"
       draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
       size A4
     end
@@ -402,6 +402,15 @@ allows make_XXX methods to choose between particular derived
 types that sample the same 'observation' in different
 simulation subtypes (bulk, channel etc).
 "
+      classrelation 438960 // <dependency>
+	relation 438320 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 438960 // <dependency>
+	  b parent class_ref 634799 // any
+      end
+
       operation 487217 "description"
 	abstract const cpp_virtual public explicit_return_type "void"
 	nparams 1
@@ -417,6 +426,40 @@ ${docstring}${body}
 	comment "Log message descibing the observer and its parameters"
       end
 
+      operation 664368 "get_label"
+	abstract const cpp_virtual public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "The human readable label of this variable.
+
+General format will be \"{type-label}[:obj-label]\"
+
+For derived classes that will only have a single 
+sampler instantiated, this label will be the same
+as the sampler type-label in the input document."
+      end
+
+      operation 650160 "get_value"
+	abstract const cpp_virtual public explicit_return_type "boost::any"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Retrieve the current value of the variable."
+      end
+
       operation 225585 "prepare"
 	abstract cpp_virtual public explicit_return_type "void"
 	nparams 1
@@ -427,64 +470,8 @@ ${docstring}${body}
 	
 	
 	
-	comment "Prepare the evaluator for use with the given simulator and
-stepper. Check for connection to signals of interest and 
-connect if necessary"
-      end
-
-      operation 647473 "enrol"
-	cpp_virtual public explicit_return_type "void"
-	nparams 1
-	  param inout name "reporter" type class_ref 340656 // report_manager
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} {}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}pass
-"
-	
-	comment "Register any signals output by the object with 
-the reporter and optionally connect to any 
-reporter specific signals. The object is responsible
-for testing if a signal with the same label has been
-registered.
-
-The base class method does nothing."
-      end
-
-      operation 607408 "on_inner_loop"
-	cpp_virtual public explicit_return_type "void"
-	nparams 1
-	  param in name "trial" type class_ref 986543 // change_set
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} {}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment "Accumulate data after every trial.
-
-Default implementation does nothing."
-      end
-
-      operation 607280 "on_outer_loop"
-	cpp_virtual public explicit_return_type "void"
-	nparams 1
-	  param in name "sym" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} {}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment "Accumulate data after a sequence of trials.
-
-Default implementation does nothing."
+	comment "Prepare the sampler for use with the given simulator. Reset
+all data."
       end
 
       operation 607152 "on_report"
@@ -599,6 +586,378 @@ ${docstring}${body}
 	
 	comment " Update wr[ix] section with information from the derived class."
       end
+
+      operation 664496 "base_sampler"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 664624 "base_sampler"
+	stereotype "move"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 1144367 // base_sampler
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 664752 "base_sampler"
+	stereotype "copy"
+	private explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 1144367 // base_sampler
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 664880 "operator="
+	private return_type class_ref 1144367 // base_sampler
+	nparams 1
+	  param in name "source" type class_ref 1144367 // base_sampler
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${abstract} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+    end
+
+    class 353840 "tracked_variable"
+      abstract visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment "A dependent variable that may obtain a new value after every 
+trial."
+      classrelation 424752 // <generalisation>
+	relation 424112 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 424752 // <generalisation>
+	  b parent class_ref 1144367 // base_sampler
+      end
+
+      operation 649520 "on_trial_end"
+	abstract cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param in name "trial" type class_ref 986543 // change_set
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Update variable after every trial."
+      end
+
+      classrelation 425008 // <dependency>
+	relation 424368 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 425008 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      extra_member 323760 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 649264 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ${p0} & boost::serialization::base_object< base_sampler >(*this);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "Save variable to checkpoint"
+      end
+
+      operation 657200 "tracked_variable"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 657328 "~tracked_variable"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 657456 "tracked_variable"
+	stereotype "copy"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 353840 // tracked_variable
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} & ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 657584 "tracked_variable"
+	stereotype "move"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 353840 // tracked_variable
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${v0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 657712 "operator="
+	private return_type class_ref 353840 // tracked_variable
+	nparams 1
+	  param in name "source" type class_ref 353840 // tracked_variable
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${abstract} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+    end
+
+    class 360496 "sampled_variable"
+      abstract visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment "A dependent variable that is sampled from the simulation at regular 
+intervals.
+
+The samping interval should have been chosen by the simulator to 
+enhance the independence of successive samples."
+      classrelation 424880 // <generalisation>
+	relation 424240 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 424880 // <generalisation>
+	  b parent class_ref 1144367 // base_sampler
+      end
+
+      operation 607280 "on_sample"
+	abstract cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param in name "sim" type class_ref 1129135 // simulator
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Accumulate data after a sequence of trials."
+      end
+
+      classrelation 425136 // <dependency>
+	relation 424496 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 425136 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      extra_member 330288 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 665648 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ${p0} & boost::serialization::base_object< base_sampler >(*this);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "Save variable to checkpoint"
+      end
+
+      operation 665520 "sampled_variable"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 665392 "~sampled_variable"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 665264 "sampled_variable"
+	stereotype "copy"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 360496 // sampled_variable
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} & ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 665136 "sampled_variable"
+	stereotype "move"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 360496 // sampled_variable
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${v0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 665008 "operator="
+	private return_type class_ref 360496 // sampled_variable
+	nparams 1
+	  param in name "source" type class_ref 360496 // sampled_variable
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${abstract} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
     end
 
     class 340656 "report_manager"
@@ -623,8 +982,8 @@ Design concept.
 
 The report manager provides an interface between the statistics samplers
 and the rest of the simulation.  Samplers register to collect data in
-either the inner loop or outer loop. During the simulation the simulator
-calls on_inner_loop and on_outer_loop of the manager, which then calls the
+either the inner loop (tracked_variable) or outer loop (sampled_variable). During the simulation the simulator
+calls on_trial_end and on_sample of the manager, which then calls the
 registered samplers. At some point the simulator calls on_report which
 signals the samplers to save aggregated data to permanent storage. The
 report_manager manages the connection between the samplers and storage.
@@ -634,65 +993,30 @@ report_manager will pass on write_document and serialize calls to the
 samplers. This ensures that any samplers not shared with another object
 will be correctly saved.
 "
-      attribute 407344 "data_source_"
-	private type class_ref 634799 // any
-	multiplicity "*"
-	stereotype "map"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< std::string, ${type} > ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${stereotype}()
-"
-	idl_decl ""
-	comment "dictionary of signals.
-
-(C++: mapped type is a boost::any object that
-should be converted to a pointer of a particular
-signal type. Signals are _not_ serialized and must
-be reconnected using 'do_enrol' and 'do_prepare' 
-after deserialization.)"
-      end
-
-      classrelation 405168 // observers_ (<directional aggregation>)
-	relation 404528 o-->
+      classrelation 411696 // variables_ (<directional aggregation>)
+	relation 411056 o-->
 	  stereotype "vector"
-	  a role_name "observers_" multiplicity "*" private
-	    comment " All the known observers"
+	  a role_name "variables_" multiplicity "*" private
 	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${association}< ${type} > > ${name}${value};
 "
 	    python "${comment}${self}${name} = ${stereotype}()
 "
-	    classrelation_ref 405168 // observers_ (<directional aggregation>)
-	  b parent class_ref 1144367 // base_sampler
+	    classrelation_ref 411696 // variables_ (<directional aggregation>)
+	  b parent class_ref 353840 // tracked_variable
 	  association_explicit_type "shared_ptr"
       end
 
-      classrelation 391472 // inner_observers_ (<directional aggregation>)
-	relation 391088 o-->
+      classrelation 432176 // samples_ (<directional aggregation>)
+	relation 431536 o-->
 	  stereotype "vector"
-	  a role_name "inner_observers_" multiplicity "*" private
-	    comment "Set of statistics accumulators activated on inner loop"
+	  a role_name "samples_" multiplicity "*" private
+	    comment "Sampled data from the simulation."
 	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${association}< ${type} > > ${name}${value};
 "
 	    python "${comment}${self}${name} = ${stereotype}()
 "
-	    classrelation_ref 391472 // inner_observers_ (<directional aggregation>)
-	  b multiplicity "1" parent class_ref 1144367 // base_sampler
-	  association_explicit_type "shared_ptr"
-      end
-
-      classrelation 391984 // outer_observers_ (<directional aggregation>)
-	relation 391472 o-->
-	  stereotype "vector"
-	  a role_name "outer_observers_" multiplicity "*" private
-	    comment "Set of statistics accumulators activated on outer loop"
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${association}< ${type} > > ${name}${value};
-"
-	    python "${comment}${self}${name} = ${stereotype}()
-"
-	    classrelation_ref 391984 // outer_observers_ (<directional aggregation>)
-	  b parent class_ref 1144367 // base_sampler
+	    classrelation_ref 432176 // samples_ (<directional aggregation>)
+	  b parent class_ref 360496 // sampled_variable
 	  association_explicit_type "shared_ptr"
       end
 
@@ -815,9 +1139,8 @@ ${docstring}${body}
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
   // data_source_ not serialized.
-  ar & observers_;
-  ar & inner_observers_;
-  ar & outer_observers_;
+  ar & this->variables_;
+  ar & this->samples_;
 }
 "
 	
@@ -841,13 +1164,13 @@ ${docstring}${body}
 	idl ""
       end
 
-      operation 621488 "add_once"
-	private explicit_return_type "void"
+      operation 672176 "add_sample"
+	public explicit_return_type "void"
 	nparams 1
-	  param inout name "obs" type class_ref 1144367 // base_sampler
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	  param inout name "var" type class_ref 360496 // sampled_variable
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} > & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}boost::shared_ptr< ${t0} >& ${p0}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}boost::shared_ptr< ${t0} > & ${p0}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -858,31 +1181,34 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Ensure observer is only added to observer_ once."
+	comment "add sampled variable to list.
+
+/pre not has_sample(var.label())"
       end
 
-      operation 605872 "enrol"
-	cpp_virtual public explicit_return_type "void"
+      operation 650544 "add_tracked"
+	public explicit_return_type "void"
 	nparams 1
-	  param inout name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	  param inout name "var" type class_ref 353840 // tracked_variable
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} > & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}boost::shared_ptr< ${t0} > & ${p0}${)}${const}${volatile}${throw}
 {
   ${body}
 }
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}pass
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
 "
 	
-	comment " Get all samplers to register any signals they output.
-"
+	comment "add variable to list.
+
+/pre not has_tracked(var.label())"
       end
 
-      operation 605232 "on_inner_loop"
+      operation 605232 "on_trial_end"
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "trial" type class_ref 986543 // change_set
@@ -902,7 +1228,7 @@ ${docstring}${body}
 	comment "Accumulate data after every trial"
       end
 
-      operation 605360 "on_outer_loop"
+      operation 605360 "on_sample"
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "sim" type class_ref 1129135 // simulator
@@ -963,26 +1289,48 @@ ${docstring}${body}
 "
       end
 
-      operation 603057 "set_signal"
+      operation 679472 "remove_sample"
 	public explicit_return_type "void"
-	nparams 2
-	  param in name "label" explicit_type "string"
-	  param in name "sig" type class_ref 634799 // any
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	nparams 1
+	  param inout name "var" type class_ref 360496 // sampled_variable
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} > & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, const ${t1} ${p1}${)}${const}${volatile}${throw}${staticnl}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}boost::shared_ptr< ${t0} > & ${p0}${)}${const}${volatile}${throw}
 {
-  this->data_source_.insert( std::make_pair( ${p0}, ${p1} ) );
+  ${body}
 }
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}, ${p1}${v1}${)}:
-${docstring}self.data_source_[${p0}] = ${p1}
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
 "
 	
-	comment "Set signal for the given label. This
-silently overrides any previous value"
+	comment "remove sampled variable from list.
+
+/pre has_sample(var->get_label()) and get_sample(var->get_label()).get() == var.get()"
+      end
+
+      operation 650672 "remove_tracked"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "var" type class_ref 353840 // tracked_variable
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} > & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}boost::shared_ptr< ${t0} > & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "remove tracked variable from list.
+
+/pre has_tracked(var->get_label()) and get_tracked(var->get_label()).get() == var.get()"
       end
 
       operation 606384 "set_sink"
@@ -1002,62 +1350,6 @@ ${docstring}${body}
 	
 	comment " Set the object that manages where the output data goes. Silently
  overwrites any previous value."
-      end
-
-      operation 606512 "share_inner_observer"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "obs" type class_ref 1144367 // base_sampler
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-   this->outer_observers_.push_back( ${p0} );
-   this->add_once( ${p0} );
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}self.observers_.append( ${p0} )
-"
-	
-	comment " Share ownership of a data observer with our inner loop 
- observer list.
-
- Unlike the evaluator, chooser and specie objects, observer
- objects may have shared ownership. This allows observers to
- be children of other objects, such as chooser or evaluator
- objects.
-
-NOTE: It is valid to share a single sampler as both an
-inner and outer observer"
-      end
-
-      operation 613936 "share_outer_observer"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "obs" type class_ref 1144367 // base_sampler
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-   this->outer_observers_.push_back( ${p0} );
-   this->add_once( ${p0} );
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}self.observers_.append( ${p0} )
-"
-	
-	comment " Share ownership of a data observer with our outer loop observer list.
-
- Unlike the evaluator, chooser and specie objects, observer
- objects may have shared ownership. This allows observers to
- be children of other objects, such as chooser or evaluator
- objects.
-
-NOTE: It is valid to share a single sampler as both an
-inner and outer observer
-"
       end
 
       extra_member 317232 "ACCESS"
@@ -1093,6 +1385,23 @@ ${docstring}${body}
 	comment " Get all samplers to write their descriptions."
       end
 
+      operation 642352 "empty"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->variables_.empty() and this->samples_.empty();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Are there any observers?"
+      end
+
       operation 606256 "get_sink"
 	const public return_type class_ref 313520 // base_sink
 	nparams 0
@@ -1110,43 +1419,109 @@ ${docstring}${body}
 	comment " Get reference to the data output sink"
       end
 
-      operation 602929 "get_signal"
-	public return_type class_ref 634799 // any
+      operation 672304 "get_sample"
+	public return_type class_ref 360496 // sampled_variable
 	nparams 1
-	  param in name "label" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+	  param in name "name" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
-  return this->data_source_.at(${p0});
+  ${body}
 }
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}return self.data_source_[${p0}]
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
 "
 	
-	comment " Get a signal from the dictionary
+	comment "Attempt to retrieve a variable by label.
 
- /pre has_signal(label)"
+/pre has_sample"
       end
 
-      operation 647345 "has_signal"
-	const public explicit_return_type "bool"
+      operation 650288 "get_tracked"
+	public return_type class_ref 353840 // tracked_variable
 	nparams 1
-	  param in name "label" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+	  param in name "name" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
-  return 0 < this->data_source_.count(label);
+  ${body}
 }
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}return label in self.data_source_.keys()
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
 "
 	
-	comment " Check if a signal with this name already
- exists in the signal dictionery"
+	comment "Attempt to retrieve a variable by label.
+
+/pre has_tracked"
+      end
+
+      operation 672432 "has_sample"
+	const public explicit_return_type "bool"
+	nparams 1
+	  param in name "name" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Attempt to retrieve a variable by label
+
+/nothrow"
+      end
+
+      operation 650416 "has_tracked"
+	const public explicit_return_type "bool"
+	nparams 1
+	  param in name "name" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Attempt to retrieve a variable by label
+
+/nothrow"
+      end
+
+      operation 642480 "size"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->variables_.size() + this->samples_.size();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " How many observers?"
       end
 
       operation 605616 "write_document"
@@ -1167,6 +1542,104 @@ ${docstring}${body}
 "
 	
 	comment " Get all samplers to write their input information."
+      end
+
+      operation 679600 "get_sample_"
+	private return_type class_ref 360496 // sampled_variable
+	nparams 1
+	  param in name "name" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::vector< boost::shared_ptr< ${type} > >::iterator ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::vector< boost::shared_ptr< ${type} > >::iterator ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Retrieve iterator pointing to sampled variable
+with the given name or \"end\".
+
+/nothrow
+"
+      end
+
+      operation 679856 "get_sample_"
+	stereotype "const"
+	const private return_type class_ref 360496 // sampled_variable
+	nparams 1
+	  param in name "name" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::vector< boost::shared_ptr< ${type} > >::const_iterator ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::vector< boost::shared_ptr< ${type} > >::const_iterator ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Retrieve iterator pointing to sampled variable
+with the given name or \"end\".
+
+/nothrow
+"
+      end
+
+      operation 679728 "get_tracked_"
+	private return_type class_ref 353840 // tracked_variable
+	nparams 1
+	  param in name "name" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::vector< boost::shared_ptr< ${type} > >::iterator ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::vector< boost::shared_ptr< ${type} > >::iterator ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Retrieve iterator pointing to tracked variable
+with the given name or \"end\".
+
+/nothrow
+"
+      end
+
+      operation 679984 "get_tracked_"
+	stereotype "const"
+	const private return_type class_ref 353840 // tracked_variable
+	nparams 1
+	  param in name "name" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::vector< boost::shared_ptr< ${type} > >::const_iterator ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::vector< boost::shared_ptr< ${type} > >::const_iterator ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Retrieve iterator pointing to tracked variable
+with the given name or \"end\".
+
+/nothrow
+"
       end
     end
 
@@ -1193,13 +1666,13 @@ ${docstring}${members}
       
       comment " sample a density distribution along the z axis (axis of rotation)
 "
-      classrelation 319792 // <generalisation>
-	relation 319408 ---|>
+      classrelation 432304 // <generalisation>
+	relation 431664 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 319792 // <generalisation>
-	  b parent class_ref 1144367 // base_sampler
+	    classrelation_ref 432304 // <generalisation>
+	  b parent class_ref 360496 // sampled_variable
       end
 
       classrelation 319920 // <dependency>
@@ -1263,7 +1736,7 @@ gives better detail but requires longer runs."
       operation 498608 "description"
 	const public explicit_return_type "void"
 	nparams 1
-	  param inout name "os" explicit_type "ostream"
+	  param inout name "out" explicit_type "ostream"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
@@ -1278,6 +1751,45 @@ ${docstring}${body}
 "
 	
 	comment " Log message descibing the observer and its parameters"
+      end
+
+      operation 499632 "get_label"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return density_zaxis::type_label_();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "Type label to access an object of this type in a report_manager and use in 
+input file for this observer"
+      end
+
+      operation 672560 "get_value"
+	const public explicit_return_type "boost::any"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Retrieve the current z-axis density profiles.
+
+return value is of type const*const vector< estimate_array >"
       end
 
       operation 498864 "make_sampler"
@@ -1306,7 +1818,7 @@ parameters : \"width\" \"stepsize\""
 	public explicit_return_type "void"
 	nparams 3
 	  param in name "sim" type class_ref 1129135 // simulator
-	  param inout name "os" explicit_type "ostream"
+	  param inout name "out" explicit_type "ostream"
 	  param inout name "reporter" type class_ref 340656 // report_manager
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
 "
@@ -1324,7 +1836,7 @@ ${docstring}${body}
 	comment "Report RDFs"
       end
 
-      operation 305329 "on_outer_loop"
+      operation 305329 "on_sample"
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "sim" type class_ref 1129135 // simulator
@@ -1396,7 +1908,7 @@ ${docstring}${body}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< base_sampler >(*this);
+  ${p0} & boost::serialization::base_object< sampled_variable >(*this);
   ar & data_sets_;
   ar & samplers_;
   ar & stepsize_;
@@ -1408,23 +1920,6 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-      end
-
-      operation 499632 "type_label"
-	const public explicit_return_type "string"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return density_zaxis::type_label_();
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment "Type label to use in input file for this observer"
       end
 
       operation 499760 "type_label_"
@@ -1491,13 +1986,13 @@ ${docstring}${members}
       
       comment "  Sample the metropolis factor generated by each trial. Failed
   trials have a factor of 0."
-      classrelation 154929 // <generalisation>
-	relation 154929 ---|>
+      classrelation 418224 // <generalisation>
+	relation 417584 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 154929 // <generalisation>
-	  b parent class_ref 1144367 // base_sampler
+	    classrelation_ref 418224 // <generalisation>
+	  b parent class_ref 353840 // tracked_variable
       end
 
       classrelation 299441 // boltzmann_factor_ (<directional composition>)
@@ -1527,7 +2022,7 @@ ${docstring}${members}
       operation 487601 "description"
 	const public explicit_return_type "void"
 	nparams 1
-	  param inout name "os" explicit_type "ostream"
+	  param inout name "out" explicit_type "ostream"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
@@ -1542,6 +2037,48 @@ ${docstring}${body}
 "
 	
 	comment "Log message descibing the observer and its parameters"
+      end
+
+      operation 174129 "get_label"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}
+{
+  return ${class}::type_label_();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 672688 "get_value"
+	const public explicit_return_type "boost::any"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Retrieve the current estimate of the boltzmann factor and
+energy change.
+
+/return Type pair< estimater, estimater > with
+  result.first -> boltzmann factor and 
+  result.second -> energy change"
       end
 
       operation 175025 "make_sampler"
@@ -1577,10 +2114,10 @@ ${docstring}${body}
 	
       end
 
-      operation 1162543 "on_inner_loop"
+      operation 1162543 "on_trial_end"
 	cpp_virtual public explicit_return_type "void"
 	nparams 1
-	  param in name "a_trial" type class_ref 986543 // change_set
+	  param in name "trial" type class_ref 986543 // change_set
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
@@ -1600,8 +2137,8 @@ ${docstring}${body}
       operation 174769 "on_report"
 	public explicit_return_type "void"
 	nparams 3
-	  param in name "sys" type class_ref 1129135 // simulator
-	  param inout name "log" explicit_type "ostream"
+	  param in name "sim" type class_ref 1129135 // simulator
+	  param inout name "out" explicit_type "ostream"
 	  param inout name "reporter" type class_ref 340656 // report_manager
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
 "
@@ -1655,27 +2192,9 @@ ${docstring}${body}
 	  param in name "version" explicit_type "unsigned int"
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
-  ${p0} & boost::serialization::base_object< base_sampler >(*this);
+  ${p0} & boost::serialization::base_object< tracked_variable >(*this);
   ${p0} & boltzmann_factor_;
   ${p0} & energy_change_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-      end
-
-      operation 174129 "type_label"
-	const public explicit_return_type "string"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}
-{
-  return ${class}::${name}_();
 }
 "
 	
@@ -1750,13 +2269,13 @@ ${docstring}${members}
       comment "sample a radial distribution function around each ion collated by
 ion specie
 "
-      classrelation 299953 // <generalisation>
-	relation 299697 ---|>
+      classrelation 432432 // <generalisation>
+	relation 431792 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 299953 // <generalisation>
-	  b parent class_ref 1144367 // base_sampler
+	    classrelation_ref 432432 // <generalisation>
+	  b parent class_ref 360496 // sampled_variable
       end
 
       classrelation 278449 // <dependency>
@@ -1833,7 +2352,7 @@ gives better detail but requires longer runs."
       operation 487729 "description"
 	const public explicit_return_type "void"
 	nparams 1
-	  param inout name "os" explicit_type "ostream"
+	  param inout name "out" explicit_type "ostream"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
@@ -1873,6 +2392,49 @@ ${docstring}${body}
 	comment " Add sampler type, width and stepsize to wr[ix]"
       end
 
+      operation 672816 "get_value"
+	const public explicit_return_type "boost::any"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Retrieve the radial distribution profiles
+
+/return vector< estimate_array > const*const where
+  rdf(i, j) is at index [i x specie_count + j]
+
+
+
+"
+      end
+
+      operation 304945 "get_label"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return rdf_sampler::type_label_();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "Type label to use in input file for this observer"
+      end
+
       operation 336305 "make_sampler"
 	class_operation public explicit_return_type "void"
 	nparams 2
@@ -1899,7 +2461,7 @@ parameters : \"width\" \"stepsize\""
 	public explicit_return_type "void"
 	nparams 3
 	  param in name "sim" type class_ref 1129135 // simulator
-	  param inout name "os" explicit_type "ostream"
+	  param inout name "out" explicit_type "ostream"
 	  param inout name "reporter" type class_ref 340656 // report_manager
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
 "
@@ -1917,7 +2479,7 @@ ${docstring}${body}
 	comment "Report density profiles"
       end
 
-      operation 499120 "on_outer_loop"
+      operation 499120 "on_sample"
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "sim" type class_ref 1129135 // simulator
@@ -1989,7 +2551,7 @@ ${docstring}${body}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< base_sampler >(*this);
+  ${p0} & boost::serialization::base_object< sampled_variable >(*this);
   ar & data_sets_;
   ar & samplers_;
   ar & stepsize_;
@@ -2002,23 +2564,6 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-      end
-
-      operation 304945 "type_label"
-	const public explicit_return_type "string"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return rdf_sampler::type_label_();
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment "Type label to use in input file for this observer"
       end
 
       operation 336177 "type_label_"
@@ -2065,13 +2610,13 @@ ${docstring}${members}
       comment "Observe and report the average number of particles, with irregular sampling.
 
 (TODO: An exact average is possible by sampling every trial.)"
-      classrelation 277937 // <generalisation>
-	relation 277681 ---|>
+      classrelation 431664 // <generalisation>
+	relation 431024 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 277937 // <generalisation>
-	  b parent class_ref 1144367 // base_sampler
+	    classrelation_ref 431664 // <generalisation>
+	  b parent class_ref 360496 // sampled_variable
       end
 
       classrelation 278193 // <dependency>
@@ -2141,23 +2686,10 @@ ${docstring}${members}
 	comment "Average particle counts."
       end
 
-      attribute 359601 "mean_signal_"
-	private type class_ref 296497 // signal_type
-	init_value "None"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "Signal origin for 'specie-count-mean' signal"
-      end
-
       operation 487857 "description"
 	const public explicit_return_type "void"
 	nparams 1
-	  param inout name "os" explicit_type "ostream"
+	  param inout name "out" explicit_type "ostream"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
@@ -2174,25 +2706,41 @@ ${docstring}${body}
 	comment "Log message descibing the observer and its parameters"
       end
 
-      operation 640689 "enrol"
-	cpp_virtual public explicit_return_type "void"
-	nparams 1
-	  param inout name "reporter" type class_ref 340656 // report_manager
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+      operation 304433 "get_label"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return ${class}::type_label_();
+}
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}return \"specie-count\"
+"
+	
+      end
+
+      operation 672944 "get_value"
+	const public explicit_return_type "boost::any"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
 {
   ${body}
 }
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
 ${docstring}${body}
 "
 	
-	comment "Register with the report manager and register 
-specie count signal"
+	comment "Retrieve the current specie count estimates
+
+/return type vector< estimater > const*const"
       end
 
       operation 365361 "make_sampler"
@@ -2236,7 +2784,7 @@ ${docstring}${body}
 and average specie counts to out."
       end
 
-      operation 304177 "on_outer_loop"
+      operation 304177 "on_sample"
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "sim" type class_ref 1129135 // simulator
@@ -2348,29 +2896,13 @@ ${docstring}${body}
 	  param in name "version" explicit_type "size_t"
 	cpp_decl "    ${comment}template< class ${t0} > ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< base_sampler >(*this);
+  ${p0} & boost::serialization::base_object< sampled_variable >(*this);
   ar & this->count_;
 }
 "
 	
 	
 	
-	
-      end
-
-      operation 304433 "type_label"
-	const public explicit_return_type "string"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return ${class}::type_label_();
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}return \"specie-count\"
-"
 	
       end
 
@@ -2734,15 +3266,6 @@ ${inlines}
       
       comment "A distribution is a counter of entries along a discritized single
 dimension. "
-      classrelation 1315887 // <generalisation>
-	relation 1277359 ---|>
-	  a public
-	    cpp default "${type}"
-	    python "${type}"
-	    classrelation_ref 1315887 // <generalisation>
-	  b parent class_ref 1144367 // base_sampler
-      end
-
       attribute 139055 "count_"
 	private explicit_type "size_t"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -2904,6 +3427,15 @@ ${docstring}${body}
 	
 	comment "Reset all the statistical data"
       end
+
+      classrelation 432048 // <generalisation>
+	relation 431408 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 432048 // <generalisation>
+	  b parent class_ref 360496 // sampled_variable
+      end
     end
 
     class 1129775 "energy_distribution"
@@ -2920,13 +3452,13 @@ ${inlines}
       
       comment "A distribution is a counter of entries along a discritized single
 dimension. "
-      classrelation 1315375 // <generalisation>
-	relation 1276847 ---|>
+      classrelation 431792 // <generalisation>
+	relation 431152 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 1315375 // <generalisation>
-	  b parent class_ref 1144367 // base_sampler
+	    classrelation_ref 431792 // <generalisation>
+	  b parent class_ref 360496 // sampled_variable
       end
 
       attribute 1429167 "filename_"
@@ -5101,6 +5633,8 @@ ${members}
 ${namespace_end}"
       associated_classes
 	class_ref 1144367 // base_sampler
+	class_ref 353840 // tracked_variable
+	class_ref 360496 // sampled_variable
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
@@ -5489,12 +6023,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     artifact 769583 "libionch_observer"
       stereotype "library"
       associated_artifacts
+	artifact_ref 181041 // specie_count
 	artifact_ref 200881 // rdf_sampler
 	artifact_ref 351792 // report_manager
-	artifact_ref 135345 // metropolis_sampler
 	artifact_ref 789807 // sampler_meta
-	artifact_ref 181041 // specie_count
 	artifact_ref 631215 // base_sampler
+	artifact_ref 135345 // metropolis_sampler
 	artifact_ref 275248 // density_zaxis
       end
     end

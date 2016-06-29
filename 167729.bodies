@@ -1,12 +1,15 @@
 class rdf_sampler
-!!!487729.cpp!!!	description(inout os : ostream) : void
-os << "[sampler] " << this->type_label_() << "\n";
-os << " Collect and report one dimensional density profiles of species\n";
-os << " - Default histogram bin width   : " << this->stepsize_ << "\n";
+!!!487729.cpp!!!	description(inout out : ostream) : void
+out << "[sampler] " << this->type_label_() << "\n";
+out << " Collect and report one dimensional density profiles of species\n";
+out << " - Default histogram bin width   : " << this->stepsize_ << "\n";
 !!!217264.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
 wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
 wr[ ix ].add_entry( "width", this->width_ );
 wr[ ix ].add_entry( "stepsize", this->stepsize_ );
+!!!672816.cpp!!!	get_value() : boost::any
+boost::any result = &this->data_sets_;
+return result;
 !!!336305.cpp!!!	make_sampler(in param_set : string, inout sim : simulator) : void
 double width = 15.0;
 double stepsize = 0.2;
@@ -38,9 +41,9 @@ if (param_set.size() != known_parameters)
 std::unique_ptr< rdf_sampler > result(new rdf_sampler);
 result->width_ = width;
 result->stepsize_ = stepsize;
-boost::shared_ptr< base_sampler > tmp( result.release() );
-sim.get_reporter().share_outer_observer( tmp );
-!!!336049.cpp!!!	on_report(in sim : simulator, inout os : ostream, inout reporter : report_manager) : void
+boost::shared_ptr< sampled_variable > tmp(result.release());
+sim.get_reporter().add_sample(tmp);
+!!!336049.cpp!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
 // Write out RDF data
 for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
 {
@@ -94,7 +97,7 @@ for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
       }
    }
 }
-!!!499120.cpp!!!	on_outer_loop(in sim : simulator) : void
+!!!499120.cpp!!!	on_sample(in sim : simulator) : void
 {
   // rij index
   const particle::ensemble &ens( sim.get_ensemble() );

@@ -1,18 +1,21 @@
 class metropolis_sampler
-!!!487601.cpp!!!	description(inout os : ostream) : void
-os << "[sampler] " << this->type_label_() << "\n";
-os << " Sample the metropolis factor of each trial\n";
+!!!487601.cpp!!!	description(inout out : ostream) : void
+out << "[sampler] " << this->type_label_() << "\n";
+out << " Sample the metropolis factor of each trial\n";
+!!!672688.cpp!!!	get_value() : boost::any
+boost::any result = std::make_pair( this->boltzmann_factor_, this->energy_change_ );
+return result;
 !!!175025.cpp!!!	make_sampler(in param_set : string, inout sim : simulator) : void
 UTILITY_INPUT(param_set.empty(),"The "+type_label_()+" sampler requires no parameters.",core::strngs::sampler_label());
-boost::shared_ptr< base_sampler > smplr( new metropolis_sampler );
-sim.get_reporter().share_inner_observer( smplr );
-!!!1162543.cpp!!!	on_inner_loop(in a_trial : change_set) : void
-if (not a_trial.fail())
+boost::shared_ptr< tracked_variable > smplr(new metropolis_sampler);
+sim.get_reporter().add_tracked(smplr);
+!!!1162543.cpp!!!	on_trial_end(in trial : change_set) : void
+if (not trial.fail())
 {
   // Collect factor for all trials that reached Metropolis/Hastings acceptance
   // check.
-  this->boltzmann_factor_.append(a_trial.metropolis_factor ());
-  this->energy_change_.append(std::exp(-a_trial.energy ()));
+  this->boltzmann_factor_.append(trial.metropolis_factor ());
+  this->energy_change_.append(std::exp(-trial.energy ()));
 }
 else
 {
@@ -23,14 +26,14 @@ else
   // The difference in energy will be zero:
   this->energy_change_.append(1.0);
 }
-!!!174769.cpp!!!	on_report(in sys : simulator, inout log : ostream, inout reporter : report_manager) : void
-log << this->type_label()
+!!!174769.cpp!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
+out << this->get_label()
     << " : P_mean       = " << this->boltzmann_factor_.mean() << " var = "
     << this->boltzmann_factor_.variance() << "\n";
-log << std::string(this->type_label().size(),' ')
+out << std::string(this->get_label().size(),' ')
     << " : -log(P_mean) = " << -std::log(this->energy_change_.mean()) << " var = "
     << std::log(this->energy_change_.variance()) << "\n";
-log << core::strngs::horizontal_bar() << "\n";
+out << core::strngs::horizontal_bar() << "\n";
 !!!174641.cpp!!!	prepare(inout sim : simulator) : void
 this->boltzmann_factor_.reset();
 this->energy_change_.reset();
