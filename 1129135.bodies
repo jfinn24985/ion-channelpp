@@ -50,10 +50,7 @@ if self.outer_sig_ != None and len(self.outer_sig_) == 0:
 , temperature_kelvin_( 300.0 )
 , rgen_( new boost::mt19937 )
 , ranf_( rgen_ )
-, inner_sig_()
-, outer_sig_()
 , prepare_sig_()
-, report_sig_()
 , output_dir_fmt_( "%1$03d" )
 , filename_base_( "input.%1$03d.inp" )
 , run_title_()
@@ -62,10 +59,7 @@ if self.outer_sig_ != None and len(self.outer_sig_) == 0:
 , permittivity_( 80.0 )
 {
   // Add simulator signals to signal set
-  this->set_signal( "report", &this->report_sig_ );
-  this->set_signal( "prepare", &this->prepare_sig_ );
-  this->set_signal( "inner-loop", &this->inner_sig_ );
-  this->set_signal( "outer-loop", &this->outer_sig_ );
+  this->reporter_->set_signal( "prepare", &this->prepare_sig_ );
 }
 !!!2154159.cpp!!!	serialize(inout ar : Archive, in version : unsigned int) : void
 ar & choices_;
@@ -250,15 +244,6 @@ os << "\n";
 os << "You should have received a copy of the GNU General Public License\n";
 os << "along with this program.  If not, see <http://www.gnu.org/licenses/>.\n";
 os << core::strngs::horizontal_bar () << "\n";
-!!!291248.cpp!!!	do_enrol() : void
-for (auto & obs : this->observers_)
-{
-  obs->enrol( *this );
-}
-for (auto & evals : this->evaluators_)
-{
-  evals.enrol( *this );
-}
 !!!502705.cpp!!!	find_input_filename() : std::string
 // Filenames to generate
 //   input.%03d.inp % run_index
@@ -741,7 +726,7 @@ UTILITY_REQUIRE( not this->species_.empty(), "Can not run simulation with no spe
 UTILITY_REQUIRE( this->ensemble_, "Can not run simulation with particles" );
 UTILITY_REQUIRE( not this->choosers_.empty(), "Can not run simulation with no trials" );
 UTILITY_REQUIRE( not this->evaluators_.empty(), "Can not run simulation with no energy evaluators" );
-UTILITY_REQUIRE(not this->observers_.empty(), "Can not run simulation with no observers" );
+UTILITY_REQUIRE(not this->reporter_->empty(), "Can not run simulation with no observers" );
 
 this->do_run( oslog );
 !!!1747759.python!!!	run(inout oslog : ostream) : void
@@ -893,9 +878,9 @@ for (size_t d9m8h2 = 0; d9m8h2 != loopcount; ++d9m8h2)
         }
       }
     }
-    for ( auto const& evaluator : this->evaluators_ )
+    for ( auto & evaluator : this->evaluators_ )
     {
-      evaluator.conclude_trial( *trial );
+      evaluator.on_conclude_trial( *trial );
     }
     this->reporter_->on_inner_loop( *trial );
     if (not env.no_except())
@@ -912,7 +897,7 @@ for (size_t d9m8h2 = 0; d9m8h2 != loopcount; ++d9m8h2)
   }
   // Note this->outer_loop_index_ is a 1-based count
   out << " STEP : " << this->outer_loop_index_ << "\n";
-  this->reporter_->on_outer_loop( *this );
+  this->reporter_->on_sample( *this );
   if ((this->outer_loop_index_ % this->report_interval_) == 0)
   {
     this->do_report( out );
@@ -1001,7 +986,6 @@ for (auto const& choice : this->choices_)
 {
   choice.report( *this, os, trial_count );
 }
-this->report_sig_( *this, os );
 this->reporter_->on_report( *this, os );
 os << core::strngs::horizontal_bar() << "\n";
 !!!2147119.python!!!	do_report(in self : simulator, inout os : ostream) : void
@@ -1121,10 +1105,7 @@ for(auto const& evltr : this->evaluators_)
 }
 
 // Add observers
-for(auto const& obsr : this->observers_)
-{
-   obsr->write_document( wr );
-}
+this->reporter_->write_document( wr );
 
 // TODO Write choice rates
 for (auto const& choice : this->choosers_)

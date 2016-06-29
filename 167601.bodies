@@ -1,35 +1,20 @@
 class specie_count
-!!!487857.cpp!!!	description(inout os : ostream) : void
-os << "SAMPLER [" << this->type_label_() << "]\n";
-os << " Sample average specie numbers.\n";
-!!!487857.python!!!	description(inout os : ostream) : void
+!!!487857.cpp!!!	description(inout out : ostream) : void
+out << "SAMPLER [" << this->type_label_() << "]\n";
+out << " Sample average specie numbers.\n";
+!!!487857.python!!!	description(inout out : ostream) : void
 print >>os, "[observer]",self.type_label()
 print >>os, " Sample the average particle number in the whole"
 print >>os, " cell of each specie."
 print >>os, " Provides signals:",self.type_label()+"-mean",self.type_label()+"-variance"
 pass
-!!!640689.cpp!!!	enrol(inout reporter : report_manager) : void
-if (not reporter.has_signal(this->type_label()))
-{
-  boost::any sig = &this->mean_signal_;
-  reporter.set_signal(this->type_label(), sig);
-}
-!!!640689.python!!!	enrol(inout reporter : report_manager) : void
-if not self.report_conx_ or not self.report_conx.connected():
-  sig = sim.get_signal("report")
-  self.report_conx_ = sig.connect(lambda *args: self.on_report(*args))
-if not self.sample_conx_ or not self.sample_conx_.connected():
-  sig = sim.get_signal("outer-loop")
-  self.sample_conx_ = sig.connect(lambda *args: self.on_sample(*args))
-if not self.mean_signal_:
-  import signals
-  self.mean_signal_ = signals.signal()
-if not sim.has_signal(self.type_label()):
-  sim.set_signal(self.type_label(), self.mean_signal_)
+!!!672944.cpp!!!	get_value() : boost::any
+boost::any result = &this->count_;
+return result;
 !!!365361.cpp!!!	make_sampler(in paramset : string, inout sim : simulator) : void
 UTILITY_INPUT( paramset.empty(), "The "+specie_count::type_label_()+" sampler takes no parameters.", core::strngs::sampler_label() );
-boost::shared_ptr< base_sampler > smplr( new specie_count );
-sim.get_reporter().share_outer_observer( smplr );
+boost::shared_ptr< sampled_variable > smplr(new specie_count);
+sim.get_reporter().add_sample(smplr);
 !!!594865.cpp!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
 if (not this->count_.empty())
 {
@@ -98,18 +83,14 @@ if self.count_ != None:
         print >>out," %3s %7d %8.4f %8.4f %8.4f %8.4f"% (spc.label(),spc.count(),(spc.count()*count_to_conc),runr.mean(),(runr.mean()*count_to_conc),runr.variance())
 pass
 
-!!!304177.cpp!!!	on_outer_loop(in sim : simulator) : void
+!!!304177.cpp!!!	on_sample(in sim : simulator) : void
 size_t ispec = 0;
 for (auto const& spc : sim.get_species())
 {
   this->count_[ispec].append( spc.count() );
   ++ispec;
 }
-if (not this->mean_signal_.empty())
-{
-  this->mean_signal_(this->count_);
-}
-!!!304177.python!!!	on_outer_loop(in sim : simulator) : void
+!!!304177.python!!!	on_sample(in sim : simulator) : void
 for m, s in zip( self.count_, sys.get_species() ):
   m.append( s.count() )
 # publish data
