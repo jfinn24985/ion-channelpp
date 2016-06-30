@@ -1,6 +1,6 @@
 format 75
 "periodic_cube" // periodic_cube
-  revision 62
+  revision 63
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -4269,8 +4269,10 @@ ${docstring}${body}
 
     class 135087 "widom"
       visibility package 
-      cpp_decl "${comment}${template}struct ${name}${inherit} {
-${members}};
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
 ${inlines}
 "
       java_decl ""
@@ -4282,6 +4284,15 @@ ${members}};
       explicit_switch_type ""
       
       comment " Widom observer class. (1D)"
+      classrelation 431920 // <generalisation>
+	relation 431280 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 431920 // <generalisation>
+	  b parent class_ref 360496 // sampled_variable
+      end
+
       classrelation 362673 // <dependency>
 	relation 362417 -_->
 	  a default
@@ -4372,6 +4383,236 @@ ${members}};
 	  b parent class_ref 1016239 // strngs
       end
 
+      class 367152 "widom_datum"
+	visibility package stereotype "struct"
+	cpp_decl "${comment}${template}struct ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+	java_decl ""
+	php_decl ""
+	python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+	idl_decl ""
+	explicit_switch_type ""
+	
+	comment "Widom based free energy estimate for one specie."
+	classrelation 446128 // chem_potential_ (<directional composition>)
+	  relation 445232 *-->
+	    a role_name "chem_potential_" multiplicity "1" public
+	      comment "The energy based chemical potential estimate"
+	      cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	      python "${comment}${self}${name} = ${type}()
+"
+	      classrelation_ref 446128 // chem_potential_ (<directional composition>)
+	    b parent class_ref 176049 // estimater
+	end
+
+	classrelation 446256 // exp_chem_potential_ (<directional composition>)
+	  relation 445360 *-->
+	    a role_name "exp_chem_potential_" public
+	      comment "The probability {exp(-energy)} based chemical potential estimate"
+	      cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	      python "${comment}${self}${name} = ${type}()
+"
+	      classrelation_ref 446256 // exp_chem_potential_ (<directional composition>)
+	    b parent class_ref 176049 // estimater
+	end
+
+	attribute 407344 "count_"
+	  public explicit_type "size_t"
+	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	  java_decl ""
+	  php_decl ""
+	  python_decl "${comment}${self}${name} = ${value}
+"
+	  idl_decl ""
+	  comment "The count of the number of add attempts completed so far in
+one sampling cycle."
+	end
+
+	attribute 407472 "specie_key_"
+	  public explicit_type "size_t"
+	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	  java_decl ""
+	  php_decl ""
+	  python_decl "${comment}${self}${name} = ${value}
+"
+	  idl_decl ""
+	  comment "The specie index of this datum."
+	end
+
+	extra_member 336816 "friend"
+	  
+	  cpp "
+  friend class boost::serialization::access;" ""
+	  java ""
+	  php ""
+	  python ""
+	  idl ""
+	end
+
+	operation 688176 "serialize"
+	  stereotype "template"
+	  cpp_inline private explicit_return_type "void"
+	  nparams 2
+	    param inout name "ar" explicit_type "Archive"
+	    param in name "version" explicit_type "unsigned int"
+	  cpp_decl "    ${comment}template<class Archive>
+${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ${p0} & chem_potential_;
+  ${p0} & exp_chem_potential_;
+  ${p0} & count_;
+  ${p0} & specie_key_;
+}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	  
+	end
+
+	operation 688304 "widom_datum"
+	  public explicit_return_type ""
+	  nparams 0
+	  cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: chem_potential_()
+, exp_chem_potential_()
+, count_()
+, specie_key_()
+{}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	end
+
+	operation 688944 "widom_datum"
+	  public explicit_return_type ""
+	  nparams 1
+	    param in name "key" explicit_type "size_t"
+	  cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
+: chem_potential_()
+, exp_chem_potential_()
+, count_()
+, specie_key_(${p0})
+{}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	  comment "Constructor with specie key"
+	end
+
+	operation 688432 "~widom_datum"
+	  public explicit_return_type ""
+	  nparams 0
+	  cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw}
+{}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	end
+
+	operation 688560 "widom_datum"
+	  stereotype "move"
+	  public explicit_return_type ""
+	  nparams 1
+	    param inout name "source" type class_ref 367152 // widom_datum
+	  cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
+: chem_potential_(std::move(source.chem_potential_))
+, exp_chem_potential_(std::move(source.exp_chem_potential_))
+, count_(std::move(source.count_))
+, specie_key_(std::move(source.specie_key_))
+{}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	end
+
+	operation 688688 "widom_datum"
+	  stereotype "copy"
+	  public explicit_return_type ""
+	  nparams 1
+	    param in name "source" type class_ref 367152 // widom_datum
+	  cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
+: chem_potential_(source.chem_potential_)
+, exp_chem_potential_(source.exp_chem_potential_)
+, count_(source.count_)
+, specie_key_(source.specie_key_)
+{}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	end
+
+	operation 688816 "operator="
+	  public return_type class_ref 367152 // widom_datum
+	  nparams 1
+	    param in name "source" type class_ref 367152 // widom_datum
+	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->swap(${p0});
+  return *this;
+}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	end
+
+	operation 689072 "swap"
+	  public explicit_return_type "void"
+	  nparams 1
+	    param inout name "source" type class_ref 367152 // widom_datum
+	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${abstract}
+{
+   std::swap(this->chem_potential_, source.chem_potential_);
+   std::swap(this->exp_chem_potential_, source.exp_chem_potential_);
+   std::swap(this->count_, source.count_);
+   std::swap(this->specie_key_, source.specie_key_);
+}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	end
+      end
+
       classrelation 1296687 // dist_widom_ (<directional composition>)
 	relation 1258287 *-->
 	  a role_name "dist_widom_" multiplicity "1" private
@@ -4381,45 +4622,16 @@ ${members}};
 	  b parent class_ref 1129775 // energy_distribution
       end
 
-      classrelation 299569 // chem_potential_ (<directional composition>)
-	relation 299313 *-->
+      classrelation 446384 // data_ (<directional composition>)
+	relation 445488 *-->
 	  stereotype "vector"
-	  a role_name "chem_potential_" multiplicity "*" private
-	    comment "The energy based chemical potential estimate"
+	  a role_name "data_" multiplicity "*" private
 	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
 "
 	    python "${comment}${self}${name} = ${stereotype}()
 "
-	    classrelation_ref 299569 // chem_potential_ (<directional composition>)
-	  b parent class_ref 176049 // estimater
-      end
-
-      attribute 282033 "count_"
-	private explicit_type "size_t"
-	multiplicity "*"
-	stereotype "vector"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${stereotype}()
-"
-	idl_decl ""
-	comment "The count of the number of add attempts completed so far in
-one sampling cycle"
-      end
-
-      classrelation 362545 // exp_chem_potential_ (<directional composition>)
-	relation 362289 *-->
-	  stereotype "vector"
-	  a role_name "exp_chem_potential_" multiplicity "*" private
-	    comment "The probability {exp(-energy)} based chemical potential estimate"
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
-"
-	    python "${comment}${self}${name} = ${stereotype}()
-"
-	    classrelation_ref 362545 // exp_chem_potential_ (<directional composition>)
-	  b parent class_ref 176049 // estimater
+	    classrelation_ref 446384 // data_ (<directional composition>)
+	  b parent class_ref 367152 // widom_datum
       end
 
       attribute 282161 "key_labels_"
@@ -4435,18 +4647,23 @@ one sampling cycle"
 all SOLUTE species."
       end
 
-      attribute 281905 "key_list_"
-	private explicit_type "size_t"
-	multiplicity "*"
-	stereotype "vector"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
+      classrelation 445872 // monitor_ (<aggregation>)
+	relation 445104 o---
+	  stereotype "shared_ptr"
+	  a role_name "monitor_" multiplicity "*" private
+	    comment "Object monitoring the simulation for add attempts."
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}boost::weak_ptr< ${type} > ${name}${value};
 "
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${stereotype}()
+	    python "${comment}${self}${name} = ${stereotype}()
 "
-	idl_decl ""
-	comment "List of specie to evaluate"
+	    classrelation_ref 445872 // monitor_ (<aggregation>)
+	  b role_name "parent_" multiplicity "*" private
+	    comment "Widom sampler for whom we are monitoring the simulation."
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+"
+	    python "${comment}${self}${name} = ${stereotype}()
+"
+	    classrelation_ref 446000 // parent_ (<aggregation>)
       end
 
       attribute 1422127 "trials_"
@@ -4474,22 +4691,10 @@ the main simulation should be identical regardless
 of whether the Widom sampler is used or not. "
       end
 
-      attribute 282289 "use_main_"
-	private explicit_type "bool"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "Should we use add attempts from the main simulation?"
-      end
-
       operation 488113 "description"
 	const public explicit_return_type "void"
 	nparams 1
-	  param inout name "os" explicit_type "ostream"
+	  param inout name "out" explicit_type "ostream"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
@@ -4529,31 +4734,27 @@ ${docstring}${body}
 	comment " Add details of widom sampler to wr[ix]."
       end
 
-      operation 434353 "on_inner_loop"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "cset" type class_ref 986543 // change_set
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+      operation 2167727 "get_label"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override
 {
-  ${body}
+  return type_label_();
 }
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
 ${docstring}${body}
 "
 	
-	comment "Capture add attempts from the main loop."
       end
 
       operation 1747631 "on_report"
 	public explicit_return_type "void"
 	nparams 3
-	  param in name "sys" type class_ref 1129135 // simulator
-	  param inout name "log" explicit_type "ostream"
+	  param in name "sim" type class_ref 1129135 // simulator
+	  param inout name "out" explicit_type "ostream"
 	  param inout name "reporter" type class_ref 340656 // report_manager
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
 "
@@ -4566,7 +4767,25 @@ ${docstring}${body}
 	
 	
 	
-	comment "Perform insertion trials to reach 'inner_' attempts per sample cycle."
+	comment "Perform insertion trials to reach 'trials' attempts per sample cycle."
+      end
+
+      operation 688048 "on_sample"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "sim" type class_ref 1129135 // simulator
+	cpp_decl "     ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment "Perform insertion trials to reach 'trials' attempts per sample cycle."
       end
 
       operation 2167599 "prepare"
@@ -4595,6 +4814,29 @@ ${docstring}${body}
  number of species to observe is known. "
       end
 
+      operation 686512 "specie_of_interest"
+	const public explicit_return_type "bool"
+	nparams 1
+	  param in name "idx" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Is specie of given index target of Widom observation?
+
+/nothrow"
+      end
+
       operation 2138671 "trials"
 	const public explicit_return_type "size_t"
 	nparams 0
@@ -4612,24 +4854,8 @@ ${docstring}${body}
 	comment "The number of trials to make per sampling cycle."
       end
 
-      operation 2167727 "type_label"
-	const public explicit_return_type "string"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return ${name}_ ();
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-      end
-
       operation 434225 "type_label_"
-	class_operation public explicit_return_type "string"
+	class_operation private explicit_return_type "string"
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
@@ -4735,17 +4961,14 @@ ${docstring}${body}
 	  param inout name "ar" explicit_type "Archive"
 	  param in name "version" explicit_type "unsigned int"
 	cpp_decl "    ${comment}template<class Archive>
-  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
-    //ar & dist_widom_;
-  ${p0} & boost::serialization::base_object< base_sampler >(*this);
-  ar & chem_potential_;
-  ar & count_;
-  ar & exp_chem_potential_;
+${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ${p0} & boost::serialization::base_object< sampled_variable >(*this);
+  ar & data_;
   ar & key_labels_;
-  ar & key_list_;
+  ar & monitor_;
   ar & trials_;
   ar & ranf_;
-  ar & use_main_;
 }
 "
 	
@@ -4762,14 +4985,10 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
 "
 	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} 
-: chem_potential_()
-, count_ ()
-, exp_chem_potential_()
+: data_()
 , key_labels_()
-, key_list_ ()
 , trials_ (0)
 , ranf_ (boost::shared_ptr< boost::mt19937 >(new boost::mt19937))
-, use_main_ (true)
 {}
 "
 	
@@ -4780,6 +4999,7 @@ ${docstring}${body}
       end
 
       operation 2176047 "widom"
+	stereotype "copy"
 	private explicit_return_type ""
 	nparams 1
 	  param in name "source" type class_ref 135087 // widom
@@ -4793,6 +5013,7 @@ ${docstring}${body}
       end
 
       operation 635696 "widom"
+	stereotype "move"
 	private explicit_return_type ""
 	nparams 1
 	  param inout name "source" type class_ref 135087 // widom
@@ -4819,14 +5040,294 @@ ${docstring}${body}
 "
 	
       end
+    end
 
-      classrelation 431920 // <generalisation>
-	relation 431280 ---|>
+    class 367024 "widom_monitor"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment "Monitor the simulation and capture add attempts occuring as
+part of the standard simulation."
+      classrelation 445488 // <generalisation>
+	relation 444848 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 431920 // <generalisation>
-	  b parent class_ref 360496 // sampled_variable
+	    classrelation_ref 445488 // <generalisation>
+	  b parent class_ref 353840 // tracked_variable
+      end
+
+      classrelation 446000 // parent_ (<aggregation>)
+	relation_ref 445104 // <aggregation>
+      end
+
+      operation 686640 "description"
+	const public explicit_return_type "void"
+	nparams 1
+	  param inout name "out" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override {};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "(does nothing, handled by parent widom
+object)"
+      end
+
+      operation 689328 "do_write_document"
+	const private explicit_return_type "void"
+	nparams 2
+	  param inout name "wr" type class_ref 163632 // input_document
+	  param in name "ix" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  wr.remove_section[ix];
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " (does nothing but remove section, the real write
+ of document is handled in parent widom object)
+"
+      end
+
+      operation 686768 "get_label"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  return this->parent_->get_label();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "(returns parent->get_label)
+
+/post get_label == parent.get_label"
+      end
+
+      operation 686896 "get_value"
+	const public explicit_return_type "boost::any"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  return this->parent_->get_value();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "(returns parent->get_value)
+
+/post get_value == parent.get_value"
+      end
+
+      operation 687024 "prepare"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "sim" type class_ref 1129135 // simulator
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override {}
+"
+	
+	
+	
+	
+	comment "(does nothing, handled by parent widom
+object)"
+      end
+
+      operation 687152 "on_report"
+	public explicit_return_type "void"
+	nparams 3
+	  param in name "sim" type class_ref 1129135 // simulator
+	  param inout name "out" explicit_type "ostream"
+	  param inout name "reporter" type class_ref 340656 // report_manager
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override {}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "(does nothing, handled by parent widom
+object)"
+      end
+
+      operation 434353 "on_trial_end"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "trial" type class_ref 986543 // change_set
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Collect data for all add attempts."
+      end
+
+      extra_member 336944 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 689200 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ${p0} & boost::serialization::base_object< tracked_variable >(*this);
+  ${p0} & parent_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 687280 "widom_monitor"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "parent" type class_ref 135087 // widom
+	cpp_decl "    ${comment}${inline}explicit ${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}boost::shared_ptr< ${t0} > ${p0}${)}${throw}
+: parent_(${p0})
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 687408 "~widom_monitor"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+{
+   this->parent_.reset();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 687536 "widom_monitor"
+	stereotype "move"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 367024 // widom_monitor
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 687664 "widom_monitor"
+	stereotype "copy"
+	private explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 367024 // widom_monitor
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 687792 "operator="
+	private return_type class_ref 367024 // widom_monitor
+	nparams 1
+	  param in name "source" type class_ref 367024 // widom_monitor
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${abstract} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 687920 "widom_monitor"
+	private explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
       end
     end
   end
@@ -5135,45 +5636,45 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     artifact 302256 "libionch_pbc"
       stereotype "library"
       associated_artifacts
-	artifact_ref 128560 // remove_specie_pbc
-	artifact_ref 148784 // bulk_simulator_meta
-	artifact_ref 148401 // periodic_system
 	artifact_ref 128176 // add_specie_pbc
-	artifact_ref 134841 // accept_igcmc
 	artifact_ref 155568 // imc_meta
-	artifact_ref 247089 // malasics_igcmc
 	artifact_ref 651823 // widom
-	artifact_ref 148912 // alternater_choice
 	artifact_ref 128944 // jump_choice_pbc
-	artifact_ref 246961 // igcmc
 	artifact_ref 162480 // alternater_chooser
-	artifact_ref 128048 // gc_choice_pbc
 	artifact_ref 128057 // lamperski_igcmc
+	artifact_ref 148401 // periodic_system
+	artifact_ref 148784 // bulk_simulator_meta
+	artifact_ref 128560 // remove_specie_pbc
+	artifact_ref 134841 // accept_igcmc
+	artifact_ref 247089 // malasics_igcmc
+	artifact_ref 148912 // alternater_choice
+	artifact_ref 246961 // igcmc
+	artifact_ref 128048 // gc_choice_pbc
       end
     end
 
     artifact 128817 "cscbulk"
       stereotype "executable"
       associated_artifacts
-	artifact_ref 207919 // libionch_utility
-	artifact_ref 327601 // cscmc_bulk
-	artifact_ref 215983 // program_options
-	artifact_ref 332208 // libionch_gdbm_sink
-	artifact_ref 769583 // libionch_observer
-	artifact_ref 185007 // serialization
-	artifact_ref 371376 // gdbm
 	artifact_ref 325552 // libionch_lapack
+	artifact_ref 334257 // uuid
+	artifact_ref 185007 // serialization
 	artifact_ref 651439 // random
+	artifact_ref 332208 // libionch_gdbm_sink
+	artifact_ref 302256 // libionch_pbc
+	artifact_ref 694959 // libionch_trial
+	artifact_ref 216239 // date_time
+	artifact_ref 222768 // clapack
+	artifact_ref 281519 // system
+	artifact_ref 769327 // libionch_platform
+	artifact_ref 327601 // cscmc_bulk
+	artifact_ref 207919 // libionch_utility
+	artifact_ref 769583 // libionch_observer
+	artifact_ref 371376 // gdbm
 	artifact_ref 617391 // libionch_particle
 	artifact_ref 609327 // libionch_core
+	artifact_ref 215983 // program_options
 	artifact_ref 716335 // libionch_evaluator
-	artifact_ref 216239 // date_time
-	artifact_ref 694959 // libionch_trial
-	artifact_ref 769327 // libionch_platform
-	artifact_ref 281519 // system
-	artifact_ref 334257 // uuid
-	artifact_ref 302256 // libionch_pbc
-	artifact_ref 222768 // clapack
       end
       comment " Program version to be used to create a make, cmake or jam
  build system for the project using \"Create build system\" tool."
@@ -5182,26 +5683,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     artifact 302128 "cscbulk_mpi"
       stereotype "executable"
       associated_artifacts
-	artifact_ref 207919 // libionch_utility
-	artifact_ref 215983 // program_options
-	artifact_ref 332208 // libionch_gdbm_sink
-	artifact_ref 769583 // libionch_observer
-	artifact_ref 185007 // serialization
-	artifact_ref 295344 // cscmc_bulk_mpi
 	artifact_ref 325552 // libionch_lapack
+	artifact_ref 334257 // uuid
+	artifact_ref 185007 // serialization
 	artifact_ref 651439 // random
+	artifact_ref 332208 // libionch_gdbm_sink
+	artifact_ref 302256 // libionch_pbc
+	artifact_ref 694959 // libionch_trial
+	artifact_ref 216239 // date_time
+	artifact_ref 222768 // clapack
+	artifact_ref 281519 // system
+	artifact_ref 769327 // libionch_platform
+	artifact_ref 207919 // libionch_utility
+	artifact_ref 769583 // libionch_observer
+	artifact_ref 301872 // mpi
+	artifact_ref 345264 // libionch_platform_mpi
+	artifact_ref 295344 // cscmc_bulk_mpi
 	artifact_ref 617391 // libionch_particle
 	artifact_ref 609327 // libionch_core
-	artifact_ref 345264 // libionch_platform_mpi
+	artifact_ref 215983 // program_options
 	artifact_ref 716335 // libionch_evaluator
-	artifact_ref 216239 // date_time
-	artifact_ref 694959 // libionch_trial
-	artifact_ref 769327 // libionch_platform
-	artifact_ref 281519 // system
-	artifact_ref 334257 // uuid
-	artifact_ref 301872 // mpi
-	artifact_ref 302256 // libionch_pbc
-	artifact_ref 222768 // clapack
       end
       comment " Program version to be used to create a make, cmake or jam
  build system for the project using \"Create build system\" tool."
@@ -5772,10 +6273,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ${comment}
 // Default inc
 #include \"utility/config.hpp\"
+#include <boost/weak_ptr.hpp>
 // End
 ${includes}
 ${declarations}
 ${namespace_start}
+// fwd decl.
+class widom;
+
 ${definition}
 ${namespace_end}
 #endif
@@ -5799,6 +6304,7 @@ ${namespace_end}
 BOOST_CLASS_EXPORT_GUID(periodic_cube::widom, \"periodic_cube::widom\");
 "
       associated_classes
+	class_ref 367024 // widom_monitor
 	class_ref 135087 // widom
       end
       comment "----------------------------------------------------------------------

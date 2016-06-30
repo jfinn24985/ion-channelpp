@@ -1,72 +1,135 @@
 class widom
-!!!488113.cpp!!!	description(inout os : ostream) : void
-os << "[sampler] " << this->type_label_() << "\n";
-os << " Sample the free energy distribution of the ensemble\n";
-os << " - Trials per sampling loop : " << this->trials_ << "\n";
+!!!488113.cpp!!!	description(inout out : ostream) : void
+out << "[sampler] " << this->get_label() << "\n";
+out << " Sample the free energy distribution of the ensemble\n";
+out << " - Trials per sampling loop : " << this->trials_ << "\n";
 
 !!!222128.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
-wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
-wr[ ix ].add_entry( core::strngs::fsiwid(), this->trials_ );
-wr[ ix ].add_entry( core::strngs::fswidm(), this->use_main_ );
-if ( not this->key_labels_.empty() )
+wr[ix].add_entry(core::strngs::fstype(), this->get_label());
+wr[ix].add_entry(core::strngs::fsiwid(), this->trials());
+const bool use_main = (this->monitor_.lock() ? true : false);
+wr[ix].add_entry(core::strngs::fswidm(), use_main);
+if (not this->key_labels_.empty())
 {
-  wr[ ix ].add_entry( core::strngs::fsspec(), this->key_labels_ );
+  wr[ix].add_entry(core::strngs::fsspec(), this->key_labels_);
 }
-!!!434353.cpp!!!	on_inner_loop(in cset : change_set) : void
-// Exit on failed change
-if (cset.fail ()) return;
-// Exit if not addition
-for (auto const& at : cset)
+!!!1747631.cpp!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
+// write report to log
 {
-  if (at.do_old) return;
+   out << " Results widom test particle method : \n";
+   out << " " << std::string(56+5,'-') << "\n";
+   out << " " << std::setw(6) << "SPECIE";
+   out << " " << std::setw(10) << "SAMPLES";
+   out << " " << std::setw(10) << "-ln<e-E>";
+   out << " " << std::setw(10) << "V(e-E)";
+   out << " " << std::setw(10) << "<E>";
+   out << " " << std::setw(10) << "V(E)";
+   out << "\n";
+   for (widom_datum const& datum : this->data_)
+   {
+      if (datum.chem_potential_.count() > 0)
+      {
+         out << " CP " << std::setw(3) << sim.get_specie(datum.specie_key_).label();
+         out << " " << std::setw(10) << datum.chem_potential_.count();
+         out << " " << std::setw(10) << -std::log(datum.exp_chem_potential_.mean());
+         out << " " << std::setw(10) << datum.exp_chem_potential_.variance();
+         out << " " << std::setw(10) << datum.chem_potential_.mean();
+         out << " " << std::setw(10) << datum.chem_potential_.variance();
+         out << "\n";
+      }
+      else
+      {
+         out << "CP " << std::setw(8) << sim.get_specie(datum.specie_key_).label();
+         out << " No results as no samples taken.\n";
+      }
+   }
+  out << core::strngs::horizontal_bar() << "\n";
 }
-// Capture results for keys of interest
-for (auto const& at : cset)
+// write data to output
 {
-  if (0 != std::count(this->key_list_.begin(), this->key_list_.end(), at.key))
-  {
-    this->update_data (at);
-  }
+   const std::string filename { "widom.dat" };
+
+   const std::size_t loopindex { sim.get_outer_loop_index() };
+
+   core::output_series dset { sim.run_uuid() };
+   dset.set_title( "Series of Widom method chemical potential estimates" );
+
+   dset.push_back_entry( core::output_field( "INDEX", "ORDINAL", [loopindex](std::ostream& os, std::size_t)
+   {
+      os << loopindex;
+   } ) );
+
+   for (widom_datum const& datum : this->data_)
+   {
+      auto const& spc = sim.get_specie(datum.specie_key_);
+      dset.push_back_entry( core::output_field( spc.label() + "_CURRENT" , "COUNT", [&spc](std::ostream& os, std::size_t)
+      {
+         os << spc.excess_potential();
+      } ) );
+      dset.push_back_entry( core::output_field( spc.label() + "_E_MEAN" , "COUNT", [&datum](std::ostream& os, std::size_t)
+      {
+         os << -std::log(datum.exp_chem_potential_.mean());
+      } ) );
+      dset.push_back_entry( core::output_field( spc.label() + "_MEAN" , "COUNT", [&datum](std::ostream& os, std::size_t)
+      {
+         os << datum.chem_potential_.mean();
+      } ) );
+      dset.push_back_entry( core::output_field( spc.label() + "_COUNT" , "COUNT", [&datum](std::ostream& os, std::size_t)
+      {
+         os << datum.exp_chem_potential_.count();
+      } ) );
+   }
+
+   dset.write( filename, reporter.get_sink(), 1 == loopindex );
+
 }
-!!!1747631.cpp!!!	on_report(in sys : simulator, inout log : ostream, inout reporter : report_manager) : void
+// reset accumulators
+for (widom_datum & datum : this->data_)
+{
+   if (datum.chem_potential_.count() > 0)
+   {
+      datum.chem_potential_.reset();
+      datum.exp_chem_potential_.reset();
+   }
+   // reset the per-cycle iteration
+   // counter to zero.
+   datum.count_ = 0ul;
+}
+!!!688048.cpp!!!	on_sample(in sim : simulator) : void
 utility::fp_env &env(utility::fp_env::env_);
 // Perform insertion trials until minimum number of trials
 // has been reached.
-for (auto key : this->key_list_)
+for (widom_datum & datum : this->data_)
 {
-  periodic_cube::add_specie_pbc adder( key, nullptr );
-  if (this->count_[key] < this->trials_)
+  if (datum.count_ < this->trials())
   {
-    std::size_t imove = this->count_[key];
+    periodic_cube::add_specie_pbc adder(datum.specie_key_, nullptr);
+    std::size_t imove = datum.count_;
     std::size_t fail_safe = 0;
-    while( imove != this->trials_ )
+    while(imove != this->trials())
     {
       ++fail_safe;
-      if (fail_safe > (this->trials_ * 100))
+      if (fail_safe > (this->trials() * 100))
       {
-        std::cerr << "WARNING: Base widom sampler add attempts are below 1%\n";
+        std::cerr << "WARNING: Widom sampler's add attempts are below 1\% for specie " << sim.get_specie(datum.specie_key_).label() << ".\n";
         break;
       } 
-      std::unique_ptr< trial::change_set > move_(adder.generate(sys, this->ranf_));
+      std::unique_ptr< trial::change_set > move_(adder.generate(sim, this->ranf_));
       // Calculate distance vectors.
       for (auto & atom : *move_)
       {
-        sys.compute_distances( atom.new_position, sys.get_ensemble().get_coordinates(), atom.new_rij, sys.get_ensemble().size(), 0 );
+        sim.compute_distances( atom.new_position, sim.get_ensemble().get_coordinates(), atom.new_rij, sim.get_ensemble().size(), 0 );
       }
       // Calculate energy
-      for (auto const& evaluator : sys.get_evaluators())
+      for (auto const& evaluator : sim.get_evaluators())
       {
-        evaluator.compute_potential( sys.get_species(), sys.get_ensemble(), *move_, 0 );
-        if ( move_->fail() ) break;
+        evaluator.compute_potential( sim.get_species(), sim.get_ensemble(), *move_, 0 );
+        if (move_->fail()) break;
       }
       if ( not env.no_except() )
       {
-        if (0 != ((~env.Inexact) & env.except()))
-        {
-          log << "Floating point exception in Widom computation\n \"" << env.error_message () << "\"\n";
-          UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+        UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
           , " Floating point exception : "+ env.error_message ());
-        }
         env.reset();
       }
       if (not move_->fail()) // **
@@ -77,113 +140,33 @@ for (auto key : this->key_list_)
 
         // Update data
         ++imove;
-        this->update_data ((*move_)[0]);
+        this->update_data((*move_)[0]);
       }
     }
+    // reset counter.
+    datum.count_ = 0ul;
+  }
+  else
+  {
+    // reset counter.
+    // ** if test assures this->count_[key] >= this->trials() **
+    datum.count_ -= this->trials();
   }
 }
-// write report to log
-{
-   log << " Results widom test particle method : \n";
-   log << " " << std::string(56+5,'-') << "\n";
-   log << " " << std::setw(6) << "SPECIE";
-   log << " " << std::setw(10) << "SAMPLES";
-   log << " " << std::setw(10) << "-ln<e-E>";
-   log << " " << std::setw(10) << "V(e-E)";
-   log << " " << std::setw(10) << "<E>";
-   log << " " << std::setw(10) << "V(E)";
-   log << "\n";
-   for (std::size_t key : this->key_list_)
-   {
-      if (this->chem_potential_[key].count() > 0)
-      {
-         log << " CP " << std::setw(3) << sys.get_specie(key).label();
-         log << " " << std::setw(10) << this->chem_potential_[key].count();
-         log << " " << std::setw(10) << -std::log(this->exp_chem_potential_[key].mean());
-         log << " " << std::setw(10) << this->exp_chem_potential_[key].variance();
-         log << " " << std::setw(10) << this->chem_potential_[key].mean();
-         log << " " << std::setw(10) << this->chem_potential_[key].variance();
-         log << "\n";
-      }
-      else
-      {
-         log << "CP " << std::setw(8) << sys.get_specie(key).label();
-         log << " No results as no samples taken.\n";
-      }
-   }
-  log << core::strngs::horizontal_bar() << "\n";
-}
-// write data to output
-{
-   const std::string filename { "widom.dat" };
-
-   const std::size_t loopindex { sys.get_outer_loop_index() };
-
-   core::output_series dset { sys.run_uuid() };
-   dset.set_title( "Series of Widom method chemical potential estimates" );
-
-   dset.push_back_entry( core::output_field( "INDEX", "ORDINAL", [loopindex](std::ostream& os, std::size_t)
-   {
-      os << loopindex;
-   } ) );
-
-   for (std::size_t ispec : this->key_list_)
-   {
-      auto const& spc = sys.get_specie( ispec );
-      auto const& estmt = this->exp_chem_potential_[ ispec ];
-      auto const& mstmt = this->chem_potential_[ ispec ];
-      dset.push_back_entry( core::output_field( spc.label() + "_CURRENT" , "COUNT", [&spc](std::ostream& os, std::size_t)
-      {
-         os << spc.excess_potential();
-      } ) );
-      dset.push_back_entry( core::output_field( spc.label() + "_E_MEAN" , "COUNT", [&estmt](std::ostream& os, std::size_t)
-      {
-         os << -std::log(estmt.mean());
-      } ) );
-      dset.push_back_entry( core::output_field( spc.label() + "_MEAN" , "COUNT", [&mstmt](std::ostream& os, std::size_t)
-      {
-         os << mstmt.mean();
-      } ) );
-      dset.push_back_entry( core::output_field( spc.label() + "_COUNT" , "COUNT", [&estmt](std::ostream& os, std::size_t)
-      {
-         os << estmt.count();
-      } ) );
-   }
-
-   dset.write( filename, reporter.get_sink(), 1 == loopindex );
-
-}
-// reset accumulators
-for (std::size_t key : this->key_list_)
-{
-   if (this->chem_potential_[key].count() > 0)
-   {
-      this->chem_potential_[key].reset();
-      this->exp_chem_potential_[key].reset();
-   }
-}
-// reset the per-cycle iteration
-// counter.
-for (auto &counter : this->count_) counter = 0ul;
 !!!2167599.cpp!!!	prepare(inout sim : simulator) : void
-std::size_t maxkey = 0;
-this->count_.clear();
-this->chem_potential_.clear();
-this->exp_chem_potential_.clear();
-this->key_list_.clear();
-if ( this->key_labels_.empty () )
+this->data_.clear();
+if (this->key_labels_.empty())
 {
   // Use all solute species if none specified in the input file.
-  for ( std::size_t key = 0; key != sim.specie_count(); ++key )
+  for (std::size_t key = 0; key != sim.specie_count(); ++key)
   {
-    if ( sim.get_specie( key ).is_solute() )
+    if (sim.get_specie(key).is_solute())
     {
-      this->key_list_.push_back (key);
-      maxkey = std::max(maxkey, key);
-      this->key_labels_ += sim.get_specie( key ).label() + " ";
+      this->data_.push_back(widom_datum(key));
+      this->key_labels_ += sim.get_specie(key).label() + " ";
     }
   }
-  if (not this->key_labels_.empty ())
+  if (not this->key_labels_.empty())
   {
      this->key_labels_.pop_back();
   }
@@ -192,20 +175,22 @@ else
 {
   // Use species specified in the input file.
   boost::tokenizer<> tok{ this->key_labels_ };
-  // construct a new label list with only the inuse labels
+  // construct a new label list with no duplicate labels
   std::string used_labels{};
-  for (auto beg = tok.begin(); beg != tok.end(); ++beg )
+  for (auto beg = tok.begin(); beg != tok.end(); ++beg)
   {
     std::string lbl{ *beg };
-    UTILITY_INPUT ( sim.has_specie(lbl),
-                   "Specie label ["+lbl+"] not found",
-                   core::strngs::sampler_label() );
-    std::size_t key = sim.get_specie_key( lbl );
+    UTILITY_INPUT(sim.has_specie(lbl),
+                  "Specie label ["+lbl+"] not found",
+                  core::strngs::sampler_label());
+    std::size_t key = sim.get_specie_key(lbl);
+    UTILITY_INPUT(sim.get_specie(key).is_solute(),
+                  "Specie labelled ["+lbl+"] is not a solute",
+                  core::strngs::sampler_label());
     // Ignore duplicate indices
-    if ( 0 == std::count( this->key_list_.begin(), this->key_list_.end(), key) )
+    if (this->data_.end() == std::find_if(this->data_.begin(), this->data_.end(), [key](const widom_datum& dat){ return dat.specie_key_ == key; }))
     {
-      this->key_list_.push_back( key );
-      maxkey = std::max( maxkey, key );
+      this->data_.push_back(widom_datum(key));
       used_labels += lbl + " ";
     }
   }
@@ -213,18 +198,26 @@ else
   {
      used_labels.pop_back();
   }
-  std::swap( this->key_labels_, used_labels );
+  std::swap(this->key_labels_, used_labels);
 }
-this->count_.resize( maxkey + 1, 0ul );
-this->chem_potential_.resize( maxkey + 1 );
-this->exp_chem_potential_.resize( maxkey + 1 );
+!!!686512.cpp!!!	specie_of_interest(in idx : size_t) : bool
+return this->data_.end() != std::find_if(this->data_.begin(), this->data_.end(), [idx](widom_datum &dat){ return dat.specie_key_ == idx; });
+
 !!!434481.cpp!!!	update_data(in atom : change_atom) : void
-++this->count_[atom.key];
-this->chem_potential_[atom.key].append(atom.energy_new);
-this->exp_chem_potential_[atom.key].append(std::exp(-atom.energy_new));
+for (widom_datum &datum : this->data_)
+{
+  if (datum.specie_key_ == atom.key)
+  {
+    ++datum.count_;
+    datum.chem_potential_.append(atom.energy_new);
+    datum.exp_chem_potential_.append(std::exp(-atom.energy_new));
+    break;
+  }
+}
 !!!2175279.cpp!!!	make_sampler(in params : string, inout sim : simulator) : void
-std::unique_ptr< widom > smplr(new widom);
+boost::shared_ptr< widom > smplr(new widom);
 // Check parameters for usable values
+bool use_main = true;
 for (auto const& item : params)
 {
   if (item.first == core::strngs::fsiwid())
@@ -233,7 +226,7 @@ for (auto const& item : params)
   }
   else if (item.first == core::strngs::fswidm())
   {
-    smplr->use_main_ = core::input_reader::read_as_bool(item.second);
+    use_main = core::input_reader::read_as_bool(item.second);
   }
   else if (item.first == core::strngs::fsspec())
   {
@@ -247,5 +240,11 @@ for (auto const& item : params)
       core::strngs::sampler_label ());
   }
 }
-boost::shared_ptr< observer::base_sampler > result( smplr.release() );
-sim.get_reporter().share_inner_observer( result );
+if (use_main)
+{
+  boost::shared_ptr< widom_monitor > monitor(new widom_monitor(smplr));
+  smplr->monitor_ = monitor;
+  sim.get_reporter().add_tracked(monitor);
+}
+// boost::shared_ptr< observer::base_sampler > result(smplr.release());
+sim.get_reporter().add_sample(smplr);
