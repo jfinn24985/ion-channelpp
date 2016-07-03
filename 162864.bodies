@@ -2,21 +2,16 @@ class alternater_sampler
 !!!212528.cpp!!!	description(inout out : ostream) : void
 out << "SAMPLER [" << this->type_label() << "]\n";
 out << " Collect data about alternater choice add/remove probabilities\n";
-!!!212784.cpp!!!	enrol(inout reporter : report_manager) : void
-if (not reporter.has_signal(this->type_label()))
+!!!223920.cpp!!!	on_sample(in sim : simulator) : void
+if (this->probabilities_.empty())
 {
-  boost::any sig = &this->prob_signal_;
-  reporter.set_signal(this->type_label(), sig);
+  this->probabilities_.resize(sim.specie_count());
 }
-!!!223920.cpp!!!	on_outer_loop(in sim : simulator) : void
-if (not this->prob_signal_.empty())
+for (auto const& item : this->choices_)
 {
-  std::vector< std::pair< double, double > > probabilities( sim.specie_count() );
-  for (auto const& item : this->choices_)
-  {
-     probabilities[ item->specie_key() ] = std::make_pair( item->add_success_rate(), item->remove_success_rate() );
-  }
-  this->prob_signal_( probabilities );
+   this->probabilities_[item->specie_key()].first.append(item->add_success_rate());
+   this->probabilities_[item->specie_key()].second.append(item->remove_success_rate());
+   item->reset();
 }
 !!!213808.cpp!!!	remove_alternater_choice(in choice : alternater_choice) : void
 for (std::vector< alternater_choice const* >::iterator itr = this->choices_.begin(); itr != this->choices_.end(); ++itr)
