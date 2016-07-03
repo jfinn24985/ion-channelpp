@@ -1,0 +1,88 @@
+class trial_acceptance_sampler
+!!!718896.cpp!!!	build_dictionary_(in trial : change_set) : void
+// downgrade /pre checks for private method.
+UTILITY_CHECK(trial.choice() != nullptr, "Malformed change set with nul choice pointer");
+UTILITY_CHECK(this->dictionary_.end() == this->dictionary_.find((void*)trial.choice()),
+              "Attempt to add choice object multiple times to dictionary.");
+// Search data if it contains more entries than dictionary
+if (this->data_.size() > this->dictionary_.size())
+{
+  // May be in data but not in dictionary
+  const std::string label
+  {
+    trial.choice()->label()
+  };
+  const std::size_t key
+  {
+    trial.choice()->specie_key()
+  };
+  for (auto & item : this->data_)
+  {
+    if (item.label == label and item.specie_key == key)
+    {
+      // item pointer should be nul
+      UTILITY_CHECK(item.hash == nullptr, "Attempt to map two choice objects to single acceptance sample");
+      item.hash = (void*)trial.choice();
+      this->dictionary_[(void*)trial.choice()] = &item;
+      UTILITY_ENSURE(this->dictionary_.end() != this->dictionary_.find((void*)trial.choice()), "Unable to find choice after adding to dictionary");
+      return; // exit, no more to do.
+    }
+  }
+}
+// If here then no existing datum object found; add one.
+{
+  this->data_.push_back(acceptance_datum(trial.choice()->label(), trial.choice(), trial.choice()->specie_key()));
+  this->dictionary_[(void*)trial.choice()] = &(this->data_.back());
+}
+UTILITY_ENSURE(this->dictionary_.end() != this->dictionary_.find((void*)trial.choice()), "Unable to find choice after adding to dictionary");
+
+!!!718128.cpp!!!	description(inout out : ostream) : void
+out << "[sampler] " << this->type_label_() << "\n";
+out << " Collect and report trial acceptance probabilities.\n";
+!!!719408.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
+
+!!!718384.cpp!!!	get_value() : boost::any
+boost::any result = this->data_;
+return result;
+!!!719280.cpp!!!	make_sampler(in param_set : string, inout sim : simulator) : void
+UTILITY_INPUT(param_set.empty(), "The "+trial_acceptance_sampler::type_label_()+" sampler takes no parameters.", core::strngs::sampler_label());
+boost::shared_ptr< tracked_variable > tmp(new trial_acceptance_sampler);
+sim.get_reporter().add_tracked(tmp);
+!!!718640.cpp!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
+boost::format format_str(" %6s SPC[%3s] %10d %10d %7.3f %7.3f\n");
+for (auto const& datum : this->data_)
+{
+if (datum.success > 0)
+{
+  out << boost::format(format_str) % datum.label
+        % sim.get_specie(datum.specie_key).label() 
+        % datum.success % datum.attempts 
+        % (datum.probability() * 100.0)
+        % ((datum.attempts * 100.0)/this->total_);
+}
+else
+{
+  out << boost::format(format_str) % datum.label 
+        % sim.get_specie(datum.specie_key).label()
+        % 0 % datum.attempts % 0.0
+        % ((datum.attempts * 100.0)/this->total_);
+}
+}
+!!!718000.cpp!!!	on_trial_end(in trial : change_set) : void
+++this->total_;
+auto iter = this->dictionary_.find((void*)trial.choice());
+if (this->dictionary_.end() == iter)
+{
+  this->build_dictionary_(trial);
+  iter = this->dictionary_.find((void*)trial.choice());
+}
+++iter->second->attempts;
+if (trial.accept())
+{
+  ++iter->second->success;
+}
+!!!718512.cpp!!!	prepare(inout sim : simulator) : void
+this->data_.clear();
+this->dictionary_.clear();
+this->total_ = 0ul;
