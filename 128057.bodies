@@ -7,11 +7,17 @@ os << " to maintain the target concentrations of solute species.\n";
 os << " Reference: S. Lamperski, Mol. Simul. 33, 1193, 2007\n";
 this->igcmc::description(os);
 !!!128185.cpp!!!	do_on_super_loop(inout sys : simulator) : void
+// Get mean concentration from specie_count sampler.
+//
+// NOTE: we could use specie_count::type_label_()
+boost::any means_any = sys.get_reporter().get_sample("specie-count")->get_value();
+std::vector< utility::estimater > const& means = *(boost::any_cast< std::vector< utility::estimater > const* >(means_any));
+
 for (size_t ispec = 0; ispec != sys.specie_count(); ++ispec)
 {
    particle::specie & spcobj = sys.get_specie(ispec);
    // only solute species exist when using IGCMC
-   double actual_concentration = this->bulk_count_[ispec]*core::constants::to_SI()/sys.volume(ispec);
+   double actual_concentration = means[ispec].mean()*core::constants::to_SI()/sys.volume(ispec);
    if (not utility::feq(actual_concentration,0.0))
    {
       double chempi = spcobj.excess_potential() + (spcobj.concentration() > actual_concentration? this->delta : -this->delta);
@@ -42,21 +48,6 @@ for (auto const& item : params)
 }
 boost::shared_ptr< periodic_cube::igcmc > result( smplr.release() );
 dynamic_cast< periodic_cube::periodic_system& >( sim ).set_super_looper( result );
-!!!724529.cpp!!!	on_specie_count_signal(in means : estimater) : void
-for (size_t ispec = 0; ispec != this->bulk_count_.size(); ++ispec)
-{
-  this->bulk_count_[ispec] = means [ispec].mean();
-}
-!!!724401.cpp!!!	do_prepare(inout sim : simulator) : void
-this->bulk_count_.clear();
-this->bulk_count_.resize(sim.specie_count());
-// Set up signal/slot to set specie means list
-if (not this->specie_count_conx_.connected())
-{
-  auto sig = boost::any_cast< boost::signals2::signal<void (const std::vector<utility::estimater>&) >* >(sim.get_reporter().get_signal("specie-count"));
-  // Need to cast signal from Any object
-  this->specie_count_conx_ = sig->connect(boost::bind(&lamperski_igcmc::on_specie_count_signal, this, _1));
-}
 !!!724401.python!!!	do_prepare(inout sim : simulator) : void
 super( malasics_igcmc, self ).prepare( sim )
 # Set up signal/slot to set specie means list

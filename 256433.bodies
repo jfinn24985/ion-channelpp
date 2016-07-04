@@ -22,13 +22,19 @@ pass
 
 
 !!!458801.cpp!!!	do_on_super_loop(inout sys : simulator) : void
+// Get mean concentration from specie_count sampler.
+//
+// NOTE: we could use specie_count::type_label_()
+boost::any means_any = sys.get_reporter().get_sample("specie-count")->get_value();
+std::vector< utility::estimater > const& means = *(boost::any_cast< std::vector< utility::estimater > const* >(means_any));
+
 for (size_t ispec = 0; ispec != sys.specie_count(); ++ispec)
 {
   particle::specie & spcobj = sys.get_specie(ispec);
   // only solute species have interesting chemical potentials
   //if (spcobj.is_solute())
   //{
-    double bulk_density = this->bulk_count_[ispec]/sys.volume(ispec);
+    double bulk_density = means[ispec].mean()/sys.volume(ispec);
     if (not utility::feq(bulk_density,0.0))
     {
       spcobj.set_excess_potential(spcobj.chemical_potential() - std::log(bulk_density));
@@ -61,11 +67,6 @@ if (not params.empty())
 }
 boost::shared_ptr< periodic_cube::igcmc > result( smplr.release() );
 dynamic_cast< periodic_cube::periodic_system& >( sim ).set_super_looper( result );
-!!!459185.cpp!!!	on_specie_count_signal(in means : estimater) : void
-for (size_t ispec = 0; ispec != this->bulk_count_.size(); ++ispec)
-{
-  this->bulk_count_[ispec] = means [ispec].mean();
-}
 !!!595633.python!!!	__init__(inout self : , in sim : simulator)
 open("chex.dat","w").truncate()
 !!!595505.python!!!	__del__(in self : )
@@ -73,16 +74,6 @@ if self.specie_count_conx_ != None and self.specie_count_conx_.connected():
   self.specie_count_conx_.disconnect()
   self.specie_count_conx_ = None
 pass
-!!!457521.cpp!!!	do_prepare(inout sim : simulator) : void
-this->bulk_count_.clear();
-this->bulk_count_.resize(sim.specie_count());
-// Set up signal/slot to set specie means list
-if (not this->specie_count_conx_.connected())
-{
-  auto sig = boost::any_cast< boost::signals2::signal<void (const std::vector<utility::estimater>&) >* >(sim.get_reporter().get_signal("specie-count"));
-  // Need to cast signal from Any object
-  this->specie_count_conx_ = sig->connect(boost::bind(&malasics_igcmc::on_specie_count_signal, this, _1));
-}
 !!!457521.python!!!	do_prepare(inout sim : simulator) : void
 super( malasics_igcmc, self ).prepare( sim )
 # Set up signal/slot to set specie means list

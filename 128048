@@ -1,6 +1,6 @@
 format 75
 "periodic_cube" // periodic_cube
-  revision 66
+  revision 68
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -1053,16 +1053,11 @@ ${docstring}${body}
 	  public explicit_return_type ""
 	  nparams 1
 	    param inout name "source" type class_ref 373680 // probability_datum
-	  cpp_decl "    ${comment}${inline}${name}${(}${t0} ¬& ${p0}${)}${volatile}${throw}
+	  cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
 : add(std::move(source.add))
 , remove(std::move(source.remove))
 , specie_key(std::move(source.specie_key))
 {}
-"
-	  cpp_def "${comment}${inline}${class}::${name}${(}${t0} & ${p0}${)}${volatile}${throw}
-{
-  ${body}
-}
 "
 	  
 	  
@@ -1095,11 +1090,10 @@ ${docstring}${body}
 	  public return_type class_ref 373680 // probability_datum
 	  nparams 1
 	    param in name "source" type class_ref 373680 // probability_datum
-	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${abstract};
-"
-	  cpp_def "${comment}${inline}${type} & ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
 {
-  ${body}
+  this->swap(${p0});
+  return *this;
 }
 "
 	  
@@ -1134,7 +1128,7 @@ ${docstring}${body}
 	  stereotype "vector"
 	  a role_name "choices_" multiplicity "*" private
 	    comment "  Set of choosers to sampler (not saved)"
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} const* > ${name}${value};
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} * > ${name}${value};
 "
 	    python "${comment}${self}${name} = ${stereotype}()
 "
@@ -1192,8 +1186,8 @@ ${docstring}${body}
       operation 213424 "add_alternater_choice"
 	public explicit_return_type "void"
 	nparams 1
-	  param in name "choice" type class_ref 141744 // alternater_choice
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} * ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+	  param inout name "choice" type class_ref 141744 // alternater_choice
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} * ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
   this->choices_.push_back( ${p0} );
 }
@@ -1250,7 +1244,11 @@ ${docstring}${body}
       operation 702512 "get_label"
 	const cpp_virtual public explicit_return_type "string"
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override
+{
+  return ${class}::type_label_();
+}
+
 "
 	
 	
@@ -1270,7 +1268,12 @@ as the sampler type-label in the input document."
       operation 702640 "get_value"
 	const cpp_virtual public explicit_return_type "boost::any"
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
 "
 	
 	
@@ -1278,7 +1281,9 @@ as the sampler type-label in the input document."
 ${docstring}${body}
 "
 	
-	comment "Retrieve the current value of the variable."
+	comment "Retrieve the current value of the variable.
+
+/return type vector< probability_datum >"
       end
 
       operation 212656 "prepare"
@@ -1342,9 +1347,9 @@ ${docstring}${body}
       operation 213808 "remove_alternater_choice"
 	public explicit_return_type "void"
 	nparams 1
-	  param in name "choice" type class_ref 141744 // alternater_choice
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} * ${p0}${v0}${)}${const}${volatile}${throw}${abstract};"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} * ${p0}${)}${const}${volatile}${throw}
+	  param inout name "choice" type class_ref 141744 // alternater_choice
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} * ${p0}${v0}${)}${const}${volatile}${throw}${abstract};"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} * ${p0}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -1386,7 +1391,7 @@ ${docstring}${body}
 	
       end
 
-      operation 213552 "type_label"
+      operation 213552 "type_label_"
 	class_operation public explicit_return_type "string"
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
@@ -3522,33 +3527,6 @@ ${docstring}${members}
 	  b parent class_ref 1016239 // strngs
       end
 
-      attribute 382513 "bulk_count_"
-	private explicit_type "double"
-	multiplicity "*"
-	stereotype "vector"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${stereotype}()
-"
-	idl_decl ""
-	comment "The average number of particles in the simulation."
-      end
-
-      attribute 359857 "specie_count_conx_"
-	private type class_ref 206255 // connection
-	init_value "None"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "Connection to 'specie-count-mean' signal"
-      end
-
       operation 488241 "description"
 	const public explicit_return_type "void"
 	nparams 1
@@ -3608,26 +3586,6 @@ ${docstring}${body}
 	comment "Create a new widom sampler using the given parameter set."
       end
 
-      operation 459185 "on_specie_count_signal"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "means" type class_ref 176049 // estimater
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::vector< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::vector< ${t0} >& ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, *args${)}:
-${docstring}self.bulk_count_ = [x.mean() for x in args[0]]
-"
-	
-	comment "Respond to signal with the average particle numbers."
-      end
-
       operation 529841 "~malasics_igcmc"
 	cpp_virtual public explicit_return_type ""
 	nparams 0
@@ -3677,9 +3635,7 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
+{}
 "
 	
 	
@@ -3735,6 +3691,15 @@ ${docstring}return \"malasics\"
 	idl ""
       end
 
+      classrelation 385969 // <dependency>
+	relation 385713 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 385969 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
       operation 458545 "serialize"
 	stereotype "template"
 	cpp_inline private explicit_return_type "void"
@@ -3744,7 +3709,6 @@ ${docstring}return \"malasics\"
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
   ${p0} & boost::serialization::base_object< igcmc >(*this);
-  ${p0} & bulk_count_;
 }
 "
 	
@@ -3776,13 +3740,13 @@ ${docstring}${body}
 only throw possible should be from os.write() operation"
       end
 
-      classrelation 385969 // <dependency>
-	relation 385713 -_->
+      classrelation 473392 // <dependency>
+	relation 472496 -_->
 	  a default
 	    cpp default "#include in source"
 	    python "${type}"
-	    classrelation_ref 385969 // <dependency>
-	  b parent class_ref 912431 // access
+	    classrelation_ref 473392 // <dependency>
+	  b parent class_ref 1144367 // base_sampler
       end
     end
 
@@ -3829,20 +3793,6 @@ ${docstring}${members}
 	  b parent class_ref 865967 // constants
       end
 
-      attribute 422065 "bulk_count_"
-	private explicit_type "double"
-	multiplicity "*"
-	stereotype "vector"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${stereotype}()
-"
-	idl_decl ""
-	comment "The average number of particles in the simulation."
-      end
-
       attribute 128185 "delta"
 	private explicit_type "double"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -3853,19 +3803,6 @@ ${docstring}${members}
 "
 	idl_decl ""
 	comment "Lamperski method  delta value"
-      end
-
-      attribute 422193 "specie_count_conx_"
-	private type class_ref 206255 // connection
-	init_value "None"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "Connection to 'specie-count-mean' signal"
       end
 
       operation 128057 "description"
@@ -3929,26 +3866,6 @@ ${docstring}${body}
 	comment "Create a new widom sampler using the given parameter set."
       end
 
-      operation 724529 "on_specie_count_signal"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "means" type class_ref 176049 // estimater
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::vector< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::vector< ${t0} >& ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, *args${)}:
-${docstring}self.bulk_count_ = [x.mean() for x in args[0]]
-"
-	
-	comment "Respond to signal with the average particle numbers."
-      end
-
       operation 724401 "do_prepare"
 	cpp_virtual private explicit_return_type "void"
 	nparams 1
@@ -3956,9 +3873,7 @@ ${docstring}self.bulk_count_ = [x.mean() for x in args[0]]
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
+{}
 "
 	
 	
@@ -4034,7 +3949,6 @@ ${docstring}${body}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
   ${p0} & boost::serialization::base_object< igcmc >(*this);
-  ${p0} & bulk_count_;
   ${p0} & delta;
 }
 "
@@ -4053,7 +3967,6 @@ ${docstring}${body}
 "
 	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} 
 : igcmc()
-, bulk_count_()
 , delta (0.1)
 {}
 "
@@ -4100,6 +4013,15 @@ ${docstring}${body}
 	comment "Add type and delta information to an input file section.
 
 only throw possible should be from os.write() operation"
+      end
+
+      classrelation 473520 // <dependency>
+	relation 472624 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 473520 // <dependency>
+	  b parent class_ref 1144367 // base_sampler
       end
     end
 
@@ -4153,32 +4075,6 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 129209 // <dependency>
 	  b parent class_ref 1016239 // strngs
-      end
-
-      attribute 190512 "choices_"
-	private explicit_type "double"
-	multiplicity "*"
-	stereotype "vector"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< std::pair< ${type}, ${type}> > ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${stereotype}()
-"
-	idl_decl ""
-      end
-
-      attribute 190768 "accept_conx_"
-	private type class_ref 206255 // connection
-	init_value "None"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "Connection to 'alternater-choice' signal"
       end
 
       attribute 135609 "variant_"
@@ -4240,9 +4136,7 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
+{}
 "
 	
 	
@@ -4295,26 +4189,6 @@ ${docstring}${body}
 "
 	
 	comment "Create a new widom sampler using the given parameter set."
-      end
-
-      operation 214960 "on_update"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "data" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::vector< std::pair < ${t0},  ${t0} > > const& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::vector< std::pair < ${t0},  ${t0} > > const& ${p0}${)}${const}${volatile}${throw}
-{
-  this->choices_ = ${p0};
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Get acceptance rate data"
       end
 
       operation 129849 "type_label"
@@ -4372,7 +4246,6 @@ ${docstring}${body}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
   ${p0} & boost::serialization::base_object< igcmc >(*this);
-  ${p0} & choices_;
   ${p0} & variant_;
 }
 "
@@ -4382,6 +4255,15 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+      end
+
+      classrelation 473648 // <dependency>
+	relation 472752 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 473648 // <dependency>
+	  b parent class_ref 1144367 // base_sampler
       end
     end
   end
@@ -5015,7 +4897,7 @@ ${docstring}${body}
       end
 
       operation 434225 "type_label_"
-	class_operation private explicit_return_type "string"
+	class_operation public explicit_return_type "string"
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
@@ -5588,6 +5470,7 @@ ${includes}
 #include \"evaluator/coulomb.hpp\"
 #include \"observer/density_zaxis.hpp\"
 #include \"observer/metropolis_sampler.hpp\"
+#include \"observer/trial_acceptance_sampler.hpp\"
 #include \"observer/rdf_sampler.hpp\"
 #include \"observer/sampler_meta.hpp\"
 #include \"observer/specie_count.hpp\"
@@ -5807,45 +5690,45 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     artifact 302256 "libionch_pbc"
       stereotype "library"
       associated_artifacts
-	artifact_ref 162480 // alternater_chooser
 	artifact_ref 128048 // gc_choice_pbc
 	artifact_ref 128057 // lamperski_igcmc
-	artifact_ref 148784 // bulk_simulator_meta
+	artifact_ref 128176 // add_specie_pbc
+	artifact_ref 128560 // remove_specie_pbc
+	artifact_ref 128944 // jump_choice_pbc
 	artifact_ref 134841 // accept_igcmc
 	artifact_ref 148401 // periodic_system
-	artifact_ref 128176 // add_specie_pbc
-	artifact_ref 155568 // imc_meta
-	artifact_ref 651823 // widom
-	artifact_ref 247089 // malasics_igcmc
-	artifact_ref 128560 // remove_specie_pbc
-	artifact_ref 246961 // igcmc
-	artifact_ref 128944 // jump_choice_pbc
+	artifact_ref 148784 // bulk_simulator_meta
 	artifact_ref 148912 // alternater_choice
+	artifact_ref 155568 // imc_meta
+	artifact_ref 162480 // alternater_chooser
+	artifact_ref 246961 // igcmc
+	artifact_ref 247089 // malasics_igcmc
+	artifact_ref 651823 // widom
       end
     end
 
     artifact 128817 "cscbulk"
       stereotype "executable"
       associated_artifacts
-	artifact_ref 216239 // date_time
-	artifact_ref 716335 // libionch_evaluator
-	artifact_ref 281519 // system
-	artifact_ref 325552 // libionch_lapack
-	artifact_ref 332208 // libionch_gdbm_sink
-	artifact_ref 302256 // libionch_pbc
-	artifact_ref 334257 // uuid
-	artifact_ref 617391 // libionch_particle
-	artifact_ref 609327 // libionch_core
-	artifact_ref 327601 // cscmc_bulk
-	artifact_ref 215983 // program_options
-	artifact_ref 769583 // libionch_observer
-	artifact_ref 207919 // libionch_utility
-	artifact_ref 222768 // clapack
 	artifact_ref 185007 // serialization
-	artifact_ref 694959 // libionch_trial
-	artifact_ref 651439 // random
-	artifact_ref 769327 // libionch_platform
+	artifact_ref 207919 // libionch_utility
+	artifact_ref 215983 // program_options
+	artifact_ref 216239 // date_time
+	artifact_ref 222768 // clapack
+	artifact_ref 281519 // system
+	artifact_ref 302256 // libionch_pbc
+	artifact_ref 325552 // libionch_lapack
+	artifact_ref 327601 // cscmc_bulk
+	artifact_ref 332208 // libionch_gdbm_sink
+	artifact_ref 334257 // uuid
 	artifact_ref 371376 // gdbm
+	artifact_ref 609327 // libionch_core
+	artifact_ref 617391 // libionch_particle
+	artifact_ref 651439 // random
+	artifact_ref 694959 // libionch_trial
+	artifact_ref 716335 // libionch_evaluator
+	artifact_ref 769327 // libionch_platform
+	artifact_ref 769583 // libionch_observer
       end
       comment " Program version to be used to create a make, cmake or jam
  build system for the project using \"Create build system\" tool."
@@ -5854,26 +5737,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     artifact 302128 "cscbulk_mpi"
       stereotype "executable"
       associated_artifacts
+	artifact_ref 185007 // serialization
+	artifact_ref 207919 // libionch_utility
+	artifact_ref 215983 // program_options
 	artifact_ref 216239 // date_time
-	artifact_ref 716335 // libionch_evaluator
+	artifact_ref 222768 // clapack
 	artifact_ref 281519 // system
-	artifact_ref 325552 // libionch_lapack
-	artifact_ref 332208 // libionch_gdbm_sink
-	artifact_ref 302256 // libionch_pbc
 	artifact_ref 295344 // cscmc_bulk_mpi
 	artifact_ref 301872 // mpi
+	artifact_ref 302256 // libionch_pbc
+	artifact_ref 325552 // libionch_lapack
+	artifact_ref 332208 // libionch_gdbm_sink
 	artifact_ref 334257 // uuid
-	artifact_ref 617391 // libionch_particle
-	artifact_ref 609327 // libionch_core
-	artifact_ref 215983 // program_options
-	artifact_ref 769583 // libionch_observer
 	artifact_ref 345264 // libionch_platform_mpi
-	artifact_ref 207919 // libionch_utility
-	artifact_ref 222768 // clapack
-	artifact_ref 185007 // serialization
-	artifact_ref 694959 // libionch_trial
+	artifact_ref 609327 // libionch_core
+	artifact_ref 617391 // libionch_particle
 	artifact_ref 651439 // random
+	artifact_ref 694959 // libionch_trial
+	artifact_ref 716335 // libionch_evaluator
 	artifact_ref 769327 // libionch_platform
+	artifact_ref 769583 // libionch_observer
       end
       comment " Program version to be used to create a make, cmake or jam
  build system for the project using \"Create build system\" tool."
@@ -6473,6 +6356,7 @@ ${namespace_end}
 
 #include <boost/serialization/export.hpp>
 BOOST_CLASS_EXPORT_GUID(periodic_cube::widom, \"periodic_cube::widom\");
+BOOST_CLASS_EXPORT_GUID(periodic_cube::widom_monitor, \"periodic_cube::widom_monitor\");
 "
       associated_classes
 	class_ref 367024 // widom_monitor

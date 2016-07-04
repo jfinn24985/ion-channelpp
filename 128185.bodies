@@ -6,68 +6,86 @@ os << " Use IGCMC to estimate the excess chemical potentials required\n";
 os << " to maintain the target concentrations of solute species.\n";
 this->igcmc::description(os);
 !!!129337.cpp!!!	do_on_super_loop(inout sys : simulator) : void
+// Get mean concentration from specie_count sampler.
+//
+// NOTE: we could use alternater_sampler::type_label_()
+boost::any choices_any = sys.get_reporter().get_sample("alternater-sampler")->get_value();
+std::vector< alternater_sampler::probability_datum > const& choices = *(boost::any_cast< std::vector< alternater_sampler::probability_datum >* >(choices_any));
+
 for (std::size_t ispec = 0; ispec != sys.specie_count(); ++ispec)
 {
-   auto & spcobj = sys.get_specie(ispec);
-   // only solute species in PBC simulations
-   const double p_add { this->choices_[ispec].first };
-   const double p_del { this->choices_[ispec].second };
-   // Initialise chempi to the previous value.
-   double chempi (spcobj.excess_potential());
-   const double num_of_particles(spcobj.concentration()*sys.volume(0)/core::constants::to_SI());
-
-   switch(this->variant_)
-   {
-   case 0:
-   case 1:
-      chempi = spcobj.excess_potential() + std::log(p_del/p_add)/2.0;
+  alternater_sampler::probability_datum const* specie_datum = nullptr;
+  for (auto const& datum : choices)
+  {
+    if (datum.specie_key == ispec)
+    {
+      specie_datum = &datum;
       break;
-   case 5:
-      //      ac6nt=ctargi(ispec)*volblk()/tosi
-      //     ac6n=floor(ac6nt)
-      //      if (ac6nt.gt.1.D0) then
-      //        tmp=(ac6nt*ac6nt)/(ac6n*ac6n+ac6n)
-      //      else
-      //        tmp=6.D0*ac6nt
-      //      endif
-      //      write(*,*)"Multiply factor : N_t=",ac6nt," N=",ac6n," factor=",tmp
-      //      call chexi_set (ispec, chexi(ispec) + dlog((p_d/p_a) * tmp)/2.D0 + chisp)
-      //      write(unit=fidlog,fmt=*)"##### ln((P_d/P_a)*(N_t**2/N(N+1)))/2 #####"
-   {
-      double ac6n=std::floor(num_of_particles);
-      double tmp=(num_of_particles > 1 ? (num_of_particles*num_of_particles)/(ac6n*ac6n+ac6n) : (6*num_of_particles));
-      chempi = spcobj.excess_potential() + std::log(tmp*p_del/p_add)/2.0;
-   }
-   break;
-   case 13:
-      //      write(unit=fidlog,fmt=*)"#########       Variant 13      ##########"
-      //       ac6nt=ctargi(ispec)*volblk()/tosi
-      //       tmp=(1.D0-erf((0.5D0-ac6nt)/sqrt(2.D0*ac6nt)))/2.D0
-      //       write(*,*)"Multiply factor : N_t=",ac6nt," N=",ac6n," factor=",tmp
-      //       call chexi_set (ispec, chexi(ispec) + dlog(tmp*p_d/p_a)/2.D0 + chisp)
-      //       write(unit=fidlog,fmt=*)"##### ln(1-erf(1/2-N_t)/sqrt(2*N_t)) #####"
-   {
-      double tmp=(1-std::erf((0.5-num_of_particles)/std::sqrt(2*num_of_particles)))/2;
-      chempi = spcobj.excess_potential() + std::log(tmp*p_del/p_add)/2.0;
-   }
-   break;
-   default:
-   {
-      std::size_t known_variant = 0;
-      UTILITY_INPUT(this->variant_ == known_variant, "Accept IGCMC variant is unknown", core::strngs::sampler_label());
-   }
-   break;
-   }
-   spcobj.set_excess_potential(chempi);
-}
-!!!214704.cpp!!!	do_prepare(inout sim : simulator) : void
-this->igcmc::prepare( sim );
+    }
+  }
+  UTILITY_CHECK(nullptr != specie_datum, "Could not find specie datum for a specie.");
 
-// Connect to signals.
-if (not this->accept_conx_.connected())
-{
-  auto sig = boost::any_cast< periodic_cube::alternater_sampler::signal_type* >( sim.get_reporter().get_signal( periodic_cube::alternater_sampler::type_label() ) );
-  this->accept_conx_ = sig->connect(boost::bind(&accept_igcmc::on_update, this, _1));
+  if (nullptr == specie_datum)
+  {
+    continue;
+  }
+  auto & spcobj = sys.get_specie(ispec);
+  // only solute species in PBC simulations
+  const double p_add
+  {
+    specie_datum->add.mean()
+  };
+  const double p_del
+  {
+    specie_datum->remove.mean()
+  };
+  // Initialise chempi to the previous value.
+  double chempi (spcobj.excess_potential());
+  const double num_of_particles(spcobj.concentration()*sys.volume(0)/core::constants::to_SI());
+
+  switch(this->variant_)
+  {
+  case 0:
+  case 1:
+    chempi = spcobj.excess_potential() + std::log(p_del/p_add)/2.0;
+    break;
+  case 5:
+    //      ac6nt=ctargi(ispec)*volblk()/tosi
+    //     ac6n=floor(ac6nt)
+    //      if (ac6nt.gt.1.D0) then
+    //        tmp=(ac6nt*ac6nt)/(ac6n*ac6n+ac6n)
+    //      else
+    //        tmp=6.D0*ac6nt
+    //      endif
+    //      write(*,*)"Multiply factor : N_t=",ac6nt," N=",ac6n," factor=",tmp
+    //      call chexi_set (ispec, chexi(ispec) + dlog((p_d/p_a) * tmp)/2.D0 + chisp)
+    //      write(unit=fidlog,fmt=*)"##### ln((P_d/P_a)*(N_t**2/N(N+1)))/2 #####"
+  {
+    double ac6n=std::floor(num_of_particles);
+    double tmp=(num_of_particles > 1 ? (num_of_particles*num_of_particles)/(ac6n*ac6n+ac6n) : (6*num_of_particles));
+    chempi = spcobj.excess_potential() + std::log(tmp*p_del/p_add)/2.0;
+  }
+  break;
+  case 13:
+    //      write(unit=fidlog,fmt=*)"#########       Variant 13      ##########"
+    //       ac6nt=ctargi(ispec)*volblk()/tosi
+    //       tmp=(1.D0-erf((0.5D0-ac6nt)/sqrt(2.D0*ac6nt)))/2.D0
+    //       write(*,*)"Multiply factor : N_t=",ac6nt," N=",ac6n," factor=",tmp
+    //       call chexi_set (ispec, chexi(ispec) + dlog(tmp*p_d/p_a)/2.D0 + chisp)
+    //       write(unit=fidlog,fmt=*)"##### ln(1-erf(1/2-N_t)/sqrt(2*N_t)) #####"
+  {
+    double tmp=(1-std::erf((0.5-num_of_particles)/std::sqrt(2*num_of_particles)))/2;
+    chempi = spcobj.excess_potential() + std::log(tmp*p_del/p_add)/2.0;
+  }
+  break;
+  default:
+  {
+    std::size_t known_variant = 0;
+    UTILITY_INPUT(this->variant_ == known_variant, "Accept IGCMC variant is unknown", core::strngs::sampler_label());
+  }
+  break;
+  }
+  spcobj.set_excess_potential(chempi);
 }
 
 !!!218288.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
@@ -110,4 +128,9 @@ if (not required_tags_variant)
 }
 boost::shared_ptr< periodic_cube::igcmc > result( smplr.release() );
 dynamic_cast< periodic_cube::periodic_system& >( sim ).set_super_looper( result );
+if (not sim.get_reporter().has_sample("alternater-sampler"))
+{
+  boost::shared_ptr< observer::sampled_variable > alt_sampler(new alternater_sampler);
+  sim.get_reporter().add_sample(alt_sampler);
+}
 
