@@ -16,14 +16,15 @@ if (this->data_.size() > this->dictionary_.size())
   {
     trial.choice()->specie_key()
   };
-  for (auto & item : this->data_)
+  for (std::size_t idx = 0; idx != this->data_.size(); ++idx)
   {
+    auto & item = this->data_[idx];
     if (item.label == label and item.specie_key == key)
     {
       // item pointer should be nul
       UTILITY_CHECK(item.hash == nullptr, "Attempt to map two choice objects to single acceptance sample");
       item.hash = (void*)trial.choice();
-      this->dictionary_[(void*)trial.choice()] = &item;
+      this->dictionary_.insert(std::make_pair((void*)trial.choice(), idx));
       UTILITY_ENSURE(this->dictionary_.end() != this->dictionary_.find((void*)trial.choice()), "Unable to find choice after adding to dictionary");
       return; // exit, no more to do.
     }
@@ -32,7 +33,7 @@ if (this->data_.size() > this->dictionary_.size())
 // If here then no existing datum object found; add one.
 {
   this->data_.push_back(acceptance_datum(trial.choice()->label(), trial.choice(), trial.choice()->specie_key()));
-  this->dictionary_[(void*)trial.choice()] = &(this->data_.back());
+  this->dictionary_.insert(std::make_pair((void*)trial.choice(), this->data_.size() - 1));
 }
 UTILITY_ENSURE(this->dictionary_.end() != this->dictionary_.find((void*)trial.choice()), "Unable to find choice after adding to dictionary");
 
@@ -77,10 +78,10 @@ if (this->dictionary_.end() == iter)
   this->build_dictionary_(trial);
   iter = this->dictionary_.find((void*)trial.choice());
 }
-++iter->second->attempts;
+++(this->data_[iter->second]).attempts;
 if (trial.accept())
 {
-  ++iter->second->success;
+  ++(this->data_[iter->second]).success;
 }
 !!!718512.cpp!!!	prepare(inout sim : simulator) : void
 this->data_.clear();
