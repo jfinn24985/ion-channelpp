@@ -1,6 +1,6 @@
 format 75
 "periodic_cube" // periodic_cube
-  revision 68
+  revision 71
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -1052,7 +1052,7 @@ ${docstring}${body}
 	  stereotype "move"
 	  public explicit_return_type ""
 	  nparams 1
-	    param inout name "source" type class_ref 373680 // probability_datum
+	    param inout name "source" explicit_type "probability_datum"
 	  cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
 : add(std::move(source.add))
 , remove(std::move(source.remove))
@@ -1071,7 +1071,7 @@ ${docstring}${body}
 	  stereotype "copy"
 	  public explicit_return_type ""
 	  nparams 1
-	    param in name "source" type class_ref 373680 // probability_datum
+	    param in name "source" explicit_type "probability_datum"
 	  cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
 : add(source.add)
 , remove(source.remove)
@@ -1087,9 +1087,9 @@ ${docstring}${body}
 	end
 
 	operation 709680 "operator="
-	  public return_type class_ref 373680 // probability_datum
+	  public explicit_return_type "probability_datum"
 	  nparams 1
-	    param in name "source" type class_ref 373680 // probability_datum
+	    param in name "source" explicit_type "probability_datum"
 	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
 {
   this->swap(${p0});
@@ -1107,7 +1107,7 @@ ${docstring}${body}
 	operation 709808 "swap"
 	  public explicit_return_type "void"
 	  nparams 1
-	    param inout name "source" type class_ref 373680 // probability_datum
+	    param inout name "source" explicit_type "probability_datum"
 	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
   std::swap(this->add, source.add);
@@ -1123,28 +1123,11 @@ ${docstring}${body}
 	end
       end
 
-      classrelation 166448 // choices_ (<aggregation>)
-	relation 166320 o---
-	  stereotype "vector"
-	  a role_name "choices_" multiplicity "*" private
-	    comment "  Set of choosers to sampler (not saved)"
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} * > ${name}${value};
-"
-	    python "${comment}${self}${name} = ${stereotype}()
-"
-	    classrelation_ref 166448 // choices_ (<aggregation>)
-	  b role_name "sampler_" private
-	    comment "  Sampler that is watching us."
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}boost::shared_ptr< ${type} > ${name}${value};
-"
-	    classrelation_ref 166960 // sampler_ (<aggregation>)
-      end
-
       attribute 414000 "probabilities_"
-	private type class_ref 176049 // estimater
+	private type class_ref 373680 // probability_datum
 	multiplicity "*"
 	stereotype "vector"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< std::pair< ${type}, ${type} > > ${name}${value};
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
 "
 	java_decl ""
 	php_decl ""
@@ -1183,24 +1166,6 @@ ${docstring}${body}
 	
       end
 
-      operation 213424 "add_alternater_choice"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "choice" type class_ref 141744 // alternater_choice
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} * ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  this->choices_.push_back( ${p0} );
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Stop watching a choice."
-      end
-
       operation 212528 "description"
 	const public explicit_return_type "void"
 	nparams 1
@@ -1222,6 +1187,7 @@ ${docstring}${body}
       end
 
       operation 217392 "do_write_document"
+	stereotype "TODO"
 	const cpp_virtual private explicit_return_type "void"
 	nparams 2
 	  param inout name "wr" type class_ref 163632 // input_document
@@ -1229,7 +1195,9 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
-{}
+{
+  ${body}
+}
 "
 	
 	
@@ -1238,7 +1206,7 @@ ${docstring}${body}
 "
 	
 	comment " This sampler is not intended to be generated from an input file, so this 
- method does nothing."
+ method must delete entry from output doc."
       end
 
       operation 702512 "get_label"
@@ -1344,25 +1312,6 @@ ${docstring}${body}
 	comment "Does nothing."
       end
 
-      operation 213808 "remove_alternater_choice"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "choice" type class_ref 141744 // alternater_choice
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} * ${p0}${v0}${)}${const}${volatile}${throw}${abstract};"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} * ${p0}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Stop watching a chocie."
-      end
-
       extra_member 156208 "friend"
 	
 	cpp "
@@ -1433,10 +1382,6 @@ ${docstring}${members}
 	  b parent class_ref 1102767 // gc_choice_pbc
       end
 
-      classrelation 166960 // sampler_ (<aggregation>)
-	relation_ref 166320 // <aggregation>
-      end
-
       operation 167600 "~alternater_choice"
 	cpp_virtual public explicit_return_type ""
 	nparams 0
@@ -1468,25 +1413,6 @@ ${body}
 	
       end
 
-      operation 213680 "set_observer"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "smplr" type class_ref 162864 // alternater_sampler
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}boost::shared_ptr< ${t0} >& ${p0}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
       operation 167984 "generate"
 	public return_type class_ref 986543 // change_set
 	nparams 1
@@ -1507,15 +1433,6 @@ ${docstring}${body}
 	comment "Generate a new change set based on this choice type."
       end
 
-      classrelation 136624 // <dependency>
-	relation 136496 -_->
-	  a package
-	    cpp default "#include in header"
-	    python "${type}"
-	    classrelation_ref 136624 // <dependency>
-	  b parent class_ref 912431 // access
-      end
-
       operation 168240 "alternater_choice"
 	private explicit_return_type ""
 	nparams 0
@@ -1528,11 +1445,19 @@ ${docstring}${body}
 	
       end
 
+      classrelation 136624 // <dependency>
+	relation 136496 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 136624 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
       extra_member 156336 "friend"
 	
 	cpp "
   friend class boost::serialization::access;
-BOOST_SERIALIZATION_SPLIT_MEMBER();
 " ""
 	java ""
 	php ""
@@ -1540,16 +1465,15 @@ BOOST_SERIALIZATION_SPLIT_MEMBER();
 	idl ""
       end
 
-      operation 214064 "save"
+      operation 214064 "serialize"
 	stereotype "template"
-	const cpp_inline private explicit_return_type "void"
+	cpp_inline private explicit_return_type "void"
 	nparams 2
 	  param inout name "ar" explicit_type "Archive"
 	  param in name "version" explicit_type "unsigned int"
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
-    ar << boost::serialization::base_object< gc_choice_pbc >(*this);
-    ar << this->sampler_;
+    ar & boost::serialization::base_object< gc_choice_pbc >(*this);
   }
 "
 	
@@ -1558,25 +1482,6 @@ BOOST_SERIALIZATION_SPLIT_MEMBER();
 	
       end
 
-      operation 214320 "load"
-	stereotype "template"
-	cpp_inline private explicit_return_type "void"
-	nparams 2
-	  param inout name "ar" explicit_type "Archive"
-	  param in name "version" explicit_type "unsigned int"
-	cpp_decl "    ${comment}template<class Archive>
-${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
-{
-  ar >> boost::serialization::base_object< gc_choice_pbc >(*this);
-  ar >> this->sampler_;
-  this->sampler_->add_alternater_choice(this);
-}
-"
-	
-	
-	
-	
-      end
     end
 
     class 170544 "alternater_chooser"
@@ -1842,6 +1747,15 @@ ${docstring}${body}
 
  only throw possible should be from os.write() operation"
       end
+
+      classrelation 480176 // <dependency>
+	relation 479280 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 480176 // <dependency>
+	  b parent class_ref 141744 // alternater_choice
+      end
     end
 
     class 1102767 "gc_choice_pbc"
@@ -1906,22 +1820,6 @@ ${docstring}${members}
 	  b multiplicity "1" parent class_ref 210737 // remove_specie_pbc
       end
 
-      operation 767793 "add_success_rate"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->adder_.success_rate ();
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
       operation 2101807 "gc_choice_pbc"
 	public explicit_return_type ""
 	nparams 2
@@ -1930,7 +1828,7 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, std::map< ${t1}, ${t1} > const& ${p1}${v1}${)}${volatile}${throw};
 "
 	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, std::map< ${t1}, ${t1} > const& ${p1}${)}${throw}
-: base_choice (${p0})
+: base_choice(${p0})
 , adder_(${p0}, this)
 , remover_(${p0}, this)
 {
@@ -1951,7 +1849,7 @@ ${docstring}${body}
 	nparams 1
 	  param in name "ispec" explicit_type "size_t"
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
-: base_choice (${p0})
+: base_choice(${p0})
 , adder_(${p0}, this)
 , remover_(${p0}, this)
 {}
@@ -1969,7 +1867,7 @@ ${docstring}${body}
 	protected explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
-: base_choice (0ul)
+: base_choice(0ul)
 , adder_(0ul, this)
 , remover_(0ul, this)
 {}
@@ -2019,7 +1917,7 @@ ${body}
 	cpp_virtual public return_type class_ref 986543 // change_set
 	nparams 1
 	  param inout name "sys" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
 {
@@ -2089,67 +1987,6 @@ ${docstring}return \"GC Ind\"
 	
       end
 
-      operation 767921 "remove_success_rate"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->remover_.success_rate ();
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
-      operation 383793 "report"
-	const public explicit_return_type "void"
-	nparams 3
-	  param in name "sim" type class_ref 1129135 // simulator
-	  param inout name "out" explicit_type "ostream"
-	  param in name "total" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}, ${t2} ${p2}${)}${const}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}, ${p1}${v1}, ${p2}${v2}${)}:
-${docstring}super(${class},self).report(${p0}, ${p1}, ${p2})
-self.adder_.report(${p0}, ${p1}, self.attempts())
-self.remover_.report(${p0}, ${p1}, self.attempts())
-"
-	
-	comment "Report Add/Remove statistics"
-      end
-
-      operation 587313 "do_reset"
-	public explicit_return_type "void"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}super(${class},self).reset()
-self.adder_.reset()
-self.remover_.reset()
-"
-	
-	comment "Report Add/Remove statistics"
-      end
-
       extra_member 477231 "friend"
 	
 	cpp "
@@ -2168,7 +2005,7 @@ self.remover_.reset()
 	  param in name "version" explicit_type "unsigned int"
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
-    ar & boost::serialization::base_object< base_choice >(*this);
+    ar & boost::serialization::base_object< trial::base_choice >(*this);
     ar & this->adder_;
     ar & this->remover_;
   };
@@ -2180,6 +2017,7 @@ self.remover_.reset()
       end
 
       operation 212144 "make_chooser"
+	stereotype "CHECK"
 	class_operation public explicit_return_type "void"
 	nparams 3
 	  param in name "params" explicit_type "string"
@@ -5703,6 +5541,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 162480 // alternater_chooser
 	artifact_ref 246961 // igcmc
 	artifact_ref 247089 // malasics_igcmc
+	artifact_ref 384432 // alternater_sampler
 	artifact_ref 651823 // widom
       end
     end
@@ -5767,6 +5606,45 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     //deployment diagram settings
     package_name_in_tab default show_context default write_horizontally default auto_label_position default draw_all_relations default shadow default
     draw_component_as_icon default show_component_req_prov default show_component_rea default show_stereotype_properties default
+    artifact 384432 "alternater_sampler"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// Manuals
+#include \"observer/trial_acceptance_sampler.hpp\"
+// -
+
+${namespace_start}
+${members}
+${namespace_end}
+
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_GUID(periodic_cube::alternater_sampler, \"periodic_cube::alternater_sampler\");"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 162864 // alternater_sampler
+      end
+    end
+
     artifact 162480 "alternater_chooser"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -5830,13 +5708,8 @@ ${comment}
 ${includes}
 ${declarations}
 ${namespace_start}
-class alternater_choice;
 ${definition}
 ${namespace_end}
-
-#include <boost/serialization/export.hpp>
-BOOST_CLASS_EXPORT_KEY(periodic_cube::alternater_choice);
-BOOST_CLASS_EXPORT_KEY(periodic_cube::alternater_sampler);
 #endif
 "
       cpp_src "${comment}
@@ -5853,14 +5726,12 @@ ${includes}
 ${namespace_start}
 ${members}
 ${namespace_end}
-
-BOOST_CLASS_EXPORT_IMPLEMENT(periodic_cube::alternater_choice);
-BOOST_CLASS_EXPORT_IMPLEMENT(periodic_cube::alternater_sampler);"
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_GUID(periodic_cube::alternater_choice, \"periodic_cube::alternater_choice\");"
       python_src "${comment}
 ${import}
 ${definition}"
       associated_classes
-	class_ref 162864 // alternater_sampler
 	class_ref 141744 // alternater_choice
       end
       comment "----------------------------------------------------------------------
@@ -6129,9 +6000,11 @@ ${namespace_end}
 ${includes}
 // Manuals
 //#include <boost/bind.hpp>
-#include \"particle/ensemble.hpp\"
 #include \"cscpbc/alternater_choice.hpp\"
+#include \"cscpbc/alternater_sampler.hpp\"
 #include \"cscpbc/periodic_system.hpp\"
+#include \"observer/trial_acceptance_sampler.hpp\"
+#include \"particle/ensemble.hpp\"
 // -
 ${namespace_start}
 ${members}

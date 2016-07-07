@@ -2,6 +2,11 @@ class alternater_sampler
 !!!212528.cpp!!!	description(inout out : ostream) : void
 out << "SAMPLER [" << this->get_label() << "]\n";
 out << " Collect data about alternater choice add/remove probabilities\n";
+out << " (Is automatically added when needed and can not be accessed via\n";
+out << " the input file.)\n";
+!!!217392.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+// remove entry.
+wr.remove_section(ix);
 !!!702640.cpp!!!	get_value() : boost::any
 boost::any result = this->probabilities_;
 return result;
@@ -9,21 +14,27 @@ return result;
 if (this->probabilities_.empty())
 {
   this->probabilities_.resize(sim.specie_count());
+  for (std::size_t idx = 0; idx != this->probabilities_.size(); ++idx)
+  {
+    this->probabilities_[idx].specie_key = idx;
+  }
 }
-for (auto & item : this->choices_)
+// Get acceptance data from "trial-success" sampler
+if (not sim.get_reporter().has_tracked(observer::trial_acceptance_sampler::type_label_()))
 {
-   this->probabilities_[item->specie_key()].first.append(item->add_success_rate());
-   this->probabilities_[item->specie_key()].second.append(item->remove_success_rate());
-   item->reset();
+  std::vector< observer::trial_acceptance_sampler::acceptance_datum > result
+     = boost::any_cast< std::vector< observer::trial_acceptance_sampler::acceptance_datum > >(sim.get_reporter().get_tracked(observer::trial_acceptance_sampler::type_label_())->get_value());
+  for(auto const& item : result)
+  {
+    if ((item.label.find("Add") != std::string::npos) or (item.label.find("add") != std::string::npos))
+    {
+      this->probabilities_[item.specie_key].add.append(item.probability());
+    }
+    else if ((item.label.find("Del") != std::string::npos) or (item.label.find("del") != std::string::npos))
+    {
+      this->probabilities_[item.specie_key].remove.append(item.probability());
+    }
+  }
 }
-!!!213808.cpp!!!	remove_alternater_choice(inout choice : alternater_choice) : void
-for (std::vector< alternater_choice* >::iterator itr = this->choices_.begin(); itr != this->choices_.end(); ++itr)
-{
-   if (*itr == choice)
-   {
-      this->choices_.erase( itr );
-      return;
-   }
-}
-const bool item_not_found( false );
-UTILITY_REQUIRE( item_not_found, "Attempt to remove a choice object that is not in the list." );
+
+

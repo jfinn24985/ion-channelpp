@@ -1,16 +1,16 @@
 class move_choice
 !!!1965103.cpp!!!	generate(inout sys : simulator) : change_set
-std::unique_ptr< change_set > result (new change_set (*this));
+std::unique_ptr< change_set > result (new change_set(*this));
 auto const& ens = sys.get_ensemble();
 if (sys.get_specie( this->specie_key() ).count() == 0)
 {
-  result->set_fail (); // No particles of this specie
+  result->set_fail(); // No particles of this specie
   return result;
 }
 // Select a particle at random
 change_atom atom;
 atom.key = this->specie_key();
-switch (sys.get_specie( atom.key ).count())
+switch (sys.get_specie(atom.key).count())
 {
 case 0:
   {
@@ -20,27 +20,27 @@ case 0:
   break;
 case 1:
   {
-    atom.index = ens.nth_specie_index( atom.key, 0 );
+    atom.index = ens.nth_specie_index(atom.key, 0);
   }
   break;
 default:
   {
-    atom.index = ens.nth_specie_index( atom.key, sys.get_random().randint( 0, sys.get_specie( atom.key ).count() - 1) );
+    atom.index = ens.nth_specie_index(atom.key, sys.get_random().randint(0, sys.get_specie(atom.key).count() - 1));
   }
   break;
 }
 // Get old position
-atom.old_position = ens.position( atom.index );
-atom.eps_old = ens.eps( atom.index );
+atom.old_position = ens.position(atom.index);
+atom.eps_old = ens.eps(atom.index);
 // give particle a random displacement
 atom.new_position.x = atom.old_position.x + sys.get_random().uniform(-this->delta_, this->delta_);
 atom.new_position.y = atom.old_position.y + sys.get_random().uniform(-this->delta_, this->delta_);
 atom.new_position.z = atom.old_position.z + sys.get_random().uniform(-this->delta_, this->delta_);
-if (not sys.is_valid_position( atom.new_position, atom.key ))
+if (not sys.is_valid_position(atom.new_position, atom.key))
 {
   result->set_fail ();
 }
-atom.eps_new = sys.permittivity_at( atom.new_position );
+atom.eps_new = sys.permittivity_at(atom.new_position);
 result->add_atom (atom);
 return result;
 !!!1965103.python!!!	generate(inout sys : simulator) : change_set
@@ -78,26 +78,3 @@ if (params.find("delta") != params.end())
       UTILITY_INPUT( invalid_conversion, "Input value for \"delta\" is not a number", core::strngs::fstry() );
    }
 }
-!!!1965615.cpp!!!	sample(in sys : simulator, inout os : ostream) : void
-if (this->attempts () != 0)
-{
-  // Fraction of successes since last sample.
-  const double frac (double(this->success () - this->successes_p_)/double(this->attempts () - this->attempts_p_));
-
-  double drt(this->delta_);
-  drt *= std::min(1.5, std::max(0.5, 2 * std::abs(frac)));
-  if (not utility::feq(this->delta_, drt))
-  {
-    // Only report if change occurs
-    os << " Number of att. to displ. a part.  : " << (this->attempts () - this->attempts_p_) << "\n";
-    os << " Success: " << (this->success () - this->successes_p_) << "(= "<< 100.*frac << "%)\n";
-    this->delta_ = drt;
-    os << " Max. displacement : " <<  this->delta_ << "\n";
-  }
-  this->successes_p_ = this->success ();
-  this->attempts_p_ = this->attempts ();
-}
-
-!!!204848.cpp!!!	make_chooser(in params : string, in rate : double, in type : string, inout sim : simulator) : void
-std::unique_ptr< base_chooser > choice_ptr( new chooser< move_choice >( params, type, rate ) );
-sim.add_chooser( choice_ptr.release() );

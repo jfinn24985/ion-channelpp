@@ -2,18 +2,14 @@ class alternater_chooser
 !!!233392.cpp!!!	generate_choices(in sim : simulator, inout choices : base_choice) : void
 for (std::size_t ispec = 0; ispec != sim.specie_count (); ++ispec)
 {
-   // All species with non-zero specie rate can have a displacement move
+   // All species with non-zero specie rate can have Grand Canonical trials
    auto const& spec = sim.get_specie( ispec );
    const double choice_rate { this->rate_ * spec.rate() };
    if ( not utility::feq( choice_rate, 0.0 ) )
    {
-      std::unique_ptr< alternater_choice > choice_ptr( new alternater_choice( ispec ) );
+      std::unique_ptr< alternater_choice > choice_ptr(new alternater_choice(ispec));
       choice_ptr->set_probability( choice_rate );
-      // To be able to share sampler_, "this" needs to be non-constant.
-      // This should be okay as what sampler_ points to is not changed
-      // execpt to increase the reference count.
-      choice_ptr->set_observer( const_cast< alternater_chooser* >(this)->sampler_ );
-      choices.push_back( choice_ptr.release() );
+      choices.push_back(choice_ptr.release());
    }
 }
 !!!232368.cpp!!!	make_chooser(in params : string, in type : string, in rate : double, inout sim : simulator) : void

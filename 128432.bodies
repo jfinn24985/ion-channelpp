@@ -1,11 +1,4 @@
 class gc_choice_cell
-!!!142768.cpp!!!	add_success_rate() : double
-double total{ 0.0 };
-for (auto const& chc : this->adder_)
-{
-   total += chc.success_rate ();
-}
-return total;
 !!!254768.cpp!!!	gc_choice_cell(in ispec : size_t, in params : string, in geom : channel_system)
 : base_choice( ispec )
 , adder_()
@@ -72,21 +65,20 @@ return total;
    }
 }
 !!!143536.cpp!!!	generate(inout sys : simulator) : change_set
-this->begin_trial();
 // Choose region to GC.
-double choice{ sys.get_random().uniform( 0.0, 2.0 ) };
+double choice{ sys.get_random().uniform(0.0, 2.0) };
 if (choice < 1.0)
 {
    // Add
    for (size_t ireg = channel_system::IZLIM; ireg < channel_system::IBULK; ++ireg)
    {
-      choice -= this->adder_[ ireg ].probability();
+      choice -= this->adder_[ireg].probability();
       if (choice <= 0.0)
       {
-         return this->adder_[ ireg ].generate(sys);
+         return this->adder_[ireg].generate(sys);
       }
    }
-   return this->adder_[ channel_system::IBULK ].generate(sys);
+   return this->adder_[channel_system::IBULK].generate(sys);
 }
 else
 {
@@ -94,13 +86,13 @@ else
    choice -= 1.0;
    for (size_t ireg = channel_system::IZLIM; ireg < channel_system::IBULK; ++ireg)
    {
-      choice -= this->remover_[ ireg ].probability();
+      choice -= this->remover_[ireg].probability();
       if (choice <= 0.0)
       {
-         return this->remover_[ ireg ].generate(sys);
+         return this->remover_[ireg].generate(sys);
       }
    }
-   return this->remover_[ channel_system::IBULK ].generate(sys);
+   return this->remover_[channel_system::IBULK].generate(sys);
 }
 !!!143536.python!!!	generate(inout sys : simulator) : change_set
 self.begin_trial()
@@ -110,24 +102,3 @@ if sys.get_random().randint(0,1) == 0:
 else:
   # Do delete
   return self.remover_.generate(sys)
-!!!144048.cpp!!!	remove_success_rate() : double
-double total{ 0.0 };
-for (auto const& chc : this->remover_)
-{
-   total += chc.success_rate ();
-}
-return total;
-
-!!!144176.cpp!!!	report(in sim : simulator, inout out : ostream, in total : size_t) : void
-this->base_choice::report(sim, out, total);
-for (auto const& chc : this->adder_)
-{
-   chc.report(sim, out, total);
-}
-for (auto const& chc : this->remover_)
-{
-   chc.report(sim, out, total);
-}
-!!!144304.cpp!!!	do_reset() : void
-for (auto &chc : this->adder_) chc.reset();
-for (auto &chc : this->remover_) chc.reset();

@@ -1,6 +1,6 @@
 format 75
 "trial" // trial
-  revision 217
+  revision 219
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -111,29 +111,6 @@ a possible MC trial moves. "
 	  b parent class_ref 134959 // ensemble
       end
 
-      classrelation 441137 // <dependency>
-	relation 440625 -_->
-	  stereotype "friend"
-	  a package
-	    cpp default "${type}"
-	    python "${type}"
-	    classrelation_ref 441137 // <dependency>
-	  b parent class_ref 986543 // change_set
-      end
-
-      attribute 128687 "attempts_"
-	private explicit_type "size_t"
-	init_value "0"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "The number of attempts with this choice"
-      end
-
       attribute 352561 "key_"
 	private explicit_type "size_t"
 	init_value "ispec"
@@ -172,80 +149,6 @@ a possible MC trial moves. "
 	comment "The relative chance this choice happens"
       end
 
-      attribute 128815 "success_"
-	private explicit_type "size_t"
-	init_value "0"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "The number of successful attempts"
-      end
-
-      operation 1973551 "attempts"
-	const public explicit_return_type "size_t"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->${name}_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}return self.attempts_
-"
-	
-	comment "The number of trial attempts"
-      end
-
-      operation 2021679 "end_trial"
-	private explicit_return_type "void"
-	nparams 1
-	  param in name "change" type class_ref 986543 // change_set
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  if (${p0}.accept())
-  {
-    ++this->success_;
-    if (this->parent_) this->parent_->${name}(${p0});
-  }
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}if ${p0}.accept:
-  self.success_ += 1
-  if self.parent_:
-    self.parent_.end_trial(${p0})
-"
-	
-	comment "Callback when a change set is accepted."
-      end
-
-      operation 2046895 "begin_trial"
-	protected explicit_return_type "void"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  ++this->attempts_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}self.attempts_ += 1
-"
-	
-	comment "Call this method when creating a trial"
-      end
-
       operation 1964207 "~base_choice"
 	cpp_virtual public explicit_return_type ""
 	nparams 0
@@ -264,11 +167,9 @@ ${docstring}self.attempts_ += 1
 	nparams 1
 	  param in name "ispec" explicit_type "size_t"
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
-: attempts_(0u)
-, key_ (${p0})
+: key_ (${p0})
 , parent_(0)
 , probability_(0.0)
-, success_ (0u)
 {}
 
 "
@@ -285,11 +186,9 @@ ${docstring}self.attempts_ += 1
 	  param in name "ispec" explicit_type "size_t"
 	  param inout name "parent" type class_ref 1026095 // base_choice
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} * ${p1}${v1}${)}${volatile}${throw}
-: attempts_(0u)
-, key_ (${p0})
+: key_ (${p0})
 , parent_(${p1})
 , probability_(0.0)
-, success_ (0u)
 {}
 
 "
@@ -408,68 +307,6 @@ ${docstring}return self.probability_"
 	comment "The relative chance this choice happens"
       end
 
-      operation 579633 "report"
-	const cpp_virtual public explicit_return_type "void"
-	nparams 3
-	  param in name "sim" type class_ref 1129135 // simulator
-	  param inout name "out" explicit_type "ostream"
-	  param in name "total" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}, ${t2} ${p2}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}, ${p1}${v1}, ${p2}${v2}${)}:
-${docstring}${body}
-"
-	
-	comment "Write out the success rate report
-
-param total: total number of trials."
-      end
-
-      operation 2054703 "reset"
-	public explicit_return_type "void"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-   this->attempts_ = 0;
-   this->success_ = 0;
-   this->do_reset();
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}self.attempts_ = 0
-self.success_ = 0
-
-"
-	
-	comment "Reset the statistics counters"
-      end
-
-      operation 211632 "do_reset"
-	cpp_virtual private explicit_return_type "void"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Perform optional reset operations in derived classes"
-      end
-
       operation 620081 "set_probability"
 	public explicit_return_type "void"
 	nparams 1
@@ -505,41 +342,6 @@ ${docstring}return self.key_
 	comment "this specie key "
       end
 
-      operation 1973679 "success"
-	const public explicit_return_type "size_t"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->${name}_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}return self.success_
-"
-	
-	comment "The number of successful trials."
-      end
-
-      operation 1973807 "success_rate"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return (this->success_ == 0 ? 0.0 : double(this->success_)/double(this->attempts_));
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}return 0.0 if self.success_ == 0 else float(self.success_)/float(self.attempts_)
-"
-	
-	comment "The ratio of successful attempts to the number of
-attempts."
-      end
-
       extra_member 449071 "friend"
 	
 	cpp "
@@ -567,11 +369,9 @@ attempts."
 	  param in name "version" explicit_type "unsigned int"
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
-    ar & attempts_;
     ar & key_;
     ar & parent_;
     ar & probability_;
-    ar & success_;
   }
 "
 	
@@ -636,29 +436,6 @@ many times.)"
 	    python "${type}"
 	    classrelation_ref 1169711 // <dependency>
 	  b parent class_ref 912431 // access
-      end
-
-      attribute 140079 "attempts_p_"
-	private explicit_type "size_t"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl ""
-	idl_decl ""
-	comment "The number of move attempts at the last outer sample
-"
-      end
-
-      attribute 140207 "successes_p_"
-	private explicit_type "size_t"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl ""
-	idl_decl ""
-	comment "The number of successful attempts at the last outer sample"
       end
 
       attribute 1330735 "delta_"
@@ -750,8 +527,6 @@ ${docstring}return self.delta_
 "
 	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, std::map< ${t1}, ${t1} > const& ${p1}${)}${throw}
 : base_choice( ${p0} )
-, attempts_p_( 0u )
-, successes_p_( 0u )
 , delta_( default_delta )
 {
   ${body}
@@ -784,8 +559,6 @@ ${body}
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
 : base_choice()
-, attempts_p_()
-, successes_p_()
 , delta_ ()
 {}
 "
@@ -809,26 +582,6 @@ ${body}
 	
       end
 
-      operation 1965615 "sample"
-	public explicit_return_type "void"
-	nparams 2
-	  param in name "sys" type class_ref 1129135 // simulator
-	  param inout name "os" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	
-	
-	comment "Adjusts maximum displacement such that about 50% of the moves will be accepted
-"
-      end
-
       extra_member 449455 "friend"
 	
 	cpp "
@@ -848,8 +601,6 @@ ${body}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
     ar & boost::serialization::base_object< base_choice >(*this);
-    ar & attempts_p_;
-    ar & successes_p_;
     ar & delta_;
   };
 "
@@ -857,146 +608,6 @@ ${body}
 	
 	
 	
-      end
-
-      operation 204848 "make_chooser"
-	class_operation public explicit_return_type "void"
-	nparams 4
-	  param in name "params" explicit_type "string"
-	  param in name "rate" explicit_type "double"
-	  param in name "type" explicit_type "string"
-	  param inout name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} & ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::map< ${t0}, ${t0} >& ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} & ${p3}${)}${const}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment "  Function to add move choice objects to the simulation."
-      end
-    end
-
-    class 719151 "compound_choice"
-      visibility package 
-      cpp_decl "${comment}${template}class ${name}${inherit}
- {
-${members}
-};
-${inlines}
-"
-      java_decl ""
-      php_decl ""
-      python_decl "class ${name}${inherit}:
-${docstring}${members}
-"
-      idl_decl ""
-      explicit_switch_type ""
-      
-      comment " Class for building multi-part changes from a set of single step
- objects."
-      operation 1696431 "compound_choice"
-	public explicit_return_type ""
-	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
-: subparts ()
-{}
-"
-	
-	
-	
-	
-      end
-
-      operation 1696559 "add_child"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "achanger" explicit_type "base_change_generator"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  this->subparts_.push_back (${p0});
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-      end
-
-      operation 1696687 "do_generate"
-	cpp_virtual public explicit_return_type "void"
-	nparams 2
-	  param in name "result" explicit_type ""
-	  param in name "rgen" type class_ref 463407 // random_distribution
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	
-	
-	comment " Generate a random change of this type (virtual component)
-
- @param rgen: random number generator
- @param result: Change set to add change to"
-      end
-
-      operation 620209 "report"
-	const public explicit_return_type "void"
-	nparams 3
-	  param in name "sim" type class_ref 1129135 // simulator
-	  param inout name "log" explicit_type "ostream"
-	  param in name "att" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}, ${t2} ${p2}${)}${const}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}, ${p1}${v1}${)}:
-${docstring}super(${class},self).report(${p0}, ${p1})
-self.adder_.report(${p0}, ${p1})
-self.remover_.report(${p0}, ${p1})
-"
-	
-	comment "Report Add/Remove statistics"
-      end
-
-      classrelation 413617 // <generalisation>
-	relation 413105 ---|>
-	  a public
-	    cpp default "${type}"
-	    python "${type}"
-	    classrelation_ref 413617 // <generalisation>
-	  b parent class_ref 1026095 // base_choice
-      end
-
-      classrelation 413745 // children_ (<directional composition>)
-	relation 413233 *-->
-	  stereotype "vector"
-	  a role_name "children_" multiplicity "*" private
-	    comment "Set of subchoices for this choice"
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}_${value};
-"
-	    python "${comment}${self}${name} = ${stereotype}()
-"
-	    classrelation_ref 413745 // children_ (<directional composition>)
-	  b parent class_ref 1026095 // base_choice
       end
     end
 
@@ -1778,6 +1389,67 @@ ${docstring}${body}
 "
 	
 	comment "Read/write object to an archive."
+      end
+    end
+
+    class 386864 "adjust_move_displacement_sampler"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment "Adjust max displacement of move choice based on trial success rate."
+      operation 1965615 "sample"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "sys" type class_ref 1129135 // simulator
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment "Adjusts maximum displacement such that about 50% of the moves will be accepted
+"
+      end
+
+      operation 204848 "make_chooser"
+	class_operation public explicit_return_type "void"
+	nparams 4
+	  param in name "params" explicit_type "string"
+	  param in name "rate" explicit_type "double"
+	  param in name "type" explicit_type "string"
+	  param inout name "sim" type class_ref 1129135 // simulator
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} & ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::map< ${t0}, ${t0} >& ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} & ${p3}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "  Function to add move choice objects to the simulation."
       end
     end
   end
@@ -3498,19 +3170,14 @@ ${docstring}self.changes.append( ${p0} )
 	public explicit_return_type ""
 	nparams 1
 	  param inout name "choice" type class_ref 1026095 // base_choice
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} & ${p0}${v0}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} & ${p0}${)}${volatile}${throw} 
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} & ${p0}${v0}${)}${volatile}${throw}
 : changes_()
 , exponential_factor_ (0.0)
 , probability_factor_ (1.0)
 , fail_ (false)
 , accept_ (false)
 , choice_(&${p0})
-{
-  ${p0}.begin_trial ();
-}
-"
+{}"
 	
 	
 	
@@ -3518,7 +3185,7 @@ ${docstring}self.changes.append( ${p0} )
       end
 
       operation 1980975 "change_set"
-	public explicit_return_type ""
+	protected explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
 : changes_ ()
@@ -3585,12 +3252,7 @@ ${docstring}if self.choice != None:
       operation 1771055 "~change_set"
 	public explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} 
-{
-  ${body}
-}
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} {}
 "
 	
 	
@@ -3773,8 +3435,7 @@ ${docstring}return self.changes[${p0}]
   ar & probability_factor_;
   ar & fail_;
   ar & accept_;
-  typename Archive::is_loading onload;
-  if (onload) choice_ = nullptr;
+  if (Archive::is_loading::value) { choice_ = nullptr; }
 }
 "
 	
@@ -4075,7 +3736,7 @@ ${self}${name} = coordinate()
       end
 
       operation 1769775 "change_atom"
-	public explicit_return_type ""
+	protected explicit_return_type ""
 	nparams 8
 	  param in name "use_old" explicit_type "bool"
 	  param in name "use_new" explicit_type "bool"
@@ -4088,35 +3749,6 @@ ${self}${name} = coordinate()
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, const ${t3} & ${p3}${v3}, const ${t4} & ${p4}${v4}, ${t5} ${p5}${v5}, ${t6} ${p6}${v6}, ${t7} ${p7}${v7}${)}${volatile}${throw};
 "
 	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, const ${t3} & ${p3}, const ${t4} & ${p4}, ${t5} ${p5}, ${t6} ${p6}, ${t7} ${p7}${)}${throw}
-${body}
-"
-	
-	
-	
-	
-      end
-
-      operation 441392 "change_atom"
-	private explicit_return_type ""
-	nparams 9
-	  param in name "dummy" explicit_type "double"
-	  param in name "use_old" explicit_type "bool"
-	  param in name "use_new" explicit_type "bool"
-	  param in name "aindex" explicit_type "size_t"
-	    defaultvalue "0"
-	  param in name "aoldpos" type class_ref 986799 // coordinate
-	    defaultvalue "particle::coordinate()"
-	  param in name "anewpos" type class_ref 986799 // coordinate
-	    defaultvalue "particle::coordinate()"
-	  param in name "akey" explicit_type "size_t"
-	    defaultvalue "0"
-	  param in name "aoldeps" explicit_type "double"
-	    defaultvalue "80.0"
-	  param in name "aneweps" explicit_type "double"
-	    defaultvalue "80.0"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}, const ${t4} & ${p4}${v4}, const ${t5} & ${p5}${v5}, ${t6} ${p6}${v6}, ${t7} ${p7}${v7}, ${t8} ${p8}${v8}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}, const ${t4} & ${p4}, const ${t5} & ${p5}, ${t6} ${p6}, ${t7} ${p7}, ${t8} ${p8}${)}${throw}
 ${body}
 "
 	
@@ -4143,11 +3775,41 @@ ${body}
 , index(0)
 , new_position ()
 , old_position ()
-{}"
+{}
+"
 	
 	
 	
 	
+	comment "Default ctor"
+      end
+
+      operation 725936 "change_atom"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "ispec" explicit_type "size_t"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}${)}${volatile}${throw} 
+: old_rij()
+, new_rij()
+, do_old(true)
+, do_new(true)
+, energy_old(0.0)
+, energy_new(0.0)
+, eps_old(0.0)
+, eps_new(0.0)
+, key(${p0})
+, index(0)
+, new_position()
+, old_position()
+{}
+"
+	
+	
+	
+	
+	comment "Construct with specie key"
       end
 
       operation 1772207 "~change_atom"

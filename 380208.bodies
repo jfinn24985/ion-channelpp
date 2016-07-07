@@ -41,7 +41,7 @@ UTILITY_ENSURE(this->dictionary_.end() != this->dictionary_.find((void*)trial.ch
 out << "[sampler] " << this->type_label_() << "\n";
 out << " Collect and report trial acceptance probabilities.\n";
 !!!719408.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
-wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
+wr[ix].add_entry(core::strngs::fstype(), this->type_label_());
 
 !!!718384.cpp!!!	get_value() : boost::any
 boost::any result = this->data_;
@@ -51,25 +51,51 @@ UTILITY_INPUT(param_set.empty(), "The "+trial_acceptance_sampler::type_label_()+
 boost::shared_ptr< tracked_variable > tmp(new trial_acceptance_sampler);
 sim.get_reporter().add_tracked(tmp);
 !!!718640.cpp!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
-boost::format format_str(" %6s SPC[%3s] %10d %10d %7.3f %7.3f\n");
-for (auto const& datum : this->data_)
+const static boost::format title_str( " %6s %8s %10s %10s %7s %s" );
+out << boost::format(title_str) % "Trial" % "Specie" % "Success" % "Attempt" % "Rate(%)" % "Total(%)" << "\n";
+const static boost::format format_str(" %6s SPC[%3s] %10d %10d %7.3f %7.3f\n");
+std::map< std::size_t, std::vector< std::size_t > > reorder_datum;
+// Sort data by specie key.
+for (std::size_t idx = 0; idx != this->data_.size(); ++idx)
 {
-if (datum.success > 0)
+  auto itr = reorder_datum.find(this->data_[idx].specie_key);
+  if (reorder_datum.end() == itr)
+  {
+    std::vector< std::size_t > tmp;
+    tmp.push_back(idx);
+    reorder_datum.insert(std::make_pair(this->data_[idx].specie_key, tmp));
+  }
+  else
+  {
+    itr->second.push_back(idx);
+  }
+}
+for (auto & entry : reorder_datum)
 {
-  out << boost::format(format_str) % datum.label
-        % sim.get_specie(datum.specie_key).label() 
-        % datum.success % datum.attempts 
+  std::sort(entry.second.begin(),entry.second.end(),[this](std::size_t x, std::size_t y){ return this->data_[x].label < this->data_[y].label; });
+  for (auto idx : entry.second)
+  {
+    auto const& datum = this->data_[idx];
+    {
+      if (datum.success > 0)
+      {
+        out << boost::format(format_str) % datum.label
+        % sim.get_specie(datum.specie_key).label()
+        % datum.success % datum.attempts
         % (datum.probability() * 100.0)
         % ((datum.attempts * 100.0)/this->total_);
-}
-else
-{
-  out << boost::format(format_str) % datum.label 
+      }
+      else
+      {
+        out << boost::format(format_str) % datum.label
         % sim.get_specie(datum.specie_key).label()
         % 0 % datum.attempts % 0.0
         % ((datum.attempts * 100.0)/this->total_);
+      }
+    }
+  }
 }
-}
+
 !!!718000.cpp!!!	on_trial_end(in trial : change_set) : void
 ++this->total_;
 auto iter = this->dictionary_.find((void*)trial.choice());
