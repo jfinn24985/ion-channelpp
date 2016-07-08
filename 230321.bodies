@@ -225,7 +225,7 @@ std::stringstream store;
 std::map< std::string, std::string > move_params;
 const double epsw{ 70.0 };
 move_params[ "delta" ] = "1.1";
-auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2)->void{
+auto set_atom = []( trial::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2 )->void{
   a.do_old = b1;
   a.do_new = b2;
   a.index = idx;
@@ -240,7 +240,7 @@ auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, par
   trial::change_set var1( choice );
   BOOST_CHECK_EQUAL( var1.accept(), false );
   BOOST_CHECK( var1.begin() == var1.end() );
-  BOOST_CHECK( var1.choice() == nullptr );
+  BOOST_CHECK( var1.choice() == &choice );
   BOOST_CHECK_EQUAL( var1.energy(), 0.0 );
   BOOST_CHECK_EQUAL( var1.exponential_factor(), 0.0 );
   BOOST_CHECK_EQUAL( var1.fail(), false );
@@ -279,8 +279,8 @@ auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, par
   test_choice choice;
   trial::change_set var2( choice );
   BOOST_CHECK_EQUAL( var2.probability_factor(), 1.0 );
-  BOOST_CHECK_THROW( var2.update_probability_factor(0.0 ), std::runtime_error);
-  BOOST_CHECK_THROW( var2.update_probability_factor(-1.0 ), std::runtime_error);
+  BOOST_CHECK_THROW( var2.update_probability_factor( 0.0 ), std::runtime_error );
+  BOOST_CHECK_THROW( var2.update_probability_factor( -1.0 ), std::runtime_error );
 }
 {
   // Test add steps
@@ -288,7 +288,7 @@ auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, par
   trial::change_set var1 ( mover );
 
   trial::change_atom s1(0);
-  set_atom(s1, true, true, 0, particle::coordinate(), particle::coordinate(0.1, 0.0, 0.1 ), epsw, epsw);
+  set_atom(s1, true, true, 0, particle::coordinate(), particle::coordinate( 0.1, 0.0, 0.1 ), epsw, epsw);
   //  s1.charge = 2.0;
 
   // Add once have individual jump move
@@ -296,8 +296,8 @@ auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, par
   // Variable that should be changed
   BOOST_CHECK( var1.begin() != var1.end() );
   BOOST_REQUIRE_EQUAL( var1.size(), 1ul );
-  BOOST_CHECK( s1.equivalent (var1[0] ));
-  BOOST_CHECK( s1.equivalent (*var1.begin() ));
+  BOOST_CHECK( s1.equivalent( var1[0] ));
+  BOOST_CHECK( s1.equivalent( *var1.begin() ));
 
   // Add again: now have salt jump move
   s1.old_position.x += 3.0;
@@ -308,8 +308,8 @@ auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, par
   // Variable that should be changed
   BOOST_CHECK( var1.begin() != var1.end() );
   BOOST_CHECK_EQUAL( var1.size(), 2ul );
-  BOOST_CHECK( s1.equivalent (var1[1] ));
-  BOOST_CHECK( s1.equivalent (*(var1.begin() + 1 )));
+  BOOST_CHECK( s1.equivalent(var1[1] ));
+  BOOST_CHECK( s1.equivalent(*(var1.begin() + 1 )));
 
   // Add third time: still have salt jump move
   s1.old_position.y += 3.0;
@@ -344,8 +344,8 @@ auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, par
     //  energy==0 exp==0.0 prob==1 beta=1
     //  prob.e( -(beta*energy-exp ))
     //  1 . e -( 0 - 0 ) == 1
-    const double metro ( var2.metropolis_factor () );
-    if ( not utility::feq(metro, 1.0 ))
+    const double metro( var2.metropolis_factor () );
+    if ( not utility::feq( metro, 1.0 ))
     {
       BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 1.0" );
     }
@@ -355,11 +355,11 @@ auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, par
     //  energy==0.1 expf==0.0 probf==1 beta=1
     //  probf.e( -(beta*energy-expf ))
     // 1 . e( -(0.1 - 0 )) == 0.90483741803596
-    var2.begin ()->energy_new = 0.1;
+    var2.begin()->energy_new = 0.1;
     BOOST_CHECK( utility::feq(var2.energy(), 0.1 ));
 
-    const double metro ( var2.metropolis_factor () );
-    if ( not utility::feq(metro, 0.90483741803596 ))
+    const double metro( var2.metropolis_factor () );
+    if ( not utility::feq( metro, 0.90483741803596 ))
     {
       BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 0.90483741803596" );
     }
@@ -370,12 +370,12 @@ auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, par
     //  probf.e( -(beta*energy-expf ))
     // 0.3 . e( -(0.1 - 0 )) == 0.3 * 0.90484 = 0.27145
     var2.update_probability_factor( 0.1 );
-    BOOST_CHECK( utility::feq(var2.probability_factor(), 0.1 ));
+    BOOST_CHECK( utility::feq( var2.probability_factor(), 0.1 ));
     var2.update_probability_factor( 3.0 );
-    BOOST_CHECK( utility::feq(var2.probability_factor(), 0.3 ));
+    BOOST_CHECK( utility::feq( var2.probability_factor(), 0.3 ));
 
-    const double metro ( var2.metropolis_factor () );
-    if ( not utility::feq(metro, 0.271451225411, 1 << 12 ))
+    const double metro( var2.metropolis_factor () );
+    if ( not utility::feq( metro, 0.271451225411, 1 << 12 ))
     {
       BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 0.271451225411" );
     }
@@ -389,7 +389,7 @@ auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, par
     BOOST_CHECK_EQUAL( var2.exponential_factor(), 0.1 );
 
     const double metro ( var2.metropolis_factor () );
-    if ( not utility::feq(metro, 0.3 ))
+    if ( not utility::feq( metro, 0.3 ))
     {
       BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 0.3" );
     }
@@ -400,11 +400,11 @@ auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, par
     //  probf.e( -(beta*energy-expf )) ->0.1
     // 0.3 . e( -(1.2 - 0.1 ) == 0.3 * 0.33287 == 0.09986
     var2.begin ()->energy_new += 1.1;
-    BOOST_CHECK( utility::feq(var2.energy(), 1.2 ));
+    BOOST_CHECK( utility::feq( var2.energy(), 1.2 ));
 
     const double metro ( var2.metropolis_factor () );
     BOOST_CHECK_NE( metro, 0.0 );
-    if ( not utility::feq(metro, 0.0998613251094, 1 << 12 ))
+    if ( not utility::feq( metro, 0.0998613251094, 1 << 12 ))
     {
       BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 0.0998613251094" );
     }
@@ -416,11 +416,11 @@ auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, par
     // 0.3 . e( -(101.3 - 0.1 ) == 0.3 * 1.238e-44 == 3.3614e-45
 
     var2.begin ()->energy_new += 100.1;
-    BOOST_CHECK( utility::feq(var2.energy(), 101.3 ));
+    BOOST_CHECK( utility::feq( var2.energy(), 101.3 ));
 
-    const double metro ( var2.metropolis_factor () );
+    const double metro ( var2.metropolis_factor() );
     BOOST_CHECK_NE( metro, 0.0 );
-    if ( not utility::feq(metro, 3.36139605555e-45, 1 << 13 ))
+    if ( not utility::feq( metro, 3.36139605555e-45, 1 << 13 ))
     {
       BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 3.36139605555e-45" );
     }
@@ -431,11 +431,11 @@ auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, par
   std::stringstream store;
   {
     trial::move_choice mover( 0, move_params );
-    trial::change_set var1 ( mover );
+    trial::change_set var1( mover );
     var1.update_exponential_factor( 0.05 );
     var1.update_probability_factor( 0.5 );
     trial::change_atom s1(1);
-    set_atom(s1, true, true, 1, particle::coordinate(-0.1, 0.1, 0.1 ), particle::coordinate(), epsw, epsw );
+    set_atom( s1, true, true, 1, particle::coordinate( -0.1, 0.1, 0.1 ), particle::coordinate(), epsw, epsw );
     // Check add
     var1.add_atom ( s1 );
     BOOST_CHECK_EQUAL( var1.size(), 1ul );
@@ -450,9 +450,9 @@ auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, par
   }
   {
     trial::move_choice mover2( 1, move_params );
-    trial::change_set var2 ( mover2 );
+    trial::change_set var2( mover2 );
     trial::change_atom s1(0);
-    set_atom(s1, false, true, 0, particle::coordinate(), particle::coordinate(0.1, -0.1, 0.1 ), epsw, epsw );
+    set_atom( s1, false, true, 0, particle::coordinate(), particle::coordinate( 0.1, -0.1, 0.1 ), epsw, epsw );
     var2.add_atom ( s1 );
     var2.add_atom ( s1 );
     BOOST_CHECK_EQUAL( var2.size(), 2ul );
