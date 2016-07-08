@@ -1,6 +1,15 @@
 class evaluator_test
 !!!311600.cpp!!!	localizer_test() : void
 const double spring_factor( 2.0 );
+auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2)->void{
+  a.do_old = b1;
+  a.do_new = b2;
+  a.index = idx;
+  a.old_position = p1;
+  a.new_position = p2;
+  a.eps_old = eps1;
+  a.eps_new = eps2;
+};
 std::stringstream store;
 {
    // static method test
@@ -187,24 +196,26 @@ std::stringstream store;
    std::size_t mobidx( simfix.sim->get_ensemble().size() );
    for (std::size_t ispec = 0; ispec != simfix.sim->specie_count(); ++ispec)
    {
-      if ( simfix.sim->get_specie( ispec ).is_localized() and simfix.sim->get_specie( ispec ).count() > 0 )
+      if ( simfix.sim->get_specie(ispec).is_localized() and simfix.sim->get_specie(ispec).count() > 0)
       {
-         mobidx = simfix.sim->get_ensemble().nth_specie_index( ispec, 0 );
+         mobidx = simfix.sim->get_ensemble().nth_specie_index(ispec, 0);
          break;
       }
    }
-   BOOST_REQUIRE( mobidx != simfix.sim->get_ensemble().size() );
+   BOOST_REQUIRE(mobidx != simfix.sim->get_ensemble().size());
 
-   BOOST_CHECK_EQUAL( simfix.sim->energy(), 0.0 );
+   BOOST_CHECK_EQUAL(simfix.sim->energy(), 0.0);
 
    {
       // Move particle zero distance
-      trial::change_set move;
-      trial::change_atom atm( true, true, mobidx, simfix.sim->get_ensemble().position( mobidx ), simfix.sim->get_ensemble().position( mobidx ), simfix.sim->get_ensemble().key( mobidx ), simfix.sim->get_ensemble().eps( mobidx ), simfix.sim->get_ensemble().eps( mobidx ) );
-      move.add_atom( atm );
+      test_choice choice;
+      trial::change_set move( choice );
+      trial::change_atom atm(simfix.sim->get_ensemble().key(mobidx));
+      set_atom(atm, true, true, mobidx, simfix.sim->get_ensemble().position(mobidx), simfix.sim->get_ensemble().position(mobidx), simfix.sim->get_ensemble().eps(mobidx), simfix.sim->get_ensemble().eps(mobidx));
+      move.add_atom(atm);
 
       // Calculate distance vectors.
-      for ( auto & atom : move )
+      for (auto & atom : move)
       {
         if (atom.do_old)
         {
@@ -226,11 +237,13 @@ std::stringstream store;
    }
    {
       // Move particle 1 angstrom distance
-      trial::change_set move;
+      test_choice choice;
+      trial::change_set move( choice );
       const particle::coordinate pstart( simfix.sim->get_ensemble().position( mobidx ) );
       const particle::coordinate pend( pstart.x + 0.6, pstart.y, pstart.z - 0.8 );
-      trial::change_atom atm( true, true, mobidx, pstart, pend, simfix.sim->get_ensemble().key( mobidx ), simfix.sim->get_ensemble().eps( mobidx ), simfix.sim->get_ensemble().eps( mobidx ) );
-      move.add_atom( atm );
+      trial::change_atom atm(simfix.sim->get_ensemble().key(mobidx));
+      set_atom(atm, true, true, mobidx, pstart, pend, simfix.sim->get_ensemble().eps(mobidx), simfix.sim->get_ensemble().eps(mobidx));
+      move.add_atom(atm);
 
       const double distance( std::sqrt( std::pow( pstart.x - pend.x, 2 )
                + std::pow( pstart.y - pend.y, 2 ) + std::pow( pstart.z - pend.z, 2 ) ) );
@@ -263,10 +276,12 @@ std::stringstream store;
    }
    {
       // Move particle 0.5 angstrom distance
-      trial::change_set move;
+      test_choice choice;
+      trial::change_set move( choice );
       const particle::coordinate pstart( simfix.sim->get_ensemble().position( mobidx ) );
       const particle::coordinate pend( pstart.x + 0.3, pstart.y - 0.4, pstart.z );
-      trial::change_atom atm( true, true, mobidx, pstart, pend, simfix.sim->get_ensemble().key( mobidx ), simfix.sim->get_ensemble().eps( mobidx ), simfix.sim->get_ensemble().eps( mobidx ) );
+      trial::change_atom atm(simfix.sim->get_ensemble().key( mobidx ));
+      set_atom(atm, true, true, mobidx, pstart, pend, simfix.sim->get_ensemble().eps(mobidx), simfix.sim->get_ensemble().eps(mobidx));
       move.add_atom( atm );
 
       const double distance( std::sqrt( std::pow( pstart.x - pend.x, 2 )
@@ -290,12 +305,14 @@ std::stringstream store;
    }
    {
       // Move particle outside localization cutoff distance
-      trial::change_set move;
+      test_choice choice;
+      trial::change_set move( choice );
       const particle::coordinate pstart( simfix.sim->get_ensemble().position( mobidx ) );
       const particle::centroid pctr( simfix.sim->get_specie( simfix.sim->get_ensemble().key( mobidx ) ).get_localization_data( 0 ) );
       const particle::coordinate pend( pstart.x + pctr.r * 1.1, pstart.y, pstart.z );
-      trial::change_atom atm( true, true, mobidx, pstart, pend, simfix.sim->get_ensemble().key( mobidx ), simfix.sim->get_ensemble().eps( mobidx ), simfix.sim->get_ensemble().eps( mobidx ) );
-      move.add_atom( atm );
+      trial::change_atom atm(simfix.sim->get_ensemble().key(mobidx));
+      set_atom(atm, true, true, mobidx, pstart, pend, simfix.sim->get_ensemble().eps(mobidx), simfix.sim->get_ensemble().eps(mobidx));
+      move.add_atom(atm);
 
       const double distance( std::sqrt( std::pow( pstart.x - pend.x, 2 )
                + std::pow( pstart.y - pend.y, 2 ) + std::pow( pstart.z - pend.z, 2 ) ) );

@@ -2,14 +2,10 @@ class trial_fixture
 !!!441648.cpp!!!	test_base_choice(in params : string) : void
 const std::size_t ispec { 1 };
 const double prob { 0.2 };
-std::size_t attempts{ 0 };
-std::size_t successes{ 0 };
 std::stringstream store;
 {
    // Single argument constructor
    boost::shared_ptr< T > chc( new T( ispec, params ) );
-   BOOST_CHECK_EQUAL( chc->attempts(), 0ul );
-   BOOST_CHECK_EQUAL( chc->success(), 0ul );
    BOOST_CHECK_EQUAL( chc->specie_key(), ispec );
    BOOST_CHECK_EQUAL( chc->probability(), 0.0 );
    // set_probability()
@@ -32,41 +28,19 @@ std::stringstream store;
       BOOST_REQUIRE_NE( simfix.sim->get_ensemble().size(), 0ul );
       {
          std::unique_ptr< trial::change_set > tryout = chc->generate( *simfix.sim );
-         ++attempts;
          BOOST_CHECK_GE( tryout->size(), 1ul );
-         BOOST_CHECK_EQUAL( chc->attempts(), attempts );
 
          try_failed = tryout->fail();
          if ( not try_failed )
          {
             tryout->set_accept( true );
-            BOOST_CHECK_EQUAL( chc->success(), successes );
-            ++successes;
-         }
-         else
-         {
-            BOOST_CHECK_EQUAL( chc->success(), successes );
          }
       }
-      BOOST_CHECK_EQUAL( chc->success(), successes );
    }
 
-   BOOST_CHECK_EQUAL( chc->attempts(), 10 );
-   // report()
-   std::stringstream rep;
-   BOOST_CHECK_NO_THROW( chc->report( *simfix.sim, rep, 10 ) );
-   const std::string srep{ rep.str() };
-   BOOST_CHECK_NE( srep.find( chc->label() ), std::string::npos );
-   
    // serialize()
    boost::archive::text_oarchive oa( store );
    oa << chc;
-
-   // reset()
-   BOOST_CHECK_NO_THROW( chc->reset() );
-   BOOST_CHECK_EQUAL( chc->attempts(), 0ul );
-   BOOST_CHECK_EQUAL( chc->success(), 0ul );
-
 }
 {
    boost::shared_ptr< T > chc2;
@@ -77,7 +51,4 @@ std::stringstream store;
 
    BOOST_CHECK_EQUAL( chc2->specie_key(), ispec );
    BOOST_CHECK_EQUAL( chc2->probability(), prob );
-   BOOST_CHECK_EQUAL( chc2->attempts(), attempts );
-   BOOST_CHECK_EQUAL( chc2->success(), successes );
-
 }

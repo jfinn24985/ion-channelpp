@@ -174,6 +174,16 @@ specie_list[ 2 ].set_valency( -1.0 );
 specie_list[ 2 ].set_type( particle::specie::SOLUTE );
 const double epsw = 80.0;
 
+auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2)->void{
+  a.do_old = b1;
+  a.do_new = b2;
+  a.index = idx;
+  a.old_position = p1;
+  a.new_position = p2;
+  a.eps_old = eps1;
+  a.eps_new = eps2;
+};
+
 // for testing serialization
 std::stringstream store;
 {
@@ -294,9 +304,11 @@ std::stringstream store;
    // Create changesets to (1) add, (2) move and (3) delete a particle
    {
       // ADD
-      trial::change_set trial;
+      test_choice choice;
+      trial::change_set trial( choice );
       const particle::coordinate pos { 7.45423699019, 5.14523134204, 2.44775178272 };
-      trial::change_atom at(false, true, ens.size(), {}, pos, 0, epsw, epsw);
+      trial::change_atom at(0);
+      set_atom(at, false, true, ens.size(), {}, pos, epsw, epsw);
       trial.add_atom(at);
 
       // Check system before change
@@ -322,10 +334,12 @@ std::stringstream store;
    }
    {
       // MOVE
-      trial::change_set trial;
+      test_choice choice;
+      trial::change_set trial( choice );
       const std::size_t index { 4 };
       const particle::coordinate pos { 3.51095035114, 1.08643570153, 0.603658014653 };
-      trial::change_atom at(true, true, index, ens.position( index ), pos, ens.key( index ), ens.eps( index ), epsw );
+      trial::change_atom at( ens.key( index ) );
+      set_atom( at, true, true, index, ens.position( index ), pos, ens.eps( index ), epsw );
       trial.add_atom(at);
 
       // Check system before change
@@ -350,9 +364,11 @@ std::stringstream store;
    }
    {
       // DELETE
-      trial::change_set trial;
+      test_choice choice;
+      trial::change_set trial( choice );
       const std::size_t index { 4 };
-      trial::change_atom at(true, false, index, ens.position( index ), {}, 0, epsw, epsw );
+      trial::change_atom at( 0 );
+      set_atom( at, true, false, index, ens.position( index ), {}, epsw, epsw );
       trial.add_atom(at);
 
       // Check system before change

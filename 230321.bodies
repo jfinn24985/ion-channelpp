@@ -27,31 +27,38 @@ const double epsw{ 70.0 };
 }
 std::stringstream store;
 {
-  // Ctor with args
-  particle::coordinate old_p (1.0, 10.0, 2.0);
-  particle::coordinate new_p (old_p);
-  new_p.x -= 0.1;
-  new_p.y -= 0.2;
-  new_p.z += 0.15;
-  trial::change_atom var1(true, true, 10, old_p, new_p, 2, epsdefault, epsw);
-  // Check set values
-  BOOST_CHECK_EQUAL(var1.do_old, true);
-  BOOST_CHECK_EQUAL(var1.do_new, true);
-  BOOST_CHECK_EQUAL(var1.index, 10);
-  BOOST_CHECK_EQUAL(var1.old_position.x, 1.0);
-  BOOST_CHECK_EQUAL(var1.old_position.y, 10.0);
-  BOOST_CHECK_EQUAL(var1.old_position.z, 2.0);
-  BOOST_CHECK_EQUAL(var1.new_position.x, 0.9);
-  BOOST_CHECK_EQUAL(var1.new_position.y, 9.8);
-  BOOST_CHECK_EQUAL(var1.new_position.z, 2.15);
-  BOOST_CHECK_EQUAL(var1.key, 2);
+  // Ctor with arg
+  trial::change_atom var1(2);
+  BOOST_CHECK_EQUAL(var1.new_position.x, 0.0);
+  BOOST_CHECK_EQUAL(var1.new_position.y, 0.0);
+  BOOST_CHECK_EQUAL(var1.new_position.z, 0.0);
+  BOOST_CHECK_EQUAL(var1.old_position.x, 0.0);
+  BOOST_CHECK_EQUAL(var1.old_position.y, 0.0);
+  BOOST_CHECK_EQUAL(var1.old_position.z, 0.0);
   BOOST_CHECK_EQUAL(var1.energy_old, 0.0);
   BOOST_CHECK_EQUAL(var1.energy_new, 0.0);
-  BOOST_CHECK_EQUAL( var1.eps_old, epsdefault );
-  BOOST_CHECK_EQUAL( var1.eps_new, epsw );
+  BOOST_CHECK_EQUAL(var1.eps_old, 0.0);
+  BOOST_CHECK_EQUAL(var1.eps_new, 0.0);
+  BOOST_CHECK_EQUAL(var1.index, 0);
+  BOOST_CHECK_EQUAL(var1.key, 2);
+  BOOST_CHECK_EQUAL(var1.do_old, true);
+  BOOST_CHECK_EQUAL(var1.do_new, true);
   BOOST_CHECK(var1.old_rij.empty());
   BOOST_CHECK(var1.new_rij.empty());
-  // Set some values
+
+  // Set atom "start" values
+  var1.do_old = true;
+  var1.do_new = true;
+  var1.index = 10;
+  var1.old_position.x = 1.0;
+  var1.old_position.y = 10.0;
+  var1.old_position.z = 2.0;
+  var1.new_position.x = 0.9;
+  var1.new_position.y = 9.8;
+  var1.new_position.z = 2.15;
+  var1.eps_old = epsdefault;
+  var1.eps_new = epsw;
+  // Set "calculated" values
   var1.energy_old = 0.001;
   var1.energy_new = 0.02;
   var1.old_rij = orij;
@@ -59,7 +66,7 @@ std::stringstream store;
   // Use var1 to make copies
   {
     // Copy ctor.
-    trial::change_atom var2 (var1);
+    trial::change_atom var2(var1);
     BOOST_CHECK_EQUAL( var2.new_position.x, var1.new_position.x );
     BOOST_CHECK_EQUAL( var2.new_position.y, var1.new_position.y );
     BOOST_CHECK_EQUAL( var2.new_position.z, var1.new_position.z );
@@ -218,9 +225,19 @@ std::stringstream store;
 std::map< std::string, std::string > move_params;
 const double epsw{ 70.0 };
 move_params[ "delta" ] = "1.1";
+auto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2)->void{
+  a.do_old = b1;
+  a.do_new = b2;
+  a.index = idx;
+  a.old_position = p1;
+  a.new_position = p2;
+  a.eps_old = eps1;
+  a.eps_new = eps2;
+};
 {
   // Default ctor
-  trial::change_set var1;
+  test_choice choice;
+  trial::change_set var1( choice );
   BOOST_CHECK_EQUAL( var1.accept(), false );
   BOOST_CHECK( var1.begin() == var1.end() );
   BOOST_CHECK( var1.choice() == nullptr );
@@ -234,12 +251,10 @@ move_params[ "delta" ] = "1.1";
 }
 {
   trial::move_choice mover( 0, move_params );
-  BOOST_CHECK_EQUAL( mover.attempts(), 0 );
-  BOOST_CHECK_EQUAL( mover.success(), 0 );
   {
     // Ctor with one arg.
     // ------------------
-    trial::change_set var1 ( mover );
+    trial::change_set var1( mover );
     BOOST_CHECK_EQUAL( var1.accept(), false );
     BOOST_CHECK( var1.begin() == var1.end() );
     BOOST_CHECK( var1.choice() == &mover );
@@ -257,15 +272,12 @@ move_params[ "delta" ] = "1.1";
     BOOST_CHECK_EQUAL( var1.fail(), true );
     BOOST_CHECK_THROW( var1.metropolis_factor(), std::runtime_error );
   }
-  // Test change_set updated the choice object
-  // in ctor/dtor
-  BOOST_CHECK_EQUAL( mover.attempts(), 1 );
-  BOOST_CHECK_EQUAL( mover.success(), 0 );
 }
 {
   // Test attempt to set a bad probability value
   // Valid only if VALUE > 0.0
-  trial::change_set var2;
+  test_choice choice;
+  trial::change_set var2( choice );
   BOOST_CHECK_EQUAL( var2.probability_factor(), 1.0 );
   BOOST_CHECK_THROW( var2.update_probability_factor(0.0 ), std::runtime_error);
   BOOST_CHECK_THROW( var2.update_probability_factor(-1.0 ), std::runtime_error);
@@ -275,8 +287,9 @@ move_params[ "delta" ] = "1.1";
   trial::move_choice mover( 0, move_params );
   trial::change_set var1 ( mover );
 
-  trial::change_atom s1 ( true, true, 0, particle::coordinate(), particle::coordinate(0.1, 0.0, 0.1 ), 0, epsw, epsw );
-//  s1.charge = 2.0;
+  trial::change_atom s1(0);
+  set_atom(s1, true, true, 0, particle::coordinate(), particle::coordinate(0.1, 0.0, 0.1 ), epsw, epsw);
+  //  s1.charge = 2.0;
 
   // Add once have individual jump move
   var1.add_atom( s1 );
@@ -320,7 +333,8 @@ move_params[ "delta" ] = "1.1";
 }
 // Test factor adjustments
 {
-  trial::change_set var2;
+  test_choice choice;
+  trial::change_set var2( choice );
   trial::change_atom a1;
   var2.add_atom ( a1 );
   BOOST_CHECK_EQUAL( var2.exponential_factor(), 0.0 );
@@ -420,7 +434,8 @@ move_params[ "delta" ] = "1.1";
     trial::change_set var1 ( mover );
     var1.update_exponential_factor( 0.05 );
     var1.update_probability_factor( 0.5 );
-    trial::change_atom s1 ( true, true, 1, particle::coordinate(-0.1, 0.1, 0.1 ), particle::coordinate(), 1, epsw, epsw );
+    trial::change_atom s1(1);
+    set_atom(s1, true, true, 1, particle::coordinate(-0.1, 0.1, 0.1 ), particle::coordinate(), epsw, epsw );
     // Check add
     var1.add_atom ( s1 );
     BOOST_CHECK_EQUAL( var1.size(), 1ul );
@@ -436,7 +451,8 @@ move_params[ "delta" ] = "1.1";
   {
     trial::move_choice mover2( 1, move_params );
     trial::change_set var2 ( mover2 );
-    trial::change_atom s1 ( false, true, 0, particle::coordinate(), particle::coordinate(0.1, -0.1, 0.1 ), 0, epsw, epsw );
+    trial::change_atom s1(0);
+    set_atom(s1, false, true, 0, particle::coordinate(), particle::coordinate(0.1, -0.1, 0.1 ), epsw, epsw );
     var2.add_atom ( s1 );
     var2.add_atom ( s1 );
     BOOST_CHECK_EQUAL( var2.size(), 2ul );
