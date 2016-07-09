@@ -1,0 +1,70 @@
+class choice_manager
+!!!746544.cpp!!!	description(inout os : ostream) : void
+if ( not this->choosers_.empty() )
+{
+   os << core::strngs::horizontal_bar () << "\n";
+   os << "[choices] trial types and rates\n";
+   static const boost::format choice_header(" %6s %7s");
+   os << boost::format(choice_header) % "type" % "rate(%)" << "\n";
+   for (auto const& chsr : this->choosers_ )
+   {
+      chsr.description( os );
+   }
+   if ( not this->choices_.empty() )
+   {
+      static const boost::format choice_header(" %6s %4s %7s");
+      os << boost::format(choice_header) % "type" % "spc." % "rate(%)" << "\n";
+      static const boost::format choice_row(" %6s %4s %7.2f");
+      for (auto const& choice : this->choices_)
+      {
+         os << boost::format(choice_row) % choice.label() % this->species_[choice.specie_key()].label() % (choice.probability()*100.0) << "\n";
+      }
+   }
+}
+
+!!!746800.cpp!!!	generate(inout sys : simulator, in selector : double) : change_set
+// select a move
+std::unique_ptr< trial::change_set > trial;
+for( auto & choice: this->choices_ )
+{
+  selector -= choice.probability();
+  if (selector <= 0.0)
+  {
+    trial = choice.generate( sys );
+    break;
+  }
+}
+return trial;
+
+!!!746928.cpp!!!	prepare(inout sim : simulator) : void
+UTILITY_REQUIRE( not this->choosers_.empty (), "Can not run simulation with no possible trials" );
+// Build choices
+this->choices_.clear();
+for (auto &chsr : this->choosers_)
+{
+  chsr.generate_choices( sim, this->choices_ );
+}
+UTILITY_ENSURE( not this->choices_.empty (), "Can not run simulation with no trials" );
+// Ensure sum of probabilities is 1.0
+double sum_choice_rates { 0.0 };
+// reset choice objects
+for( auto &choice : this->choices_)
+{
+  sum_choice_rates += choice.probability();
+}
+if( not utility::feq( sum_choice_rates, 1.0 ))
+{
+  for (auto &choice : this->choices_)
+  {
+    choice.set_probability( choice.probability() / sum_choice_rates );
+  }
+}
+// Randomize choice order
+sim.get_random().shuffle( this->choices_ );
+
+!!!747312.cpp!!!	write_document(inout wr : input_document) : void
+// Write choosers
+for (auto const& choice : this->choosers_)
+{
+   choice.write_document( wr );
+}
