@@ -452,8 +452,8 @@ BOOST_CHECK_EQUAL(env.ToNearest, env.round ());
 
 std::numeric_limits< double > dlim;
 
-BOOST_CHECKPOINT("(inexact) Compute (DBL_MIN)^42");
-BOOST_CHECK_EQUAL(0.0, pow(dlim.min(), 42.0));
+BOOST_CHECKPOINT("(inexact) Compute (DBL_MAX - DBL_MIN)");
+BOOST_CHECK_EQUAL(dlim.max(), dlim.max() - dlim.min() );
 BOOST_CHECK_NE(0, (env.Inexact & env.except()));
 env.reset ();
 BOOST_CHECK_EQUAL(0, env.except());
@@ -535,7 +535,16 @@ BOOST_CHECK_NE(0, (env.Overflow & env.except()));
 BOOST_CHECK_NE(0, (env.Inexact & env.except()));
 env.reset ();
 BOOST_CHECK_EQUAL(0, env.except());
-
+  
+// Could throw inexact or underflow.
+std::numeric_limits< double > dlim;
+BOOST_CHECKPOINT("(inexact) Compute (DBL_MAX)^4");
+BOOST_CHECK_EQUAL(dlim.infinity(), pow(dlim.max(), 4.0));
+BOOST_CHECK_NE(0, (env.Overflow & env.except()));
+BOOST_CHECK_NE(0, (env.Inexact & env.except()));
+env.reset ();
+BOOST_CHECK_EQUAL(0, env.except());
+ 
 !!!266672.cpp!!!	test_fp_underflow() : void
 utility::fp_env &env(utility::fp_env::env_);
 
@@ -551,6 +560,14 @@ BOOST_CHECK_NE(0, (env.Inexact & env.except()));
 env.reset ();
 BOOST_CHECK_EQUAL(0, env.except());
 
+// Should throw inexact or underflow.
+BOOST_CHECKPOINT("(inexact) Compute (DBL_MIN)^4");
+BOOST_CHECK_EQUAL(0.0, pow(dlim.min(), 4.0));
+BOOST_CHECK_NE(0, (env.Underflow & env.except()));
+BOOST_CHECK_NE(0, (env.Inexact & env.except()));
+env.reset ();
+BOOST_CHECK_EQUAL(0, env.except());
+ 
 !!!512304.cpp!!!	test_archive_file() : void
 const std::string paxpath( "myar.pax" );
 const std::string zippath( "myar.zip" );
