@@ -1,6 +1,6 @@
 format 75
 "utility test suite" // utility::utility test suite
-  revision 90
+  revision 91
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -53,6 +53,175 @@ format 75
       draw_all_relations default hide_attributes yes hide_operations yes hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language c++ show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
       comment "Post overview of utility class coverage (unchecked)"
       size A4
+    end
+
+    class 406704 "pattern_test"
+      visibility package stereotype "struct"
+      cpp_decl "${comment}${template}struct ${name}${inherit} 
+{
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment "Test standard patterns"
+      operation 762288 "check_lt_on_eq"
+	class_operation cpp_inline public explicit_return_type "void"
+	nparams 2
+	  param in name "a" explicit_type "test_class"
+	  param in name "b" explicit_type "test_class"
+	cpp_decl "    ${comment}${friend}template< class test_class, bool has_lt > ${static}${inline}${virtual}typename std::enable_if< has_lt==true >::type ${name}${(}const test_class & ${p0}${v0}, const test_class & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+    BOOST_CHECK( not ( ${p0} < ${p1} ) );
+    BOOST_CHECK( not ( ${p1} < ${p0} ) );
+}
+"
+	
+	
+	
+	
+	comment "Function to conditionally include test if less than operator is defined
+
+Test not ( a < b or b < a )"
+      end
+
+      operation 762416 "check_lt_on_eq"
+	class_operation cpp_inline public explicit_return_type "void"
+	nparams 2
+	  param in name "a" explicit_type "test_class"
+	  param in name "b" explicit_type "test_class"
+	cpp_decl "    ${comment}${friend}template< class test_class, bool has_lt > ${static}${inline}${virtual}typename std::enable_if< has_lt==false >::type ${name}${(}const test_class & ${p0}${v0}, const test_class & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{}
+"
+	
+	
+	
+	
+	comment "Function to conditionally NOT include test if less than operator is NOT defined"
+      end
+
+      operation 762800 "check_lt_on_ne"
+	class_operation cpp_inline public explicit_return_type "void"
+	nparams 2
+	  param in name "a" explicit_type "test_class"
+	  param in name "b" explicit_type "test_class"
+	cpp_decl "    ${comment}${friend}template< class test_class, bool has_lt > ${static}${inline}${virtual}typename std::enable_if< has_lt==true >::type ${name}${(}const test_class & ${p0}${v0}, const test_class & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+    BOOST_CHECK( ( ${p0} < ${p1} ) or ( ${p1} < ${p0} ) );
+}
+"
+	
+	
+	
+	
+	comment "Function to conditionally include test if less than operator is defined
+
+Test ( a < b or b < a )"
+      end
+
+      operation 762928 "check_lt_on_ne"
+	class_operation cpp_inline public explicit_return_type "void"
+	nparams 2
+	  param in name "a" explicit_type "test_class"
+	  param in name "b" explicit_type "test_class"
+	cpp_decl "    ${comment}${friend}template< class test_class, bool has_lt > ${static}${inline}${virtual}typename std::enable_if< has_lt==false >::type ${name}${(}const test_class & ${p0}${v0}, const test_class & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{}
+"
+	
+	
+	
+	
+	comment "Function to conditionally NOT include test if less than operator is NOT defined"
+      end
+
+      operation 762544 "check_serialize"
+	class_operation cpp_inline public explicit_return_type "void"
+	nparams 1
+	  param in name "a" explicit_type "test_class"
+	cpp_decl "    ${comment}${friend}template< class test_class, bool has_io > ${static}${inline}${virtual}typename std::enable_if< has_io==true >::type ${name}${(}const test_class & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  std::stringstream store;
+  {
+    boost::archive::text_oarchive oa( store );
+    oa << ${p0};
+  }
+  {
+    test_class obj3;
+    boost::archive::text_iarchive ia( store );
+    ia >> obj3;
+    BOOST_CHECK( ${p0} == obj3 );
+  }
+}
+"
+	
+	
+	
+	
+	comment "Function to conditionally include serialization test if serialization is defined
+
+Tests
+oarchive << a
+iarchive >> b
+b == a"
+      end
+
+      operation 762672 "check_serialize"
+	class_operation cpp_inline public explicit_return_type "void"
+	nparams 1
+	  param in name "a" explicit_type "test_class"
+	cpp_decl "    ${comment}${friend}template< class test_class, bool has_io > ${static}${inline}${virtual}typename std::enable_if< has_io==false >::type ${name}${(}const test_class & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{}
+"
+	
+	
+	
+	
+	comment "Function to conditionally NOT include serialization test if serialization is NOT defined"
+      end
+
+      operation 762032 "canonical"
+	class_operation cpp_inline public explicit_return_type "void"
+	nparams 2
+	  param in name "a" explicit_type "test_class"
+	  param in name "b" explicit_type "test_class"
+	cpp_decl "    ${comment}${friend}template< class test_class, bool has_lessthan, bool has_serialize > ${static}${inline}${virtual}${type} ${name}${(}test_class const& ${p0}${v0}, test_class const& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}template< class test_class, bool has_lessthan, bool has_serialize > ${inline}${type} ${class}::${name}${(}test_class const& ${p0}, test_class const& ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Test of a class matching canonical class pattern.
+
+ Assumes the following
+ - constructors include: default, copy, move and assignment
+ - equivalence test using '=='
+ - param a /= test_class{}
+
+ If has_lessthan is true assumes:
+ - if a == b then not ( ( a < b ) or ( b < a ) )
+ - if a /= b then ( a < b ) or ( b < a )
+
+ If has_serialize is true assumes boost serialization
+ - oa << a
+ - ia >> b
+ - then a == b
+
+"
+      end
     end
 
     class 889263 "mathutil_test_suite"
@@ -499,6 +668,15 @@ Classes:
 	    python "${type}"
 	    classrelation_ref 306865 // <dependency>
 	  b parent class_ref 189489 // estimate_2d
+      end
+
+      classrelation 500144 // <dependency>
+	relation 499248 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 500144 // <dependency>
+	  b parent class_ref 406704 // pattern_test
       end
 
       attribute 234033 "var"
@@ -991,6 +1169,48 @@ ${namespace_end}
 "
       associated_classes
 	class_ref 889263 // mathutil_test_suite
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 404016 "pattern_test"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+// manual includes
+#include <boost/test/unit_test.hpp>
+#include <sstream>
+#include <type_traits>
+#include \"utility/archive.hpp\"
+// -
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 406704 // pattern_test
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
