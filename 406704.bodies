@@ -2,19 +2,19 @@ class pattern_test
 !!!762032.cpp!!!	canonical(in a : test_class, in b : test_class) : void
 // default constructable
 {
-  test_class obj_1, obj_2;
+  test_class obj_1{}, obj_2{};
   BOOST_CHECK( obj_1 == obj_2 );
   pattern_test::check_lt_on_eq< test_class, has_lessthan >( obj_1, obj_2 );
   pattern_test::check_serialize< test_class, has_serialize >( obj_1 );
 }
 // Copy constructor
 {
-    test_class dummy;
+    test_class dummy{};
     BOOST_CHECK( not ( dummy == a ) );
     pattern_test::check_lt_on_ne< test_class, has_lessthan >( a, dummy );
     //, "First argument to function should not give the same state as default constructor." );
-    test_class obj_a( a );
-    test_class obj_b( b );
+    test_class obj_a{ a };
+    test_class obj_b{ b };
     BOOST_CHECK( obj_a == a );
     BOOST_CHECK( obj_b == b );
     pattern_test::check_lt_on_eq< test_class, has_lessthan >( obj_a, a );
@@ -35,15 +35,15 @@ class pattern_test
 // Assignment
 {
   {
-    test_class obj_1;
-    test_class obj_2;
+    test_class obj_1{};
+    test_class obj_2{};
     obj_2 = obj_1;
     BOOST_CHECK( obj_1 == obj_2 );
     pattern_test::check_lt_on_eq< test_class, has_lessthan >( obj_1, obj_2 );
   }
   {
-    test_class obj_1( a );
-    test_class obj_2;
+    test_class obj_1{ a };
+    test_class obj_2{};
     obj_2 = obj_1;
     BOOST_CHECK( obj_1 == obj_2 );
     pattern_test::check_lt_on_eq< test_class, has_lessthan >( obj_1, obj_2 );
@@ -52,16 +52,16 @@ class pattern_test
 // Move constructor
 {
   {
-    test_class obj_1;
-    test_class obj_2( obj_1 );
-    test_class obj_3( std::move( obj_1 ) );
+    test_class obj_1{};
+    test_class obj_2{ obj_1 };
+    test_class obj_3{ std::move( obj_1 ) };
     BOOST_CHECK( obj_2 == obj_3 );
     pattern_test::check_lt_on_eq< test_class, has_lessthan >( obj_2, obj_3 );
   }
   {
-    test_class obj_1( a );
-    test_class obj_2( obj_1 );
-    test_class obj_3( std::move( obj_1 ) );
+    test_class obj_1{ a };
+    test_class obj_2{ obj_1 };
+    test_class obj_3{ std::move( obj_1 ) };
     BOOST_CHECK( obj_2 == obj_3 );
     pattern_test::check_lt_on_eq< test_class, has_lessthan >( obj_2, obj_3 );
   }
@@ -69,3 +69,36 @@ class pattern_test
 
 
 
+!!!776752.cpp!!!	comparable(in big : test_class, in mid : test_class, in sml : test_class, in dup : test_class) : void
+// big, mid, sml
+BOOST_CHECK( big != mid );
+BOOST_CHECK( big != sml );
+BOOST_CHECK( mid != sml );
+BOOST_CHECK( big > mid );
+BOOST_CHECK( big > sml );
+BOOST_CHECK( mid > sml );
+BOOST_CHECK( big >= sml );
+BOOST_CHECK( big >= mid );
+BOOST_CHECK( mid >= sml );
+BOOST_CHECK( mid < big );
+BOOST_CHECK( sml < big );
+BOOST_CHECK( sml < mid );
+BOOST_CHECK( sml <= big );
+BOOST_CHECK( mid <= big );
+BOOST_CHECK( sml <= mid );
+BOOST_CHECK( ( big == dup ) or ( mid == dup ) or ( sml == dup ) );
+if( big == dup )
+{
+  BOOST_CHECK( big >= dup );
+  BOOST_CHECK( big <= dup );
+}
+else if ( mid == dup )
+{
+  BOOST_CHECK( mid >= dup );
+  BOOST_CHECK( mid <= dup );
+}
+else if ( sml == dup )
+{
+  BOOST_CHECK( sml >= dup );
+  BOOST_CHECK( sml <= dup );
+}

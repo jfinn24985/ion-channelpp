@@ -201,6 +201,114 @@ estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
 
 }
 
+!!!769712.cpp!!!	binary_estimate_lifetime() : void
+estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
+{
+  // TEST: default ctor
+  utility::binary_estimate var1;
+  //
+  // Test that initial values are well-defined
+  BOOST_REQUIRE(var1.count() == 0);
+  BOOST_REQUIRE(utility::feq(var1.mean(), 0.0));
+  BOOST_REQUIRE(utility::feq(var1.variance(), 0.0));
+}
+{
+  utility::binary_estimate var1;
+
+  // TEST: copy constructor on empty object
+  utility::binary_estimate var2(var1);
+
+  // var1 should be unchanged
+  BOOST_CHECK_EQUAL(var1.count(), 0);
+  BOOST_CHECK(utility::feq(var1.mean(), 0.0));
+  BOOST_CHECK(utility::feq(var1.variance(), 0.0));
+  // var2 should have the same data as var1
+  BOOST_CHECK_EQUAL(var1.mean(), var2.mean());
+  BOOST_CHECK_EQUAL(var1.variance(), var2.variance());
+  BOOST_CHECK_EQUAL(var1.count(), var2.count());
+  BOOST_CHECK( var1.equivalent( var2 ) );
+}
+{
+  utility::binary_estimate var1;
+  utility::binary_estimate var3;
+  // Insert some values (using raw pointers)
+  for (std::size_t idx = 0; idx != 15; ++idx)
+  {
+    if (1.0 > exemplar.var[idx])
+    {
+      var1.success();
+    }
+    else
+    {
+      var1.fail();
+    }
+    if (1.0 > exemplar.var[idx + 16])
+    {
+      var3.success();
+    }
+    else
+    {
+      var3.fail();
+    }
+  }
+  BOOST_CHECK_NE(var1.mean(), var3.mean());
+  BOOST_CHECK_NE(var1.variance(), var3.variance());
+  BOOST_CHECK_EQUAL(var1.count(), var3.count());
+ 
+  // Run canonical test
+  pattern_test::canonical< utility::binary_estimate, false, true >( var1, var3 );
+
+  // TEST: copy constructor on object with data
+  utility::binary_estimate var2(var1);
+
+  // var1 should be unchanged
+  BOOST_CHECK_EQUAL(var1.count(), 15);
+  // var2 should have the same data as var1
+  BOOST_CHECK_EQUAL(var1.mean(), var2.mean());
+  BOOST_CHECK_EQUAL(var1.variance(), var2.variance());
+  BOOST_CHECK_EQUAL(var1.count(), var2.count());
+  BOOST_CHECK( var1 == var2 );
+}
+{
+  utility::binary_estimate var1;
+  // Insert some values (using iterators)
+  for (auto value : exemplar.var)
+  {
+    if (1.0 > value)
+    {
+      var1.success();
+    }
+    else
+    {
+      var1.fail();
+    }
+  } 
+  BOOST_CHECK_EQUAL(var1.count(), 31);
+  // TEST: assignment
+  utility::binary_estimate var2;
+  // insert some values
+  for (std::size_t idx = 0; idx != 16; ++idx)
+  {
+    if (1.0 > exemplar.var[idx])
+    {
+      var2.success();
+    }
+    else
+    {
+      var2.fail();
+    }
+  }
+  BOOST_CHECK( not ( var1 == var2 ) );
+  BOOST_CHECK_EQUAL(var2.count(), 16);
+  // assignment should overwrite existing data
+  var2 = var1;
+  BOOST_CHECK( var1 == var2 );
+
+  // var1 should be unchanged
+  BOOST_CHECK_EQUAL(var1.count(), 31);
+  BOOST_CHECK_EQUAL(var2.count(), 31);
+}
+
 !!!327857.cpp!!!	estimater_lifetime() : void
 estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
 {
@@ -347,114 +455,6 @@ estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
   BOOST_CHECK_EQUAL(test_var.count(), 31);
   BOOST_CHECK(utility::feq(test_var.mean(), exemplar.mean));
   BOOST_CHECK(utility::feq(test_var.variance(), exemplar.svar));
-}
-
-!!!769712.cpp!!!	binary_estimate_lifetime() : void
-estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
-{
-  // TEST: default ctor
-  utility::binary_estimate var1;
-  //
-  // Test that initial values are well-defined
-  BOOST_REQUIRE(var1.count() == 0);
-  BOOST_REQUIRE(utility::feq(var1.mean(), 0.0));
-  BOOST_REQUIRE(utility::feq(var1.variance(), 0.0));
-}
-{
-  utility::binary_estimate var1;
-
-  // TEST: copy constructor on empty object
-  utility::binary_estimate var2(var1);
-
-  // var1 should be unchanged
-  BOOST_CHECK_EQUAL(var1.count(), 0);
-  BOOST_CHECK(utility::feq(var1.mean(), 0.0));
-  BOOST_CHECK(utility::feq(var1.variance(), 0.0));
-  // var2 should have the same data as var1
-  BOOST_CHECK_EQUAL(var1.mean(), var2.mean());
-  BOOST_CHECK_EQUAL(var1.variance(), var2.variance());
-  BOOST_CHECK_EQUAL(var1.count(), var2.count());
-  BOOST_CHECK( var1.equivalent( var2 ) );
-}
-{
-  utility::binary_estimate var1;
-  utility::binary_estimate var3;
-  // Insert some values (using raw pointers)
-  for (std::size_t idx = 0; idx != 15; ++idx)
-  {
-    if (1.0 > exemplar.var[idx])
-    {
-      var1.success();
-    }
-    else
-    {
-      var1.fail();
-    }
-    if (1.0 > exemplar.var[idx + 16])
-    {
-      var3.success();
-    }
-    else
-    {
-      var3.fail();
-    }
-  }
-  BOOST_CHECK_NE(var1.mean(), var3.mean());
-  BOOST_CHECK_NE(var1.variance(), var3.variance());
-  BOOST_CHECK_EQUAL(var1.count(), var3.count());
- 
-  // Run canonical test
-  pattern_test::canonical< utility::binary_estimate, false, true >( var1, var3 );
-
-  // TEST: copy constructor on object with data
-  utility::binary_estimate var2(var1);
-
-  // var1 should be unchanged
-  BOOST_CHECK_EQUAL(var1.count(), 15);
-  // var2 should have the same data as var1
-  BOOST_CHECK_EQUAL(var1.mean(), var2.mean());
-  BOOST_CHECK_EQUAL(var1.variance(), var2.variance());
-  BOOST_CHECK_EQUAL(var1.count(), var2.count());
-  BOOST_CHECK( var1 == var2 );
-}
-{
-  utility::binary_estimate var1;
-  // Insert some values (using iterators)
-  for (auto value : exemplar.var)
-  {
-    if (1.0 > value)
-    {
-      var1.success();
-    }
-    else
-    {
-      var1.fail();
-    }
-  } 
-  BOOST_CHECK_EQUAL(var1.count(), 31);
-  // TEST: assignment
-  utility::binary_estimate var2;
-  // insert some values
-  for (std::size_t idx = 0; idx != 16; ++idx)
-  {
-    if (1.0 > exemplar.var[idx])
-    {
-      var2.success();
-    }
-    else
-    {
-      var2.fail();
-    }
-  }
-  BOOST_CHECK( not ( var1 == var2 ) );
-  BOOST_CHECK_EQUAL(var2.count(), 16);
-  // assignment should overwrite existing data
-  var2 = var1;
-  BOOST_CHECK( var1 == var2 );
-
-  // var1 should be unchanged
-  BOOST_CHECK_EQUAL(var1.count(), 31);
-  BOOST_CHECK_EQUAL(var2.count(), 31);
 }
 
 !!!356657.cpp!!!	estimate_array_lifetime() : void
@@ -1691,6 +1691,13 @@ estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
 }
 
 
+!!!776880.cpp!!!	pattern_test_test() : void
+// test match to canonical pattern
+pattern_test::canonical< int, true, true >( 1, 2 );
+pattern_test::canonical< double, true, true >( 1.0, 2.0 );
+// test match to comparable pattern
+pattern_test::comparable< int >( 4, 2, 1, 2 );
+pattern_test::comparable< double >( 4.0, 2.0, 1.0, 2.0 );
 !!!358577.cpp!!!	sample_2d_collection() : void
 estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
 {
