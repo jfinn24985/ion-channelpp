@@ -1,6 +1,6 @@
 format 75
 "utility" // utility
-  revision 207
+  revision 208
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -146,7 +146,7 @@ ${docstring}${body}
       operation 319665 "basic_mean"
 	public explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} : mean_(), variance_() {};
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} : mean_(0.0), variance_(0.0) {};
 "
 	
 	
@@ -183,6 +183,23 @@ ${docstring}${body}
 	
 	
 	
+	
+      end
+
+      operation 762160 "equivalent"
+	const public explicit_return_type "bool"
+	nparams 1
+	  param in name "other" type class_ref 176433 // basic_mean
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->mean_ == other.mean_ and this->variance_ == other.variance_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
 	
       end
 
@@ -301,28 +318,11 @@ ${docstring}return 0.0 if count <= 1 else (self.variance_/float(count-1))
 	comment "Get the estimate's sample variance"
       end
 
-      operation 762160 "equivalence"
-	const public explicit_return_type "bool"
-	nparams 1
-	  param in name "other" type class_ref 176433 // basic_mean
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->mean_ == other.mean_ and this->variance_ == other.variance_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
       extra_member 350128 "operator=="
 	
 	cpp "friend inline bool operator==(const basic_mean &lhs, const basic_mean &rhs)
 {
-  return lhs.equivalence( rhs );
+  return lhs.equivalent( rhs );
 }
 
 " ""
@@ -421,7 +421,11 @@ ${docstring}${body}
       operation 618161 "binary_estimate"
 	public explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile} = default;"
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}
+: count_(0ul)
+, heads_(0ul)
+, variance_(0.0)
+{}"
 	
 	
 	
@@ -429,6 +433,7 @@ ${docstring}${body}
       end
 
       operation 618289 "binary_estimate"
+	stereotype "copy"
 	public explicit_return_type ""
 	nparams 1
 	  param in name "other" type class_ref 276529 // binary_estimate
@@ -436,6 +441,23 @@ ${docstring}${body}
 : count_ (other.count_)
 , heads_ (other.heads_)
 , variance_ (other.variance_)
+{}
+"
+	
+	
+	
+	
+      end
+
+      operation 769968 "binary_estimate"
+	stereotype "move"
+	public explicit_return_type ""
+	nparams 1
+	  param inout name "other" type class_ref 276529 // binary_estimate
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${v0}${)}${volatile}${throw} 
+: count_( other.count_ )
+, heads_( other.heads_ )
+, variance_( other.variance_ )
 {}
 "
 	
@@ -488,6 +510,41 @@ ${docstring}${body}
 	
       end
 
+      operation 770224 "count"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->count_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}return self.count_
+"
+	
+	comment "Get the number of trials"
+      end
+
+      operation 769456 "equivalent"
+	const public explicit_return_type "bool"
+	nparams 1
+	  param in name "source" type class_ref 276529 // binary_estimate
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return (this->count_ == source.count_) and (this->heads_ == source.heads_) and (this->variance_ == source.variance_);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Compare two binary estimates for equality"
+      end
+
       operation 618801 "fail"
 	public explicit_return_type "void"
 	nparams 0
@@ -535,6 +592,51 @@ ${docstring}return self.count_ - self.heads_
 	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
 ${docstring}return 0.0 if self.count_ == 0 else float(self.heads_)/float(self.count_)
 "
+	
+      end
+
+      extra_member 356656 "operator=="
+	
+	cpp "friend inline bool operator==(const binary_estimate & lhs, const binary_estimate & rhs)
+{
+  return lhs.equivalent( rhs );
+}
+" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+	comment "friendly op=="
+      end
+
+      extra_member 356912 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;
+
+" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 769840 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+    ar & count_;
+    ar & heads_;
+    ar & variance_;
+  }
+"
+	
+	
+	
 	
       end
 
@@ -724,10 +826,28 @@ ${docstring}return self.count_
 	comment "The number of samples taken"
       end
 
+      operation 769584 "equivalent"
+	const public explicit_return_type "bool"
+	nparams 1
+	  param in name "other" type class_ref 176049 // estimater
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return (this->count_ == other.count_) and this->basic_mean::equivalent(other);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Test if two estimaters are equivalent"
+      end
+
       operation 318513 "estimater"
 	public explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} : basic_mean(), count_() {};
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} : basic_mean(), count_(0ul) {};
 "
 	
 	
@@ -736,11 +856,26 @@ ${docstring}return self.count_
       end
 
       operation 318641 "estimater"
+	stereotype "copy"
 	public explicit_return_type ""
 	nparams 1
 	  param in name "other" type class_ref 176049 // estimater
 	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}${)}${volatile}${throw}
  : basic_mean(${p0}), count_(${p0}.count_) {}
+"
+	
+	
+	
+	
+      end
+
+      operation 770096 "estimater"
+	stereotype "move"
+	public explicit_return_type ""
+	nparams 1
+	  param inout name "other" type class_ref 176049 // estimater
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${v0}${)}${volatile}${throw}
+ : basic_mean(std::move(${p0})), count_(${p0}.count_) {}
 "
 	
 	
@@ -798,6 +933,20 @@ ${docstring}for val in iterable:
 	
 	
 	
+      end
+
+      extra_member 356784 "operator=="
+	
+	cpp "friend inline bool operator==(const estimater &lhs, const estimater &rhs)
+{
+  return lhs.equivalent( rhs );
+}
+" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+	comment " Friendly op =="
       end
 
       operation 319025 "reset"

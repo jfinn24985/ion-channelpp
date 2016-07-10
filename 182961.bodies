@@ -44,145 +44,6 @@ class estimater_test_fw
 }
 
 
-!!!327857.cpp!!!	estimater_lifetime() : void
-estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
-{
-  // TEST: default ctor
-  utility::estimater var1;
-  //
-  // Test that initial values are well-defined
-  BOOST_REQUIRE(var1.count() == 0);
-  BOOST_REQUIRE(utility::feq(var1.mean(), 0.0));
-  BOOST_REQUIRE(utility::feq(var1.variance(), 0.0));
-}
-{
-  utility::estimater var1;
-
-  // TEST: copy constructor on empty object
-  utility::estimater var2(var1);
-
-  // var1 should be unchanged
-  BOOST_CHECK_EQUAL(var1.count(), 0);
-  BOOST_CHECK(utility::feq(var1.mean(), 0.0));
-  BOOST_CHECK(utility::feq(var1.variance(), 0.0));
-  // var2 should have the same data as var1
-  BOOST_CHECK_EQUAL(var1.mean(), var2.mean());
-  BOOST_CHECK_EQUAL(var1.variance(), var2.variance());
-  BOOST_CHECK_EQUAL(var1.count(), var2.count());
-}
-{
-  utility::estimater var1;
-  // Insert some values (using raw pointers)
-  var1.insert(&exemplar.var[0], &exemplar.var[31]);
-
-  // TEST: copy constructor on object with data
-  utility::estimater var2(var1);
-
-  // var1 should be unchanged
-  BOOST_CHECK_EQUAL(var1.count(), 31);
-  BOOST_CHECK(utility::feq(var1.mean(), exemplar.mean));
-  BOOST_CHECK(utility::feq(var1.variance(), exemplar.svar, 1<<9));
-  // var2 should have the same data as var1
-  BOOST_CHECK_EQUAL(var1.mean(), var2.mean());
-  BOOST_CHECK_EQUAL(var1.variance(), var2.variance());
-  BOOST_CHECK_EQUAL(var1.count(), var2.count());
-}
-{
-  utility::estimater var1;
-  // Insert some values (using iterators)
-  var1.insert(exemplar.var.begin(), exemplar.var.end());
-
-  // TEST: assignment
-  utility::estimater var2;
-  // insert some values (insert limited set of values using raw pointers)
-  var2.insert(&exemplar.var[0], &exemplar.var[11]);
-  // assignment should overwrite existing data
-  var2 = var1;
-
-  // var1 should be unchanged
-  BOOST_CHECK_EQUAL(var1.count(), 31);
-  BOOST_CHECK(utility::feq(var1.mean(), exemplar.mean));
-  BOOST_CHECK(utility::feq(var1.variance(), exemplar.svar, 1<<9));
-  // var2 should have the same data as var1
-  BOOST_CHECK_EQUAL(var1.mean(), var2.mean());
-  BOOST_CHECK_EQUAL(var1.variance(), var2.variance());
-  BOOST_CHECK_EQUAL(var1.count(), var2.count());
-}
-{
-  std::stringstream store;
-  {
-    utility::estimater var1;
-    var1.insert(exemplar.var.begin(), exemplar.var.end());
-    boost::archive::text_oarchive oa(store);
-    // write class instance to archive
-    oa << var1;
-    // var1 should be unchanged
-    BOOST_CHECK_EQUAL(var1.count(), 31);
-    BOOST_CHECK(utility::feq(var1.mean(), exemplar.mean));
-    BOOST_CHECK(utility::feq(var1.variance(), exemplar.svar, 1<<9));
-  }
-  {
-    utility::estimater var2;
-    boost::archive::text_iarchive ia(store);
-    // read class instance to archive
-    ia >> var2;
-    // var2 should have the same data as var1 had
-    BOOST_CHECK_EQUAL(var2.count(), 31);
-    BOOST_CHECK(utility::feq(var2.mean(), exemplar.mean));
-    BOOST_CHECK(utility::feq(var2.variance(), exemplar.svar, 1<<9));
-  }
-}
-
-
-
-!!!327985.cpp!!!	estimater_data_collection() : void
-estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
-{
-  utility::estimater test_var;
-  // TEST: default ctor
-  //
-  // Test that initial values are well-defined
-  BOOST_CHECK_EQUAL(test_var.count(), 0);
-  BOOST_REQUIRE(utility::feq(test_var.mean(), 0.0));
-  BOOST_REQUIRE(utility::feq(test_var.variance(), 0.0));
-}
-{
-  utility::estimater test_var;
-  // TEST: append method
-  for (auto val : exemplar.var)
-  {
-    test_var.append(val);
-  }
-  BOOST_CHECK_EQUAL(test_var.count(), 31);
-  BOOST_CHECK(utility::feq(test_var.mean(), exemplar.mean));
-  BOOST_CHECK(utility::feq(test_var.variance(), exemplar.svar));
-}
-{
-  // TEST: insert method
-  utility::estimater test_var;
-
-  test_var.insert(&exemplar.var[0], &exemplar.var[31]);
-
-  BOOST_CHECK_EQUAL(test_var.count(), 31);
-  BOOST_CHECK(utility::feq(test_var.mean(), exemplar.mean));
-  BOOST_CHECK(utility::feq(test_var.variance(), exemplar.svar));
-
-  // TEST: reset returns to well-defined values
-  test_var.reset ();
-
-  BOOST_CHECK_EQUAL(test_var.count(), 0);
-  BOOST_CHECK(utility::feq(test_var.mean(), 0.0));
-  BOOST_CHECK(utility::feq(test_var.variance(), 0.0));
-
-  // Check that reinserting value gives the
-  // same results after the reset.
-  test_var.insert(&exemplar.var[0], &exemplar.var[31]);
-
-  BOOST_CHECK_EQUAL(test_var.count(), 31);
-  BOOST_CHECK(utility::feq(test_var.mean(), exemplar.mean));
-  BOOST_CHECK(utility::feq(test_var.variance(), exemplar.svar));
-}
-
 !!!329009.cpp!!!	basic_mean_lifetime() : void
 
 estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
@@ -338,6 +199,262 @@ estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
   BOOST_CHECK(utility::feq(test_var.mean(), exemplar.mean));
   BOOST_CHECK(utility::feq(test_var.variance(count), exemplar.svar));
 
+}
+
+!!!327857.cpp!!!	estimater_lifetime() : void
+estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
+{
+  // TEST: default ctor
+  utility::estimater var1;
+  //
+  // Test that initial values are well-defined
+  BOOST_REQUIRE(var1.count() == 0);
+  BOOST_REQUIRE(utility::feq(var1.mean(), 0.0));
+  BOOST_REQUIRE(utility::feq(var1.variance(), 0.0));
+}
+{
+  utility::estimater var1;
+
+  // TEST: copy constructor on empty object
+  utility::estimater var2(var1);
+
+  // var1 should be unchanged
+  BOOST_CHECK_EQUAL(var1.count(), 0);
+  BOOST_CHECK(utility::feq(var1.mean(), 0.0));
+  BOOST_CHECK(utility::feq(var1.variance(), 0.0));
+  // var2 should have the same data as var1
+  BOOST_CHECK_EQUAL(var1.mean(), var2.mean());
+  BOOST_CHECK_EQUAL(var1.variance(), var2.variance());
+  BOOST_CHECK_EQUAL(var1.count(), var2.count());
+}
+{
+  utility::estimater var1;
+  // Insert some values (using raw pointers)
+  var1.insert(&exemplar.var[0], &exemplar.var[31]);
+
+  // Run canonical test
+  {
+    utility::estimater var3;
+    // Insert some values (using raw pointers)
+    var3.insert(&exemplar.var[0], &exemplar.var[30]);
+
+    pattern_test::canonical< utility::estimater, false, true >( var1, var3 );
+  }
+
+  // TEST: copy constructor on object with data
+  utility::estimater var2(var1);
+
+  // var1 should be unchanged
+  BOOST_CHECK_EQUAL(var1.count(), 31);
+  BOOST_CHECK(utility::feq(var1.mean(), exemplar.mean));
+  BOOST_CHECK(utility::feq(var1.variance(), exemplar.svar, 1<<9));
+  // var2 should have the same data as var1
+  BOOST_CHECK_EQUAL(var1.mean(), var2.mean());
+  BOOST_CHECK_EQUAL(var1.variance(), var2.variance());
+  BOOST_CHECK_EQUAL(var1.count(), var2.count());
+}
+{
+  utility::estimater var1;
+  // Insert some values (using iterators)
+  var1.insert(exemplar.var.begin(), exemplar.var.end());
+
+  // TEST: assignment
+  utility::estimater var2;
+  // insert some values (insert limited set of values using raw pointers)
+  var2.insert(&exemplar.var[0], &exemplar.var[11]);
+  // assignment should overwrite existing data
+  var2 = var1;
+
+  // var1 should be unchanged
+  BOOST_CHECK_EQUAL(var1.count(), 31);
+  BOOST_CHECK(utility::feq(var1.mean(), exemplar.mean));
+  BOOST_CHECK(utility::feq(var1.variance(), exemplar.svar, 1<<9));
+  // var2 should have the same data as var1
+  BOOST_CHECK_EQUAL(var1.mean(), var2.mean());
+  BOOST_CHECK_EQUAL(var1.variance(), var2.variance());
+  BOOST_CHECK_EQUAL(var1.count(), var2.count());
+}
+{
+  std::stringstream store;
+  {
+    utility::estimater var1;
+    var1.insert(exemplar.var.begin(), exemplar.var.end());
+    boost::archive::text_oarchive oa(store);
+    // write class instance to archive
+    oa << var1;
+    // var1 should be unchanged
+    BOOST_CHECK_EQUAL(var1.count(), 31);
+    BOOST_CHECK(utility::feq(var1.mean(), exemplar.mean));
+    BOOST_CHECK(utility::feq(var1.variance(), exemplar.svar, 1<<9));
+  }
+  {
+    utility::estimater var2;
+    boost::archive::text_iarchive ia(store);
+    // read class instance to archive
+    ia >> var2;
+    // var2 should have the same data as var1 had
+    BOOST_CHECK_EQUAL(var2.count(), 31);
+    BOOST_CHECK(utility::feq(var2.mean(), exemplar.mean));
+    BOOST_CHECK(utility::feq(var2.variance(), exemplar.svar, 1<<9));
+  }
+}
+
+
+
+!!!327985.cpp!!!	estimater_data_collection() : void
+estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
+{
+  utility::estimater test_var;
+  // TEST: default ctor
+  //
+  // Test that initial values are well-defined
+  BOOST_CHECK_EQUAL(test_var.count(), 0);
+  BOOST_REQUIRE(utility::feq(test_var.mean(), 0.0));
+  BOOST_REQUIRE(utility::feq(test_var.variance(), 0.0));
+}
+{
+  utility::estimater test_var;
+  // TEST: append method
+  for (auto val : exemplar.var)
+  {
+    test_var.append(val);
+  }
+  BOOST_CHECK_EQUAL(test_var.count(), 31);
+  BOOST_CHECK(utility::feq(test_var.mean(), exemplar.mean));
+  BOOST_CHECK(utility::feq(test_var.variance(), exemplar.svar));
+}
+{
+  // TEST: insert method
+  utility::estimater test_var;
+
+  test_var.insert(&exemplar.var[0], &exemplar.var[31]);
+
+  BOOST_CHECK_EQUAL(test_var.count(), 31);
+  BOOST_CHECK(utility::feq(test_var.mean(), exemplar.mean));
+  BOOST_CHECK(utility::feq(test_var.variance(), exemplar.svar));
+
+  // TEST: reset returns to well-defined values
+  test_var.reset ();
+
+  BOOST_CHECK_EQUAL(test_var.count(), 0);
+  BOOST_CHECK(utility::feq(test_var.mean(), 0.0));
+  BOOST_CHECK(utility::feq(test_var.variance(), 0.0));
+
+  // Check that reinserting value gives the
+  // same results after the reset.
+  test_var.insert(&exemplar.var[0], &exemplar.var[31]);
+
+  BOOST_CHECK_EQUAL(test_var.count(), 31);
+  BOOST_CHECK(utility::feq(test_var.mean(), exemplar.mean));
+  BOOST_CHECK(utility::feq(test_var.variance(), exemplar.svar));
+}
+
+!!!769712.cpp!!!	binary_estimate_lifetime() : void
+estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
+{
+  // TEST: default ctor
+  utility::binary_estimate var1;
+  //
+  // Test that initial values are well-defined
+  BOOST_REQUIRE(var1.count() == 0);
+  BOOST_REQUIRE(utility::feq(var1.mean(), 0.0));
+  BOOST_REQUIRE(utility::feq(var1.variance(), 0.0));
+}
+{
+  utility::binary_estimate var1;
+
+  // TEST: copy constructor on empty object
+  utility::binary_estimate var2(var1);
+
+  // var1 should be unchanged
+  BOOST_CHECK_EQUAL(var1.count(), 0);
+  BOOST_CHECK(utility::feq(var1.mean(), 0.0));
+  BOOST_CHECK(utility::feq(var1.variance(), 0.0));
+  // var2 should have the same data as var1
+  BOOST_CHECK_EQUAL(var1.mean(), var2.mean());
+  BOOST_CHECK_EQUAL(var1.variance(), var2.variance());
+  BOOST_CHECK_EQUAL(var1.count(), var2.count());
+  BOOST_CHECK( var1.equivalent( var2 ) );
+}
+{
+  utility::binary_estimate var1;
+  utility::binary_estimate var3;
+  // Insert some values (using raw pointers)
+  for (std::size_t idx = 0; idx != 15; ++idx)
+  {
+    if (1.0 > exemplar.var[idx])
+    {
+      var1.success();
+    }
+    else
+    {
+      var1.fail();
+    }
+    if (1.0 > exemplar.var[idx + 16])
+    {
+      var3.success();
+    }
+    else
+    {
+      var3.fail();
+    }
+  }
+  BOOST_CHECK_NE(var1.mean(), var3.mean());
+  BOOST_CHECK_NE(var1.variance(), var3.variance());
+  BOOST_CHECK_EQUAL(var1.count(), var3.count());
+ 
+  // Run canonical test
+  pattern_test::canonical< utility::binary_estimate, false, true >( var1, var3 );
+
+  // TEST: copy constructor on object with data
+  utility::binary_estimate var2(var1);
+
+  // var1 should be unchanged
+  BOOST_CHECK_EQUAL(var1.count(), 15);
+  // var2 should have the same data as var1
+  BOOST_CHECK_EQUAL(var1.mean(), var2.mean());
+  BOOST_CHECK_EQUAL(var1.variance(), var2.variance());
+  BOOST_CHECK_EQUAL(var1.count(), var2.count());
+  BOOST_CHECK( var1 == var2 );
+}
+{
+  utility::binary_estimate var1;
+  // Insert some values (using iterators)
+  for (auto value : exemplar.var)
+  {
+    if (1.0 > value)
+    {
+      var1.success();
+    }
+    else
+    {
+      var1.fail();
+    }
+  } 
+  BOOST_CHECK_EQUAL(var1.count(), 31);
+  // TEST: assignment
+  utility::binary_estimate var2;
+  // insert some values
+  for (std::size_t idx = 0; idx != 16; ++idx)
+  {
+    if (1.0 > exemplar.var[idx])
+    {
+      var2.success();
+    }
+    else
+    {
+      var2.fail();
+    }
+  }
+  BOOST_CHECK( not ( var1 == var2 ) );
+  BOOST_CHECK_EQUAL(var2.count(), 16);
+  // assignment should overwrite existing data
+  var2 = var1;
+  BOOST_CHECK( var1 == var2 );
+
+  // var1 should be unchanged
+  BOOST_CHECK_EQUAL(var1.count(), 31);
+  BOOST_CHECK_EQUAL(var2.count(), 31);
 }
 
 !!!356657.cpp!!!	estimate_array_lifetime() : void
