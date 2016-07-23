@@ -1,6 +1,6 @@
 format 75
 "trial" // trial
-  revision 222
+  revision 228
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -76,9 +76,9 @@ format 75
     end
 
     class 400048 "choice_hash"
-      visibility package stereotype "union"
-      cpp_decl "${comment}${template}union ${name}
- {
+      visibility package stereotype "struct"
+      cpp_decl "${comment}${template}struct ${name}${inherit} 
+{
 ${members}
 };
 ${inlines}
@@ -89,87 +89,65 @@ ${inlines}
       idl_decl ""
       explicit_switch_type ""
       
-      comment " Dirty hash for use with choice objects. "
-      class 400176 "anonymous"
-	visibility package stereotype "struct"
-	cpp_decl "${comment}${template}struct ${inherit} 
-{
-${members}
-};
-${inlines}
-"
-	java_decl ""
-	php_decl ""
-	python_decl ""
-	idl_decl ""
-	explicit_switch_type ""
-	
-	comment " Components of the hash "
-	attribute 441136 "lead"
-	  public explicit_type "char"
-	  init_value "0"
-	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	  java_decl ""
-	  php_decl ""
-	  python_decl "${comment}${self}${name} = ${value}
-"
-	  idl_decl ""
-	  comment " Empty first byte."
-	end
+      comment " Hash for use with choice objects.
 
-	attribute 441264 "start"
-	  public explicit_type "char"
-	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+ Code should not care about the sort order of the hash. The
+ purpose of the hash is to allow hash_tables, sets or maps
+ and search methods to be used.
 "
-	  java_decl ""
-	  php_decl ""
-	  python_decl "${comment}${self}${name} = ${value}
-"
-	  idl_decl ""
-	  comment " The number of particles in change set at start of trial."
-	end
-
-	attribute 441392 "final"
-	  public explicit_type "char"
-	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	  java_decl ""
-	  php_decl ""
-	  python_decl "${comment}${self}${name} = ${value}
-"
-	  idl_decl ""
-	  comment " The number of particles in the change at end of trial."
-	end
-
-	attribute 441520 "subtype"
-	  public explicit_type "char"
-	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	  java_decl ""
-	  php_decl ""
-	  python_decl "${comment}${self}${name} = ${value}
-"
-	  idl_decl ""
-	  comment " Trial subtype indicator. Value is user defined."
-	end
-      end
-
-      attribute 441008 "hash"
-	public explicit_type "int32_t"
+      attribute 441136 "key"
+	public explicit_type "size_t"
+	init_value "0"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
 	java_decl ""
 	php_decl ""
-	python_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
 	idl_decl ""
-	comment " The simple numerical version, useful for quickly comparing hashes. "
+	comment " Empty first byte or specie key"
+      end
+
+      attribute 441264 "start"
+	public explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The number of particles in change set at start of trial."
+      end
+
+      attribute 441392 "finish"
+	public explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The number of particles in the change set at end of trial."
+      end
+
+      attribute 441520 "subtype"
+	public explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Trial subtype indicator. Value is user defined."
       end
 
       operation 747696 "choice_hash"
 	public explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: hash(0) {}
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: key(0), start(0), finish(0), subtype(0) {}
 "
 	
 	
@@ -193,7 +171,12 @@ ${inlines}
 	public explicit_return_type ""
 	nparams 1
 	  param inout name "source" type class_ref 400048 // choice_hash
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} & ${p0}${)}${volatile}${throw}: hash(${p0}.hash) {}
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} & ${p0}${)}${volatile}${throw}
+: key(${p0}.key)
+, start(${p0}.start)
+, finish(${p0}.finish)
+, subtype(${p0}.subtype)
+{}
 "
 	
 	
@@ -206,7 +189,12 @@ ${inlines}
 	public explicit_return_type ""
 	nparams 1
 	  param in name "source" type class_ref 400048 // choice_hash
-	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}: hash(${p0}.hash) {}
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
+: key(${p0}.key)
+, start(${p0}.start)
+, finish(${p0}.finish)
+, subtype(${p0}.subtype)
+{}
 "
 	
 	
@@ -220,7 +208,7 @@ ${inlines}
 	  param in name "source" type class_ref 400048 // choice_hash
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
 {
-  this->hash = ${p0}.hash;
+  this->swap(${p0});
   return *this;
 }
 "
@@ -236,20 +224,11 @@ ${inlines}
 	  param inout name "source" type class_ref 400048 // choice_hash
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  std::swap(this->hash, ${p0}.hash);
+  std::swap(this->key, ${p0}.key);
+  std::swap(this->start, ${p0}.start);
+  std::swap(this->finish, ${p0}.finish);
+  std::swap(this->subtype, ${p0}.subtype);
 }
-"
-	
-	
-	
-	
-      end
-
-      operation 748464 "choice_hash"
-	public explicit_return_type ""
-	nparams 1
-	  param in name "hsh" explicit_type "int32_t"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}: hash(${p0}) {}
 "
 	
 	
@@ -259,21 +238,206 @@ ${inlines}
 
       operation 748592 "choice_hash"
 	public explicit_return_type ""
-	nparams 3
-	  param in name "start" explicit_type "short"
-	  param in name "final" explicit_type "short"
-	  param in name "subtype" explicit_type "short"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
-: lead(0)
-, start(${p0})
-, final(${p1})
-, subtype(${p2})
+	nparams 4
+	  param in name "speciekey" explicit_type "size_t"
+	  param in name "start_count" explicit_type "size_t"
+	  param in name "finish_count" explicit_type "size_t"
+	  param in name "choice_subtype" explicit_type "size_t"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${volatile}${throw}
+: key(${p0})
+, start(${p1})
+, finish(${p2})
+, subtype(${p3})
 {}
 "
 	
 	
 	
 	
+      end
+
+      extra_member 370608 "friend"
+	
+	cpp "
+
+  friend class boost::serialization::access;
+
+" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      classrelation 506800 // <dependency>
+	relation 505904 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 506800 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      operation 783536 "serialize"
+	stereotype "template"
+	private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+    ar & key;
+    ar & start;
+    ar & finish;
+    ar & subtype;
+  }
+"
+	
+	
+	
+	
+	comment "We serialize the object using the struct members not the
+hash. This should ensure the object has the same logical 
+state regardless of endianness."
+      end
+
+      operation 755120 "equivalent"
+	const public explicit_return_type "bool"
+	nparams 1
+	  param in name "other" type class_ref 400048 // choice_hash
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->key == ${p0}.key
+	&& this->start == ${p0}.start
+	&& this->finish == ${p0}.finish
+	&& this->subtype == ${p0}.subtype;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 783664 "match"
+	const public explicit_return_type "bool"
+	nparams 1
+	  param in name "other" type class_ref 400048 // choice_hash
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->start == ${p0}.start
+	&& this->finish == ${p0}.finish
+	&& this->subtype == ${p0}.subtype;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Two choice_hash objects match if they are equivalent except for the specie key,
+ which may or may not be equivalent."
+      end
+
+      operation 755376 "less_than"
+	const public explicit_return_type "bool"
+	nparams 1
+	  param in name "other" type class_ref 400048 // choice_hash
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->key < ${p0}.key
+	|| (this->key == ${p0}.key && (this->start < ${p0}.start
+		|| (this->start == ${p0}.start && (this->finish < ${p0}.finish
+			|| (this->finish == ${p0}.finish && this->subtype < ${p0}.subtype)))));
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 363440 "operator=="
+	
+	cpp "friend inline bool operator==(choice_hash const& lhs, choice_hash const&rhs)
+{
+  return lhs.equivalent(rhs);
+}
+" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      extra_member 363568 "operator!="
+	
+	cpp "friend inline bool operator!=(choice_hash const& lhs, choice_hash const&rhs)
+{
+  return not lhs.equivalent(rhs);
+}
+" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      extra_member 363696 "operator<"
+	
+	cpp "friend inline bool operator<(choice_hash const& lhs, choice_hash const&rhs)
+{
+  return lhs.less_than(rhs);
+}
+" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      extra_member 363824 "operator>="
+	
+	cpp "friend inline bool operator>=(choice_hash const& lhs, choice_hash const&rhs)
+{
+  return not lhs.less_than(rhs);
+}
+" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      extra_member 363952 "operator>"
+	
+	cpp "friend inline bool operator>(choice_hash const& lhs, choice_hash const&rhs)
+{
+  return rhs.less_than(lhs);
+}
+" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      extra_member 364080 "operator<="
+	
+	cpp "friend inline bool operator<=(choice_hash const& lhs, choice_hash const&rhs)
+{
+  return not rhs.less_than(lhs);
+}
+" ""
+	java ""
+	php ""
+	python ""
+	idl ""
       end
     end
 
@@ -314,7 +478,7 @@ a possible MC trial moves. "
       end
 
       attribute 352561 "key_"
-	private explicit_type "size_t"
+	private type class_ref 400048 // choice_hash
 	init_value "ispec"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
@@ -323,7 +487,7 @@ a possible MC trial moves. "
 	python_decl "${comment}${self}${name} = ${value}
 "
 	idl_decl ""
-	comment "The specie (or salt) index of the change"
+	comment "The ID of the change"
       end
 
       attribute 375985 "parent_"
@@ -367,8 +531,8 @@ a possible MC trial moves. "
       operation 620337 "base_choice"
 	public explicit_return_type ""
 	nparams 1
-	  param in name "ispec" explicit_type "size_t"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
+	  param in name "key" type class_ref 400048 // choice_hash
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}${)}${volatile}${throw}
 : key_ (${p0})
 , parent_(0)
 , probability_(0.0)
@@ -379,15 +543,15 @@ a possible MC trial moves. "
 	
 	
 	
-	comment "Make a choice without a parent"
+	comment " Make a choice without a parent"
       end
 
       operation 579505 "base_choice"
 	public explicit_return_type ""
 	nparams 2
-	  param in name "ispec" explicit_type "size_t"
+	  param in name "key" type class_ref 400048 // choice_hash
 	  param inout name "parent" type class_ref 1026095 // base_choice
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} * ${p1}${v1}${)}${volatile}${throw}
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}, ${t1} * ${p1}${v1}${)}${volatile}${throw}
 : key_ (${p0})
 , parent_(${p1})
 , probability_(0.0)
@@ -527,10 +691,10 @@ ${docstring}self.probability_ = value
 	comment "Change probability of this choice"
       end
 
-      operation 146361 "specie_key"
-	const public explicit_return_type "size_t"
+      operation 146361 "key"
+	const public return_type class_ref 400048 // choice_hash
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
   return this->key_;
 }
@@ -541,7 +705,7 @@ ${docstring}self.probability_ = value
 ${docstring}return self.key_
 "
 	
-	comment "this specie key "
+	comment " This choice ID "
       end
 
       extra_member 449071 "friend"
@@ -728,7 +892,7 @@ ${docstring}return self.delta_
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, std::map< ${t1}, ${t1} > const& ${p1}${v1}${)}${volatile}${throw};
 "
 	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, std::map< ${t1}, ${t1} > const& ${p1}${)}${throw}
-: base_choice( ${p0} )
+: base_choice( trial::choice_hash( ${p0}, 1, 1, 0 ) )
 , delta_( default_delta )
 {
   ${body}
@@ -829,7 +993,162 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
-      comment " Generator class for choices."
+      comment " Generator class for choices.
+
+ The chooser interface provides a single function,
+ generate_choices. This method takes a simulation object
+ and adds choice objects to a a list. The hash 'key' of
+ the generated choice objects must 'match' the key of the
+ chooser object that generated them.
+"
+      classrelation 182320 // <dependency>
+	relation 182064 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 182320 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      classrelation 506928 // key_ (<directional composition>)
+	relation 506032 *-->
+	  a role_name "key_" multiplicity "1" private
+	    comment " The key that all choices generated by this chooser \"match\"."
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	    python "${comment}${self}${name} = ${type}()
+"
+	    classrelation_ref 506928 // key_ (<directional composition>)
+	  b parent class_ref 400048 // choice_hash
+      end
+
+      operation 783792 "base_chooser"
+	protected explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: key_()
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Default ctor for serialization."
+      end
+
+      operation 784304 "base_chooser"
+	protected explicit_return_type ""
+	nparams 1
+	  param in name "key" type class_ref 400048 // choice_hash
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}${)}${volatile}${throw}
+: key_(${p0})
+{}
+
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Default ctor for serialization."
+      end
+
+      operation 783920 "base_chooser"
+	stereotype "move"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 170160 // base_chooser
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " No move"
+      end
+
+      operation 784048 "base_chooser"
+	stereotype "copy"
+	private explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 170160 // base_chooser
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " No copy"
+      end
+
+      operation 784176 "operator="
+	private return_type class_ref 170160 // base_chooser
+	nparams 1
+	  param in name "source" type class_ref 170160 // base_chooser
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${abstract} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " No assignment"
+      end
+
+      operation 230960 "~base_chooser"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} {};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 240688 "description"
+	abstract const cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Provide a description of the chooser state."
+      end
+
+      operation 240048 "do_write_document"
+	abstract preserve_cpp_body_indent const cpp_virtual private explicit_return_type "void"
+	nparams 2
+	  param inout name "wr" type class_ref 163632 // input_document
+	  param in name "ix" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Add derived content to input file section wr[ix]. 
+
+ only throw possible should be from os.write() operation"
+      end
+
       operation 230832 "generate_choices"
 	abstract const cpp_virtual public explicit_return_type "void"
 	nparams 2
@@ -846,17 +1165,50 @@ ${docstring}${body}
 	comment "  Generate and add choices to simulator."
       end
 
-      operation 230960 "~base_chooser"
-	cpp_virtual public explicit_return_type ""
+      operation 784432 "key"
+	const public return_type class_ref 400048 // choice_hash
 	nparams 0
-	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} {};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->key_;
+}
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}return self.key_
+"
+	
+	comment " This choice ID "
+      end
+
+      extra_member 470319 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 2086703 "serialize"
+	public explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "a_ver" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}template< class ${t0} > ${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ar & key_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
 ${docstring}${body}
 "
 	
+	comment "Read/write object to an archive."
       end
 
       operation 240176 "write_document"
@@ -882,79 +1234,10 @@ ${docstring}${body}
 
  The output of this factory method is made up like
 
- sampler
+ chooser
  <call do_write_document>
  end
 "
-      end
-
-      operation 240048 "do_write_document"
-	abstract preserve_cpp_body_indent const cpp_virtual private explicit_return_type "void"
-	nparams 2
-	  param inout name "wr" type class_ref 163632 // input_document
-	  param in name "ix" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment " Add derived content to input file section wr[ix]. 
-
- only throw possible should be from os.write() operation"
-      end
-
-      operation 240688 "description"
-	abstract const cpp_virtual public explicit_return_type "void"
-	nparams 1
-	  param inout name "os" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Provide a description of the chooser state."
-      end
-
-      extra_member 470319 "friend"
-	
-	cpp "
-  friend class boost::serialization::access;" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      operation 2086703 "serialize"
-	public explicit_return_type "void"
-	nparams 2
-	  param inout name "ar" explicit_type "Archive"
-	  param in name "a_ver" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}template< class ${t0} > ${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
-{}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment "Read/write object to an archive."
-      end
-
-      classrelation 182320 // <dependency>
-	relation 182064 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 182320 // <dependency>
-	  b parent class_ref 912431 // access
       end
     end
 
@@ -3580,6 +3863,17 @@ choice object that generated the change_set.
   Only valid if self.fail = True"
       end
 
+      classrelation 513584 // key_ (<directional composition>)
+	relation 512688 *-->
+	  a role_name "key_" multiplicity "1" private
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	    python "${comment}${self}${name} = ${type}()
+"
+	    classrelation_ref 513584 // key_ (<directional composition>)
+	  b parent class_ref 400048 // choice_hash
+      end
+
       attribute 1222191 "fail"
 	private explicit_type "bool"
 	init_value "False"
@@ -3868,6 +4162,23 @@ return val"
 	
 	
 	comment "Is this change valid?"
+      end
+
+      operation 790960 "key"
+	const public return_type class_ref 400048 // choice_hash
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->key_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}return self.key_
+"
+	
+	comment " This choice ID "
       end
 
       operation 1770287 "metropolis_factor"
@@ -4638,6 +4949,43 @@ BOOST_CLASS_EXPORT_GUID(trial::base_choice, \"trial::base_choice\");
 ${definition}"
       associated_classes
 	class_ref 1026095 // base_choice
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 410544 "choice_hash"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+
+// As hash is a union we need to tell the serialization system that
+// it is serializable.
+//BOOST_CLASS_IMPLEMENTATION(trial::choice_hash,boost::serialization::object_serializable)
+#endif
+"
+      associated_classes
+	class_ref 400048 // choice_hash
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify

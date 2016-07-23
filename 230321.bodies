@@ -488,6 +488,233 @@ auto set_atom = []( trial::change_atom &a, bool b1, bool b2, std::size_t idx, pa
     BOOST_CHECK( var2.choice() == nullptr );
   }
 }
+!!!783408.cpp!!!	choice_hash_test() : void
+std::stringstream store;
+{
+  // Default ctor
+  trial::choice_hash var1;
+  BOOST_CHECK_EQUAL( var1.key, 0 );
+  BOOST_CHECK_EQUAL( var1.start, 0 );
+  BOOST_CHECK_EQUAL( var1.finish, 0 );
+  BOOST_CHECK_EQUAL( var1.subtype, 0 );
+
+  trial::choice_hash var2;
+  BOOST_CHECK( var1.equivalent( var2 ) );
+  BOOST_CHECK( var1 == var2 );
+  BOOST_CHECK( var1 >= var2 );
+  BOOST_CHECK( var1 <= var2 );
+  BOOST_CHECK( not (var1 != var2) );
+  BOOST_CHECK( not (var1.less_than( var2 ) ) );
+  BOOST_CHECK( not (var1 < var2) );
+
+  var1.key = 1;
+  var1.start = 2;
+  var1.finish = 3;
+  var1.subtype = 4;
+
+  BOOST_CHECK( not var1.equivalent( var2 ) );
+
+  trial::choice_hash var3( 1, 2, 3, 4 );
+  BOOST_CHECK( var1.key == var3.key );
+  BOOST_CHECK( var1.start == var3.start );
+  BOOST_CHECK( var1.finish == var3.finish );
+  BOOST_CHECK( var1.subtype == var3.subtype );
+
+  // copy ctor
+  trial::choice_hash var4( var1 );
+  BOOST_CHECK( var1 == var4 );
+
+  // move ctor
+  trial::choice_hash var5( std::move( var4 ) );
+  BOOST_CHECK( var1 == var5 );
+
+  var5.subtype = 5;
+  BOOST_CHECK( var1 != var5 );
+  // op=
+  var5 = var3;
+  BOOST_CHECK( var1 == var5 );
+
+  boost::archive::text_oarchive oa(store);
+  // write class instance to archive
+  oa << var1;
+}
+{
+  trial::choice_hash var1;
+  trial::choice_hash var2;
+
+  BOOST_CHECK( var1 == var2 );
+
+  boost::archive::text_iarchive ia(store);
+  // get class instance from archive
+  ia >> var1;
+
+  BOOST_CHECK( var1 != var2 );
+  BOOST_CHECK_EQUAL( var1.key, 1 );
+  BOOST_CHECK_EQUAL( var1.start, 2 );
+  BOOST_CHECK_EQUAL( var1.finish, 3 );
+  BOOST_CHECK_EQUAL( var1.subtype, 4 );
+}
+{
+  // Check comparison
+  trial::choice_hash var1( 1, 2, 3, 4 );
+  trial::choice_hash var2( 1, 2, 3, 5 );
+  BOOST_CHECK( var1.key == var2.key );
+  BOOST_CHECK( var1.start == var2.start );
+  BOOST_CHECK( var1.finish == var2.finish );
+  BOOST_CHECK( var1.subtype < var2.subtype );
+
+  BOOST_CHECK( var1 != var2 );
+  BOOST_CHECK( var1 < var2 );
+  BOOST_CHECK( var1 <= var2 );
+  BOOST_CHECK( var2 > var1 );
+  BOOST_CHECK( var2 >= var1 );
+  BOOST_CHECK( not var1.match( var2 ) );
+
+  var2 = var1;
+  ++var2.finish;
+
+  BOOST_CHECK( var1 != var2 );
+  BOOST_CHECK( var1 < var2 );
+  BOOST_CHECK( var1 <= var2 );
+  BOOST_CHECK( var2 > var1 );
+  BOOST_CHECK( var2 >= var1 );
+  BOOST_CHECK( not var1.match( var2 ) );
+
+  var2 = var1;
+  ++var2.start;
+
+  BOOST_CHECK( var1 != var2 );
+  BOOST_CHECK( var1 < var2 );
+  BOOST_CHECK( var1 <= var2 );
+  BOOST_CHECK( var2 > var1 );
+  BOOST_CHECK( var2 >= var1 );
+  BOOST_CHECK( not var1.match( var2 ) );
+
+  var2 = var1;
+  ++var2.key;
+
+  BOOST_CHECK( var1 != var2 );
+  BOOST_CHECK( var1 < var2 );
+  BOOST_CHECK( var1 <= var2 );
+  BOOST_CHECK( var2 > var1 );
+  BOOST_CHECK( var2 >= var1 );
+  BOOST_CHECK( var1.match( var2 ) );
+
+}
+!!!791600.cpp!!!	test_chooser_test() : void
+std::stringstream store;
+{
+  // Test chooser key.
+  trial::choice_hash var3( 1, 2, 3, 4 );
+
+  trial::choice_hash var1;
+  BOOST_CHECK_EQUAL( var1.key, 0 );
+  BOOST_CHECK_EQUAL( var1.start, 0 );
+  BOOST_CHECK_EQUAL( var1.finish, 0 );
+  BOOST_CHECK_EQUAL( var1.subtype, 0 );
+
+  trial::choice_hash var2;
+  BOOST_CHECK( var1.equivalent( var2 ) );
+  BOOST_CHECK( var1 == var2 );
+  BOOST_CHECK( var1 >= var2 );
+  BOOST_CHECK( var1 <= var2 );
+  BOOST_CHECK( not (var1 != var2) );
+  BOOST_CHECK( not (var1.less_than( var2 ) ) );
+  BOOST_CHECK( not (var1 < var2) );
+
+  var1.key = 1;
+  var1.start = 2;
+  var1.finish = 3;
+  var1.subtype = 4;
+
+  BOOST_CHECK( not var1.equivalent( var2 ) );
+
+  BOOST_CHECK( var1.key == var3.key );
+  BOOST_CHECK( var1.start == var3.start );
+  BOOST_CHECK( var1.finish == var3.finish );
+  BOOST_CHECK( var1.subtype == var3.subtype );
+
+  // copy ctor
+  trial::choice_hash var4( var1 );
+  BOOST_CHECK( var1 == var4 );
+
+  // move ctor
+  trial::choice_hash var5( std::move( var4 ) );
+  BOOST_CHECK( var1 == var5 );
+
+  var5.subtype = 5;
+  BOOST_CHECK( var1 != var5 );
+  // op=
+  var5 = var3;
+  BOOST_CHECK( var1 == var5 );
+
+  boost::archive::text_oarchive oa(store);
+  // write class instance to archive
+  oa << var1;
+}
+{
+  trial::choice_hash var1;
+  trial::choice_hash var2;
+
+  BOOST_CHECK( var1 == var2 );
+
+  boost::archive::text_iarchive ia(store);
+  // get class instance from archive
+  ia >> var1;
+
+  BOOST_CHECK( var1 != var2 );
+  BOOST_CHECK_EQUAL( var1.key, 1 );
+  BOOST_CHECK_EQUAL( var1.start, 2 );
+  BOOST_CHECK_EQUAL( var1.finish, 3 );
+  BOOST_CHECK_EQUAL( var1.subtype, 4 );
+}
+{
+  // Check comparison
+  trial::choice_hash var1( 1, 2, 3, 4 );
+  trial::choice_hash var2( 1, 2, 3, 5 );
+  BOOST_CHECK( var1.key == var2.key );
+  BOOST_CHECK( var1.start == var2.start );
+  BOOST_CHECK( var1.finish == var2.finish );
+  BOOST_CHECK( var1.subtype < var2.subtype );
+
+  BOOST_CHECK( var1 != var2 );
+  BOOST_CHECK( var1 < var2 );
+  BOOST_CHECK( var1 <= var2 );
+  BOOST_CHECK( var2 > var1 );
+  BOOST_CHECK( var2 >= var1 );
+  BOOST_CHECK( not var1.match( var2 ) );
+
+  var2 = var1;
+  ++var2.finish;
+
+  BOOST_CHECK( var1 != var2 );
+  BOOST_CHECK( var1 < var2 );
+  BOOST_CHECK( var1 <= var2 );
+  BOOST_CHECK( var2 > var1 );
+  BOOST_CHECK( var2 >= var1 );
+  BOOST_CHECK( not var1.match( var2 ) );
+
+  var2 = var1;
+  ++var2.start;
+
+  BOOST_CHECK( var1 != var2 );
+  BOOST_CHECK( var1 < var2 );
+  BOOST_CHECK( var1 <= var2 );
+  BOOST_CHECK( var2 > var1 );
+  BOOST_CHECK( var2 >= var1 );
+  BOOST_CHECK( not var1.match( var2 ) );
+
+  var2 = var1;
+  ++var2.key;
+
+  BOOST_CHECK( var1 != var2 );
+  BOOST_CHECK( var1 < var2 );
+  BOOST_CHECK( var1 <= var2 );
+  BOOST_CHECK( var2 > var1 );
+  BOOST_CHECK( var2 >= var1 );
+  BOOST_CHECK( var1.match( var2 ) );
+
+}
 !!!441776.cpp!!!	move_choice_test() : void
 std::map< std::string, std::string > params;
 trial_fixture::test_base_choice< trial::move_choice >( params );
