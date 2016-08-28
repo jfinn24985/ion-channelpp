@@ -1,6 +1,6 @@
 format 75
 "ion_channel" // ion_channel
-  revision 58
+  revision 60
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -3815,15 +3815,20 @@ ${docstring}${members}
 	  param in name "ispec" explicit_type "size_t"
 	  param in name "params" explicit_type "string"
 	  param in name "geom" type class_ref 1129391 // channel_system
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, std::map< ${t1}, ${t1}> const& ${p1}${v1}, const ${t2} & ${p2}${v2}${)}${volatile}${throw};
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}, std::map< ${t1}, ${t1}> const& ${p1}${v1}, const ${t2} & ${p2}${v2}${)}${volatile}${throw};
 "
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, std::map< ${t1}, ${t1}> const& ${p1}, const ${t2} & ${p2}${)}${throw}
+	cpp_def "${comment}${inline}${class}::${name}${(}const ${t0} & ${p0}, std::map< ${t1}, ${t1}> const& ${p1}, const ${t2} & ${p2}${)}${throw}
 ${body}
 "
 	
 	
 	
 	
+	comment "Create a grand canonical individual move.
+
+choice hash subtype is \"0\" (one particle changes)
+hash pattern is ( X, 0, 1, 0 ). NOTE: GC moves use
+the hash pattern of their \"add\" sub-choice."
       end
 
       operation 143152 "gc_choice_cell"
@@ -4040,11 +4045,11 @@ ${docstring}${members}
       operation 141488 "add_choice_cell"
 	preserve_cpp_body_indent public explicit_return_type ""
 	nparams 3
-	  param in name "ispec" explicit_type "size_t"
+	  param in name "key" explicit_type "size_t"
 	  param inout name "parent" type class_ref 1026095 // base_choice
 	  param in name "reg" type class_ref 183856 // cylinder
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} & ${p1}${v1}, const ${t2} & ${p2}${v2}${)}${volatile}${throw}
-: base_choice( ${p0}, &${p1} )
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, const ${t2} & ${p2}${v2}${)}${volatile}${throw}
+: base_choice( { ${p0}, 0, 1, 0 }, &${p1} )
 , region_( ${p2} )
 {}
 "
@@ -4281,7 +4286,7 @@ ${docstring}return \"-- Del\"
 	  param inout name "parent" type class_ref 1026095 // base_choice
 	  param in name "geom" type class_ref 183856 // cylinder
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} & ${p1}${v1}, const ${t2} & ${p2}${v2}${)}${volatile}${throw}
-: base_choice( ${p0}, &${p1} )
+: base_choice( { ${p0}, 1, 0, 0 }, &${p1} )
 , region_( ${p2} )
 {}
 "
@@ -4390,7 +4395,9 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment "Objects of this class define an MC move that involves a
-jump anywhere within the simulation cell."
+jump anywhere within the simulation cell.
+
+choice_hash subtype is \"1\", so hash pattern is ( X, 1, 1, 1 )"
       classrelation 129456 // <generalisation>
 	relation 129456 ---|>
 	  a public
@@ -4436,6 +4443,9 @@ ${body}
 	
 	
 	
+	comment "
+Choice hash subtype for jump move is \"1\", so 
+pattern for jump move is { X, 1, 1, 1 }."
       end
 
       operation 146608 "jump_choice_cell"

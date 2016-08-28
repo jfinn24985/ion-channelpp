@@ -888,7 +888,7 @@ utility::random_distribution rgen(generator);
   // Check for missing (false) indices.
   BOOST_CHECK(check.end() == std::find(check.begin(), check.end(), false));
 }
-!!!798384.cpp!!!	test_chooser_operation(inout chsr : base_chooser) : void
+!!!798384.cpp!!!	test_chooser_operation(in chsr : base_chooser, in expected_size : size_t) : void
 // The chooser interface provides a single unique 
 // function, generate_choices. This method takes a
 // simulation object and adds choice objects to a
@@ -897,16 +897,18 @@ utility::random_distribution rgen(generator);
 // object that generated them.
 
 // call signature
-// void generate_choices(const simulator & sim, boost::ptr_vector< base_choice >& choices)
+// void generate_choices(const simulator & sim, boost::ptr_vector< base_choice >& choices) const
 
 boost::ptr_vector< trial::base_choice > choices;
 
 // dummy simulator
 platform::simulator_fixture simfix;
 simfix.add_solute_species();
+simfix.add_localized_species();
  
-chsr.generate_choices( simfix, choices );
+chsr.generate_choices( *(simfix.sim), choices );
 
+BOOST_CHECK( choices.size() == expected_size );
 // Zero or more choices is valid
 if ( choices.size() > 0 )
 {
