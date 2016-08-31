@@ -1,6 +1,6 @@
 format 75
 "periodic_cube" // periodic_cube
-  revision 72
+  revision 74
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -1373,15 +1373,6 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment "Objects of this class can be used to generate a possible MC trial moves. "
-      classrelation 166192 // <generalisation>
-	relation 166064 ---|>
-	  a public
-	    cpp default "${type}"
-	    python "${type}"
-	    classrelation_ref 166192 // <generalisation>
-	  b parent class_ref 1102767 // gc_choice_pbc
-      end
-
       operation 167600 "~alternater_choice"
 	cpp_virtual public explicit_return_type ""
 	nparams 0
@@ -1757,7 +1748,7 @@ ${docstring}${body}
       end
     end
 
-    class 1102767 "gc_choice_pbc"
+    class 1102767 "gc_chooser_pbc"
       visibility protected 
       cpp_decl "${comment}${template}class ${name}${inherit}
  {
@@ -1774,18 +1765,18 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " Single particle Grand canonical move generator, delegates
- move generation to add_choice/remove_choice children
+ move generation to add_choice/remove_choice objects
 
  This version is for simulation in a periodic cube.
 
  Use same choice hash pattern as add_choice: { X, 0, 1, 0 }"
-      classrelation 1243311 // <generalisation>
-	relation 1205551 ---|>
+      classrelation 520624 // <generalisation>
+	relation 519728 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 1243311 // <generalisation>
-	  b parent class_ref 1026095 // base_choice
+	    classrelation_ref 520624 // <generalisation>
+	  b parent class_ref 170160 // base_chooser
       end
 
       classrelation 427441 // <dependency>
@@ -1797,77 +1788,8 @@ ${docstring}${members}
 	  b parent class_ref 134959 // ensemble
       end
 
-      classrelation 399793 // adder_ (<directional composition>)
-	relation 399537 *-->
-	  a role_name "adder_" multiplicity "1" init_value "add_specie( ispec, self )" private
-	    comment "The GC add move generator"
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	    python "${comment}${self}${name} = ${type}(ispec, self)
-"
-	    classrelation_ref 399793 // adder_ (<directional composition>)
-	  b multiplicity "1" parent class_ref 210609 // add_specie_pbc
-      end
-
-      classrelation 400049 // remover_ (<directional composition>)
-	relation 399665 *-->
-	  a role_name "remover_" multiplicity "1" init_value " ispec, self " private
-	    comment "The GC remove generator."
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	    python "${comment}${self}${name} = ${type}( ispec, self )
-"
-	    classrelation_ref 400049 // remover_ (<directional composition>)
-	  b multiplicity "1" parent class_ref 210737 // remove_specie_pbc
-      end
-
-      operation 2101807 "gc_choice_pbc"
+      operation 662193 "gc_chooser_pbc"
 	public explicit_return_type ""
-	nparams 2
-	  param in name "ispec" explicit_type "size_t"
-	  param in name "params" explicit_type "string"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, std::map< ${t1}, ${t1} > const& ${p1}${v1}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, std::map< ${t1}, ${t1} > const& ${p1}${)}${throw}
-: base_choice( { ${p0}, 0, 1, 0 } )
-, adder_(${p0}, this)
-, remover_(${p0}, this)
-{
-  ${body}
-}
-"
-	
-	
-	
-	
-	comment " Create add/remove change generator
-
- choice hash subtype is \"0\", use pattern of 
- add_choice hash as pattern: { X, 0, 1, 0 }
-"
-      end
-
-      operation 233520 "gc_choice_pbc"
-	protected explicit_return_type ""
-	nparams 1
-	  param in name "ispec" explicit_type "size_t"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
-: base_choice( { ${p0}, 0, 1, 0 } )
-, adder_(${p0}, this)
-, remover_(${p0}, this)
-{}
-"
-	
-	
-	
-	
-	comment " Create add/remove change generator
-
-"
-      end
-
-      operation 662193 "gc_choice_pbc"
-	protected explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
 "
@@ -1875,28 +1797,10 @@ ${docstring}${members}
 	
 	
 	
-	comment "For serialization"
+	comment "For serialization and make_chooser method"
       end
 
-      operation 588081 "__init__"
-	public explicit_return_type ""
-	nparams 2
-	  param in name "self" explicit_type ""
-	  param in name "ispec" explicit_type "size_t"
-	
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(} ${p0}${v0}, ${p1}${v1} ${)}:
-${docstring}super( ${class}, ${p0} ).__init__( ${p1} )
-${body}
-"
-	
-	comment " Create add/remove change generator
-
-"
-      end
-
-      operation 144689 "~gc_choice_pbc"
+      operation 144689 "~gc_chooser_pbc"
 	cpp_virtual public explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
@@ -1908,62 +1812,6 @@ ${body}
 	
 	
 	
-	
-      end
-
-      operation 2102063 "generate"
-	cpp_virtual public return_type class_ref 986543 // change_set
-	nparams 1
-	  param inout name "sys" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment "Create a particle addition/remove trial"
-      end
-
-      operation 760625 "get_adder"
-	public explicit_return_type "add_specie_pbc"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} & ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}
-{
-  return this->adder_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
-      operation 760753 "get_remover"
-	public explicit_return_type "remove_specie_pbc"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} & ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}
-{
-  return this->remover_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
 	
       end
 
@@ -2003,9 +1851,7 @@ ${docstring}return \"GC Ind\"
 	  param in name "version" explicit_type "unsigned int"
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
-    ar & boost::serialization::base_object< trial::base_choice >(*this);
-    ar & this->adder_;
-    ar & this->remover_;
+    ar & boost::serialization::base_object< trial::base_chooser >(*this);
   };
 "
 	
@@ -2035,6 +1881,42 @@ ${docstring}${body}
 "
 	
 	comment "  Function to add move choice objects to the simulation."
+      end
+
+      operation 812208 "description"
+	const cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Provide a description of the chooser state."
+      end
+
+      operation 812336 "generate_choices"
+	const public explicit_return_type "void"
+	nparams 2
+	  param in name "sim" type class_ref 1129135 // simulator
+	  param inout name "choices" type class_ref 1026095 // base_choice
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, boost::ptr_vector< ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, boost::ptr_vector< ${t1} >& ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "  Generate and add choices to simulator."
       end
     end
 
@@ -5848,7 +5730,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(periodic_cube::gc_choice_pbc);"
 ${import}
 ${definition}"
       associated_classes
-	class_ref 1102767 // gc_choice_pbc
+	class_ref 1102767 // gc_chooser_pbc
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify

@@ -1,21 +1,4 @@
-class gc_choice_pbc
-!!!2101807.cpp!!!	gc_choice_pbc(in ispec : size_t, in params : string)
-UTILITY_INPUT( params.empty() 
-      or ( 1 == params.size() and 1 == params.count( core::strngs::fsspec() ) ),
-     "Grand Canonical trial requires no extra parameters.", 
-     core::strngs::fstry() );
-!!!2102063.cpp!!!	generate(inout sys : simulator) : change_set
-// Choose specie to GC.
-return (sys.get_random().randint(0,1) == 0 ? this->adder_.generate(sys) :
-  this->remover_.generate(sys));
-!!!2102063.python!!!	generate(inout sys : simulator) : change_set
-self.begin_trial()
-if sys.get_random().randint(0,1) == 0:
-  # Do add
-  return self.adder_.generate(sys)
-else:
-  # Do delete
-  return self.remover_.generate(sys)
+class gc_chooser_pbc
 !!!212144.cpp!!!	make_chooser(in params : string, in rate : double, inout sim : simulator) : void
 for (std::size_t ispec = 0; ispec != sim.specie_count (); ++ispec)
 {
@@ -30,3 +13,32 @@ for (std::size_t ispec = 0; ispec != sim.specie_count (); ++ispec)
       //sim.add_chooser( choice_ptr.release() );
    }
 }
+!!!812336.cpp!!!	generate_choices(in sim : simulator, inout choices : base_choice) : void
+{
+  // All species with non-zero specie rate can have a GC move
+  // in a PBC simulation
+  double specie_rate_sum = 0.0;
+  for ( auto const& spec : sim.get_species() )
+  {
+    specie_rate_sum += spec.rate();
+  }
+  IONCH_INPUT( not utility::feq( specie_rate_sum ), "Can not create simulation with sum of species set at zero.", core::strngs::fstry() );
+  for (std::size_t ispec = 0; ispec != sim.get_specie_count(); ++ispec )
+  {
+    auto const& spec = sim.get_specie( ispec );
+    const double choice_rate
+    {
+      rate * spec.rate()
+    };
+    if ( not utility::feq( choice_rate, 0.0 ) )
+    {
+      std::unique_ptr< base_choice > add_ptr( new add_choice_pbc( ispec ) );
+      std::unique_ptr< base_choice > rem_ptr( new add_choice_pbc( ispec ) );
+      add_ptr->set_probability( choice_rate );
+      rem_ptr->set_probability( choice_rate );
+      choices.push_back( add_ptr.release() );
+      choices.push_back( rem_ptr.release() );
+    }
+  }
+}
+
