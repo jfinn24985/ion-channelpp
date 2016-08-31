@@ -1,43 +1,46 @@
 class choice_meta
-!!!2164655.cpp!!!	choice_meta(inout man : choice_manager)
-if (0 == counter_)
+!!!826416.cpp!!!	add_trial_type(in trial_label : string, in ctor : choice_meta::choice_generator_fn) : void
+UTILITY_REQUIRE( 0 == this->type_to_object_.count( trial_label ), ("Attempt to add more than one chooser factory for type \""+trial_label+"\"."), this->section_label() );
+this->parameter_set_.insert( std::make_pair( trial_label, ctor ) );
+
+
+!!!2164655.cpp!!!	choice_meta(inout man : choice_manager, inout help : input_help)
+this->missing_required_tags_ = std::bitset< CHOICE_TAG_COUNT >( true );
+
+const std::string seclabel( core::strngs::fstry() );
+// ----------------------------------------
+// add section
+// ----------------------------------------
+
+//   Specie input section definition
+help_text.add_section( seclabel,
+    "Trial input section definition.  In addition to the listed options, each individual"
+    "trial subtypes may have its own specific options.");
+
+// ----------------------------------------
+// add parameters
+// ----------------------------------------
+
+//   rate : [required, number] trial rate
 {
-  const std::string seclabel( core::strngs::fstry() );
-  // ----------------------------------------
-  // add section
-  // ----------------------------------------
-
-  //   Specie input section definition
-  core::input_help::exemplar().add_section( seclabel, 
-"Trial input section definition.  In addition to the listed options, each individual"
-"trial subtypes may have its own specific options.");
-
-  // ----------------------------------------
-  // add parameters
-  // ----------------------------------------
-
-  //   rate : [required, number] trial rate
-  {
-    const std::string description("[required, number] trial relative rate (not necessarily normalized).");
-    core::input_help::exemplar().add_option( seclabel, core::strngs::rate_label(), description );
-  }
-  //  type : [required] trial subtype
-  {
-    const std::string description("[required, string] trial subtype (see documentation for valid subtypes).");
-    core::input_help::exemplar().add_option( seclabel, core::strngs::fstype(), description );
-  }
-  //  specie : [optional] include/exclude list
-  {
-    const std::string description("[optional, list] Space separated list of specie labels to include or exclude. Exclude species by preceding the label with '-' (e.g. -Aa). All species are included by default, but you may also include species by putting their label in the list (optionally preceded by '+').");
-    core::input_help::exemplar().add_option( seclabel, core::strngs::fsspec(), description );
-  }
-  //  simulator : [optional] simulator subtype
-  {
-    const std::string description("[optional, string] specific simulator subtype to add the evaluator to (see documentation for valid subtypes).");
-    core::input_help::exemplar().add_option( seclabel, core::strngs::simulator_label(), description );
-  }
+  const std::string description("[required, number] trial relative rate (not necessarily normalized).");
+  help_text.add_option( seclabel, core::strngs::rate_label(), description );
 }
-++counter_;
+//  type : [required] trial subtype
+{
+  const std::string description("[required, string] trial subtype (see documentation for valid subtypes).");
+  help_text.add_option( seclabel, core::strngs::fstype(), description );
+}
+//  specie : [optional] include/exclude list
+{
+  const std::string description("[optional, list] Space separated list of specie labels to include or exclude. Exclude species by preceding the label with '-' (e.g. -Aa). All species are included by default, but you may also include species by putting their label in the list (optionally preceded by '+').");
+  help_text.add_option( seclabel, core::strngs::fsspec(), description );
+}
+//  simulator : [optional] simulator subtype
+{
+  const std::string description("[optional, string] specific simulator subtype to add the evaluator to (see documentation for valid subtypes).");
+  help_text.add_option( seclabel, core::strngs::simulator_label(), description );
+}
 
 !!!204592.cpp!!!	do_read_entry(inout reader : input_base_reader) : bool
 if (reader.name().find(core::strngs::rate_label ()) == 0)
@@ -71,11 +74,11 @@ else
 {
    // --------------------
    // Assume choice specific parameters
-   UTILITY_INPUT (0 == this->parameter_set_.count (reader.name()), ("keyword \""+reader.name()+"\" appears more than once in a single in specie section"), this->section_label());
+   UTILITY_INPUT (0 == this->parameter_set_.count (reader.name()), ("keyword \""+reader.name()+"\" appears more than once in a single \""+core::strngs::fstry()+"\" section"), this->section_label());
    this->parameter_set_.insert (std::make_pair(reader.name(), reader.value()));
 }
 return true;
-!!!204720.cpp!!!	do_read_end(inout sim : simulator) : void
+!!!204720.cpp!!!	do_read_end() : void
 UTILITY_INPUT (not this->missing_required_tags_.any(), "Not all required tags were present.", this->section_label());
 
 // Use generator to create the set of choice objects (ie
@@ -83,9 +86,9 @@ UTILITY_INPUT (not this->missing_required_tags_.any(), "Not all required tags we
 this->manager_.add_chooser( this->type_to_object_[ this->type_ ]( this->parameter_set_, this->type_, this->rate_ ) );
 
 this->parameter_set_.clear();
+this->missing_required_tags_ = std::bitset< CHOICE_TAG_COUNT >( true );
 this->type_.clear();
 this->rate_ = 0;
-this->missing_required_tags_ = std::bitset< CHOICE_TAG_COUNT >( true );
-!!!268848.cpp!!!	do_reset() : void
-this->parameter_set_.clear();
-this->missing_required_tags_.reset();
+
+!!!826544.cpp!!!	has_trial_type(in trial_label : string) : bool
+return 0 != this->type_to_object_.count( trial_label );
