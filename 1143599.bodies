@@ -1,35 +1,36 @@
 class evaluator_meta
-!!!2165679.cpp!!!	evaluator_meta()
-if (0 == counter_)
+!!!842160.cpp!!!	add_documentation(inout helper : input_help) : void
+const std::string seclabel( core::strngs::evaluator_label() );
+// ----------------------------------------
+// add section
+// ----------------------------------------
+
+//   Specie input section definition
+core::input_help::exemplar().add_section( seclabel,
+    "Evaluator input section definition.  In addition to the listed options, each individual"
+    "evaluator subtype may have its own specific options.");
+
+// ----------------------------------------
+// add parameters
+// ----------------------------------------
+
+//  type : [required] trial subtype
 {
-   const std::string seclabel( core::strngs::evaluator_label() );
-   // ----------------------------------------
-   // add section
-   // ----------------------------------------
-
-   //   Specie input section definition
-   core::input_help::exemplar().add_section( seclabel,
-         "Evaluator input section definition.  In addition to the listed options, each individual"
-         "evaluator subtype may have its own specific options.");
-
-   // ----------------------------------------
-   // add parameters
-   // ----------------------------------------
-
-   //  type : [required] trial subtype
-   {
-      const std::string description( "[required, string] trial subtype (see documentation for valid subtypes)." );
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fstype(), description );
-   }
-   //  simulator : [optional] simulator subtype
-   {
-      const std::string description("[optional, string] specific simulator subtype to add the evaluator to (see documentation for valid subtypes).");
-      core::input_help::exemplar().add_option( seclabel, core::strngs::simulator_label(), description );
-   }
-
+  const std::string description( "[required, string] trial subtype (see documentation for valid subtypes)." );
+  core::input_help::exemplar().add_option( seclabel, core::strngs::fstype(), description );
 }
-++counter_;
-!!!203824.cpp!!!	do_read_entry(inout reader : input_reader) : bool
+//  simulator : [optional] simulator subtype
+{
+  const std::string description("[optional, string] specific simulator subtype to add the evaluator to (see documentation for valid subtypes).");
+  core::input_help::exemplar().add_option( seclabel, core::strngs::simulator_label(), description );
+}
+
+!!!842416.cpp!!!	add_evaluator_type(in eval_label : string, in ctor : evaluator_meta::evaluator_generator_fn) : void
+UTILITY_REQUIRE( 0 == this->type_to_object_.count( eval_label ), ("Attempt to add more than one evaluator factory for type \""+eval_label+"\"."), this->section_label() );
+this->type_to_object_.insert( std::make_pair( eval_label, ctor ) );
+
+
+!!!203824.cpp!!!	do_read_entry(inout reader : input_base_reader) : bool
 if (reader.name().find(core::strngs::fstype()) == 0)
 {
    // --------------------
@@ -48,7 +49,7 @@ else
    this->parameter_set_.insert (std::make_pair(reader.name(), reader.value()));
 }
 return true;
-!!!203952.cpp!!!	do_read_end(inout sim : simulator) : void
+!!!203952.cpp!!!	do_read_end() : void
 UTILITY_INPUT (not this->missing_required_tags_.any(), "Not all required tags were present.", this->section_label());
 // Add to all simulator types!
 //
@@ -56,12 +57,11 @@ UTILITY_INPUT (not this->missing_required_tags_.any(), "Not all required tags we
 // in case the evaluator is not valid for a particular
 // simulator type or there are different evaluator types
 // for different simulators.
-this->type_to_object_[ this->type_ ]( this->parameter_set_, sim );
+this->type_to_object_[ this->type_ ]( this->parameter_set_, *(this->manager_) );
 
 // Reset the meta data
 this->missing_required_tags_ = std::bitset< EVALUATOR_TAG_COUNT >( true );
 this->parameter_set_.clear();
 this->type_.clear();
-!!!268208.cpp!!!	do_reset() : void
-this->parameter_set_.clear();
-this->missing_required_tags_.reset();
+!!!842288.cpp!!!	has_trial_type(in eval_label : string) : bool
+return 0 != this->type_to_object_.count( eval_label );

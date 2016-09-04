@@ -1,0 +1,75 @@
+class evaluator_manager
+!!!841008.cpp!!!	serialize(inout ar : Archive, in version : unsigned int) : void
+ar & evaluators_;
+!!!841776.cpp!!!	compute_potential(in spcs : specie, in ens : ensemble, inout changes : change_set, in start_index : size_t = 0) : void
+// Calculate energy
+for ( auto const& evaluator : this->evaluators_ )
+{
+  evaluator.compute_potential( spcs, ens, changes, start_index );
+  if ( changes.fail() ) break;
+}
+!!!841648.cpp!!!	compute_total_potential(in sim : simulator) : double
+for (auto const& evltr : this->evaluators_)
+{
+  evltr.compute_total_potential( sim );
+}
+
+!!!841264.cpp!!!	description(inout os : ostream) : void
+if ( not this->evaluators_.empty() )
+{
+   os << core::strngs::horizontal_bar () << "\n";
+   for (auto const& evltr : this->evaluators_)
+   {
+      evltr.description(os);
+   }
+}
+!!!841264.python!!!	description(inout os : ostream) : void
+from constants import constants
+constants.description( os )
+print >>os, "[simulation]"
+print >>os, "        volume :", self.cell_region_.volume(-1), "Anstrom{3}"
+print >>os, "  permittivity :", self.cell_region_.permittivity()
+print >>os, " beta (1/k_BT) :", (1.0/(constants.boltzmann_constant()*self.temperature_kelvin_)), " J{-1}"
+print >>os, "  temperature :", self.temperature_kelvin_, " K"
+print >>os, " specie count :", self.specie_count()
+print >>os, " - loop sizes"
+print >>os, "       thermal :", self.equilibration_interval_
+print >>os, "    production :", self.production_interval_
+print >>os, "         inner :", self.inner_loop_size_
+print >>os, " current index :", self.outer_loop_index_
+print >>os, " - other parameters"
+print >>os, " starting particle count :", self.target_number_of_particles()
+print >>os, "          ionic strength :", self.ionic_strength()
+print >>os, "             trial rates :", self.rates_
+print >>os, "              move delta :", self.delta
+for spc in self.species_:
+  spc.description( os )
+print >>os, "[choices] trial types and rates"
+print >>os, " %6s %4s %7s" % ( "type", "spc.", "rate(%)" )
+for choice in self.choices_:
+  print >>os, " %6s %4s %7.2f" % ( choice.label(), self.species_[choice.specie_key()].label(), choice.probability()*100.0 )
+for observer in self.observers_:
+  observer.description( os )
+for potl in self.evaluators_:
+  potl.description( os )
+self.ensemble_.description( os )
+
+!!!841904.cpp!!!	on_conclude_trial(in changes : change_set) : void
+for ( auto & evaluator : this->evaluators_ )
+{
+  evaluator.on_conclude_trial( changes );
+}
+
+!!!841392.cpp!!!	prepare(inout sim : simulator) : void
+// reset the evaluators
+for (auto &evltr : this->evaluators_)
+{
+  evltr.prepare ( *this );
+}
+
+!!!842032.cpp!!!	write_document(inout wr : input_document) : void
+// Add evaluator definitions
+for(auto const& evltr : this->evaluators_)
+{
+   evltr.write_document( wr );
+}

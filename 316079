@@ -1,6 +1,6 @@
 format 75
 "trial" // trial
-  revision 233
+  revision 235
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -32,6 +32,43 @@ format 75
   cpp_src_dir "trial"
   cpp_namespace "trial"
   python_dir "cmc"
+  comment "The trial library provides the classes for generating
+proposed changes to the ensemble of particles. It has two
+major sub-groups of classes: Trial encoding classes and trial
+generating classes.
+
+The trial encoding classes (change_set and change_atom) contain
+the information about the proposed changes to the ensemble. The
+change_atom contains a change to a single particle in the
+ensemble. It can encode movement, addition or removal of the
+particle. The change_set contains one or more change_atoms
+objects for a trial.
+
+The generator classes are more involved as they allow for
+selecting trial types in the input file. The main classes are:
+
+* base_choice (and derived classes) generate a specific trial.
+Each object generates a single trial with specific a specie
+(or for multi-particle trial).
+
+* base_chooser (and derived classes) manage a type of trial.
+They examine the simulation and create base_choice objects
+that implement the trial for all the appropriate species in
+the simulation.
+
+* choice_manager manages the chooser and choice objects for
+the simulation.
+
+* choice_meta interprets the input file.
+
+
+The choice_meta object interprets the input file and generates
+base_chooser derived class objects for the trial types
+listed in the input file. These chooser objects are added to
+a choice_manager object. At the start of the simulation the
+chooser objects generate the choice objects that will be used
+during the simulation.
+"
   classview 525487 "choices"
     //class diagram settings
     draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
@@ -60,8 +97,9 @@ format 75
       size A4
     end
 
-    classdiagram 180785 "Add/Remove choosers"
-      draw_all_relations no hide_attributes yes hide_operations yes hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
+    classdiagram 180785 "choosers from input"
+      draw_all_relations yes hide_attributes yes hide_operations yes hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
+      comment "Classes involved in creating choosers from input file."
       size A4
     end
 
@@ -2376,15 +2414,6 @@ ${docstring}${members}
 	  b parent class_ref 1082671 // input_base_meta
       end
 
-      classrelation 196785 // <dependency>
-	relation 196529 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 196785 // <dependency>
-	  b parent class_ref 1129135 // simulator
-      end
-
       class 1143855 "choice_generator_fn"
 	visibility package stereotype "typedef" base_type class_ref 156336 // function3
 	nactuals 4
@@ -2579,21 +2608,18 @@ ${docstring}${body}
 
       operation 2164655 "choice_meta"
 	public explicit_return_type ""
-	nparams 2
+	nparams 1
 	  param inout name "man" type class_ref 393392 // choice_manager
-	  param inout name "help" type class_ref 1004335 // input_help
-	cpp_decl "    ${comment}${inline}${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}, ${t1} & ${p1}${v1}${)}${volatile}${throw};
+	cpp_decl "    ${comment}${inline}${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}${)}${volatile}${throw};
 "
-	cpp_def "${comment}${inline}${class}::${name}${(}boost::shared_ptr< ${t0} > ${p0}, ${t1} & ${p1}${)}${throw} 
+	cpp_def "${comment}${inline}${class}::${name}${(}boost::shared_ptr< ${t0} > ${p0}${)}${throw} 
 : input_base_meta( core::strngs::fstry(), true, true )
 , manager_( ${p0} )
 , parameter_set_()
-, missing_required_tags_()
+, missing_required_tags_(std::bitset< CHOICE_TAG_COUNT >( true ))
 , rate_()
 , type_()
-{
-  ${body}
-}
+{}
 
 "
 	
@@ -2619,6 +2645,26 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+      end
+
+      operation 833200 "add_documentation"
+	const public explicit_return_type "void"
+	nparams 1
+	  param inout name "helper" type class_ref 1004335 // input_help
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " "
       end
 
       operation 204592 "do_read_entry"

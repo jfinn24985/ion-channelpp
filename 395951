@@ -1,6 +1,6 @@
 format 75
 "evaluator" // evaluator
-  revision 164
+  revision 165
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -57,6 +57,39 @@ format 75
     classdiagram 630703 "evaluator meta from input file"
       draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
       size A4
+    end
+
+    class 439472 "const_range_t"
+      visibility package stereotype "typedef" base_type class_ref 1136687 // iterator_range
+      nactuals 1
+      actual class class_ref 1136687 // iterator_range
+        rank 0 explicit_value "boost::ptr_vector< evaluator::base_evaluator >::const_iterator"
+      cpp_decl "${comment}typedef ${type} ${name};
+"
+      java_decl ""
+      php_decl ""
+      python_decl ""
+      idl_decl "${comment}typedef ${type} ${name};
+"
+      explicit_switch_type ""
+      
+      classrelation 533808 // <realization>
+	relation 532912 -_-|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 533808 // <realization>
+	  b parent class_ref 1136687 // iterator_range
+      end
+
+      classrelation 533936 // <dependency>
+	relation 533040 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 533936 // <dependency>
+	  b parent class_ref 912175 // base_evaluator
+      end
     end
 
     class 912175 "base_evaluator"
@@ -307,15 +340,6 @@ ${docstring}${members}
 	  b parent class_ref 1082671 // input_base_meta
       end
 
-      classrelation 203825 // <dependency>
-	relation 203569 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 203825 // <dependency>
-	  b parent class_ref 1129135 // simulator
-      end
-
       class 1143983 "evaluator_generator_fn"
 	visibility package stereotype "typedef" base_type class_ref 251439 // function2
 	nactuals 3
@@ -324,7 +348,7 @@ ${docstring}${members}
 	actual class class_ref 251439 // function2
 	  rank 1 explicit_value "std::map< std::string, std::string > const&"
 	actual class class_ref 251439 // function2
-	  rank 2 explicit_value "platform::simulator &"
+	  rank 2 explicit_value "evaluator::evaluator_manager &"
 	cpp_decl "${comment}typedef ${type} ${name};
 "
 	java_decl ""
@@ -399,17 +423,17 @@ ${items}};
 	end
       end
 
-      attribute 1445167 "counter_"
-	class_attribute private explicit_type "size_t"
-	init_value "= 0"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+      classrelation 534064 // manager_ (<directional composition>)
+	relation 533168 *-->
+	  stereotype "shared_ptr"
+	  a role_name "manager_" multiplicity "0..1" private
+	    comment " Where to put the evaluator objects generated from the input file."
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
 "
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
+	    python "${comment}${self}${name} = ${stereotype}()
 "
-	idl_decl ""
-	comment "once-only initialization counter."
+	    classrelation_ref 534064 // manager_ (<directional composition>)
+	  b parent class_ref 439344 // evaluator_manager
       end
 
       attribute 1444783 "parameter_set_"
@@ -442,7 +466,7 @@ ${items}};
       classrelation 1314479 // type_to_object_ (<directional composition>)
 	relation 1275951 *-->
 	  stereotype "std::map"
-	  a role_name "type_to_object_" multiplicity "*" class_relation public
+	  a role_name "type_to_object_" multiplicity "*" public
 	    comment "Map of evaluator type names to evaluator constructor methods."
 	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<std::string,${type}> ${name}${value};"
 	    python "${comment}${self}${name} = ${stereotype}()
@@ -471,14 +495,11 @@ ${items}};
 "
 	cpp_def "${comment}${inline}${class}::${name}${(}${)} 
 : input_base_meta (core::strngs::evaluator_label(), true, true)
-, parameter_set_ ()
-, missing_required_tags_ ()
-, type_ ()
+, parameter_set_()
+, missing_required_tags_( std::bitset< EVALUATOR_TAG_COUNT >( true ))
+, type_()
 ${throw}
-{
-  this->missing_required_tags_.set();
-  ${body}
-}
+{}
 "
 	
 	
@@ -500,6 +521,49 @@ ${docstring}${body}
 	
 	
 	
+      end
+
+      operation 842160 "add_documentation"
+	const public explicit_return_type "void"
+	nparams 1
+	  param inout name "helper" type class_ref 1004335 // input_help
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 842416 "add_evaluator_type"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "eval_label" explicit_type "string"
+	  param in name "ctor" type class_ref 1143983 // evaluator_generator_fn
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add ctor for input \"trial\" section with \"type = [trial_label]\" 
+
+ \\pre not has_trial_type( trial_label )
+ \\post has_trial_type( trial_label )"
       end
 
       operation 203824 "do_read_entry"
@@ -526,11 +590,10 @@ throw an error if input file is incorrect (using UTILITY_INPUT macro)"
 
       operation 203952 "do_read_end"
 	cpp_virtual protected explicit_return_type "void"
-	nparams 1
-	  param inout name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}  override;
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}  override;
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -544,12 +607,13 @@ ${docstring}${body}
 	comment " Perform checks at the end of reading a section."
       end
 
-      operation 268208 "do_reset"
-	private explicit_return_type "void"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw} override;
+      operation 842288 "has_trial_type"
+	public explicit_return_type "bool"
+	nparams 1
+	  param in name "eval_label" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -560,7 +624,305 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Reset the object"
+	comment " Is there a ctor to match input \"trial\" section with
+ \"type = [trial_label]\""
+      end
+
+    end
+
+    class 439344 "evaluator_manager"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      classrelation 533680 // evaluators_ (<directional composition>)
+	relation 532784 *-->
+	  stereotype "ptr_vector"
+	  a role_name "evaluators_" multiplicity "*" private
+	    comment "Set of evaluators for a simulation."
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+"
+	    python "${comment}${self}${name} = ${stereotype}()
+"
+	    classrelation_ref 533680 // evaluators_ (<directional composition>)
+	  b parent class_ref 912175 // base_evaluator
+      end
+
+      operation 840368 "evaluator_manager"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+: evaluators_()
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 840496 "~evaluator_manager"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 840624 "evaluator_manager"
+	stereotype "move"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 439344 // evaluator_manager
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} & ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 840752 "evaluator_manager"
+	stereotype "copy"
+	private explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 439344 // evaluator_manager
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 840880 "operator="
+	private return_type class_ref 439344 // evaluator_manager
+	nparams 1
+	  param in name "source" type class_ref 439344 // evaluator_manager
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 383664 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 841008 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};"
+	cpp_def "${comment}template<class Archive> ${inline}${type} ${class}::${name}${(}${t0} & ${p0}, const ${t1} ${p1}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 840240 "add_evaluator"
+	preserve_cpp_body_indent public explicit_return_type "void"
+	nparams 1
+	  param inout name "evltr" type class_ref 912175 // base_evaluator
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0}* ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0}* ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+   std::unique_ptr< ${t0} > captured_ptr( ${p0} );
+   this->evaluators_.push_back ( captured_ptr.get() );
+   captured_ptr.release();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}self.evaluators_.append( ${p0} )
+"
+	
+	comment " Transfer ownership of an energy evaluators into the evaluators list
+"
+      end
+
+      operation 841776 "compute_potential"
+	const public explicit_return_type "void"
+	nparams 4
+	  param in name "spcs" type class_ref 134577 // specie
+	  param in name "ens" type class_ref 134959 // ensemble
+	  param inout name "changes" type class_ref 986543 // change_set
+	  param in name "start_index" explicit_type "size_t"
+	    defaultvalue "0"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::vector< ${t0} >& ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::vector< ${t0} >& ${p0}, const ${t1} & ${p1}, ${t2} & ${p2}, ${t3} ${p3}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment "Compute the change in potential energy."
+      end
+
+      operation 841648 "compute_total_potential"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "sim" type class_ref 1129135 // simulator
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment "Calculate the total potential energy."
+      end
+
+      operation 841264 "description"
+	const public explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Details about the current simulation to be written to the
+ log at the start of the simulation."
+      end
+
+      operation 840112 "get_evaluators"
+	const public return_type class_ref 439472 // const_range_t
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}
+{
+  return ${type} (this->evaluators_.begin (), this->evaluators_.end ());
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}return self.evaluators_
+"
+	
+	comment " Access the list of evaluators"
+      end
+
+      operation 841904 "on_conclude_trial"
+	cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param in name "changes" type class_ref 986543 // change_set
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment "  Called after the trial is complete. (default do nothing)"
+      end
+
+      operation 841392 "prepare"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "sim" type class_ref 1129135 // simulator
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 842032 "write_document"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "wr" type class_ref 163632 // input_document
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Write contents of simulation as an input document"
       end
     end
   end
@@ -9715,14 +10077,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     artifact 716335 "libionch_evaluator"
       stereotype "library"
       associated_artifacts
-	artifact_ref 538415 // icc_surface_grid
-	artifact_ref 783151 // evaluator_meta
-	artifact_ref 236080 // integrator
-	artifact_ref 235824 // icc_matrix
-	artifact_ref 716207 // base_evaluator
-	artifact_ref 708911 // induced_charge
 	artifact_ref 154929 // coulomb
+	artifact_ref 235824 // icc_matrix
+	artifact_ref 236080 // integrator
 	artifact_ref 492335 // localizer
+	artifact_ref 538415 // icc_surface_grid
+	artifact_ref 708911 // induced_charge
+	artifact_ref 716207 // base_evaluator
+	artifact_ref 783151 // evaluator_meta
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
