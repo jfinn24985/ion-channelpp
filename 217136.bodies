@@ -1299,3 +1299,184 @@ std::stringstream log;
 //XX        BOOST_CHECK_CLOSE_FRACTION( area, 2*core::constants::pi()*40.0*10, 0.0001 );
 //XX     }
 //XX  }
+!!!848944.cpp!!!	evaluator_manager_lifetime() : void
+//std::map< std::string, std::string > params;
+std::stringstream store;
+std::stringstream log;
+{
+  //  Constructor tests
+  BOOST_CHECK( std::default_constructible< evalautor::evaluator_manager >::type );
+  BOOST_CHECK( not std::copy_constructible< evalautor::evaluator_manager >::type );
+  BOOST_CHECK( not std::move_constructible< evalautor::evaluator_manager >::type );
+  BOOST_CHECK( not std::assignable< evalautor::evaluator_manager >::type );
+
+  evalautor::evaluator_manager mgr;
+  BOOST_CHECK_EQUAL( mgr.size(), 0 );
+  BOOST_CHECK( mgr.empty() );
+}
+// Constructor test method
+{
+  // default
+  evalautor::evaluator_manager mgr;
+//XX
+//XX   BOOST_CHECK_EQUAL( icceval.size(), 0 );
+//XX   BOOST_CHECK_EQUAL( icceval.empty(), true );
+//XX   BOOST_CHECK_EQUAL( icceval.type_label(), core::strngs::fsptch() );
+//XX   BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx.dat" );
+//XX   BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch.dat" );
+//XX   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.6 );
+//XX   BOOST_CHECK_EQUAL( icceval.get_dxw(), 1.6 );
+//XX   BOOST_CHECK_EQUAL( icceval.get_nsub0(), 10 );
+//XX
+//XX   BOOST_CHECK_NO_THROW( icceval.set_a_matrix_filename( "amx-test.txt" ) );
+//XX   BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx-test.txt" );
+//XX
+//XX   BOOST_CHECK_NO_THROW( icceval.set_patch_filename( "patch-test.txt" ) );
+//XX   BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch-test.txt" );
+//XX
+//XX   BOOST_CHECK_NO_THROW( icceval.set_dxf( 1.25 ) );
+//XX   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.25 );
+//XX
+//XX   BOOST_CHECK_NO_THROW( icceval.set_dxw( 3.5 ) );
+//XX   BOOST_CHECK_EQUAL( icceval.get_dxw(), 3.5 );
+//XX
+//XX   BOOST_CHECK_NO_THROW( icceval.set_nsub0( 11 ) );
+//XX   BOOST_CHECK_EQUAL( icceval.get_nsub0(), 11 );
+//XX
+//XX   BOOST_CHECK_EQUAL( icceval.size(), 0 );
+//XX   BOOST_CHECK_EQUAL( icceval.empty(), true );
+//XX
+  boost::archive::text_oarchive oa( store );
+  oa << mgr;
+}
+// Serialization test method.
+{
+  evalautor::evaluator_manager mgr;
+
+  boost::archive::text_iarchive ia( store );
+  ia >> mgr;
+  BOOST_CHECK_EQUAL( mgr.size(), 0 );
+  BOOST_CHECK( mgr.empty() );
+//XX
+//XX   BOOST_CHECK_EQUAL( icceval.size(), 0 );
+//XX   BOOST_CHECK_EQUAL( icceval.empty(), true );
+//XX   BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx-test.txt" );
+//XX   BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch-test.txt" );
+//XX   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.25 );
+//XX   BOOST_CHECK_EQUAL( icceval.get_dxw(), 3.5 );
+//XX   BOOST_CHECK_EQUAL( icceval.get_nsub0(), 11 );
+//XX
+}
+//XX// Manual build test
+//XX{
+//XX   // default
+//XX   evaluator::induced_charge icceval;
+//XX   platform::simulator_fixture simfix;
+//XX
+//XX   // Set parameters as per 'fix'.
+//XX   BOOST_CHECK_NO_THROW( icceval.set_dxf( fix.dxf() ) );
+//XX   BOOST_CHECK_NO_THROW( icceval.set_dxw( fix.dxw() ) );
+//XX   BOOST_CHECK_NO_THROW( icceval.set_nsub0( fix.nsub() ) );
+//XX   BOOST_CHECK_NO_THROW( icceval.set_alfa( fix.temperature() ) );
+//XX   BOOST_CHECK_NO_THROW( icceval.set_permittivity( fix.epsw() ) );
+//XX   BOOST_CHECK_EQUAL( icceval.get_alfa(), fix.alfa() );
+//XX   BOOST_CHECK_EQUAL( icceval.get_permittivity(), fix.epsw() );
+//XX
+//XX   // Build amx from data from 'fix'. We need to
+//XX   // do this as simfix is not derived from channel_system.
+//XX   BOOST_CHECK_NO_THROW( icceval.create_amx( fix.zl1(), fix.rl1(), fix.rl4(), fix.rlvest(), fix.rlmemb(), fix.epsw(), fix.epspr(), log ) );
+//XX
+//XX   // We assume this simple size test means that the surface grid and the A
+//XX   // matrix are correctly built because independent tests of the surface grid
+//XX   // and A matrix classes produce the correct results.
+//XX   BOOST_CHECK_EQUAL( icceval.size(), fix.expected_grid_size() );
+//XX}
+//XX{
+//XX   // Construction as if from an input file with no parameters
+//XX   platform::simulator_fixture simfix;
+//XX
+//XX   std::map< std::string, std::string > params;
+//XX   // Empty parameter list allowed
+//XX   BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
+//XX
+//XX   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
+//XX   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
+//XX   BOOST_REQUIRE( nullptr != llp );
+//XX   BOOST_CHECK_EQUAL( llp->get_dxf(), 1.6);
+//XX
+//XX   // write_document test
+//XX   core::input_document wr( 1 );
+//XX   bep->write_document( wr );
+//XX   BOOST_CHECK_EQUAL( wr.size(), 1  );
+//XX   BOOST_CHECK_EQUAL( wr[ 0 ].label(), core::strngs::evaluator_label() );
+//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fstype() ) );
+//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fstype() ), core::strngs::fsptch() );
+//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsdxw() ) );
+//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsdxw() ), std::to_string( 1.6 ) );
+//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsdxf() ) );
+//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsdxf() ), std::to_string( 1.6 ) );
+//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsnsub() ) );
+//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsnsub() ), std::to_string( 10 ) );
+//XX}
+//XX{
+//XX   // Construction as if from an input file with valid parameters
+//XX   platform::simulator_fixture simfix;
+//XX
+//XX   std::map< std::string, std::string > params;
+//XX   params[ core::strngs::fsdxf() ] = "4.0";
+//XX   params[ core::strngs::fsdxw() ] = "6.0";
+//XX   params[ core::strngs::fsnsub() ] = "50";
+//XX   // Empty parameter list allowed
+//XX   BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
+//XX
+//XX   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
+//XX   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
+//XX   BOOST_REQUIRE( nullptr != llp );
+//XX   BOOST_CHECK_EQUAL( llp->get_dxf(), 4.0 );
+//XX   BOOST_CHECK_EQUAL( llp->get_dxw(), 6.0 );
+//XX   BOOST_CHECK_EQUAL( llp->get_nsub0(), 50 );
+//XX}
+//XX{
+//XX   // Construction as if from an input file with valid parameters
+//XX   platform::simulator_fixture simfix;
+//XX
+//XX   std::map< std::string, std::string > params;
+//XX   params[ core::strngs::fsdxf() ] = "4";
+//XX   // Empty parameter list allowed
+//XX   BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
+//XX
+//XX   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
+//XX   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
+//XX   BOOST_REQUIRE( nullptr != llp );
+//XX   BOOST_CHECK_EQUAL( llp->get_dxf(), 4.0 );
+//XX}
+//XX{
+//XX   // Construction as if from an input file with invalid parameters : invalid value
+//XX   platform::simulator_fixture simfix;
+//XX
+//XX   std::map< std::string, std::string > params;
+//XX   params[ core::strngs::fsdxf() ] = "four";
+//XX   // Empty parameter list allowed
+//XX   BOOST_REQUIRE_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ), std::runtime_error );
+//XX}
+//XX{
+//XX   // Construction as if from an input file with invalid parameters : invalid name
+//XX   platform::simulator_fixture simfix;
+//XX
+//XX   std::map< std::string, std::string > params;
+//XX   params[ core::strngs::fsiwid() ] = "4.0";
+//XX   // Empty parameter list allowed
+//XX   BOOST_REQUIRE_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ), std::runtime_error );
+//XX}
+//XX{
+//XX   // Construction as if from an input file with invalid parameters we would
+//XX   // like to be valid
+//XX   platform::simulator_fixture simfix;
+//XX
+//XX   std::map< std::string, std::string > params;
+//XX   params[ "amxfile" ] = "amx.txt";
+//XX   params[ "patchfile" ] = "patch.txt";
+//XX   // Empty parameter list allowed
+//XX   BOOST_REQUIRE_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ), std::runtime_error );
+//XX}
+
