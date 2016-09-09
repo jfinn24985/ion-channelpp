@@ -95,13 +95,14 @@ const boost::filesystem::path dummy_path( boost::filesystem::absolute( "dummy" )
 
 !!!406193.cpp!!!	input_help_test() : void
 {
-  //  Constructor tests
+  // Static Lifetime method tests
 
-  // NOTE: input help has private default ctor
+  // NOTE: input help has private default ctor, so is "not" default constructable
   BOOST_CHECK( not std::is_default_constructible< core::input_help >::type{} );
   BOOST_CHECK( not std::is_copy_constructible< core::input_help >::type{} );
   BOOST_CHECK( not std::is_move_constructible< core::input_help >::type{} );
-  BOOST_CHECK( not std::is_assignable< core::input_help, core::input_help >::type{} );
+  BOOST_CHECK( (not std::is_assignable< core::input_help, core::input_help >::type{}) );
+  BOOST_CHECK( not std::has_virtual_destructor< core::input_help >::type{} );
 }
 std::string section1(core::strngs::fsspec());
 std::string section2(core::strngs::fssalt());
@@ -541,30 +542,17 @@ BOOST_CHECK_EQUAL(static_cast< int >(core::constants::nzgmx), 4096);
 //  }
 //
 //}
-!!!554672.cpp!!!	input_base_reader_test() : void
-class test_reader: public core::input_base_reader
+!!!855856.cpp!!!	input_base_reader_statics_test() : void
 {
-public:
-   bool do_next()
-   {
-      return false;
-   };
-   boost::filesystem::path current_filename() const
-   {
-      return boost::filesystem::path();
-   }
-   std::size_t current_line_number() const
-   {
-      return 0;
-   }
-   void add_buffer(const boost::filesystem::path &, std::string) {}
-   void add_include(const boost::filesystem::path &) {}
-};
-//--template < class Archive >
-//--void serialize( Archive &ar, input_base_reader &rr, const int version = 0)
-//--{
-//--   rr.serialize( ar );
-//--};
+  // Static Lifetime method tests
+
+  // NOTE, not default constructible because it is an abstract class
+  BOOST_CHECK( not std::is_default_constructible< core::input_base_reader >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< core::input_base_reader >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< core::input_base_reader >::type{} );
+  BOOST_CHECK( (not std::is_assignable< core::input_base_reader, core::input_base_reader >::type{}) );
+  BOOST_CHECK( std::has_virtual_destructor< core::input_base_reader >::type{} );
+}
 {
    // TEST BOOL CONVERTERS
    {
@@ -725,7 +713,6 @@ public:
       result = core::input_base_reader::dequote(result);
       BOOST_CHECK_EQUAL(result, pass);
    }
-
 }
 {
    // TEST Decommenting
@@ -795,7 +782,6 @@ public:
    BOOST_CHECK_EQUAL( result[1], 2.4 );
    BOOST_CHECK_EQUAL( result[2], 1.3 );
 }
-
 {
    std::vector< double > result;
    core::input_base_reader::read_as_floats("1 2 3 ABC", result);
@@ -804,116 +790,176 @@ public:
    BOOST_CHECK_EQUAL( result[1], 2.0 );
    BOOST_CHECK_EQUAL( result[2], 3.0 );
 }
-
 {
    std::vector< double > result;
    core::input_base_reader::read_as_floats("1", result);
    BOOST_CHECK_EQUAL(result.size(),1);
    BOOST_CHECK_EQUAL(result[0],1.0);
 }
-
+!!!554672.cpp!!!	input_base_reader_test() : void
+////////////
+// Simple (no-op) derived class to enable testing of base class methods
+class test_reader: public core::input_base_reader
 {
-   // TEST reader ctor
-   test_reader test;
-   BOOST_CHECK_EQUAL( test.line().size(), 0 );
-   BOOST_CHECK_EQUAL( test.name().size(), 0 );
-   BOOST_CHECK_EQUAL( test.value().size(), 0 );
+public:
+  bool do_next()
+  {
+    return false;
+  };
+  boost::filesystem::path current_filename() const
+  {
+    return boost::filesystem::path();
+  }
+  std::size_t current_line_number() const
+  {
+    return 0;
+  }
+  void add_buffer(const boost::filesystem::path &, std::string) {}
+  void add_include(const boost::filesystem::path &) {}
+};
+//--template < class Archive >
+//--void serialize( Archive &ar, input_base_reader &rr, const int version = 0)
+//--{
+//--   rr.serialize( ar );
+//--};
+{
+  // TEST reader ctor
+  test_reader test;
+  BOOST_CHECK_EQUAL( test.line().size(), 0 );
+  BOOST_CHECK_EQUAL( test.name().size(), 0 );
+  BOOST_CHECK_EQUAL( test.value().size(), 0 );
 }
 std::stringstream store;
 {
-   // TEST set_line
-   test_reader test;
+  // TEST set_line
+  test_reader test;
 
-   // serialization
-   boost::archive::text_oarchive oa( store );
-   {
-      // name only
-      const std::string ll( "section" );
-      BOOST_CHECK( test.set_line( ll ) );
-      BOOST_CHECK_EQUAL( test.line(), ll );
-      BOOST_CHECK_EQUAL( test.name(), ll );
-      BOOST_CHECK_EQUAL( test.value().size(), 0 );
-   }
-   {
-      // name value with '=' separator
-      const std::string ll( "name1 = value1" );
-      BOOST_CHECK( test.set_line( ll ) );
-      BOOST_CHECK_EQUAL( test.line(), ll );
-      BOOST_CHECK_EQUAL( test.name(), "name1" );
-      BOOST_CHECK_EQUAL( test.value(), "value1" );
-      oa << test;
-   }
-   {
-      // name value with ' ' separator
-      const std::string ll( "name2    value2" );
-      BOOST_CHECK( test.set_line( ll ) );
-      BOOST_CHECK_EQUAL( test.line(), ll );
-      BOOST_CHECK_EQUAL( test.name(), "name2" );
-      BOOST_CHECK_EQUAL( test.value(), "value2" );
-      oa << test;
-   }
-   {
-      // comment line
-      const std::string ll( "# section" );
-      BOOST_CHECK( not test.set_line( ll ) );
-      BOOST_CHECK_EQUAL( test.line(), ll );
-      BOOST_CHECK_EQUAL( test.name().size(), 0 );
-      BOOST_CHECK_EQUAL( test.value().size(), 0 );
-   }
-   {
-      // empty line
-      const std::string ll( "" );
-      BOOST_CHECK( not test.set_line( ll ) );
-      BOOST_CHECK_EQUAL( test.line(), ll );
-      BOOST_CHECK_EQUAL( test.name().size(), 0 );
-      BOOST_CHECK_EQUAL( test.value().size(), 0 );
-   }
-   {
-      // line with values separated by spaces and a comment
-      const std::string ll( "1 2.3 4 not a num # COMMENT" );
-      BOOST_CHECK( test.set_line( ll ) );
-      BOOST_CHECK_EQUAL( test.line(), ll );
-      BOOST_CHECK_EQUAL( test.name(), "1" );
-      BOOST_CHECK_EQUAL( test.value(), "2.3 4 not a num" );
-   }
-   {
-      // name only with a comment
-      const std::string ll( "section # COMMENT" );
-      BOOST_CHECK( test.set_line( ll ) );
-      BOOST_CHECK_EQUAL( test.line(), ll );
-      BOOST_CHECK_EQUAL( test.name(), "section" );
-      BOOST_CHECK_EQUAL( test.value().size(), 0 );
-   }
-   {
-      // value only ??
-      const std::string ll( " = section" );
-      BOOST_CHECK( test.set_line( ll ) );
-      BOOST_CHECK_EQUAL( test.line(), ll );
-      BOOST_CHECK_EQUAL( test.name().size(), 0  );
-      BOOST_CHECK_EQUAL( test.value(), "section" );
-   }
+  // serialization
+  boost::archive::text_oarchive oa( store );
+  {
+    // name only
+    const std::string ll( "section" );
+    BOOST_CHECK( test.set_line( ll ) );
+    BOOST_CHECK_EQUAL( test.line(), ll );
+    BOOST_CHECK_EQUAL( test.trimmed_line(), ll );
+    BOOST_CHECK_EQUAL( test.name(), ll );
+    BOOST_CHECK_EQUAL( test.value().size(), 0 );
+  }
+  {
+    // name value with '=' separator
+    const std::string ll( "name1 = value1" );
+    BOOST_CHECK( test.set_line( ll ) );
+    BOOST_CHECK_EQUAL( test.line(), ll );
+    BOOST_CHECK_EQUAL( test.trimmed_line(), ll );
+    BOOST_CHECK_EQUAL( test.name(), "name1" );
+    BOOST_CHECK_EQUAL( test.value(), "value1" );
+
+    // SAVE POINT 1
+    oa << test;
+
+    BOOST_CHECK_NE( test.line().size(), 0 );
+    BOOST_CHECK_NE( test.name().size(), 0 );
+    BOOST_CHECK_NE( test.value().size(), 0 );
+    test.clear();
+    BOOST_CHECK_EQUAL( test.line().size(), 0 );
+    BOOST_CHECK_EQUAL( test.name().size(), 0 );
+    BOOST_CHECK_EQUAL( test.value().size(), 0 );
+  }
+  {
+    // name value with ' ' separator
+    const std::string ll( "name2    value2" );
+    BOOST_CHECK( test.set_line( ll ) );
+    BOOST_CHECK_EQUAL( test.line(), ll );
+    BOOST_CHECK_EQUAL( test.trimmed_line(), ll );
+    BOOST_CHECK_EQUAL( test.name(), "name2" );
+    BOOST_CHECK_EQUAL( test.value(), "value2" );
+
+    // SAVE POINT 2
+    oa << test;
+
+    BOOST_CHECK_NE( test.line().size(), 0 );
+    BOOST_CHECK_NE( test.name().size(), 0 );
+    BOOST_CHECK_NE( test.value().size(), 0 );
+    BOOST_CHECK( not test.next() );
+    BOOST_CHECK_EQUAL( test.line().size(), 0 );
+    BOOST_CHECK_EQUAL( test.name().size(), 0 );
+    BOOST_CHECK_EQUAL( test.value().size(), 0 );
+  }
+  {
+    // comment line
+    const std::string ll( "# section" );
+    BOOST_CHECK( not test.set_line( ll ) );
+    BOOST_CHECK_EQUAL( test.line(), ll );
+    BOOST_CHECK_EQUAL( test.trimmed_line(), "" );
+    BOOST_CHECK_EQUAL( test.name().size(), 0 );
+    BOOST_CHECK_EQUAL( test.value().size(), 0 );
+  }
+  {
+    // empty line
+    const std::string ll( "" );
+    BOOST_CHECK( not test.set_line( ll ) );
+    BOOST_CHECK_EQUAL( test.line(), ll );
+    BOOST_CHECK_EQUAL( test.trimmed_line(), ll );
+    BOOST_CHECK_EQUAL( test.name().size(), 0 );
+    BOOST_CHECK_EQUAL( test.value().size(), 0 );
+  }
+  {
+    // line with values separated by spaces and a comment
+    const std::string ll( "1 2.3 4 not a num # COMMENT" );
+    BOOST_CHECK( test.set_line( ll ) );
+    BOOST_CHECK_EQUAL( test.line(), ll );
+    BOOST_CHECK_EQUAL( test.trimmed_line(), "1 2.3 4 not a num" );
+    BOOST_CHECK_EQUAL( test.name(), "1" );
+    BOOST_CHECK_EQUAL( test.value(), "2.3 4 not a num" );
+  }
+  {
+    // name only with a comment
+    const std::string ll( "section # COMMENT" );
+    BOOST_CHECK( test.set_line( ll ) );
+    BOOST_CHECK_EQUAL( test.line(), ll );
+    BOOST_CHECK_EQUAL( test.name(), "section" );
+    BOOST_CHECK_EQUAL( test.value().size(), 0 );
+  }
+  {
+    // value only ??
+    const std::string ll( " = section" );
+    BOOST_CHECK( test.set_line( ll ) );
+    BOOST_CHECK_EQUAL( test.line(), ll );
+    BOOST_CHECK_EQUAL( test.name().size(), 0  );
+    BOOST_CHECK_EQUAL( test.value(), "section" );
+  }
 
 }
 {
 
-   boost::archive::text_iarchive ia( store );
-   {
-      test_reader test;
-      ia >> test;
-      BOOST_CHECK_EQUAL( test.line(), "name1 = value1" );
-      BOOST_CHECK_EQUAL( test.name(), "name1" );
-      BOOST_CHECK_EQUAL( test.value(), "value1" );
-   }
-   {
-      test_reader test;
-      ia >> test;
-      BOOST_CHECK_EQUAL( test.line(), "name2    value2" );
-      BOOST_CHECK_EQUAL( test.name(), "name2" );
-      BOOST_CHECK_EQUAL( test.value(), "value2" );
-   }
+  boost::archive::text_iarchive ia( store );
+  {
+    test_reader test;
+    // FROM SAVE POINT 1
+    ia >> test;
+    BOOST_CHECK_EQUAL( test.line(), "name1 = value1" );
+    BOOST_CHECK_EQUAL( test.name(), "name1" );
+    BOOST_CHECK_EQUAL( test.value(), "value1" );
+  }
+  {
+    test_reader test;
+    // FROM SAVE POINT 2
+    ia >> test;
+    BOOST_CHECK_EQUAL( test.line(), "name2    value2" );
+    BOOST_CHECK_EQUAL( test.name(), "name2" );
+    BOOST_CHECK_EQUAL( test.value(), "value2" );
+  }
 }
-!!!554800.cpp!!!	input_preprocess_test() : void
 
+!!!554800.cpp!!!	input_preprocess_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( std::is_default_constructible< core::input_preprocess >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< core::input_preprocess >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< core::input_preprocess >::type{} );
+  BOOST_CHECK( (not std::is_assignable< core::input_preprocess, core::input_preprocess >::type{}) );
+  BOOST_CHECK( std::has_virtual_destructor< core::input_preprocess >::type{} );
+}
 {
    // TEST reader ctor
    core::input_preprocess test;
@@ -924,9 +970,13 @@ std::stringstream store;
    BOOST_CHECK_EQUAL( "", test.current_filename() );
 }
 {
+   // Test standard reader behavior (uses memory buffers only). 
    core_test_suite::test_read_input_buffer< core::input_preprocess, true >();
 }
 // test serialization
+//
+// input_preprocess should read the content of the input files, including any
+// "include" files, into internal buffers that can be serialized.
 std::stringstream store;
 const std::string dummy_input("\n\n# A comment\nsection # Another comment\nname1 = value1\n1 2.3 4 not a num # 6.2\nname1 value1");
 const std::string  dummy_filename("dummy");
@@ -936,52 +986,13 @@ const boost::filesystem::path dummy_path( boost::filesystem::absolute( "dummy" )
    test.add_buffer( dummy_filename, dummy_input );
    boost::archive::text_oarchive oa( store );
    oa << test;
-   
-   BOOST_CHECK_EQUAL( dummy_path, test.current_filename() );
-   BOOST_CHECK(test.next());
-   BOOST_CHECK_EQUAL( "section # Another comment", test.line() );
-   BOOST_CHECK_EQUAL( "section", test.name() );
-   BOOST_CHECK_EQUAL( "", test.value() );
-   BOOST_CHECK_EQUAL( 4, test.current_line_number() );
-   BOOST_CHECK_EQUAL( dummy_path, test.current_filename() );
-
-   // TEST reader next part 2
-   BOOST_CHECK(test.next());
-   BOOST_CHECK_EQUAL("name1 = value1",test.line());
-   BOOST_CHECK_EQUAL("name1",test.name());
-   BOOST_CHECK_EQUAL("value1",test.value());
-   BOOST_CHECK_EQUAL(5,test.current_line_number());
-   BOOST_CHECK_EQUAL(dummy_path,test.current_filename());
-
-   // TEST reader next part 3
-   BOOST_CHECK(test.next());
-   BOOST_CHECK_EQUAL("1 2.3 4 not a num # 6.2",test.line());
-   BOOST_CHECK_EQUAL("1",test.name());
-   BOOST_CHECK_EQUAL("2.3 4 not a num",test.value());
-   BOOST_CHECK_EQUAL(6,test.current_line_number());
-   BOOST_CHECK_EQUAL(dummy_path,test.current_filename());
-
-   // TEST reader next part 4
-   BOOST_CHECK(test.next());
-   BOOST_CHECK_EQUAL("name1 value1",test.line());
-   BOOST_CHECK_EQUAL("name1",test.name());
-   BOOST_CHECK_EQUAL("value1",test.value());
-   BOOST_CHECK_EQUAL(7,test.current_line_number());
-   BOOST_CHECK_EQUAL(dummy_path,test.current_filename());
-
-   // TEST reader next part 5
-   BOOST_CHECK(not test.next());
-   BOOST_CHECK_EQUAL("",test.line());
-   BOOST_CHECK_EQUAL("",test.name());
-   BOOST_CHECK_EQUAL("",test.value());
-
 }
 {
    core::input_preprocess rdr;
    boost::archive::text_iarchive ia( store );
    ia >> rdr;
 
-   BOOST_CHECK(rdr.next());
+   BOOST_CHECK( rdr.next() );
    BOOST_CHECK_EQUAL( "section # Another comment", rdr.line() );
    BOOST_CHECK_EQUAL( "section", rdr.name() );
    BOOST_CHECK_EQUAL( "", rdr.value() );
@@ -1020,404 +1031,40 @@ const boost::filesystem::path dummy_path( boost::filesystem::absolute( "dummy" )
 }
 
 !!!550960.cpp!!!	input_node_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( std::is_default_constructible< core::input_node >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< core::input_node >::type{} );
+  BOOST_CHECK( std::is_move_constructible< core::input_node >::type{} );
+  BOOST_CHECK( (std::is_assignable< core::input_node, core::input_node >::type{}) );
+  BOOST_CHECK( not std::has_virtual_destructor< core::input_node >::type{} );
+}
+
 const std::string dummy_input("\n\n# A comment\nsection # Another comment\nname1 = value1\n1 2.3 4 not a num # 6.2\nname1 value1\n\n");
 const std::string  dummy_filename("dummy");
+const boost::filesystem::path dummy_path( boost::filesystem::absolute( "dummy" ) );
 const std::vector< std::string > lines = { "", "", "# A comment", "section # Another comment", "name1 = value1", "1 2.3 4 not a num # 6.2", "name1 value1", "", "" };
+const std::vector< std::size_t > pos = { 1, 2, 14, 40, 55, 79, 92, 93, 94 };
+const std::vector< std::size_t > linenums = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 
-//--{
-//--  // TEST BOOL CONVERTERS
-//--  {
-//--    // Converting string to bool
-//--    // Converting string to bool: true -> true
-//--    const std::string test ("true");
-//--    bool pass = false;
-//--    pass = core::input_node::read_as_bool(test);
-//--    BOOST_CHECK_EQUAL(pass, true);
-//--  }
-//--  {
-//--    // Converting string to bool
-//--    // Converting string to bool: false -> false
-//--    const std::string test ("false");
-//--    bool pass = true;
-//--    pass = core::input_node::read_as_bool(test);
-//--    BOOST_CHECK_EQUAL(pass, false);
-//--  }
-//--  {
-//--    // Converting string to bool
-//--    // Converting string to bool: 0 -> false
-//--    const std::string test ("0");
-//--    bool pass = true;
-//--    pass = core::input_node::read_as_bool(test);
-//--    BOOST_CHECK_EQUAL(pass, false);
-//--  }
-//--  {
-//--    // Converting string to bool
-//--    // Converting string to bool: 1 -> true
-//--    const std::string test ("1");
-//--    bool pass = false;
-//--    pass = core::input_node::read_as_bool(test);
-//--    BOOST_CHECK_EQUAL(pass, true);
-//--
-//--  }
-//--  {
-//--    // Converting string to bool
-//--    // Converting string to bool: .false. -> false
-//--    const std::string test (".false.");
-//--    bool pass = true;
-//--    pass = core::input_node::read_as_bool(test);
-//--    BOOST_CHECK_EQUAL(pass, false);
-//--  }
-//--  {
-//--    // Converting string to bool
-//--    // Converting string to bool: 2.0 -> ?true?
-//--    const std::string test ("2.0");
-//--    bool pass = true;
-//--    BOOST_CHECK_THROW(pass = core::input_node::read_as_bool(test), boost::bad_lexical_cast);
-//--    BOOST_CHECK_EQUAL(pass, true);
-//--  }
-//--  {
-//--    // Converting string to bool
-//--    // Converting string to bool: 2 -> ?true?
-//--    const std::string test ("2");
-//--    bool pass = true;
-//--    BOOST_CHECK_THROW(pass = core::input_node::read_as_bool(test), boost::bad_lexical_cast);
-//--    BOOST_CHECK_EQUAL(pass, true);
-//--  }
-//--
-//--}
-//--{
-//--  // Test of dequoting
-//--  {
-//--    const std::string expect("abc  ");
-//--    const std::string input1("'abc  '");   // -> |abc  |
-//--    const std::string input2("\"abc  \""); // -> |abc  |
-//--    const std::string input3("\"abc  '");  // unchanged
-//--    const std::string input4("\"abc  \" ");// -> |abc  |
-//--    const std::string input5("\"abc  ' "); // unchanged
-//--    std::string result;
-//--
-//--    result = core::input_node::dequote(input1);
-//--    BOOST_CHECK_EQUAL(result, expect);
-//--
-//--    result = core::input_node::dequote(input2);
-//--    BOOST_CHECK_EQUAL(result, expect);
-//--
-//--    result = core::input_node::dequote(input3);
-//--    BOOST_CHECK_EQUAL(result, input3);
-//--
-//--    result = core::input_node::dequote(input4);
-//--    BOOST_CHECK_EQUAL(result, expect);
-//--
-//--    result = core::input_node::dequote(input5);
-//--    BOOST_CHECK_EQUAL(result, input5);
-//--  }
-//--  {
-//--    // No quotes
-//--    // Unquoted text: unchanged
-//--    std::string result = "The lazy dog.";
-//--    const std::string pass = "The lazy dog.";
-//--    result = core::input_node::dequote(result);
-//--    BOOST_CHECK_EQUAL(result, pass);
-//--  }
-//--  {
-//--    // Uneven quoted (front) text: unchanged
-//--    std::string result = "\"The lazy dog.";
-//--    const std::string pass = "\"The lazy dog.";
-//--    result = core::input_node::dequote(result);
-//--    BOOST_CHECK_EQUAL(result, pass);
-//--  }
-//--  {
-//--    // Uneven quotes (back) text: unchanged
-//--    std::string result = "The lazy dog.\"";
-//--    const std::string pass = "The lazy dog.\"";
-//--    result = core::input_node::dequote(result);
-//--    BOOST_CHECK_EQUAL(result, pass);
-//--  }
-//--  {
-//--    // Matched quotes [\"] text: strip quotes
-//--    std::string result = "\"The lazy dog.\"";
-//--    const std::string pass = "The lazy dog.";
-//--    result = core::input_node::dequote(result);
-//--    BOOST_CHECK_EQUAL(result, pass);
-//--  }
-//--  {
-//--    // Matched multi-quoted text: strip one set of quotes
-//--    std::string result = "\"\"The lazy dog.\"\"";
-//--    const std::string pass = "\"The lazy dog.\"";
-//--    result = core::input_node::dequote(result);
-//--    BOOST_CHECK_EQUAL(result, pass);
-//--  }
-//--  {
-//--    // Matched quoted with one end embedded in text: unchanged
-//--    std::string result = "\"The\" lazy dog.";
-//--    const std::string pass = "\"The\" lazy dog.";
-//--    result = core::input_node::dequote(result);
-//--    BOOST_CHECK_EQUAL(result, pass);
-//--  }
-//--  {
-//--    // Matched quoted ['] text: strip quotes
-//--    std::string result = "'The lazy dog.'";
-//--    const std::string pass = "The lazy dog.";
-//--    result = core::input_node::dequote(result);
-//--    BOOST_CHECK_EQUAL(result, pass);
-//--  }
-//--  {
-//--    // Mismatched quoted [\"...'] text: unchanged
-//--    std::string result = "\"The lazy dog.'";
-//--    const std::string pass = "\"The lazy dog.'";
-//--    result = core::input_node::dequote(result);
-//--    BOOST_CHECK_EQUAL(result, pass);
-//--  }
-//--  {
-//--    // Matched quoted [\"] text with external spacing: strip quotes and whitespace
-//--    std::string result = "\"The lazy dog. \" ";
-//--    const std::string pass = "The lazy dog. ";
-//--    result = core::input_node::dequote(result);
-//--    BOOST_CHECK_EQUAL(result, pass);
-//--  }
-//--  {
-//--    // Matched quoted [\"] text with internal spacing: strip quotes, leave internal whitespace
-//--    std::string result = "\"The lazy dog. \"";
-//--    const std::string pass = "The lazy dog. ";
-//--    result = core::input_node::dequote(result);
-//--    BOOST_CHECK_EQUAL(result, pass);
-//--  }
-//--
-//--}
-//--{
-//--  // TEST Decommenting
-//--  const std::string input1("#abc  '"); // empty
-//--
-//--  const std::string expect2(" ");
-//--  const std::string input2(" #abc  "); // -> | |
-//--
-//--  const std::string expect3("abc  ");
-//--  const std::string input3("abc  # "); // -> |abc  |
-//--
-//--  const std::string input4("abc   ");  // unchanged
-//--
-//--  const std::string input5("abc  \\# "); // unchanged
-//--
-//--  const std::string input6("\"abc  # \""); // unchanged
-//--
-//--  const std::string expect7("\'abc\'  ");
-//--  const std::string input7("\'abc\'  # ");
-//--
-//--  const std::string input8("\"abc\"  \"# "); // -> unchanged
-//--
-//--  const std::string expect9("\"abc\'  \"");
-//--  const std::string input9("\"abc\'  \"# ");
-//--
-//--  const std::string expectA("abc  \\\\");
-//--  const std::string inputA("abc  \\\\# ");
-//--  std::string result;
-//--
-//--  result = core::input_node::decomment(input1);
-//--  BOOST_CHECK(result.empty());
-//--
-//--  result = core::input_node::decomment(input2);
-//--  BOOST_CHECK_EQUAL(result, expect2);
-//--
-//--  result = core::input_node::decomment(input3);
-//--  BOOST_CHECK_EQUAL(result, expect3);
-//--
-//--  result = core::input_node::decomment(input4);
-//--  BOOST_CHECK_EQUAL(result, input4);
-//--
-//--  result = core::input_node::decomment(input5);
-//--  BOOST_CHECK_EQUAL(result, input5);
-//--
-//--  result = core::input_node::decomment(input6);
-//--  BOOST_CHECK_EQUAL(result, input6);
-//--
-//--  result = core::input_node::decomment(input7);
-//--  BOOST_CHECK_EQUAL(result, expect7);
-//--
-//--  result = core::input_node::decomment(input8);
-//--  BOOST_CHECK_EQUAL(result, input8);
-//--
-//--  result = core::input_node::decomment(input9);
-//--  BOOST_CHECK_EQUAL(result, expect9);
-//--
-//--  result = core::input_node::decomment(inputA);
-//--  BOOST_CHECK_EQUAL(result, expectA);
-//--
-//--}
+core::input_node node;
+core::input_preprocess reader;
+node.process_string( dummy_filename, dummy_input, reader );
+
+BOOST_CHECK_EQUAL( node.pos_, 0 );
+BOOST_CHECK_EQUAL( node.line_no_, 0 );
+BOOST_CHECK_EQUAL( node.path_, dummy_path );
+
+for (std::size_t ii = 0; ii != 9; ++ii )
 {
-  // TEST reader ctor
-  core::input_node test;
-  BOOST_CHECK_EQUAL( test.buffer_.size(), 0 );
-  BOOST_CHECK_EQUAL( test.path_.size(), 0 );
-  BOOST_CHECK_EQUAL( test.pos_, 0 );
-  BOOST_CHECK_EQUAL( test.line_no_, -1 );
+  std::string line;
+  node.getline( line );
+  BOOST_CHECK( node.eof() == (ii >= 8) );
+  BOOST_CHECK_EQUAL( line, lines[ii] );
+  BOOST_CHECK_EQUAL( node.pos_, pos[ii] );
+  BOOST_CHECK_EQUAL( node.line_no_, linenums[ii] );
 }
-//--{
-//--  // TEST process_string
-//--  core::input_node test;
-//--  test.process_string( dummy_filename, dummy_input );
-//--  BOOST_CHECK_EQUAL( test.includes_.size(), 0 );
-//--  BOOST_CHECK_EQUAL( test.buffer_.size(), dummy_input.size() );
-//--  BOOST_CHECK_EQUAL( test.path_, dummy_filename );
-//--  BOOST_CHECK_EQUAL( test.pos_, 0 );
-//--  BOOST_CHECK_EQUAL( test.line_no_, 0 );
-//--}
-//--{
-//--  // TEST bad input (1) for process_string
-//--  core::input_node test;
-//--  try
-//--  {
-//--     const std::string input( "\ninclude    \n\n" );
-//--     test.process_string( dummy_filename, input );
-//--  }
-//--  catch(const std::exception &err)
-//--  {
-//--     std::cerr << err.what() << "\n";
-//--  }
-//--//--  BOOST_CHECK_EQUAL( test.includes_.size(), 0 );
-//--//--  BOOST_CHECK_EQUAL( test.buffer_.size(), input.size() );
-//--//--  BOOST_CHECK_EQUAL( test.path_, dummy_filename );
-//--//--  BOOST_CHECK_EQUAL( test.pos_, 0 );
-//--//--  BOOST_CHECK_EQUAL( test.line_no_, 0 );
-//--}
-//--{
-//--  // TEST bad input (2) process_string
-//--  core::input_node test;
-//--
-//--  const std::string input( "\ninclude \n\n" );
-//--  test.process_string( dummy_filename, input );
-//--  BOOST_CHECK_EQUAL( test.includes_.size(), 0 );
-//--  BOOST_CHECK_EQUAL( test.buffer_.size(), input.size() );
-//--  BOOST_CHECK_EQUAL( test.path_, dummy_filename );
-//--  BOOST_CHECK_EQUAL( test.pos_, 0 );
-//--  BOOST_CHECK_EQUAL( test.line_no_, 0 );
-//--}
-//--{
-//--  // TEST bad input (3) process_string
-//--  core::input_node test;
-//--  const std::string input( "\ninclude=\n\n" );
-//--  test.process_string( dummy_filename, input );
-//--  BOOST_CHECK_EQUAL( test.includes_.size(), 0 );
-//--  BOOST_CHECK_EQUAL( test.buffer_.size(), input.size() );
-//--  BOOST_CHECK_EQUAL( test.path_, dummy_filename );
-//--  BOOST_CHECK_EQUAL( test.pos_, 0 );
-//--  BOOST_CHECK_EQUAL( test.line_no_, 0 );
-//--}
-//--{
-//--  // TEST bad input (4) process_string
-//--  core::input_node test;
-//--  const std::string input( "\ninclude  # some comment \n\n" );
-//--  test.process_string( dummy_filename, input );
-//--  BOOST_CHECK_EQUAL( test.includes_.size(), 0 );
-//--  BOOST_CHECK_EQUAL( test.buffer_.size(), input.size() );
-//--  BOOST_CHECK_EQUAL( test.path_, dummy_filename );
-//--  BOOST_CHECK_EQUAL( test.pos_, 0 );
-//--  BOOST_CHECK_EQUAL( test.line_no_, 0 );
-//--}
-//--{
-//--  // TEST getline
-//--  core::input_node test;
-//--  test.process_string( dummy_filename, dummy_input );
-//--
-//--  int counter = 0;
-//--  for (auto const& cline : lines)
-//--  {
-//--     std::string line;
-//--     BOOST_CHECK( not test.eof() );
-//--     test.getline( line );
-//--     ++counter;
-//--     BOOST_CHECK_EQUAL( cline, line );
-//--     BOOST_CHECK_EQUAL( counter, test.line_no_ );
-//--     BOOST_CHECK( test.pos_ <= test.buffer_.size() or test.eof() ); 
-//--  }
-//--  BOOST_CHECK( test.eof() );
-//--}
-//--{
-//--  // TEST reader next part 1
-//--  boost::shared_ptr< std::istream > input (new std::istringstream(dummy_input));
-//--  core::input_node test(dummy_filename,input);
-//--  BOOST_CHECK(test.next());
-//--  BOOST_CHECK_EQUAL("section",test.line());
-//--  BOOST_CHECK_EQUAL("section",test.name());
-//--  BOOST_CHECK_EQUAL("",test.value());
-//--  BOOST_CHECK_EQUAL(4,test.current_line_number());
-//--  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
-//--
-//--  // TEST reader next part 2
-//--  BOOST_CHECK(test.next());
-//--  BOOST_CHECK_EQUAL("name1 = value1",test.line());
-//--  BOOST_CHECK_EQUAL("name1",test.name());
-//--  BOOST_CHECK_EQUAL("value1",test.value());
-//--  BOOST_CHECK_EQUAL(5,test.current_line_number());
-//--  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
-//--
-//--  // TEST reader next part 3
-//--  BOOST_CHECK(test.next());
-//--  BOOST_CHECK_EQUAL("1 2.3 4 not a num",test.line());
-//--  BOOST_CHECK_EQUAL("1",test.name());
-//--  BOOST_CHECK_EQUAL("2.3 4 not a num",test.value());
-//--  BOOST_CHECK_EQUAL(6,test.current_line_number());
-//--  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
-//--
-//--  {
-//--    std::vector< double > result;
-//--    test.read_as_floats(test.line(), result);
-//--    BOOST_CHECK_EQUAL(result.size(),3);
-//--    BOOST_CHECK_EQUAL(result[0],1.0);
-//--    BOOST_CHECK_EQUAL(result[1],2.3);
-//--    BOOST_CHECK_EQUAL(result[2],4.0);
-//--  }
-//--
-//--  {
-//--    std::vector< double > result;
-//--    test.read_as_floats("-1.0 2.4 1.3", result);
-//--    BOOST_CHECK_EQUAL( result.size(), 3 );
-//--    BOOST_CHECK_EQUAL( result[0], -1.0 );
-//--    BOOST_CHECK_EQUAL( result[1], 2.4 );
-//--    BOOST_CHECK_EQUAL( result[2], 1.3 );
-//--  }
-//--
-//--  {
-//--    std::vector< double > result;
-//--    test.read_as_floats("1 2 3 ABC", result);
-//--    BOOST_CHECK_EQUAL( result.size(), 3 );
-//--    BOOST_CHECK_EQUAL( result[0], 1.0 );
-//--    BOOST_CHECK_EQUAL( result[1], 2.0 );
-//--    BOOST_CHECK_EQUAL( result[2], 3.0 );
-//--  }
-//--
-//--  {
-//--    std::vector< double > result;
-//--    test.read_as_floats("1", result);
-//--    BOOST_CHECK_EQUAL(result.size(),1);
-//--    BOOST_CHECK_EQUAL(result[0],1.0);
-//--  }
-//--
-//--  // TEST reader next part 4
-//--  BOOST_CHECK(test.next());
-//--  BOOST_CHECK_EQUAL("name1 value1",test.line());
-//--  BOOST_CHECK_EQUAL("name1",test.name());
-//--  BOOST_CHECK_EQUAL("value1",test.value());
-//--  BOOST_CHECK_EQUAL(7,test.current_line_number());
-//--  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
-//--
-//--  // TEST reader next part 5
-//--  BOOST_CHECK(not test.next());
-//--  BOOST_CHECK_EQUAL("",test.line());
-//--  BOOST_CHECK_EQUAL("",test.name());
-//--  BOOST_CHECK_EQUAL("",test.value());
-//--  // zero line number and "" indicate no file.
-//--  BOOST_CHECK_EQUAL(0,test.current_line_number());
-//--  BOOST_CHECK_EQUAL("",test.current_filename());
-//--  // Check stability of calling next after last element.
-//--  BOOST_CHECK(not test.next());
-//--  BOOST_CHECK_EQUAL("",test.line());
-//--  BOOST_CHECK_EQUAL("",test.name());
-//--  BOOST_CHECK_EQUAL("",test.value());
-//--  // zero line number and "" indicate no file.
-//--  BOOST_CHECK_EQUAL(0,test.current_line_number());
-//--  BOOST_CHECK_EQUAL("",test.current_filename());
-//--
-//--}
+ 
 !!!406065.cpp!!!	input_reader_test() : void
 std::string dummy_input("\n\n# A comment\nsection # Another comment\nname1 = value1\n1 2.3 4 not a num # 6.2\nname1 value1");
 std::string  dummy_filename("dummy");
