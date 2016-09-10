@@ -94,16 +94,17 @@ const boost::filesystem::path dummy_path( boost::filesystem::absolute( "dummy" )
 }
 
 !!!406193.cpp!!!	input_help_test() : void
+
 {
   // Static Lifetime method tests
 
-  // NOTE: input help has private default ctor, so is "not" default constructable
-  BOOST_CHECK( not std::is_default_constructible< core::input_help >::type{} );
+  BOOST_CHECK( std::is_default_constructible< core::input_help >::type{} );
   BOOST_CHECK( not std::is_copy_constructible< core::input_help >::type{} );
   BOOST_CHECK( not std::is_move_constructible< core::input_help >::type{} );
   BOOST_CHECK( (not std::is_assignable< core::input_help, core::input_help >::type{}) );
   BOOST_CHECK( not std::has_virtual_destructor< core::input_help >::type{} );
 }
+
 std::string section1(core::strngs::fsspec());
 std::string section2(core::strngs::fssalt());
 std::string sectdesc1("Specie definition input section variables and expected values.");
@@ -116,143 +117,83 @@ std::string description12("[\""+core::strngs::fsfree()+"\" type only, required, 
 std::string description21("[required, four letters] salt code name (quotes optional).");
 
 {
-  // We test the default ctor by getting the exemplar
-  core::input_help const& tmp (core::input_help::exemplar());
+  // default ctor
+  core::input_help tmp;
 
   BOOST_CHECK(tmp.empty());
-
   BOOST_CHECK_EQUAL(tmp.size(), 0ul);
-
   BOOST_CHECK(not tmp.has_section(section1));
-
 }
 {
   // test adding a section
-  core::input_help & tmp (core::input_help::exemplar());
+  core::input_help tmp;
 
   BOOST_CHECK(tmp.empty());
-
   BOOST_CHECK_EQUAL(tmp.size(), 0ul);
-
   BOOST_CHECK(not tmp.has_section(section1));
 
   tmp.add_section(section1, sectdesc1);
 
   BOOST_CHECK(not tmp.empty());
-
   BOOST_CHECK_EQUAL(tmp.size(), 1ul);
-
   BOOST_CHECK(tmp.has_section(section1));
 
-}
-{
-  // test getting a description (after add section)
-  core::input_help & tmp (core::input_help::exemplar());
-  BOOST_CHECK(not tmp.empty());
-
-  BOOST_CHECK_EQUAL(tmp.size(), 1ul);
-
-  BOOST_CHECK(tmp.has_section(section1));
-}
-{
-  // test adding an option (1)
-  core::input_help & tmp (core::input_help::exemplar());
-  BOOST_CHECK(not tmp.empty());
-
-  BOOST_CHECK_EQUAL(tmp.size(), 1ul);
-
-  BOOST_CHECK(tmp.has_section(section1));
-
+  // test adding an option after adding section
   tmp.add_option( section1, argname11, description11 );
 
-}
-{
-  // test adding an option (1)
-  core::input_help & tmp (core::input_help::exemplar());
-  BOOST_CHECK(not tmp.empty());
-
-  BOOST_CHECK_EQUAL(tmp.size(), 1ul);
-
-  BOOST_CHECK(not tmp.has_section(section2));
+  // test adding an option without adding a section
+  BOOST_CHECK( not tmp.has_section( section2 ) );
 
   tmp.add_option( section2, argname21, description21 );
+  BOOST_CHECK_EQUAL( tmp.size(), 2ul );
+  BOOST_CHECK( tmp.has_section( section2 ) );
+
+  // test adding a section (with description) after section has been added.
+  // This should simply add the description to the existing option.
+  BOOST_CHECK( tmp.has_section( section2 ));
+  tmp.add_section( section2, sectdesc2 );
 
   BOOST_CHECK_EQUAL(tmp.size(), 2ul);
+  BOOST_CHECK( tmp.has_section( section1 ) );
+  BOOST_CHECK( tmp.has_section( section2 ) );
 
-  BOOST_CHECK(tmp.has_section(section2));
-}
-{
-  // test adding a section 2
-  core::input_help & tmp (core::input_help::exemplar());
-
-  BOOST_CHECK_EQUAL(tmp.size(), 2ul);
-
-  BOOST_CHECK(tmp.has_section(section2));
-
-  tmp.add_section(section2, sectdesc2);
-
-  BOOST_CHECK(tmp.has_section(section2));
-
-}
-{
   // test adding an option (1.2)
-  core::input_help & tmp (core::input_help::exemplar());
-  BOOST_CHECK(not tmp.empty());
-
-  BOOST_CHECK_EQUAL(tmp.size(), 2ul);
-
-  BOOST_CHECK(tmp.has_section(section2));
-  BOOST_CHECK(tmp.has_section(section1));
-
   tmp.add_option( section1, argname12, description12 );
+
+  {
+    // test of printing a section
+    std::stringstream os;
+    tmp.print( os, section1 );
+    const std::string output( os.str() );
+    boost::tokenizer<> tok( output );
+    boost::tokenizer<> toksearch1( sectdesc1 );
+    BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch1.begin(), toksearch1.end() ) );
+    // Check description of section 2 is not present
+    boost::tokenizer<> toksearch2( sectdesc2 );
+    BOOST_CHECK( tok.end() == std::search( tok.begin(), tok.end(), toksearch2.begin(), toksearch2.end() ) );
+    boost::tokenizer<> toksearch3( description12 );
+    BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch3.begin(), toksearch3.end() ) );
+    boost::tokenizer<> toksearch4( description21 );
+    BOOST_CHECK( tok.end() == std::search( tok.begin(), tok.end(), toksearch4.begin(), toksearch4.end() ) );
+  }
+  {
+    // test printing everything
+    std::stringstream os;
+    tmp.print( os );
+    const std::string output( os.str() );
+    boost::tokenizer<> tok( output );
+    boost::tokenizer<> toksearch1( sectdesc1 );
+    BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch1.begin(), toksearch1.end() ) );
+    // Check description of section 2 is present
+    boost::tokenizer<> toksearch2( sectdesc2 );
+    BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch2.begin(), toksearch2.end() ) );
+    boost::tokenizer<> toksearch3( description12 );
+    BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch3.begin(), toksearch3.end() ) );
+    boost::tokenizer<> toksearch4( description21 );
+    BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch4.begin(), toksearch4.end() ) );
+  }
 }
-{
-  // test of printing a section
-  core::input_help & tmp (core::input_help::exemplar());
-  BOOST_CHECK(not tmp.empty());
 
-  BOOST_CHECK_EQUAL(tmp.size(), 2ul);
-
-  BOOST_CHECK(tmp.has_section(section2));
-  BOOST_CHECK(tmp.has_section(section1));
-
-  std::stringstream os;
-  tmp.print(os, section1);
-  const std::string output(os.str());
-  boost::tokenizer<> tok(output);
-  boost::tokenizer<> toksearch1(sectdesc1);
-  BOOST_CHECK(tok.end() != std::search(tok.begin(), tok.end(), toksearch1.begin(), toksearch1.end()));
-  boost::tokenizer<> toksearch2(sectdesc2);
-  BOOST_CHECK(tok.end() == std::search(tok.begin(), tok.end(), toksearch2.begin(), toksearch2.end()));
-  boost::tokenizer<> toksearch3(description12);
-  BOOST_CHECK(tok.end() != std::search(tok.begin(), tok.end(), toksearch3.begin(), toksearch3.end()));
-  boost::tokenizer<> toksearch4(description21);
-  BOOST_CHECK(tok.end() == std::search(tok.begin(), tok.end(), toksearch4.begin(), toksearch4.end()));
-
-}
-{
-  // test printing everything
-  core::input_help & tmp (core::input_help::exemplar());
-  BOOST_CHECK(not tmp.empty());
-
-  BOOST_CHECK_EQUAL(tmp.size(), 2ul);
-
-  BOOST_CHECK(tmp.has_section(section2));
-  BOOST_CHECK(tmp.has_section(section1));
-
-  std::stringstream os;
-  tmp.print(os);
-  const std::string output(os.str());
-  boost::tokenizer<> tok(output);
-  boost::tokenizer<> toksearch1(sectdesc1);
-  BOOST_CHECK(tok.end() != std::search(tok.begin(), tok.end(), toksearch1.begin(), toksearch1.end()));
-  boost::tokenizer<> toksearch2(sectdesc2);
-  BOOST_CHECK(tok.end() != std::search(tok.begin(), tok.end(), toksearch2.begin(), toksearch2.end()));
-  boost::tokenizer<> toksearch3(description12);
-  BOOST_CHECK(tok.end() != std::search(tok.begin(), tok.end(), toksearch3.begin(), toksearch3.end()));
-  boost::tokenizer<> toksearch4(description21);
-  BOOST_CHECK(tok.end() != std::search(tok.begin(), tok.end(), toksearch4.begin(), toksearch4.end()));
-}
 !!!405297.cpp!!!	dictionary_test() : void
 BOOST_CHECK_EQUAL(core::strngs::fsaccu(), "accum");
 BOOST_CHECK_EQUAL(core::strngs::fsadd(),  "add");
@@ -1047,24 +988,47 @@ const std::vector< std::string > lines = { "", "", "# A comment", "section # Ano
 const std::vector< std::size_t > pos = { 1, 2, 14, 40, 55, 79, 92, 93, 94 };
 const std::vector< std::size_t > linenums = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
 
-core::input_node node;
-core::input_preprocess reader;
-node.process_string( dummy_filename, dummy_input, reader );
-
-BOOST_CHECK_EQUAL( node.pos_, 0 );
-BOOST_CHECK_EQUAL( node.line_no_, 0 );
-BOOST_CHECK_EQUAL( node.path_, dummy_path );
-
-for (std::size_t ii = 0; ii != 9; ++ii )
+std::stringstream store;
 {
-  std::string line;
-  node.getline( line );
-  BOOST_CHECK( node.eof() == (ii >= 8) );
-  BOOST_CHECK_EQUAL( line, lines[ii] );
-  BOOST_CHECK_EQUAL( node.pos_, pos[ii] );
-  BOOST_CHECK_EQUAL( node.line_no_, linenums[ii] );
+  core::input_node node;
+  core::input_preprocess reader;
+  node.process_string( dummy_filename, dummy_input, reader );
+
+  BOOST_CHECK_EQUAL( node.pos_, 0 );
+  BOOST_CHECK_EQUAL( node.line_no_, 0 );
+  BOOST_CHECK_EQUAL( node.path_, dummy_path );
+  boost::archive::text_oarchive oa( store );
+  oa << node;
+
+  for (std::size_t ii = 0; ii != 9; ++ii )
+  {
+    std::string line;
+    node.getline( line );
+    BOOST_CHECK( node.eof() == (ii >= 8) );
+    BOOST_CHECK_EQUAL( line, lines[ii] );
+    BOOST_CHECK_EQUAL( node.pos_, pos[ii] );
+    BOOST_CHECK_EQUAL( node.line_no_, linenums[ii] );
+  }
 }
- 
+{
+  core::input_node node;
+  boost::archive::text_iarchive ia( store );
+  ia >> node;
+  BOOST_CHECK_EQUAL( node.pos_, 0 );
+  BOOST_CHECK_EQUAL( node.line_no_, 0 );
+  BOOST_CHECK_EQUAL( node.path_, dummy_path );
+
+  for (std::size_t ii = 0; ii != 9; ++ii )
+  {
+    std::string line;
+    node.getline( line );
+    BOOST_CHECK( node.eof() == (ii >= 8) );
+    BOOST_CHECK_EQUAL( line, lines[ii] );
+    BOOST_CHECK_EQUAL( node.pos_, pos[ii] );
+    BOOST_CHECK_EQUAL( node.line_no_, linenums[ii] );
+  }
+}
+
 !!!406065.cpp!!!	input_reader_test() : void
 std::string dummy_input("\n\n# A comment\nsection # Another comment\nname1 = value1\n1 2.3 4 not a num # 6.2\nname1 value1");
 std::string  dummy_filename("dummy");
