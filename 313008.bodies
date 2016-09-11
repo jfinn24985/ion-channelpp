@@ -28,67 +28,28 @@ else
    }
 }
 ++this->line_no_;
-!!!551088.cpp!!!	process_file(in filename : path, inout parent : input_preprocess) : void
+!!!551088.cpp!!!	set_buffer(in filename : path) : bool
 this->path_ = boost::filesystem::absolute( filename ).string();
-this->line_no_ = 0;
 // read file into our buffer stream
 std::ifstream ifs( this->path_.c_str() );
+std::string temp_buffer;
 if ( ifs )
 {
    ifs.seekg(0, std::ios::end);
    std::streampos length = ifs.tellg();
    ifs.seekg(0, std::ios::beg);
-   this->buffer_.reserve( length );
-   this->buffer_.assign( ( std::istreambuf_iterator<char>( ifs ) ), ( std::istreambuf_iterator<char>() ) );
+   temp_buffer.reserve( length );
+   temp_buffer.assign( ( std::istreambuf_iterator<char>( ifs ) ), ( std::istreambuf_iterator<char>() ) );
+  std::swap( temp_buffer, this->buffer_ );
+  this->rewind();
+  return true;
 }
-
-// look for include files in buffer
-this->process( parent );
-!!!551216.cpp!!!	process_string(in filename : path, in buffer : string, inout parent : input_preprocess) : void
+else
+{
+  return false;
+}
+!!!551216.cpp!!!	set_buffer(in filename : path, in buffer : string) : bool
 this->path_ = boost::filesystem::absolute( filename ).string();
 this->line_no_ = 0;
 this->buffer_ = buffer;
-
-// look for include files in buffer
-this->process( parent );
-!!!550192.cpp!!!	process(inout parent : input_preprocess) : void
-//
-// Attempt to handle input error cases where include keyword
-// is found without a value
-//
-// "include\n"
-// "include \n"
-
-const std::string incl_label( core::strngs::fsincl() );
-// look for include files in buffer
-while (not this->eof())
-{
-   std::string line;
-   std::string name;
-   std::string value;
-   this->getline( line );
-   boost::algorithm::trim( line );
-   // only consider lines with 'include' as first word
-   if ( 0 != line.find( incl_label ) ) continue;
-   UTILITY_INPUT( line == incl_label, "Missing file name", core::strngs::fsincl() );
-   if ( not std::isspace( line[ incl_label.size() ] ) or line[ incl_label.size() ] != '=' ) continue;
-   // Get line after include
-   line = line.substr( incl_label.size() );
-   line = parent.decomment( line, '#' );
-   boost::algorithm::trim( line );
-   // Check 'include' line has a path.
-   UTILITY_INPUT( not line.empty(), "Missing file name", core::strngs::fsincl() );
-
-   // Complete filename based on the current filename
-   boost::filesystem::path fn( line );
-   if ( fn.has_relative_path() )
-   {
-      boost::filesystem::path root( this->path_ );
-      fn = root.relative_path() / fn;
-   }
-   // Add to parent
-   parent.add_include( fn );
-}
-// reset buffer position.
-this->pos_ = 0;
-this->line_no_ = 0;
+return true;

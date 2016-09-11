@@ -44,7 +44,8 @@ std::string fn = boost::filesystem::absolute( filename ).string();
 UTILITY_REQUIRE( this->end() == this->includes_.find( fn ), "Input file included multiple times." );
 
 // Process the buffer
-this->includes_[ fn ].process_string( fn, buffer, *this );
+this->includes_[ fn ].set_buffer( fn, buffer );
+this->process( this->includes_[ fn ] );
 
 if ( this->file_stack_.empty() )
 {
@@ -57,7 +58,8 @@ if ( this->file_stack_.empty() )
 std::string fn = boost::filesystem::absolute( filename ).string();
 // Require that it is not already in the map
 UTILITY_REQUIRE( this->end() == this->includes_.find( fn ), "Input file included multiple times." );
-this->includes_[ fn ].process_file( fn, *this );
+this->includes_[ fn ].set_buffer( fn );
+this->process( this->includes_[ fn ] );
 
 if ( this->file_stack_.empty() )
 {
@@ -67,6 +69,47 @@ if ( this->file_stack_.empty() )
    this->file_stack_.push_back( this->includes_.find( fn ) );
 }
 
+!!!550192.cpp!!!	process(inout anode : input_node) : void
+//
+// Attempt to handle input error cases where include keyword
+// is found without a value
+//
+// "include\n"
+// "include \n"
+
+const std::string incl_label( core::strngs::fsincl() );
+// look for include files in buffer
+while (not anode.eof())
+{
+   std::string line;
+   std::string name;
+   std::string value;
+   anode.getline( line );
+   boost::algorithm::trim( line );
+   // only consider lines with 'include' as first word
+   if ( 0 != line.find( incl_label ) ) continue;
+   line = this->decomment( line, '#' );
+   boost::algorithm::trim( line );
+   UTILITY_INPUT( line == incl_label, "Keyword 'include' used without file name in file \""+anode.path()+"\" at line "+std::to_string( anode.line_number() ), core::strngs::fsincl() );
+   if ( not std::isspace( line[ incl_label.size() ] ) or line[ incl_label.size() ] != '=' ) continue;
+   // Get the rest of the line after 'include'
+   line = line.substr( incl_label.size() );
+   boost::algorithm::trim( line );
+   // Check 'include' line has a path.
+   UTILITY_INPUT( not line.empty(), "Keyword 'include' used without file name in file \""+anode.path()+"\" at line "+std::to_string( anode.line_number() ), core::strngs::fsincl() );
+
+   // Complete filename based on the current filename
+   boost::filesystem::path fn( line );
+   if ( fn.has_relative_path() )
+   {
+      boost::filesystem::path root( anode.path() );
+      fn = root.relative_path() / fn;
+   }
+   // Add to parent
+   this->add_include( fn );
+}
+// reset buffer position.
+anode.rewind();
 !!!548400.cpp!!!	do_next() : bool
 if (this->file_stack_.empty())
 {
@@ -96,7 +139,7 @@ while (true)
       boost::filesystem::path fn( this->value());
       if ( fn.has_relative_path() )
       {
-         boost::filesystem::path root( fid.path_ );
+         boost::filesystem::path root( fid.path() );
          if ( root.has_parent_path() )
          {
             fn = root.parent_path() / fn;
