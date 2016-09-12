@@ -79,37 +79,37 @@ if ( this->file_stack_.empty() )
 
 const std::string incl_label( core::strngs::fsincl() );
 // look for include files in buffer
-while (not anode.eof())
+while ( not anode.eof() )
 {
-   std::string line;
-   std::string name;
-   std::string value;
-   anode.getline( line );
-   boost::algorithm::trim( line );
-   // only consider lines with 'include' as first word
-   if ( 0 != line.find( incl_label ) ) continue;
-   line = this->decomment( line, '#' );
-   boost::algorithm::trim( line );
-   UTILITY_INPUT( line == incl_label, "Keyword 'include' used without file name in file \""+anode.path()+"\" at line "+std::to_string( anode.line_number() ), core::strngs::fsincl() );
-   if ( not std::isspace( line[ incl_label.size() ] ) or line[ incl_label.size() ] != '=' ) continue;
-   // Get the rest of the line after 'include'
-   line = line.substr( incl_label.size() );
-   boost::algorithm::trim( line );
-   // Check 'include' line has a path.
-   UTILITY_INPUT( not line.empty(), "Keyword 'include' used without file name in file \""+anode.path()+"\" at line "+std::to_string( anode.line_number() ), core::strngs::fsincl() );
+  std::string line;
+  std::string name;
+  std::string value;
+  anode.getline( line );
+  boost::algorithm::trim( line );
+  // only consider lines with 'include' as first word
+  if( 0 != line.find( incl_label ) ) continue;
+  this->set_line( line );
+  // If the name is not include (eg someone wrote include....) continue
+  if( this->name() != incl_label ) continue;
+  UTILITY_INPUT( not this->value().empty(), "Keyword 'include' used without file name in file \""+anode.path()+"\" at line "+std::to_string( anode.line_number() ), core::strngs::fsincl() );
 
-   // Complete filename based on the current filename
-   boost::filesystem::path fn( line );
-   if ( fn.has_relative_path() )
-   {
-      boost::filesystem::path root( anode.path() );
-      fn = root.relative_path() / fn;
-   }
-   // Add to parent
-   this->add_include( fn );
+  // Complete filename based on the current node's path
+  boost::filesystem::path fn( this->value() );
+  // reset name/value.
+  this->clear();
+
+  // Add include to map
+  if( fn.has_relative_path() )
+  {
+    // All nodes should have absolute paths.
+    boost::filesystem::path here( anode.path() );
+    fn = here.parent_path() / fn;
+  }
+  this->add_include( fn );
 }
 // reset buffer position.
 anode.rewind();
+
 !!!548400.cpp!!!	do_next() : bool
 if (this->file_stack_.empty())
 {

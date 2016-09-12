@@ -1,51 +1,59 @@
 class input_reader
 !!!555824.cpp!!!	add_buffer(in filename : path, in buffer : string) : void
-boost::shared_ptr< std::istream > tmp( new std::stringstream( buffer ) );
-this->file_stack_.push_back( input_reader::location_node( filename, tmp ) );
+UTILITY_INPUT( this->file_stack_.size() < 100, "Include depth exceeding 100 levels, which probably indicates an include cycle", core::strngs::fsincl() );
+// leave filename as-is
+this->file_stack_.push_back( input_node{} );
+this->file_stack_.back().set_buffer( filename.string(), buffer );
+
+!!!555696.cpp!!!	add_include(in filename : path) : void
+UTILITY_INPUT( this->file_stack_.size() < 100, "Include depth exceeding 100 levels, which probably indicates an include cycle", core::strngs::fsincl() );
+boost::filesystem::path fullpath( filename );
+if ( fullpath.has_relative_path() )
+{
+  boost::filesystem::path here( this->current_filename() );
+  if ( here.has_parent_path() )
+  {
+    fullpath = here.parent_path() / fullpath;
+  }
+  // else assume is relative to working directory.
+}
+this->file_stack_.push_back( input_node{} );
+this->file_stack_.back().set_buffer( fullpath.string() );
 
 !!!1542831.cpp!!!	do_next() : bool
-if (this->file_stack_.empty())
+if ( this->file_stack_.empty() )
 {
   return false;
 }
 // Keep going until we get a result or reach the end of all files.
-while (true)
+while ( true )
 {
-  // Get the top most stream
-  std::istream &fid = *(this->file_stack_.back().stream_);
-  if (not fid or fid.eof())
+  // Get the top most input node
+  input_node &fid = this->file_stack_.back();
+  if ( fid.eof() )
   {
     this->file_stack_.pop_back();
-    if (this->file_stack_.empty())
+    if( this->file_stack_.empty() )
     {
       return false;
     }
     continue;
   }
   std::string line;
-  std::getline(fid, line);
-  // Keep track of the current line number.
-  ++this->file_stack_.back().line_no_;
+  fid.getline( line );
+
   if ( not this->set_line( line ) ) continue;
 
   // Check for include.
-  if (this->name() == core::strngs::fsincl())
+  if ( this->name() == core::strngs::fsincl() )
   {
-    boost::filesystem::path fn( this->value());
-    if ( fn.has_relative_path() )
-    {
-       if ( this->file_stack_.back().path_.has_parent_path() )
-       {
-         fn = this->file_stack_.back().path_.parent_path() / fn;
-       }
-    }
-    UTILITY_INPUT( this->file_stack_.size() < 100, "Include depth exceeding 100 levels, which probably indicates an include cycle", core::strngs::fsincl() );
-    this->file_stack_.push_back( input_reader::location_node( fn ) );
+    this->add_include( this->value() );
     continue;
   }
   break;
 }
 return true;
+
 !!!1542831.python!!!	do_next() : bool
 if len(self.file_stack_) == 0:
   return False

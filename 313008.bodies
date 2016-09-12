@@ -28,18 +28,17 @@ else
    }
 }
 ++this->line_no_;
-!!!551088.cpp!!!	set_buffer(in filename : path) : bool
-this->path_ = boost::filesystem::absolute( filename ).string();
-// read file into our buffer stream
-std::ifstream ifs( this->path_.c_str() );
-std::string temp_buffer;
-if ( ifs )
+!!!878384.cpp!!!	read_stream_(inout ais : istream) : bool
+if( ais )
 {
-   ifs.seekg(0, std::ios::end);
-   std::streampos length = ifs.tellg();
-   ifs.seekg(0, std::ios::beg);
-   temp_buffer.reserve( length );
-   temp_buffer.assign( ( std::istreambuf_iterator<char>( ifs ) ), ( std::istreambuf_iterator<char>() ) );
+  // read stream into temp buffer
+  std::string temp_buffer;
+  ais.seekg( 0, std::ios::end );
+  std::streampos length = ais.tellg();
+  ais.seekg( 0, std::ios::beg );
+  temp_buffer.reserve( length );
+  temp_buffer.assign( ( std::istreambuf_iterator<char>( ais ) ), ( std::istreambuf_iterator<char>() ) );
+  // If all ok, swap temp buffer with out buffer.
   std::swap( temp_buffer, this->buffer_ );
   this->rewind();
   return true;
@@ -48,8 +47,18 @@ else
 {
   return false;
 }
+
+!!!878256.cpp!!!	set_buffer(in filename : path, inout ais : istream) : bool
+this->path_ = boost::filesystem::absolute( filename ).string();
+// read stream into our buffer
+return this->read_stream_( ais );
+!!!551088.cpp!!!	set_buffer(in filename : path) : bool
+this->path_ = boost::filesystem::absolute( filename ).string();
+// read file into our buffer stream
+std::ifstream ifs( this->path_.c_str() );
+return this->read_stream_( ifs );
 !!!551216.cpp!!!	set_buffer(in filename : path, in buffer : string) : bool
 this->path_ = boost::filesystem::absolute( filename ).string();
-this->line_no_ = 0;
-this->buffer_ = buffer;
+std::swap( this->buffer_, buffer );
+this->rewind();
 return true;

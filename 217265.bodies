@@ -1,8 +1,9 @@
 class core_test_suite
 !!!555312.cpp!!!	test_read_input_buffer() : void
-const std::string dummy_input("\n\n# A comment\nsection # Another comment\nname1 = value1\n1 2.3 4 not a num # 6.2\nname1 value1");
-const std::string  dummy_filename("dummy");
+const std::string dummy_input( "\n\n# A comment\nsection # Another comment\nname1 = value1\n1 2.3 4 not a num # 6.2\nname1 value1" );
+const std::string dummy_filename( "dummy" );
 const boost::filesystem::path dummy_path( boost::filesystem::absolute( "dummy" ) );
+const std::string dummy_path_str( dummy_path.string() );
 
 {
   Reader rdr;
@@ -13,67 +14,33 @@ const boost::filesystem::path dummy_path( boost::filesystem::absolute( "dummy" )
   BOOST_CHECK_EQUAL( "section", rdr.name() );
   BOOST_CHECK_EQUAL( "", rdr.value() );
   BOOST_CHECK_EQUAL( 4, rdr.current_line_number() );
-  if ( use_absolute )
-  {
-    BOOST_CHECK_EQUAL( dummy_path, rdr.current_filename() );
-    BOOST_CHECK_NE( dummy_filename, rdr.current_filename() );
-  }
-  else
-  {
-    BOOST_CHECK_EQUAL( dummy_filename, rdr.current_filename() );
-    BOOST_CHECK_NE( dummy_path, rdr.current_filename() );
-  }
+  BOOST_CHECK_EQUAL( dummy_path_str, rdr.current_filename() );
+  BOOST_CHECK_NE( dummy_filename, rdr.current_filename() );
+
   // TEST reader next part 2
   BOOST_CHECK( rdr.next() );
   BOOST_CHECK_EQUAL( "name1 = value1", rdr.line() );
   BOOST_CHECK_EQUAL( "name1", rdr.name() );
   BOOST_CHECK_EQUAL( "value1", rdr.value() );
   BOOST_CHECK_EQUAL( 5, rdr.current_line_number() );
-  if ( use_absolute )
-  {
-    BOOST_CHECK_EQUAL( dummy_path, rdr.current_filename() );
-    BOOST_CHECK_NE( dummy_filename, rdr.current_filename() );
-  }
-  else
-  {
-    BOOST_CHECK_EQUAL( dummy_filename, rdr.current_filename() );
-    BOOST_CHECK_NE( dummy_path, rdr.current_filename() );
-  }
-
+  BOOST_CHECK_EQUAL( dummy_path_str, rdr.current_filename() );
+  BOOST_CHECK_NE( dummy_filename, rdr.current_filename() );
   // TEST reader next part 3
   BOOST_CHECK( rdr.next() );
   BOOST_CHECK_EQUAL( "1 2.3 4 not a num # 6.2", rdr.line() );
   BOOST_CHECK_EQUAL( "1", rdr.name() );
   BOOST_CHECK_EQUAL( "2.3 4 not a num", rdr.value() );
   BOOST_CHECK_EQUAL( 6, rdr.current_line_number() );
-  if ( use_absolute )
-  {
-    BOOST_CHECK_EQUAL( dummy_path, rdr.current_filename() );
-    BOOST_CHECK_NE( dummy_filename, rdr.current_filename() );
-  }
-  else
-  {
-    BOOST_CHECK_EQUAL( dummy_filename, rdr.current_filename() );
-    BOOST_CHECK_NE( dummy_path, rdr.current_filename() );
-  }
-
+  BOOST_CHECK_EQUAL( dummy_path_str, rdr.current_filename() );
+  BOOST_CHECK_NE( dummy_filename, rdr.current_filename() );
   // TEST reader next part 4
   BOOST_CHECK( rdr.next() );
   BOOST_CHECK_EQUAL( "name1 value1", rdr.line() );
   BOOST_CHECK_EQUAL( "name1", rdr.name() );
   BOOST_CHECK_EQUAL( "value1", rdr.value() );
   BOOST_CHECK_EQUAL( 7, rdr.current_line_number() );
-  if ( use_absolute )
-  {
-    BOOST_CHECK_EQUAL( dummy_path, rdr.current_filename() );
-    BOOST_CHECK_NE( dummy_filename, rdr.current_filename() );
-  }
-  else
-  {
-    BOOST_CHECK_EQUAL( dummy_filename, rdr.current_filename() );
-    BOOST_CHECK_NE( dummy_path, rdr.current_filename() );
-  }
-
+  BOOST_CHECK_EQUAL( dummy_path_str, rdr.current_filename() );
+  BOOST_CHECK_NE( dummy_filename, rdr.current_filename() );
   // TEST reader next part 5
   BOOST_CHECK( not rdr.next() );
   BOOST_CHECK_EQUAL( "", rdr.line() );
@@ -90,9 +57,7 @@ const boost::filesystem::path dummy_path( boost::filesystem::absolute( "dummy" )
   // zero line number and "" indicate no file.
   BOOST_CHECK_EQUAL( 0, rdr.current_line_number() );
   BOOST_CHECK_EQUAL( "", rdr.current_filename() );
-
 }
-
 !!!406193.cpp!!!	input_help_test() : void
 
 {
@@ -598,20 +563,20 @@ BOOST_CHECK_EQUAL( static_cast< int >( core::constants::nzgmx ), 4096 );
 class test_reader: public core::input_base_reader
 {
 public:
-  bool do_next()
+  bool do_next() override
   {
     return false;
   };
-  boost::filesystem::path current_filename() const
+  std::string current_filename() const override
   {
-    return boost::filesystem::path();
+    return std::string();
   }
-  std::size_t current_line_number() const
+  std::size_t current_line_number() const override
   {
     return 0;
   }
-  void add_buffer(const boost::filesystem::path &, std::string) {}
-  void add_include(const boost::filesystem::path &) {}
+  void add_buffer(const boost::filesystem::path &, std::string) override {}
+  void add_include(const boost::filesystem::path &) override {}
 };
 //--template < class Archive >
 //--void serialize( Archive &ar, input_base_reader &rr, const int version = 0)
@@ -824,7 +789,7 @@ std::stringstream store;
 }
 {
    // Test standard reader behavior (uses memory buffers only). 
-   core_test_suite::test_read_input_buffer< core::input_preprocess, true >();
+   core_test_suite::test_read_input_buffer< core::input_preprocess >();
 }
 // test serialization
 //
@@ -884,85 +849,85 @@ const boost::filesystem::path dummy_path( boost::filesystem::absolute( "dummy" )
 }
 
 !!!406065.cpp!!!	input_reader_test() : void
-std::string dummy_input("\n\n# A comment\nsection # Another comment\nname1 = value1\n1 2.3 4 not a num # 6.2\nname1 value1");
-std::string  dummy_filename("dummy");
-//boost::filesystem::path dummy_path( "dummy" );
+std::string dummy_input( "\n\n# A comment\nsection # Another comment\nname1 = value1\n1 2.3 4 not a num # 6.2\nname1 value1" );
+std::string dummy_filename( boost::filesystem::absolute( "dummy" ).string() );
 
 {
-   core_test_suite::test_read_input_buffer< core::input_reader, false >();
+  core_test_suite::test_read_input_buffer< core::input_reader >();
 }
 {
   // TEST reader ctor
-  boost::shared_ptr< std::istream > input (new std::istringstream(dummy_input));
-  core::input_reader test(dummy_filename,input);
-  BOOST_CHECK_EQUAL("",test.line());
-  BOOST_CHECK_EQUAL("",test.name());
-  BOOST_CHECK_EQUAL("",test.value());
-  BOOST_CHECK_EQUAL(0,test.current_line_number());
-  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
+  std::istringstream input( dummy_input );
+  core::input_reader test( dummy_filename,input );
+  BOOST_CHECK_EQUAL( "",test.line() );
+  BOOST_CHECK_EQUAL( "",test.name() );
+  BOOST_CHECK_EQUAL( "",test.value() );
+  BOOST_CHECK_EQUAL( 0,test.current_line_number() );
+  BOOST_CHECK_EQUAL( dummy_filename,test.current_filename() );
 
 }
 {
   // TEST reader next part 1
-  boost::shared_ptr< std::istream > input (new std::istringstream(dummy_input));
-  core::input_reader test(dummy_filename,input);
-  BOOST_CHECK(test.next());
-  BOOST_CHECK_EQUAL("section # Another comment",test.line());
-  BOOST_CHECK_EQUAL("section",test.name());
-  BOOST_CHECK_EQUAL("",test.value());
-  BOOST_CHECK_EQUAL(4,test.current_line_number());
-  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
+  std::istringstream input( dummy_input );
+  core::input_reader test( dummy_filename,input );
+  BOOST_CHECK( test.next() );
+  BOOST_CHECK_EQUAL( "section # Another comment",test.line() );
+  BOOST_CHECK_EQUAL( "section",test.name() );
+  BOOST_CHECK_EQUAL( "",test.value() );
+  BOOST_CHECK_EQUAL( 4,test.current_line_number() );
+  BOOST_CHECK_EQUAL( dummy_filename,test.current_filename() );
 
   // TEST reader next part 2
-  BOOST_CHECK(test.next());
-  BOOST_CHECK_EQUAL("name1 = value1",test.line());
-  BOOST_CHECK_EQUAL("name1",test.name());
-  BOOST_CHECK_EQUAL("value1",test.value());
-  BOOST_CHECK_EQUAL(5,test.current_line_number());
-  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
+  BOOST_CHECK( test.next() );
+  BOOST_CHECK_EQUAL( "name1 = value1",test.line() );
+  BOOST_CHECK_EQUAL( "name1",test.name() );
+  BOOST_CHECK_EQUAL( "value1",test.value() );
+  BOOST_CHECK_EQUAL( 5,test.current_line_number() );
+  BOOST_CHECK_EQUAL( dummy_filename,test.current_filename() );
 
   // TEST reader next part 3
-  BOOST_CHECK(test.next());
-  BOOST_CHECK_EQUAL("1 2.3 4 not a num # 6.2",test.line());
-  BOOST_CHECK_EQUAL("1",test.name());
-  BOOST_CHECK_EQUAL("2.3 4 not a num",test.value());
-  BOOST_CHECK_EQUAL(6,test.current_line_number());
-  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
+  BOOST_CHECK( test.next() );
+  BOOST_CHECK_EQUAL( "1 2.3 4 not a num # 6.2",test.line() );
+  BOOST_CHECK_EQUAL( "1",test.name() );
+  BOOST_CHECK_EQUAL( "2.3 4 not a num",test.value() );
+  BOOST_CHECK_EQUAL( 6,test.current_line_number() );
+  BOOST_CHECK_EQUAL( dummy_filename,test.current_filename() );
 
   {
     std::vector< double > result;
-    test.read_as_floats(test.line(), result);
-    BOOST_CHECK_EQUAL(result.size(),3);
-    BOOST_CHECK_EQUAL(result[0],1.0);
-    BOOST_CHECK_EQUAL(result[1],2.3);
-    BOOST_CHECK_EQUAL(result[2],4.0);
+    test.read_as_floats( test.line(), result );
+    BOOST_CHECK_EQUAL( result.size(),3 );
+    BOOST_CHECK_EQUAL( result[0],1.0 );
+    BOOST_CHECK_EQUAL( result[1],2.3 );
+    BOOST_CHECK_EQUAL( result[2],4.0 );
   }
   // TEST reader next part 4
-  BOOST_CHECK(test.next());
-  BOOST_CHECK_EQUAL("name1 value1",test.line());
-  BOOST_CHECK_EQUAL("name1",test.name());
-  BOOST_CHECK_EQUAL("value1",test.value());
-  BOOST_CHECK_EQUAL(7,test.current_line_number());
-  BOOST_CHECK_EQUAL(dummy_filename,test.current_filename());
+  BOOST_CHECK( test.next() );
+  BOOST_CHECK_EQUAL( "name1 value1",test.line() );
+  BOOST_CHECK_EQUAL( "name1",test.name() );
+  BOOST_CHECK_EQUAL( "value1",test.value() );
+  BOOST_CHECK_EQUAL( 7,test.current_line_number() );
+  BOOST_CHECK_EQUAL( dummy_filename,test.current_filename() );
 
   // TEST reader next part 5
-  BOOST_CHECK(not test.next());
-  BOOST_CHECK_EQUAL("",test.line());
-  BOOST_CHECK_EQUAL("",test.name());
-  BOOST_CHECK_EQUAL("",test.value());
+  BOOST_CHECK( not test.next() );
+  BOOST_CHECK_EQUAL( "",test.line() );
+  BOOST_CHECK_EQUAL( "",test.name() );
+  BOOST_CHECK_EQUAL( "",test.value() );
   // zero line number and "" indicate no file.
-  BOOST_CHECK_EQUAL(0,test.current_line_number());
-  BOOST_CHECK_EQUAL("",test.current_filename());
+  BOOST_CHECK_EQUAL( 0,test.current_line_number() );
+  BOOST_CHECK_EQUAL( "",test.current_filename() );
   // Check stability of calling next after last element.
-  BOOST_CHECK(not test.next());
-  BOOST_CHECK_EQUAL("",test.line());
-  BOOST_CHECK_EQUAL("",test.name());
-  BOOST_CHECK_EQUAL("",test.value());
+  BOOST_CHECK( not test.next() );
+  BOOST_CHECK_EQUAL( "",test.line() );
+  BOOST_CHECK_EQUAL( "",test.name() );
+  BOOST_CHECK_EQUAL( "",test.value() );
   // zero line number and "" indicate no file.
-  BOOST_CHECK_EQUAL(0,test.current_line_number());
-  BOOST_CHECK_EQUAL("",test.current_filename());
+  BOOST_CHECK_EQUAL( 0,test.current_line_number() );
+  BOOST_CHECK_EQUAL( "",test.current_filename() );
 
 }
+
 !!!405553.cpp!!!	input_delegater_test() : void
 //platform::application appl;
 //{

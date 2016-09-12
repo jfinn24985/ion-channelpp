@@ -1,6 +1,6 @@
 format 75
 "core" // core
-  revision 164
+  revision 166
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -2818,7 +2818,7 @@ ${docstring}${body}
       end
 
       operation 553264 "current_filename"
-	abstract preserve_cpp_body_indent const cpp_virtual public return_type class_ref 252079 // path
+	abstract preserve_cpp_body_indent const cpp_virtual public explicit_return_type "string"
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
 "
@@ -3107,6 +3107,15 @@ ${docstring}${members}
  includes the file name and current read position.
 
  This class follows canonical pattern."
+      classrelation 547760 // <dependency>
+	relation 546864 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 547760 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
       attribute 372144 "buffer_"
 	private explicit_type "string"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -3259,7 +3268,7 @@ ${docstring}${members}
       classrelation 354736 // <dependency>
 	relation 354352 -_->
 	  stereotype "friend"
-	  a package
+	  a public
 	    cpp default "${type}"
 	    python "${type}"
 	    classrelation_ref 354736 // <dependency>
@@ -3374,6 +3383,51 @@ ${docstring}${body}
 	comment " The name of the file that we obtained the buffer contents from."
       end
 
+      operation 878384 "read_stream_"
+	private explicit_return_type "bool"
+	nparams 1
+	  param inout name "ais" explicit_type "istream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Read stream into internal buffer.
+
+ If return value is true then node contains the contents of
+ the named file. If false (or on exception) then contents are
+ unchanged. "
+      end
+
+      operation 878256 "set_buffer"
+	public explicit_return_type "bool"
+	nparams 2
+	  param in name "filename" type class_ref 252079 // path
+	  param inout name "ais" explicit_type "istream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Work from stream, giving it the path 'filename'.
+
+ If return value is true then node contains the contents of
+ the named file. If false (or on exception) then contents are
+ unchanged. "
+      end
+
       operation 551088 "set_buffer"
 	public explicit_return_type "bool"
 	nparams 1
@@ -3475,6 +3529,15 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 355376 // <generalisation>
 	  b parent class_ref 313392 // input_base_reader
+      end
+
+      classrelation 554288 // <dependency>
+	relation 553392 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 554288 // <dependency>
+	  b parent class_ref 313008 // input_node
       end
 
       classrelation 354480 // <dependency>
@@ -3722,9 +3785,9 @@ ${docstring}${body}
       end
 
       operation 547760 "current_filename"
-	preserve_cpp_body_indent const public return_type class_ref 252079 // path
+	preserve_cpp_body_indent const public explicit_return_type "string"
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override
 {
   return ( this->file_stack_.empty() ? ${type}() : this->file_stack_.back()->second.path() );
 }
@@ -3735,17 +3798,14 @@ ${docstring}${body}
 ${docstring}return None if len(self.file_stack_) == 0 else self.file_stack_[-1].path_
 "
 	
-	comment " --------------------------------------------
- CURRENT FILE NAME
-
- Get the name of the file that is currently being processed.
+	comment " Get the name of the file that is currently being processed.
  If there is not current file then an empty string or None is returned"
       end
 
       operation 547888 "current_line_number"
 	preserve_cpp_body_indent const public explicit_return_type "size_t"
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override
 {
   return ( this->file_stack_.empty() ? 0 : this->file_stack_.back()->second.line_number() );
 } 
@@ -3756,10 +3816,7 @@ ${docstring}return None if len(self.file_stack_) == 0 else self.file_stack_[-1].
 ${docstring}return -1 if len(self.file_stack_) == 0 else self.file_stack_[-1].line_no_
 "
 	
-	comment " --------------------------------------------
- CURRENT LINE NUMBER
-
- Get the line number of the file that is currently being
+	comment " Get the line number of the file that is currently being
  processed. If there is no current file then 0(C++) or
  -1(python) is returned."
       end
@@ -3841,7 +3898,7 @@ ${docstring}${body}
 	nparams 2
 	  param in name "filename" type class_ref 252079 // path
 	  param in name "buffer" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
 {
@@ -3861,7 +3918,7 @@ ${docstring}${body}
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "filename" type class_ref 252079 // path
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
 {
@@ -3918,7 +3975,7 @@ ${docstring}${body}
       operation 548400 "do_next"
 	preserve_cpp_body_indent private explicit_return_type "bool"
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "//  dequote
 // --------------------------------------------
@@ -4040,6 +4097,15 @@ in the order they appear in the Serializer.section_handlers list.
 	  b parent class_ref 313392 // input_base_reader
       end
 
+      classrelation 554416 // <dependency>
+	relation 553520 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 554416 // <dependency>
+	  b parent class_ref 313008 // input_node
+      end
+
       classrelation 1200559 // <dependency>
 	relation 1163439 -_->
 	  a default
@@ -4049,200 +4115,8 @@ in the order they appear in the Serializer.section_handlers list.
 	  b parent class_ref 1016239 // strngs
       end
 
-      class 1039279 "location_node"
-	visibility package stereotype "struct"
-	cpp_decl "${comment}${template}struct ${name}${inherit} 
-{
-${members}
-};
-${inlines}
-"
-	java_decl ""
-	php_decl ""
-	python_2_2 python_decl "class ${name}${inherit}:
-${docstring}${members}
-"
-	idl_decl ""
-	explicit_switch_type ""
-	
-	attribute 368305 "path_"
-	  public type class_ref 252079 // path
-	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	  java_decl ""
-	  php_decl ""
-	  python_decl "${comment}${self}${name} = ${value}
-"
-	  idl_decl ""
-	  comment "Path of input stream"
-	end
-
-	attribute 368433 "line_no_"
-	  public explicit_type "int"
-	  init_value "-1"
-	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	  java_decl ""
-	  php_decl ""
-	  python_decl "${comment}${self}${name} = ${value}
-"
-	  idl_decl ""
-	  comment "Current line number in file"
-	end
-
-	attribute 368561 "stream_"
-	  public explicit_type "istream"
-	  multiplicity "0..1"
-	  stereotype "shared_ptr"
-	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
-"
-	  java_decl ""
-	  php_decl ""
-	  python_decl "${comment}${self}${name} = ${value}
-"
-	  idl_decl ""
-	  comment "Input stream"
-	end
-
-	operation 610481 "location_node"
-	  public explicit_return_type ""
-	  nparams 1
-	    param in name "filename" type class_ref 252079 // path
-	  cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}${)}${volatile}${throw};
-"
-	  cpp_def "${comment}${inline}${class}::${name}${(}const ${t0} & ${p0}${)}${volatile}${throw} 
-: path_(${p0})
-, line_no_(-1)
-, stream_()
-{
-  ${body}
-}
-"
-	  
-	  
-	  
-	  
-	end
-
-	operation 610993 "location_node"
-	  public explicit_return_type ""
-	  nparams 3
-	    param in name "filename" type class_ref 252079 // path
-	    param in name "ais" explicit_type "istream"
-	    param in name "lineno" explicit_type "int"
-	      defaultvalue "0"
-	  cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}, boost::shared_ptr< ${t1} > ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw};
-"
-	  cpp_def "${comment}${inline}${class}::${name}${(}const ${t0} & ${p0}, boost::shared_ptr< ${t1} > ${p1}, ${t2} ${p2}${)}${volatile}${throw} 
-: path_(${p0})
-, line_no_(${p2})
-, stream_(${p1})
-{}
-"
-	  
-	  
-	  
-	  
-	  comment "Create a location node from a preexisting input
-stream"
-	end
-
-	operation 611505 "__init__"
-	  public explicit_return_type ""
-	  nparams 2
-	    param inout name "self" explicit_type ""
-	    param in name "*args" explicit_type ""
-	  
-	  
-	  
-	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}, ${p1}${v1}${)}:
-${docstring}${body}
-"
-	  
-	end
-
-	operation 610609 "~location_node"
-	  public explicit_return_type ""
-	  nparams 0
-	  cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} = default;
-"
-	  
-	  
-	  
-	  
-	end
-
-	operation 610737 "location_node"
-	  stereotype "copy"
-	  public explicit_return_type ""
-	  nparams 1
-	    param in name "source" type class_ref 1039279 // location_node
-	  cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
-: path_(source.path_)
-, line_no_(source.line_no_)
-, stream_(source.stream_)
-{}
-"
-	  
-	  
-	  
-	  
-	end
-
-	operation 611121 "location_node"
-	  stereotype "move"
-	  public explicit_return_type ""
-	  nparams 1
-	    param inout name "source" type class_ref 1039279 // location_node
-	  cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
-: path_(source.path_)
-, line_no_(source.line_no_)
-, stream_(source.stream_)
-{}
-"
-	  
-	  
-	  
-	  
-	end
-
-	operation 610865 "operator="
-	  public return_type class_ref 1039279 // location_node
-	  nparams 1
-	    param in name "source" type class_ref 1039279 // location_node
-	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
-{
-  this->swap(source);
-  return *this;
-}
-"
-	  
-	  
-	  
-	  
-	end
-
-	operation 611249 "swap"
-	  public explicit_return_type "void"
-	  nparams 1
-	    param inout name "source" type class_ref 1039279 // location_node
-	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  std::swap(path_, source.path_);
-  std::swap(line_no_, source.line_no_);
-  std::swap(stream_, source.stream_);
-}
-
-"
-	  
-	  
-	  
-	  
-	end
-      end
-
       attribute 1092911 "file_stack_"
-	private type class_ref 1039279 // location_node
+	private type class_ref 313008 // input_node
 	multiplicity "*"
 	stereotype "vector"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
@@ -4252,7 +4126,7 @@ ${docstring}${body}
 	python_decl "${comment}${self}${name} = ${value}
 "
 	idl_decl ""
-	comment "The set of input streams/files"
+	comment "The set of buffered input streams/files"
       end
 
       extra_member 271665 "lifetime"
@@ -4281,9 +4155,9 @@ ${docstring}${body}
 "
 	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}${)}
 : input_base_reader()
-, file_stack_()
+, file_stack_(1)
 {
-  this->file_stack_.push_back (input_reader::location_node(filename));
+  this->file_stack_[0].set_buffer( filename );
 }
 "
 	
@@ -4298,13 +4172,13 @@ ${docstring}${body}
 	nparams 2
 	  param in name "filename" explicit_type "string"
 	  param inout name "ais" explicit_type "istream"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, boost::shared_ptr< ${t1} > ${p1}${v1}${)}${volatile}${throw};
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} & ${p1}${v1}${)}${volatile}${throw};
 "
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, boost::shared_ptr< ${t1} > ${p1}${)}  ${throw}
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1}& ${p1}${)}  ${throw}
 : input_base_reader()
-, file_stack_()
+, file_stack_(1)
 {
-  this->file_stack_.push_back (input_reader::location_node(${p0}, ${p1}));
+  this->file_stack_[0].set_buffer(${p0}, ${p1});
 }
 "
 	
@@ -4337,14 +4211,28 @@ ${docstring}${body}
 	
 	
 	
-	comment " invalid operation"
       end
 
       operation 1542063 "input_reader"
+	stereotype "copy"
 	private explicit_return_type ""
 	nparams 1
-	  param in name "" type class_ref 871087 // input_reader
+	  param in name "source" type class_ref 871087 // input_reader
 	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	
+	
+	comment " invalid operation"
+      end
+
+      operation 878512 "input_reader"
+	stereotype "move"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 871087 // input_reader
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${v0}${)}${volatile}${throw};
 "
 	
 	
@@ -4385,11 +4273,11 @@ ${docstring}${body}
       end
 
       operation 1543087 "current_filename"
-	preserve_cpp_body_indent const public return_type class_ref 252079 // path
+	preserve_cpp_body_indent const public explicit_return_type "string"
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override
 {
-  return (this->file_stack_.empty() ? ${type}() : this->file_stack_.back().path_);
+  return (this->file_stack_.empty() ? ${type}() : this->file_stack_.back().path());
 }
 "
 	
@@ -4398,19 +4286,16 @@ ${docstring}${body}
 ${docstring}return None if len(self.file_stack_) == 0 else self.file_stack_[-1].path_
 "
 	
-	comment " --------------------------------------------
- CURRENT FILE NAME
-
- Get the name of the file that is currently being processed.
+	comment " Get the name of the file that is currently being processed.
  If there is not current file then an empty string or None is returned"
       end
 
       operation 1542959 "current_line_number"
 	preserve_cpp_body_indent const public explicit_return_type "size_t"
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override
 {
-  return (this->file_stack_.empty() ? 0 : this->file_stack_.back().line_no_);
+  return (this->file_stack_.empty() ? 0 : this->file_stack_.back().line_number());
 } 
 "
 	
@@ -4419,10 +4304,7 @@ ${docstring}return None if len(self.file_stack_) == 0 else self.file_stack_[-1].
 ${docstring}return -1 if len(self.file_stack_) == 0 else self.file_stack_[-1].line_no_
 "
 	
-	comment " --------------------------------------------
- CURRENT LINE NUMBER
-
- Get the line number of the file that is currently being
+	comment " Get the line number of the file that is currently being
  processed. If there is no current file then 0(C++) or
  -1(python) is returned."
       end
@@ -4450,7 +4332,7 @@ ${docstring}return -1 if len(self.file_stack_) == 0 else self.file_stack_[-1].li
 	nparams 2
 	  param in name "filename" type class_ref 252079 // path
 	  param in name "buffer" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
 {
@@ -4461,32 +4343,31 @@ ${docstring}return -1 if len(self.file_stack_) == 0 else self.file_stack_[-1].li
 	
 	
 	
-	comment " Generate a reader using a (possibly dummy) filename and a
- preexisting input stream."
+	comment " Add a preread buffer with a (possibly dummy) filename."
       end
 
       operation 555696 "add_include"
 	preserve_cpp_body_indent public explicit_return_type "void"
 	nparams 1
 	  param in name "filename" type class_ref 252079 // path
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
 {
-  this->file_stack_.push_back ( input_reader::location_node( ${p0} ) );
+  ${body}
 }
 "
 	
 	
 	
 	
-	comment " Generate a reader using the filename of the top-level file."
+	comment " Add an included file."
       end
 
       operation 1542831 "do_next"
 	preserve_cpp_body_indent private explicit_return_type "bool"
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "//  dequote
 // --------------------------------------------
@@ -4528,24 +4409,6 @@ ${docstring}${body}
  (In 'include' statements C++ should handle relative paths, 
  python currently does not)
 "
-      end
-
-      extra_member 272049 "input line processing"
-	
-	cpp "// ----------------------------------------
-// input line processing
-// ----------------------------------------
-" "// ----------------------------------------
-// input line processing
-// ----------------------------------------
-"
-	java ""
-	php ""
-	python "# ----------------------------------------
-# input line processing
-# ----------------------------------------
-"
-	idl ""
       end
     end
 
@@ -7494,6 +7357,101 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
+    artifact 674735 "input_help"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+//-
+#include <boost/program_options/options_description.hpp>
+//=
+${namespace_start}
+${members}
+${namespace_end}"
+      associated_classes
+	class_ref 1004335 // input_help
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 430256 "input_node"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// manual include
+#include <fstream>
+// -
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 313008 // input_node
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
     artifact 288304 "input_preprocess"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -7533,54 +7491,7 @@ ${namespace_end}"
 ${import}
 ${definition}"
       associated_classes
-	class_ref 313008 // input_node
 	class_ref 312752 // input_preprocess
-      end
-      comment "----------------------------------------------------------------------
-This source file is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-----------------------------------------------------------------------
-"
-    end
-
-    artifact 674735 "input_help"
-      stereotype "source"
-      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
-#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
-
-${comment}
-${includes}
-${declarations}
-${namespace_start}
-${definition}
-${namespace_end}
-#endif
-"
-      cpp_src "${comment}
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
-
-${includes}
-//-
-#include <boost/program_options/options_description.hpp>
-//=
-${namespace_start}
-${members}
-${namespace_end}"
-      associated_classes
-	class_ref 1004335 // input_help
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
@@ -7812,6 +7723,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 268720 // output_file
 	artifact_ref 288304 // input_preprocess
 	artifact_ref 288432 // input_base_reader
+	artifact_ref 430256 // input_node
 	artifact_ref 577711 // constants
 	artifact_ref 579119 // input_reader
 	artifact_ref 674607 // input_delegater
