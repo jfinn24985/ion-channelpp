@@ -1,6 +1,6 @@
 format 75
 "core" // core
-  revision 166
+  revision 168
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -3218,8 +3218,8 @@ ${docstring}${members}
 	nparams 1
 	  param inout name "source" type class_ref 313008 // input_node
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
-: buffer_(source.buffer_)
-, path_(source.path_)
+: buffer_(std::move(source.buffer_))
+, path_(std::move(source.path_))
 , pos_(source.pos_)
 , line_no_(source.line_no_)
 {}
@@ -3252,7 +3252,7 @@ ${docstring}${members}
 	  param inout name "source" type class_ref 313008 // input_node
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  std::swap(buffer_, source.buffer_);
+  std::swap(buffer_, source.buffer_);  
   std::swap(path_, source.path_);
   std::swap(pos_, source.pos_);
   std::swap(line_no_, source.line_no_);
@@ -3300,7 +3300,7 @@ ${docstring}${members}
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
-  return this->pos_ > this->buffer_.size();
+  return this->buffer_.size() <= this->pos_;
 }
 "
 	
@@ -3309,7 +3309,10 @@ ${docstring}${members}
 ${docstring}${body}
 "
 	
-	comment "Is our current position at the end of the buffer?"
+	comment "Is our current position at the end of the buffer?
+
+ \"eof\" is true under the following condition:
+ *  pos_ >= input_buffer.size"
       end
 
       operation 869168 "file_position"

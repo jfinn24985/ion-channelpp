@@ -725,9 +725,9 @@ std::stringstream store;
 const std::string dummy_input("\n\n# A comment\nsection # Another comment\nname1 = value1\n1 2.3 4 not a num # 6.2\nname1 value1\n\n");
 const std::string  dummy_filename("dummy");
 const boost::filesystem::path dummy_path( boost::filesystem::absolute( "dummy" ) );
-const std::vector< std::string > lines = { "", "", "# A comment", "section # Another comment", "name1 = value1", "1 2.3 4 not a num # 6.2", "name1 value1", "", "" };
-const std::vector< std::size_t > pos = { 1, 2, 14, 40, 55, 79, 92, 93, 94 };
-const std::vector< std::size_t > linenums = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+const std::vector< std::string > lines = { "", "", "# A comment", "section # Another comment", "name1 = value1", "1 2.3 4 not a num # 6.2", "name1 value1", "", "", "" };
+const std::vector< std::size_t > pos = { 1, 2, 14, 40, 55, 79, 92, 93, 94, 94 };
+const std::vector< std::size_t > linenums = { 1, 2, 3, 4, 5, 6, 7, 8, 8, 8 };
 
 std::stringstream store;
 {
@@ -737,17 +737,34 @@ std::stringstream store;
   BOOST_CHECK_EQUAL( node.file_position(), 0 );
   BOOST_CHECK_EQUAL( node.line_number(), 0 );
   BOOST_CHECK_EQUAL( node.path(), dummy_path );
+  BOOST_CHECK_EQUAL( node.eof(), false );
+
   boost::archive::text_oarchive oa( store );
   oa << node;
 
-  for (std::size_t ii = 0; ii != 9; ++ii )
+  for (std::size_t ii = 0; ii != 10; ++ii )
   {
     std::string line;
     node.getline( line );
-    BOOST_CHECK( node.eof() == (ii >= 8) );
+    BOOST_CHECK( node.eof() == (ii >= 7) );
     BOOST_CHECK_EQUAL( line, lines[ii] );
     BOOST_CHECK_EQUAL( node.file_position(), pos[ii] );
     BOOST_CHECK_EQUAL( node.line_number(), linenums[ii] );
+    BOOST_CHECK_EQUAL( node.path(), dummy_path );
+  }
+  node.rewind();
+  BOOST_CHECK_EQUAL( node.file_position(), 0 );
+  BOOST_CHECK_EQUAL( node.line_number(), 0 );
+  BOOST_CHECK_EQUAL( node.path(), dummy_path );
+  for (std::size_t ii = 0; ii != 8; ++ii )
+  {
+    std::string line;
+    node.getline( line );
+    BOOST_CHECK( node.eof() == (ii >= 7) );
+    BOOST_CHECK_EQUAL( line, lines[ii] );
+    BOOST_CHECK_EQUAL( node.file_position(), pos[ii] );
+    BOOST_CHECK_EQUAL( node.line_number(), linenums[ii] );
+    BOOST_CHECK_EQUAL( node.path(), dummy_path );
   }
 }
 {
@@ -758,15 +775,67 @@ std::stringstream store;
   BOOST_CHECK_EQUAL( node.line_number(), 0 );
   BOOST_CHECK_EQUAL( node.path(), dummy_path );
 
-  for (std::size_t ii = 0; ii != 9; ++ii )
+  for (std::size_t ii = 0; ii != 8; ++ii )
   {
     std::string line;
     node.getline( line );
-    BOOST_CHECK( node.eof() == (ii >= 8) );
+    BOOST_CHECK( node.eof() == (ii >= 7) );
     BOOST_CHECK_EQUAL( line, lines[ii] );
     BOOST_CHECK_EQUAL( node.file_position(), pos[ii] );
     BOOST_CHECK_EQUAL( node.line_number(), linenums[ii] );
+    BOOST_CHECK_EQUAL( node.path(), dummy_path );
   }
+}
+
+// Test of input that is a single line without \n
+{
+  const std::string single_input("section ");
+  core::input_node node;
+  node.set_buffer( dummy_filename, single_input );
+
+  BOOST_CHECK_EQUAL( node.file_position(), 0 );
+  BOOST_CHECK_EQUAL( node.line_number(), 0 );
+  BOOST_CHECK_EQUAL( node.path(), dummy_path );
+  BOOST_CHECK_EQUAL( node.eof(), false );
+
+  std::string line;
+  node.getline( line );
+  BOOST_CHECK( node.eof() );
+  BOOST_CHECK_EQUAL( line, single_input );
+  BOOST_CHECK_EQUAL( node.file_position(), single_input.size() );
+  BOOST_CHECK_EQUAL( node.line_number(), 1 );
+  BOOST_CHECK_EQUAL( node.path(), dummy_path );
+}
+
+// Test of empty input
+{
+  const std::string empty_input{};
+  core::input_node node;
+  node.set_buffer( dummy_filename, empty_input );
+
+  BOOST_CHECK_EQUAL( node.file_position(), 0 );
+  BOOST_CHECK_EQUAL( node.line_number(), 0 );
+  BOOST_CHECK_EQUAL( node.path(), dummy_path );
+  BOOST_CHECK_EQUAL( node.eof(), true );
+}
+
+// Test of empty single line input
+{
+  const std::string empty_input{"\n"};
+  core::input_node node;
+  node.set_buffer( dummy_filename, empty_input );
+
+  BOOST_CHECK_EQUAL( node.file_position(), 0 );
+  BOOST_CHECK_EQUAL( node.line_number(), 0 );
+  BOOST_CHECK_EQUAL( node.path(), dummy_path );
+  BOOST_CHECK_EQUAL( node.eof(), false );
+  std::string line;
+  node.getline( line );
+  BOOST_CHECK( node.eof() );
+  BOOST_CHECK_EQUAL( line, "" );
+  BOOST_CHECK_EQUAL( node.file_position(), 1 );
+  BOOST_CHECK_EQUAL( node.line_number(), 1 );
+  BOOST_CHECK_EQUAL( node.path(), dummy_path );
 }
 
 !!!554800.cpp!!!	input_preprocess_test() : void
