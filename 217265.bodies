@@ -58,6 +58,44 @@ const std::string dummy_path_str( dummy_path.string() );
   BOOST_CHECK_EQUAL( 0, rdr.current_line_number() );
   BOOST_CHECK_EQUAL( "", rdr.current_filename() );
 }
+!!!898992.cpp!!!	test_input_base_meta() : void
+//// CTOR TESTS
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( not typename std::is_default_constructible< Meta >::type{} );
+  BOOST_CHECK( not typename std::is_copy_constructible< Meta >::type{} );
+  BOOST_CHECK( not typename std::is_move_constructible< Meta >::type{} );
+  BOOST_CHECK( not (typename std::is_assignable< Meta, Meta >::type{}) );
+  BOOST_CHECK( typename std::has_virtual_destructor< Meta >::type{} );
+}
+// ----------
+const std::string label( "name" );
+{
+  std::unique_ptr< core::input_base_meta > dobj( new Meta( label, false, false ) );
+  BOOST_CHECK_EQUAL( dobj->section_label(), label );
+  BOOST_CHECK_EQUAL( dobj->multiple(), false );
+  BOOST_CHECK_EQUAL( dobj->required(), false );
+}
+{
+  std::unique_ptr< core::input_base_meta > dobj( new Meta( label, true, false ) );
+  BOOST_CHECK_EQUAL( dobj->section_label(), label );
+  BOOST_CHECK_EQUAL( dobj->multiple(), true );
+  BOOST_CHECK_EQUAL( dobj->required(), false );
+}
+{
+  std::unique_ptr< core::input_base_meta > dobj( new Meta( label, false, true ) );
+  BOOST_CHECK_EQUAL( dobj->section_label(), label );
+  BOOST_CHECK_EQUAL( dobj->multiple(), false );
+  BOOST_CHECK_EQUAL( dobj->required(), true );
+}
+{
+  std::unique_ptr< core::input_base_meta > dobj( new Meta( label, true, true ) );
+  BOOST_CHECK_EQUAL( dobj->section_label(), label );
+  BOOST_CHECK_EQUAL( dobj->multiple(), true );
+  BOOST_CHECK_EQUAL( dobj->required(), true );
+}
+
+
 !!!406193.cpp!!!	input_help_test() : void
 
 {
@@ -1410,202 +1448,376 @@ const std::string label2 { "label2" };
          BOOST_CHECK_EQUAL( *t_iter, *w_iter );
       }
    }}
-!!!412721.cpp!!!	input_meta_test() : void
-//// CTOR TESTS
+!!!899120.cpp!!!	test_meta_lifetime_test() : void
+// CTOR TESTS
+core_test_suite::test_input_base_meta< test_meta >();
+// test test_meta attribute initialisation.
 {
-  // Static Lifetime method tests
-  BOOST_CHECK( not std::is_default_constructible< test_meta >::type{} );
-  BOOST_CHECK( not std::is_copy_constructible< test_meta >::type{} );
-  BOOST_CHECK( not std::is_move_constructible< test_meta >::type{} );
-  BOOST_CHECK( not (std::is_assignable< test_meta, test_meta >::type{}) );
-  BOOST_CHECK( std::has_virtual_destructor< test_meta >::type{} );
+  const std::string label( "name" );
+  std::unique_ptr< test_meta > dobj( new test_meta( label, true, false ) );
+  BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 0ul );
+  BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 0ul );
+  BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 0ul );
 }
-// ----------
+!!!899248.cpp!!!	test_meta_add_documentation_test() : void
+{
+  // 
+  // Call add_documentation, all other attributes unaffected.
+  // 
+  std::unique_ptr< test_meta > dobj( new test_meta( "label" ) );
+  BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 0ul );
+  {
+    core::input_help dummy;
+    dobj->add_documentation( dummy );
+    BOOST_CHECK_EQUAL( dobj->entry_map().size(), 0ul );
+    BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 0ul );
+    BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 0ul );
+    BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 1ul );
+  }
+}
+!!!891952.cpp!!!	test_meta_read_section_test() : void
 const std::string label( "name" );
 {
-  std::unique_ptr< core::input_base_meta > dobj( new test_meta( label ) );
-  // test_meta(str,bool=false) --> input_base_meta(str,false,bool)
-  BOOST_CHECK_EQUAL( dobj->section_label(), label );
-  BOOST_CHECK_EQUAL( dobj->multiple(), false );
-  BOOST_CHECK_EQUAL( dobj->required(), false );
+  // 
+  // Read section with no name/value pairs
+  // 
+  std::unique_ptr< test_meta > dobj( new test_meta( label ) );
+  {
+    core::input_reader dummy;
+    dummy.add_buffer( "test_filename", "name\n# comment\nend\n" );
+    while( dummy.next() )
+    {
+      if ( dummy.name() == "name" )
+      {
+        dobj->read_section( dummy );
+        BOOST_CHECK_EQUAL( dobj->entry_map().size(), 0ul );
+        BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 0ul );
+        BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
+        BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 0ul );
+      }
+    }
+  }
+  {
+    core::input_help dummy;
+    dobj->add_documentation( dummy );
+    BOOST_CHECK_EQUAL( dobj->entry_map().size(), 0ul );
+    BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 0ul );
+    BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
+    BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 1ul );
+  }
 }
 {
-  std::unique_ptr< core::input_base_meta > dobj( new test_meta( label, true, false ) );
-  // test_meta(str,bool,bool) --> input_base_meta(str,bool,bool)
-  BOOST_CHECK_EQUAL( dobj->section_label(), label );
-  BOOST_CHECK_EQUAL( dobj->multiple(), true );
-  BOOST_CHECK_EQUAL( dobj->required(), false );
+  // 
+  // Read section with one name/value pair
+  // 
+  std::unique_ptr< test_meta > dobj( new test_meta( label ) );
+  {
+    core::input_reader dummy;
+    dummy.add_buffer( "test_filename", "name\nhello world\nend\n" );
+    while( dummy.next() )
+    {
+      if ( dummy.name() == "name" )
+      {
+        dobj->read_section( dummy );
+        BOOST_CHECK_EQUAL( dobj->entry_map().size(), 1ul );
+        BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 1ul );
+        BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
+      }
+    }
+  }
 }
 {
-  std::unique_ptr< core::input_base_meta > dobj( new test_meta( label, false, true ) );
-  // test_meta(str,bool,bool) --> input_base_meta(str,bool,bool)
-  BOOST_CHECK_EQUAL( dobj->section_label(), label );
-  BOOST_CHECK_EQUAL( dobj->multiple(), false );
-  BOOST_CHECK_EQUAL( dobj->required(), true );
+  // 
+  // Read section with three name/value pair
+  // 
+  std::unique_ptr< test_meta > dobj( new test_meta( label ) );
+  {
+    core::input_reader dummy;
+    dummy.add_buffer( "test_filename", "name\n# comment\na\nb c\nd e # hmm\nend\n" );
+    while( dummy.next() )
+    {
+      if ( dummy.name() == "name" )
+      {
+        dobj->read_section( dummy );
+        BOOST_CHECK_EQUAL( dobj->entry_map().size(), 3ul );
+        BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 3ul );
+        BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
+        BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 0ul );
+      }
+    }
+  }
+  {
+    core::input_help dummy;
+    dobj->add_documentation( dummy );
+    BOOST_CHECK_EQUAL( dobj->entry_map().size(), 3ul );
+    BOOST_CHECK_EQUAL( dobj->entry_map().count( "a" ), 1 );
+    BOOST_CHECK_EQUAL( dobj->entry_map().count( "b" ), 1 );
+    if ( dobj->entry_map().count( "b" ) >= 1 )
+    {
+       BOOST_CHECK_EQUAL( dobj->entry_map().find( "b" )->second, "c" );
+    }
+    BOOST_CHECK_EQUAL( dobj->entry_map().count( "d" ), 1 );
+    if ( dobj->entry_map().count( "d" ) >= 1 )
+    {
+       BOOST_CHECK_EQUAL( dobj->entry_map().find( "d" )->second, "e" );
+    }
+    BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 3ul );
+    BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
+    BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 1ul );
+  }
+}
+{
+  // 
+  // Read section with three name/value pair, one duplicated
+  // 
+  std::unique_ptr< test_meta > dobj( new test_meta( label ) );
+  {
+    core::input_reader dummy;
+    dummy.add_buffer( "test_filename", "name\n# comment\na\nb c\nb e # hmm\nend\n" );
+    // second value of "b" silently ignored.
+    while( dummy.next() )
+    {
+      if ( dummy.name() == "name" )
+      {
+        dobj->read_section( dummy );
+        BOOST_CHECK_EQUAL( dobj->entry_map().size(), 2ul );
+        BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 3ul );
+        BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
+        BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 0ul );
+      }
+    }
+  }
+  {
+    core::input_help dummy;
+    dobj->add_documentation( dummy );
+    BOOST_CHECK_EQUAL( dobj->entry_map().size(), 2ul );
+    BOOST_CHECK_EQUAL( dobj->entry_map().count( "a" ), 1 );
+    BOOST_CHECK_EQUAL( dobj->entry_map().count( "b" ), 1 );
+    if ( dobj->entry_map().count( "b" ) >= 1 )
+    {
+       BOOST_CHECK_EQUAL( dobj->entry_map().find( "b" )->second, "c" );
+    }
+    BOOST_CHECK_EQUAL( dobj->entry_map().count( "d" ), 0 );
+    BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 3ul );
+    BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
+    BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 1ul );
+  }
 }
 
-!!!405553.cpp!!!	input_delegater_test() : void
-//platform::application appl;
-//{
-//  core::input_delegater var1(1ul);
-//  BOOST_CHECK_EQUAL(var1.size (), 0ul);
-//  BOOST_CHECK_EQUAL(var1.read_version (), 0ul);
-//  BOOST_CHECK_EQUAL(var1.max_version (), 1ul);
-//  BOOST_CHECK_THROW(var1.read_input_file (appl, "test"), std::runtime_error);
-//}
-//{
-//  boost::shared_ptr< core::input_base_meta > dobj (new test_meta("test"));
-//  
-//  core::input_delegater var1(1ul);
-//  
-//  BOOST_CHECK_EQUAL(var1.size (), 0ul);
-//  BOOST_CHECK_EQUAL(var1.read_version (), 0ul);
-//  BOOST_CHECK_EQUAL(var1.max_version (), 1ul);
-//  
-//  var1.add_input_delegate (dobj);
-//  BOOST_CHECK_EQUAL(var1.size (), 1ul);
-//  BOOST_CHECK(var1.has_section("test"));
-//  BOOST_CHECK_THROW(var1.read_input_file (appl, "test"), std::runtime_error);
-//}
-//{
-//  boost::shared_ptr< core::input_base_meta > dobj (new test_meta("test"));
-//  
-//  const std::string canon_input ("fileversion 1\n");
-//  
-//  core::input_delegater var1(1ul);
-//  
-//  BOOST_CHECK_EQUAL(var1.size (), 0ul);
-//  BOOST_CHECK_EQUAL(var1.read_version (), 0ul);
-//  BOOST_CHECK_EQUAL(var1.max_version (), 1ul);
-//  
-//  var1.add_input_delegate (dobj);
-//  
-//  BOOST_CHECK_EQUAL(var1.size (), 1ul);
-//  
-//  boost::shared_ptr< std::istream > imp (new std::stringstream (canon_input));
-//  
-//  BOOST_CHECK_NO_THROW(var1.read_input_file (appl, "test", imp));
-//  BOOST_CHECK_EQUAL(var1.read_version (), 1ul);
-//  
-//
-//}
-//{
-//  boost::shared_ptr< core::input_base_meta > dobj (new test_meta("test"));
-//  const std::string canon_input ("fileversion 2\n");
-//  core::input_delegater var1(1ul);
-//  BOOST_CHECK_EQUAL(var1.size (), 0ul);
-//  BOOST_CHECK_EQUAL(var1.read_version (), 0ul);
-//  BOOST_CHECK_EQUAL(var1.max_version (), 1ul);
-//  var1.add_input_delegate (dobj);
-//  BOOST_CHECK_EQUAL(var1.size (), 1ul);
-//  boost::shared_ptr< std::istream > imp (new std::stringstream (canon_input));
-//  BOOST_CHECK_THROW(var1.read_input_file (appl, "test", imp), std::runtime_error);
-//  
-//
-//}
-//{
-//  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test1"));
-//  boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test2"));
-//  boost::shared_ptr< core::input_base_meta > dobj3 (new test_meta("test3"));
-//  
-//  const std::string canon_input ("fileversion 1\ntest1\nend\ntest2\n\nend\n");
-//  core::input_delegater var1(1ul);
-//  
-//  var1.add_input_delegate (dobj1);
-//  var1.add_input_delegate (dobj2);
-//  var1.add_input_delegate (dobj3);
-//  
-//  BOOST_CHECK_EQUAL(var1.size (), 3ul);
-//  
-//  BOOST_CHECK(var1.has_section("test1"));
-//  BOOST_CHECK(var1.has_section("test2"));
-//  BOOST_CHECK(var1.has_section("test3"));
-//  BOOST_CHECK(not var1.has_section("test4"));
-//  
-//  boost::shared_ptr< std::istream > imp (new std::stringstream (canon_input));
-//  BOOST_CHECK_NO_THROW(var1.read_input_file (appl, "test", imp));
-//
-//}
-//{
-//  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test1"));
-//  boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test2"));
-//  boost::shared_ptr< core::input_base_meta > dobj3 (new test_meta("test3"));
-//  
-//  const std::string canon_input ("fileversion 1\ntest1\nend\ntest4\n\nend\n");
-//  core::input_delegater var1(1ul);
-//  
-//  var1.add_input_delegate (dobj1);
-//  var1.add_input_delegate (dobj2);
-//  var1.add_input_delegate (dobj3);
-//  
-//  BOOST_CHECK_EQUAL(var1.size (), 3ul);
-//  boost::shared_ptr< std::istream > imp (new std::stringstream (canon_input));
-//  BOOST_CHECK_THROW(var1.read_input_file (appl, "test", imp), std::runtime_error);
-//  
-//
-//}
-//{
-//  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test1"));
-//  boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test2"));
-//  boost::shared_ptr< core::input_base_meta > dobj3 (new test_meta("test3", true));
-//  
-//  const std::string canon_input ("fileversion 1\ntest1\nend\ntest2\n\nend\n");
-//  core::input_delegater var1(1ul);
-//  
-//  var1.add_input_delegate (dobj1);
-//  var1.add_input_delegate (dobj2);
-//  var1.add_input_delegate (dobj3);
-//  
-//  boost::shared_ptr< std::istream > imp (new std::stringstream (canon_input));
-//  
-//  BOOST_CHECK_THROW(var1.read_input_file (appl, "test", imp), std::runtime_error);
-//  
-//
-//}
-//{
-//  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test1"));
-//  boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test2"));
-//  
-//  const std::string canon_input ("fileversion 1\ntest1\nend\ntest2\n\nend\ntest2\n\nend\n");
-//  core::input_delegater var1(1ul);
-//  
-//  var1.add_input_delegate (dobj1);
-//  var1.add_input_delegate (dobj2);
-//  
-//  boost::shared_ptr< std::istream > imp (new std::stringstream (canon_input));
-//  
-//  BOOST_CHECK_THROW(var1.read_input_file (appl,"test", imp), std::runtime_error);
-//  
-//
-//}
-//{
-//  std::stringstream store;
-//  {
-//    boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test1"));
-//    boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test2"));
-//  
-//    const std::string canon_input ("fileversion 1\ntest1\nend\ntest2\n\nend\ntest2\n\nend\n");
-//    core::input_delegater var1(1ul);
-//  
-//    var1.add_input_delegate (dobj1);
-//    var1.add_input_delegate (dobj2);
-//  
-//    boost::shared_ptr< std::istream > imp (new std::stringstream (canon_input));
-//  
-//    BOOST_CHECK_THROW(var1.read_input_file (appl, "test", imp), std::runtime_error);
-//    boost::archive::text_oarchive oa(store);
-//    // write class instance to archive
-//    oa << var1;
-//  }
-//  {
-//    core::input_delegater var1(1ul);
-//    boost::archive::text_iarchive ia(store);
-//    // get class instance from archive
-//    ia >> var1;
-//  
-//  }
-//
-//}
+
+!!!405553.cpp!!!	input_delegater_lifetime_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( not std::is_default_constructible< core::input_delegater >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< core::input_delegater >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< core::input_delegater >::type{} );
+  BOOST_CHECK( not( std::is_assignable< core::input_delegater, core::input_delegater >::type{} ) );
+  BOOST_CHECK( not( std::has_virtual_destructor< core::input_delegater >::type{} ) );
+}
+{
+  // Construct delegater 
+  core::input_delegater dlgater( 1 );
+  BOOST_CHECK( dlgater.empty() );
+  BOOST_CHECK_EQUAL( dlgater.size(), 0 );
+  BOOST_CHECK_EQUAL( dlgater.max_version(), 1 );
+  BOOST_CHECK_EQUAL( dlgater.read_version(), 0 );
+}
+
+!!!898608.cpp!!!	input_delegater_add_input_delegate_test() : void
+{
+  const std::string label1( "label_one" );
+  const std::string label2( "label_two" );
+  boost::shared_ptr< test_meta > sobj1( new test_meta( label1, false, false ) );
+  boost::shared_ptr< test_meta > sobj2( new test_meta( label2, true, false ) );
+
+  // Construct delegater
+  core::input_delegater dlgater( 1 );
+
+  // add first delegater
+  dlgater.add_input_delegate( sobj1 );
+  BOOST_CHECK( not dlgater.empty() );
+  BOOST_CHECK_EQUAL( dlgater.size(), 1 );
+  BOOST_CHECK( dlgater.has_section( label1 ) );
+  BOOST_CHECK( not dlgater.has_section( label2 ) );
+
+  // add second delegater
+  dlgater.add_input_delegate( sobj2 );
+  BOOST_CHECK( not dlgater.empty() );
+  BOOST_CHECK_EQUAL( dlgater.size(), 2 );
+  BOOST_CHECK( dlgater.has_section( label1 ) );
+  BOOST_CHECK( dlgater.has_section( label2 ) );
+
+  // Process input buffer
+  {
+    core::input_reader dummy;
+    dummy.add_buffer( "test_filename", "label_one\n# comment\na\nb c\nd e # hmm\nend\n" );
+
+    dlgater.read_input( dummy );
+
+    BOOST_CHECK_EQUAL( sobj1->get_read_entry_count(), 3ul );
+    BOOST_CHECK_EQUAL( sobj1->get_read_end_count(), 1ul );
+
+    BOOST_CHECK_EQUAL( sobj2->get_read_entry_count(), 0ul );
+    BOOST_CHECK_EQUAL( sobj2->get_read_end_count(), 0ul );
+  }
+}
+{
+  // Construct delegater and add two meta objects with the same section name
+  const std::string label1( "label_one" );
+  const std::string label2( "label_two" );
+  boost::shared_ptr< test_meta > sobj1( new test_meta( label1, false, false ) );
+  boost::shared_ptr< test_meta > sobj2( new test_meta( label2, true, false ) );
+  boost::shared_ptr< test_meta > sobj3( new test_meta( label2, true, false ) );
+
+  core::input_delegater dlgater( 1 );
+  dlgater.add_input_delegate( sobj1 );
+  dlgater.add_input_delegate( sobj2 );
+  BOOST_CHECK_THROW( dlgater.add_input_delegate( sobj3 ), std::runtime_error );
+}
+!!!898736.cpp!!!	input_delegater_input_file_versioning_test() : void
+{
+  // Test valid file version processed
+  boost::shared_ptr< core::input_base_meta > dobj( new test_meta( "test" ) );
+
+  const std::string canon_input( "fileversion \t1\n" );
+  core::input_reader dummy;
+  dummy.add_buffer( "test_filename", canon_input );
+
+  core::input_delegater var1( 1ul );
+
+  var1.add_input_delegate( dobj );
+
+  BOOST_CHECK_NO_THROW( var1.read_input( dummy ) );
+  BOOST_CHECK_EQUAL( var1.read_version(), 1ul );
+}
+{
+  // Test invalid file version processed
+  boost::shared_ptr< core::input_base_meta > dobj( new test_meta( "test" ) );
+  const std::string canon_input( "fileversion 2\n" );
+  core::input_reader dummy;
+  dummy.add_buffer( "test_filename", canon_input );
+  core::input_delegater var1( 1ul );
+
+  var1.add_input_delegate( dobj );
+
+  BOOST_CHECK_THROW( var1.read_input( dummy ), std::runtime_error );
+}
+{
+  // Test invalid file version (non-number) processed
+  boost::shared_ptr< core::input_base_meta > dobj( new test_meta( "test" ) );
+  const std::string canon_input( "fileversion A2016\n" );
+  core::input_reader dummy;
+  dummy.add_buffer( "test_filename", canon_input );
+  core::input_delegater var1( 1ul );
+
+  var1.add_input_delegate( dobj );
+
+  BOOST_CHECK_THROW( var1.read_input( dummy ), std::runtime_error );
+}
+{
+  // Test invalid file version (negative number) processed
+  boost::shared_ptr< core::input_base_meta > dobj( new test_meta( "test" ) );
+  const std::string canon_input( "fileversion -1\n" );
+  core::input_reader dummy;
+  dummy.add_buffer( "test_filename", canon_input );
+  core::input_delegater var1( 1ul );
+
+  var1.add_input_delegate( dobj );
+
+  BOOST_CHECK_THROW( var1.read_input( dummy ), std::runtime_error );
+}
+!!!898864.cpp!!!	input_delegater_input_sections_test() : void
+{
+  // Test valid input with sections
+  boost::shared_ptr< test_meta > dobj1( new test_meta( "test_one" ) );
+  boost::shared_ptr< test_meta > dobj2( new test_meta( "test_two" ) );
+  boost::shared_ptr< test_meta > dobj3( new test_meta( "test_three" ) );
+
+  const std::string canon_input( "fileversion 1\ntest_one\nend\ntest_two\n\nend\n" );
+  core::input_reader dummy;
+  dummy.add_buffer( "test_filename", canon_input );
+
+  core::input_delegater var1( 1ul );
+
+  var1.add_input_delegate( dobj1 );
+  var1.add_input_delegate( dobj2 );
+  var1.add_input_delegate( dobj3 );
+
+  BOOST_CHECK_NO_THROW( var1.read_input( dummy ) );
+
+  BOOST_CHECK_EQUAL( dobj1->get_read_end_count(), 1ul );
+  BOOST_CHECK_EQUAL( dobj2->get_read_end_count(), 1ul );
+  BOOST_CHECK_EQUAL( dobj3->get_read_end_count(), 0ul );
+}
+{
+  // Test invalid input (unknown section)
+  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test_one"));
+  boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test_two"));
+  boost::shared_ptr< core::input_base_meta > dobj3 (new test_meta("test_three"));
+
+  const std::string canon_input ("fileversion 1\ntest_one\nend\ntest4\n\nend\n");
+  core::input_reader dummy;
+  dummy.add_buffer( "test_filename", canon_input );
+
+  core::input_delegater var1(1ul);
+
+  var1.add_input_delegate (dobj1);
+  var1.add_input_delegate (dobj2);
+  var1.add_input_delegate (dobj3);
+
+  BOOST_CHECK_THROW( var1.read_input( dummy ), std::runtime_error );
+}
+{
+  // Test invalid input (missing required section)
+  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test_one"));
+  boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test_two"));
+  boost::shared_ptr< core::input_base_meta > dobj3 (new test_meta("test_three", false, true));
+
+  const std::string canon_input ("fileversion 1\ntest_one\nend\ntest_two\n\nend\n");
+  core::input_reader dummy;
+  dummy.add_buffer( "test_filename", canon_input );
+
+  core::input_delegater var1(1ul);
+
+  var1.add_input_delegate (dobj1);
+  var1.add_input_delegate (dobj2);
+  var1.add_input_delegate (dobj3);
+
+  BOOST_CHECK_THROW( var1.read_input( dummy ), std::runtime_error );
+}
+{
+  // Test valid input (repeated multiple section)
+  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test_one"));
+  boost::shared_ptr< test_meta > dobj2 (new test_meta("test_two", true, false));
+
+  const std::string canon_input ("fileversion 1\ntest_one\nend\ntest_two\n\nend\ntest_two\n\nend\n");
+  core::input_reader dummy;
+  dummy.add_buffer( "test_filename", canon_input );
+
+  core::input_delegater var1(1ul);
+
+  var1.add_input_delegate (dobj1);
+  var1.add_input_delegate (dobj2);
+
+  BOOST_CHECK_NO_THROW( var1.read_input( dummy ) );
+  BOOST_CHECK_EQUAL( dobj2->get_read_end_count(), 2ul );
+}
+{
+  // Test invalid input (repeated non-multiple section)
+  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test_one"));
+  boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test_two"));
+
+  const std::string canon_input ("fileversion 1\ntest_one\nend\ntest_two\n\nend\ntest_two\n\nend\n");
+  core::input_reader dummy;
+  dummy.add_buffer( "test_filename", canon_input );
+
+  core::input_delegater var1(1ul);
+
+  var1.add_input_delegate (dobj1);
+  var1.add_input_delegate (dobj2);
+
+  BOOST_CHECK_THROW( var1.read_input( dummy ), std::runtime_error );
+}
 !!!477616.cpp!!!	output_field_test() : void
 // CTOR TESTS
 // ----------

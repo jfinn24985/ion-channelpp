@@ -1,6 +1,6 @@
 format 75
 "libcore Test Suites" // core::libcore Test Suites
-  revision 143
+  revision 145
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -77,22 +77,57 @@ ${docstring}${members}
 	  b parent class_ref 1082671 // input_base_meta
       end
 
-      operation 2071087 "test_meta"
-	public explicit_return_type ""
-	nparams 2
-	  param in name "label" explicit_type "string"
-	  param in name "req" explicit_type "bool"
-	    defaultvalue "false"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
-: input_base_meta (${p0}, false, ${p1})
-{}
+      attribute 461616 "entries_"
+	private explicit_type "string"
+	multiplicity "*"
+	stereotype "map"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type}, ${type} > ${name}${value};
 "
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${stereotype}()
 "
-	
+	idl_decl ""
+	comment " Map of entries."
+      end
+
+      attribute 455088 "add_documentation_count_"
+	private explicit_type "size_t"
+	cpp_mutable cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	get_oper operation_ref 891824 // get_add_documentation_count
+	comment " The number of times do_read_entry has been called"
+      end
+
+      attribute 454960 "read_end_count_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	get_oper operation_ref 891696 // get_read_end_count
+	comment " The number of times do_read_entry has been called"
+      end
+
+      attribute 454832 "read_entry_count_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	get_oper operation_ref 891568 // get_read_entry_count
+	comment " The number of times do_read_entry has been called"
       end
 
       operation 412849 "test_meta"
@@ -100,9 +135,15 @@ ${docstring}${body}
 	nparams 3
 	  param in name "label" explicit_type "string"
 	  param in name "multiple" explicit_type "bool"
+	    defaultvalue "false"
 	  param in name "req" explicit_type "bool"
+	    defaultvalue "false"
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
 : input_base_meta (${p0}, ${p1}, ${p2})
+, entries_()
+, add_documentation_count_()
+, read_end_count_()
+, read_entry_count_()
 {}
 "
 	
@@ -117,7 +158,7 @@ ${docstring}${body}
       operation 405809 "test_meta"
 	private explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = delete;
 "
 	
 	
@@ -151,6 +192,8 @@ ${docstring}${body}
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
 {
+   ++this->read_entry_count_;
+   this->entries_.insert( std::make_pair( reader.name(), reader.value() ) );
    return true;
 }
 "
@@ -171,7 +214,9 @@ throw an error if input file is incorrect (using UTILITY_INPUT macro)"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{}
+{
+   ++this->read_end_count_;
+}
 "
 	
 	
@@ -186,7 +231,10 @@ ${docstring}${body}
 	const cpp_virtual public explicit_return_type "void"
 	nparams 1
 	  param inout name "helper" type class_ref 1004335 // input_help
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override {}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override
+{
+   ++this->add_documentation_count_;
+}
 "
 	
 	
@@ -194,6 +242,95 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+      end
+
+      operation 898480 "entry_map"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::map< ${type},  ${type} > const& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->entries_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the map of entries"
+      end
+
+      operation 891568 "get_read_entry_count"
+	force_body_gen const cpp_inline public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type} ${name}${(}${)}${const}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}const ${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  return this->read_entry_count_;
+}
+"
+	cpp_name_spec "get_read_entry_count"
+	final 
+	java_name_spec "get${Name}"
+	php_final 
+	php_name_spec "get${Name}"
+	python_def "${@}${static}${abstract}def ${name}${(}self${p0}${v0}${)}:
+${docstring}return self.read_entry_count_
+"
+	python_name_spec "get${name}"
+	
+	idl_name_spec "get_${name}"
+	get_of_attribute attribute_ref 454832 // read_entry_count_
+      end
+
+      operation 891696 "get_read_end_count"
+	force_body_gen const cpp_inline public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type} ${name}${(}${)}${const}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}const ${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  return this->read_end_count_;
+}
+"
+	cpp_name_spec "get_read_end_count"
+	final 
+	java_name_spec "get${Name}"
+	php_final 
+	php_name_spec "get${Name}"
+	python_def "${@}${static}${abstract}def ${name}${(}self${p0}${v0}${)}:
+${docstring}return self.read_end_count_
+"
+	python_name_spec "get${name}"
+	
+	idl_name_spec "get_${name}"
+	get_of_attribute attribute_ref 454960 // read_end_count_
+      end
+
+      operation 891824 "get_add_documentation_count"
+	force_body_gen const cpp_inline public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type} ${name}${(}${)}${const}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}const ${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  return add_documentation_count_;
+}
+"
+	cpp_name_spec "get_add_documentation_count"
+	final 
+	java_name_spec "get${Name}"
+	php_final 
+	php_name_spec "get${Name}"
+	python_def "${@}${static}${abstract}def ${name}${(}self${p0}${v0}${)}:
+${docstring}return self.add_documentation_count_
+"
+	python_name_spec "get${name}"
+	
+	idl_name_spec "get_${name}"
+	get_of_attribute attribute_ref 455088 // add_documentation_count_
       end
     end
 
@@ -225,6 +362,7 @@ ${docstring}${members}
       classrelation 334769 // <dependency>
 	relation 334513 -_->
 	  a package
+	    cpp default "#include in source"
 	    python "${type}"
 	    classrelation_ref 334769 // <dependency>
 	  b parent class_ref 1012655 // input_delegater
@@ -330,6 +468,29 @@ ${docstring}${body}
 	comment "Test common functionality of input_base_reader derived classes"
       end
 
+      operation 898992 "test_input_base_meta"
+	class_operation public explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}template< class Meta > ${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}template< class Meta > ${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "  Test  'input_base_meta' derived class base class functionality
+  - check no default ctor
+  - check no copy ability
+  - check virtual dtor
+  - check three argument ctor : label, is_multiple, is_required"
+      end
+
       operation 406193 "input_help_test"
 	public explicit_return_type "void"
 	nparams 0
@@ -373,6 +534,63 @@ ${docstring}${body}
 	comment " Test strngs functions give expected value
 
   - 89 strings tested"
+      end
+
+      operation 899504 "strngs_has_spaces_test"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "
+"
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Check strngs::has_spaces."
+      end
+
+      operation 899760 "strngs_is_one_word_test"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "
+"
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Check strngs::is_one_word"
+      end
+
+      operation 900016 "strngs_is_valid_name"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "
+"
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Check strngs::is_one_word"
       end
 
       operation 405425 "numerical_constants_test"
@@ -532,7 +750,7 @@ ${docstring}${body}
 the abstract base class 'input_base_meta'"
       end
 
-      operation 412721 "input_base_meta_test"
+      operation 899120 "test_meta_lifetime_test"
 	public explicit_return_type "void"
 	nparams 0
 	cpp_decl "
@@ -548,12 +766,12 @@ the abstract base class 'input_base_meta'"
 ${docstring}${body}
 "
 	
-	comment " Use the 'test_meta' class to test the non-virtual members of
- the abstract base class 'input_base_meta'."
+	comment " Check lifetime methods of 'test_meta'.
+ - check conforms to input_base_meta
+ - check initialisation of attributes."
       end
 
-      operation 405553 "input_delegater_test"
-	stereotype "TODO"
+      operation 899248 "test_meta_add_documentation_test"
 	public explicit_return_type "void"
 	nparams 0
 	cpp_decl "
@@ -569,6 +787,127 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+	comment " Test input file read_section processing
+ * valid input
+ ** empty section (only comments)
+ ** single or multiple entries
+ ** - non-unique entries
+ "
+      end
+
+      operation 891952 "test_meta_read_section_test"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "
+"
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Test input file read_section processing
+ * valid input
+ ** empty section (only comments)
+ ** single or multiple entries
+ ** - non-unique entries
+ * check other attributes unchanged
+ "
+      end
+
+      operation 405553 "input_delegater_lifetime_test"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "
+"
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Check for expected lifetime method behaviour:
+ * non-virtual dtor
+ * no defualt ctor
+ * no copy behaviour (copy, move and assign)
+"
+      end
+
+      operation 898608 "input_delegater_add_input_delegate_test"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "
+"
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Check adding input delegaters:
+ * check added delegaters can be found.
+ * - check failure to add delegaters with same name.
+"
+      end
+
+      operation 898736 "input_delegater_input_file_versioning_test"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "
+"
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Check handling of file version
+ * check file version label in input file detected
+ * - check on invalid file versions (version > delegater max)
+ * - check on invalid file versions (version < 0)"
+      end
+
+      operation 898864 "input_delegater_input_sections_test"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "
+"
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Check handling of input sections
+ * check called meta classes match section in input
+ * - check for unknown section
+ * check for multiple section
+ * - check for duplicate non-multiple section"
       end
 
       operation 477616 "output_field_test"
