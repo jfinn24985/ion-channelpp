@@ -1,6 +1,6 @@
 format 75
 "core" // core
-  revision 169
+  revision 171
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -2181,6 +2181,72 @@ ${docstring}return \"sampler\"
 ${docstring}return \"simulator\"
 "
 	
+      end
+
+      operation 899376 "is_one_word"
+	class_operation public explicit_return_type "bool"
+	nparams 1
+	  param in name "word" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Check that argument is one \"word\"
+ * valid words have no spaces anywhere in the string 
+ * valid words have only alphabetic characters"
+      end
+
+      operation 899888 "is_valid_name"
+	class_operation public explicit_return_type "bool"
+	nparams 1
+	  param in name "word" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Check that argument is a valid \"name\"
+ * valid names have no spaces anywhere in the string 
+ * valid names have only alphanumeric characters or '_' or '.'
+ * in our case numbers, '.' and '_' can appear anywhere in the string"
+      end
+
+      operation 899632 "has_spaces"
+	class_operation public explicit_return_type "bool"
+	nparams 1
+	  param in name "word" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Check that argument is one \"word\"
+ * valid words have no spaces anywhere in the string "
       end
     end
   end
@@ -4779,11 +4845,15 @@ ${inlines}
 	  param in name "label" explicit_type "string"
 	  param in name "multiple" explicit_type "bool"
 	  param in name "required" explicit_type "bool"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}${)}${volatile}${throw}
 : section_label_ (${p0})
 , multiple_ (${p1})
 , required_ (${p2})
-{}
+{
+  UTILITY_CHECK( core::strngs::is_valid_name(${p0}), \"section label must be single word without spaces or numbers\" );
+}
 "
 	
 	
@@ -4869,7 +4939,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment "Read an entry in the input file. Return true if the entry was processed.
+	comment "Read a name/value entry in the input file. Return true if the entry was processed.
 
 throw an error if input file is incorrect (using UTILITY_INPUT macro)"
       end
@@ -4922,7 +4992,6 @@ ${docstring}${body}
 "
 	
       end
-
     end
 
     classdiagram 148016 "input file write"
@@ -7680,6 +7749,10 @@ ${namespace_end}
 #endif
 
 ${includes}
+// Manual includes
+#include <algorithm>
+#include <cctype>
+// -
 ${namespace_start}
 ${members}
 ${namespace_end}"
