@@ -13,7 +13,132 @@ for ( std::string kw : { core::strngs::fsname(), core::strngs::fstype(), core::s
 return match_standard_keyword != 0;
 !!!2086575.cpp!!!	has_keyword(in name : string) : bool
 return 0 != specie_meta::known_keywords_.count( name );
-!!!203312.cpp!!!	do_read_entry(inout reader : input_reader) : bool
+!!!915248.cpp!!!	add_documentation(inout helper : input_help) : void
+const std::string seclabel( core::strngs::fsspec() );
+// ----------------------------------------
+// add section
+// ----------------------------------------
+
+//   Specie input section definition
+helper.add_section( seclabel, "Specie input section definition" );
+
+// ----------------------------------------
+// add parameters
+// ----------------------------------------
+
+//   z : [required, number] specie valency
+{
+  const std::string description( "[required, number] specie valency (atomic)." );
+  helper.add_option( seclabel, core::strngs::fsz(), description );
+}
+//  d : [required, number] specie diameter
+{
+  const std::string description( "[required, number > 0] specie diameter (Angstrom)." );
+  helper.add_option( seclabel, core::strngs::fsd(), description );
+}
+// name : [required, two letters] specie code name (quotes optional)
+{
+  const std::string description( "[required, two letters] specie code name (quotes optional)." );
+  helper.add_option( seclabel, core::strngs::fsname(), description );
+}
+//  type : [optional, default type is \"free\"] specie model
+//         type. value should be one of: fsmobl, fsflxd, fschon
+//         or fsfree (only first 3 letters required)
+{
+  std::stringstream description;
+  description << "[optional, default type is \"" << core::strngs::fsfree()
+              << "\"] specie model type. value should be one of: \""
+              << core::strngs::fsmobl() << "\", \"" << core::strngs::fsflxd() << "\", \""
+              << core::strngs::fschon() << "\" or \"" << core::strngs::fsfree()
+              << "\" (only first 3 letters required).";
+  helper.add_option( seclabel, core::strngs::fstype(), description.str() );
+}
+// chex : [required and valid for ",fsfree," type only, number] initial chemical excess
+{
+  const std::string description( "[required and valid for \"" + core::strngs::fsfree()
+                                 + "\" type only, number] initial chemical excess." );
+  helper.add_option( seclabel, core::strngs::fschex(), description );
+}
+// ratspec  : [optional for ",fsmobl,", ",fsflxd," and ",fschon,", required for ",fsfree,", number]
+//            Probability this specie is used in a move trial
+{
+  std::stringstream description;
+  description << "[optional for  \"" << core::strngs::fsmobl()
+              << "\", \"" << core::strngs::fsflxd() << "\" and \""
+              << core::strngs::fschon() << "\", required for \"" << core::strngs::fsfree()
+              << ", number > 0] Probability this specie is used in a move trial.";
+  helper.add_option( seclabel, core::strngs::fsrtsp(), description.str() );
+}
+// ratexchg : [",fsfree," type only, required, number] Once selected for a move, "
+//   write(unit=fid,fmt='(9X,A)')"probability of channel insertion (vs step) move"
+{
+  std::stringstream description;
+  description << "[\"" << core::strngs::fsfree()
+              << " type only, required, number > 0] Once selected for a move, probability of channel insertion (vs step) move.";
+  helper.add_option( seclabel, core::strngs::fsrtex(), description.str() );
+}
+//  ratmov : [",fsfree," type only, required, number] Once selected for a step move,
+//           probability of a gas phase or liquid phase move.
+{
+  std::stringstream description;
+  description << "[\"" << core::strngs::fsfree()
+              << " type only, required, number > 0] Once selected for a step move, probability  of a gas phase or liquid phase move.";
+  helper.add_option( seclabel, core::strngs::fsrtmv(), description.str() );
+}
+// ratgr  : [",fsfree," type only, optional, number] Probability this specie is
+//         used in a individual ion grand-canonical trial.
+{
+  std::stringstream description;
+  description << "[\"" << core::strngs::fsfree()
+              << " type only, required, number > 0] Probability this specie is used in a individual ion grand-canonical trial.";
+  helper.add_option( seclabel, core::strngs::fsrtgr(), description.str() );
+}
+//  ratreg : ["fsfree" type only, required*, four numbers] Per-region probability
+//          this specie is inserted into the particular region in a grand-
+//          canonical trial. *Required if this specie is part of a salt or
+//          if "fsrtgr" is set
+{
+  std::stringstream description;
+  description << "[\"" << core::strngs::fsfree()
+              << " type only, required*, number > 0 for each region] Per-region probabilities "
+              << "this specie is inserted into the particular region in a grand-"
+              << "canonical trial. \n(*)Required if this specie is part of a salt or "
+              << "if " << core::strngs::fsrtgr() << " is set.";
+  helper.add_option( seclabel, core::strngs::fsrtrg(), description.str() );
+}
+//   n : [required for "fsmobl" and "fsflxd", optional for other types, integer > 0]
+//       Initial position definition flag. The lines following "fsn" contain
+//       X number of lines of x,y,z etc information, where X is the argument
+//       to "fsn". This tag must appear after the "fstype" tag for "fsmobl" and "fsflxd"
+//       species. "fschon" or "fsfree" require three numbers defining the initial
+//       x,y,z position of the particle. "fsmobl" and "fsflxd" additionally require
+//       a fourth number with the localisation radius, and an optional three
+//       numbers defining the x,y,z position of the localisation centre-point.
+//       If the optional last three numbers are not included then the initial x,y,z
+//       position is used as the localisation centre-point.
+{
+  std::stringstream description;
+  description << "[required for \"" << core::strngs::fsmobl()
+              << "\", \"" << core::strngs::fsflxd() << "\" and \""
+              << core::strngs::fschon() << "\", optional for \"" << core::strngs::fsfree()
+              << "\", integer number > 0] Number of initial position definitions.\n"
+              << "The lines following \"" << core::strngs::fsn() << "\" contain "
+              << "X number of lines of x,y,z etc information, where X is the argument "
+              << "to \"" << core::strngs::fsn() << "\". This tag must appear after the \""
+              << core::strngs::fstype() << "\" tag for \"" << core::strngs::fsmobl()
+              << "\" and \"" << core::strngs::fsflxd() << "\" species.  \""
+              << core::strngs::fschon() << "\" or \"" << core::strngs::fsfree()
+              << "\" require three numbers defining the initial "
+              << "x,y,z position of the particle. \"" << core::strngs::fsmobl()
+              << "\" and \"" << core::strngs::fsflxd() << "\" additionally require "
+              << "a fourth number with the localisation radius, and an optional three "
+              << "numbers defining the x,y,z position of the localisation centre-point. "
+              << "If these last three numbers are not included then the initial x,y,z "
+              << "position is used as the localisation centre-point.";
+  helper.add_option( seclabel, core::strngs::fsn(), description.str() );
+}
+
+!!!203312.cpp!!!	do_read_entry(inout reader : input_base_reader) : bool
 // process entries
 
 if (reader.name().find(core::strngs::fsname()) == 0)
@@ -131,142 +256,11 @@ else
    // required parameters are present
 }
 return true;
-!!!203440.cpp!!!	do_read_end(inout sim : simulator) : void
+!!!203440.cpp!!!	do_read_end() : void
 UTILITY_INPUT (not this->missing_required_tags_.any(), "Not all required tags were present.", this->section_label());
 
-sim.add_specie( this->specie_obj_ );
+this->manager_->add_specie( this->specie_obj_ );
 // Reset state
 this->specie_obj_ = particle::specie();
 this->missing_required_tags_ = std::bitset< SPECIE_TAG_COUNT >( true );
 
-!!!268464.cpp!!!	do_reset() : void
-this->missing_required_tags_.reset();
-this->specie_obj_ = particle::specie();
-!!!2079023.cpp!!!	specie_meta()
-if (0 == counter)
-{
-   const std::string seclabel( core::strngs::fsspec() );
-   // ----------------------------------------
-   // add section
-   // ----------------------------------------
-
-   //   Specie input section definition
-   core::input_help::exemplar().add_section( seclabel, "Specie input section definition" );
-
-   // ----------------------------------------
-   // add parameters
-   // ----------------------------------------
-
-   //   z : [required, number] specie valency
-   {
-      const std::string description("[required, number] specie valency (atomic).");
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fsz(), description );
-   }
-   //  d : [required, number] specie diameter
-   {
-      const std::string description("[required, number > 0] specie diameter (Angstrom).");
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fsd(), description );
-   }
-   // name : [required, two letters] specie code name (quotes optional)
-   {
-      const std::string description("[required, two letters] specie code name (quotes optional).");
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fsname(), description );
-   }
-   //  type : [optional, default type is \"free\"] specie model
-   //         type. value should be one of: fsmobl, fsflxd, fschon
-   //         or fsfree (only first 3 letters required)
-   {
-      std::stringstream description;
-      description << "[optional, default type is \"" << core::strngs::fsfree()
-                  << "\"] specie model type. value should be one of: \""
-                  << core::strngs::fsmobl() << "\", \"" << core::strngs::fsflxd() << "\", \""
-                  << core::strngs::fschon() << "\" or \"" << core::strngs::fsfree()
-                  << "\" (only first 3 letters required).";
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fstype(), description.str() );
-   }
-   // chex : [required and valid for ",fsfree," type only, number] initial chemical excess
-   {
-      const std::string description("[required and valid for \"" + core::strngs::fsfree()
-                                    + "\" type only, number] initial chemical excess.");
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fschex(), description );
-   }
-   // ratspec  : [optional for ",fsmobl,", ",fsflxd," and ",fschon,", required for ",fsfree,", number]
-   //            Probability this specie is used in a move trial
-   {
-      std::stringstream description;
-      description << "[optional for  \"" << core::strngs::fsmobl()
-                  << "\", \"" << core::strngs::fsflxd() << "\" and \""
-                  << core::strngs::fschon() << "\", required for \"" << core::strngs::fsfree()
-                  << ", number > 0] Probability this specie is used in a move trial.";
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fsrtsp(), description.str() );
-   }
-   // ratexchg : [",fsfree," type only, required, number] Once selected for a move, "
-   //   write(unit=fid,fmt='(9X,A)')"probability of channel insertion (vs step) move"
-   {
-      std::stringstream description;
-      description << "[\"" << core::strngs::fsfree()
-                  << " type only, required, number > 0] Once selected for a move, probability of channel insertion (vs step) move.";
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fsrtex(), description.str());
-   }
-   //  ratmov : [",fsfree," type only, required, number] Once selected for a step move,
-   //           probability of a gas phase or liquid phase move.
-   {
-      std::stringstream description;
-      description << "[\"" << core::strngs::fsfree()
-                  << " type only, required, number > 0] Once selected for a step move, probability  of a gas phase or liquid phase move.";
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fsrtmv(), description.str());
-   }
-   // ratgr  : [",fsfree," type only, optional, number] Probability this specie is
-   //         used in a individual ion grand-canonical trial.
-   {
-      std::stringstream description;
-      description << "[\"" << core::strngs::fsfree()
-                  << " type only, required, number > 0] Probability this specie is used in a individual ion grand-canonical trial.";
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fsrtgr(), description.str() );
-   }
-   //  ratreg : ["fsfree" type only, required*, four numbers] Per-region probability
-   //          this specie is inserted into the particular region in a grand-
-   //          canonical trial. *Required if this specie is part of a salt or
-   //          if "fsrtgr" is set
-   {
-      std::stringstream description;
-      description << "[\"" << core::strngs::fsfree()
-                  << " type only, required*, number > 0 for each region] Per-region probabilities "
-                  << "this specie is inserted into the particular region in a grand-"
-                  << "canonical trial. \n(*)Required if this specie is part of a salt or "
-                  << "if " << core::strngs::fsrtgr() << " is set.";
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fsrtrg(), description.str());
-   }
-   //   n : [required for "fsmobl" and "fsflxd", optional for other types, integer > 0]
-   //       Initial position definition flag. The lines following "fsn" contain
-   //       X number of lines of x,y,z etc information, where X is the argument
-   //       to "fsn". This tag must appear after the "fstype" tag for "fsmobl" and "fsflxd"
-   //       species. "fschon" or "fsfree" require three numbers defining the initial
-   //       x,y,z position of the particle. "fsmobl" and "fsflxd" additionally require
-   //       a fourth number with the localisation radius, and an optional three
-   //       numbers defining the x,y,z position of the localisation centre-point.
-   //       If the optional last three numbers are not included then the initial x,y,z
-   //       position is used as the localisation centre-point.
-   {
-      std::stringstream description;
-      description << "[required for \"" << core::strngs::fsmobl()
-                  << "\", \"" << core::strngs::fsflxd() << "\" and \""
-                  << core::strngs::fschon() << "\", optional for \"" << core::strngs::fsfree()
-                  << "\", integer number > 0] Number of initial position definitions.\n"
-                  << "The lines following \"" << core::strngs::fsn() << "\" contain "
-                  << "X number of lines of x,y,z etc information, where X is the argument "
-                  << "to \"" << core::strngs::fsn() << "\". This tag must appear after the \""
-                  << core::strngs::fstype() << "\" tag for \"" << core::strngs::fsmobl()
-                  << "\" and \"" << core::strngs::fsflxd() << "\" species.  \""
-                  << core::strngs::fschon() << "\" or \"" << core::strngs::fsfree()
-                  << "\" require three numbers defining the initial "
-                  << "x,y,z position of the particle. \"" << core::strngs::fsmobl()
-                  << "\" and \"" << core::strngs::fsflxd() << "\" additionally require "
-                  << "a fourth number with the localisation radius, and an optional three "
-                  << "numbers defining the x,y,z position of the localisation centre-point. "
-                  << "If these last three numbers are not included then the initial x,y,z "
-                  << "position is used as the localisation centre-point.";
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fsn(), description.str() );
-   }
-}
-++counter;
