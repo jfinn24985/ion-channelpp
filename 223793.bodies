@@ -1,9 +1,17 @@
 class particle_test
-!!!420145.cpp!!!	change_atom_test() : void
+!!!420145.cpp!!!	change_atom_lifetime_test() : void
 const std::vector< double > nrij { 1.0, 1.3, 2.4 };
 const std::vector< double > orij { 1.1, 1.4, 2.0 };
 const double epsdefault{ 80.0 };
 const double epsw{ 70.0 };
+{
+  // Test is canonical pattern
+  BOOST_CHECK( std::is_default_constructible< particle::change_atom >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< particle::change_atom >::type{} );
+  BOOST_CHECK( std::is_move_constructible< particle::change_atom >::type{} );
+  BOOST_CHECK( (std::is_assignable< particle::change_atom, particle::change_atom >::type{}) );
+  BOOST_CHECK( not std::has_virtual_destructor< particle::change_atom >::type{} );
+}
 {
   // Default ctor
   particle::change_atom var1;
@@ -40,7 +48,7 @@ std::stringstream store;
   BOOST_CHECK_EQUAL(var1.eps_old, 0.0);
   BOOST_CHECK_EQUAL(var1.eps_new, 0.0);
   BOOST_CHECK_EQUAL(var1.index, 0);
-  BOOST_CHECK_EQUAL(var1.key, 2);
+  BOOST_CHECK_EQUAL(var1.key, 2); // ONLY NON-DEFAULT VALUE
   BOOST_CHECK_EQUAL(var1.do_old, true);
   BOOST_CHECK_EQUAL(var1.do_new, true);
   BOOST_CHECK(var1.old_rij.empty());
@@ -67,109 +75,7 @@ std::stringstream store;
   {
     // Copy ctor.
     particle::change_atom var2(var1);
-    BOOST_CHECK_EQUAL( var2.new_position.x, var1.new_position.x );
-    BOOST_CHECK_EQUAL( var2.new_position.y, var1.new_position.y );
-    BOOST_CHECK_EQUAL( var2.new_position.z, var1.new_position.z );
-    BOOST_CHECK_EQUAL( var2.old_position.x, var1.old_position.x );
-    BOOST_CHECK_EQUAL( var2.old_position.y, var1.old_position.y );
-    BOOST_CHECK_EQUAL( var2.old_position.z, var1.old_position.z );
-    BOOST_CHECK_EQUAL( var2.index, var1.index );
-    BOOST_CHECK_EQUAL( var2.key, var1.key );
-    BOOST_CHECK_EQUAL( var2.do_old, var1.do_old );
-    BOOST_CHECK_EQUAL( var2.do_new, var1.do_new );
-    BOOST_CHECK_EQUAL( var2.energy_old, var1.energy_old );
-    BOOST_CHECK_EQUAL( var2.energy_new, var1.energy_new );
-    BOOST_CHECK_EQUAL( var2.eps_old, var1.eps_old );
-    BOOST_CHECK_EQUAL( var2.eps_new, var1.eps_new );
-    BOOST_CHECK_EQUAL_COLLECTIONS(var2.old_rij.begin(), var2.old_rij.end()
-        , orij.begin(), orij.end());
-    BOOST_CHECK_EQUAL_COLLECTIONS(var2.new_rij.begin(), var2.new_rij.end()
-        , nrij.begin(), nrij.end());
-    BOOST_CHECK( var2.equivalent(var1) );
-  }
-  {
-    // TEST equivalent is sensitive to change in any one parameter
-    BOOST_CHECK( var1.equivalent(var1) );
-    {
-      particle::change_atom var2( var1 );
-      var2.new_position.x += 0.1;
-      BOOST_CHECK(not var2.equivalent(var1));
-    }   
-    {
-      particle::change_atom var2(var1);
-      var2.new_position.y += 0.1;
-      BOOST_CHECK(not var2.equivalent(var1));
-    }   
-    {
-      particle::change_atom var2(var1);
-      var2.new_position.z += 0.1;
-      BOOST_CHECK(not var2.equivalent(var1));
-    }   
-    {
-      particle::change_atom var2(var1);
-      var2.old_position.x += 0.1;
-      BOOST_CHECK(not var2.equivalent(var1));
-    }   
-    {
-      particle::change_atom var2(var1);
-      var2.old_position.y += 0.1;
-      BOOST_CHECK(not var2.equivalent(var1));
-    }   
-    {
-      particle::change_atom var2(var1);
-      var2.old_position.z += 0.1;
-      BOOST_CHECK(not var2.equivalent(var1));
-    }
-    {
-      particle::change_atom var2(var1);
-      var2.energy_old += 0.1;
-      BOOST_CHECK(not var2.equivalent(var1));
-    }   
-    {
-      particle::change_atom var2(var1);
-      var2.energy_new += 0.1;
-      BOOST_CHECK(not var2.equivalent(var1));
-    } 
-    {
-      particle::change_atom var2(var1);
-      var2.eps_old += 0.1;
-      BOOST_CHECK(not var2.equivalent(var1));
-    }   
-    {
-      particle::change_atom var2(var1);
-      var2.eps_new += 0.1;
-      BOOST_CHECK(not var2.equivalent(var1));
-    } 
-    {
-      particle::change_atom var2(var1);
-      var2.do_old = not var2.do_old;
-      BOOST_CHECK(not var2.equivalent(var1));
-    }   
-    {
-      particle::change_atom var2(var1);
-      var2.do_new = not var2.do_new;
-      BOOST_CHECK(not var2.equivalent(var1));
-    }   
-    {
-      particle::change_atom var2(var1);
-      var2.key += 1;
-      BOOST_CHECK(not var2.equivalent(var1));
-    }   
-    {
-      particle::change_atom var2(var1);
-      var2.index += 1;
-      BOOST_CHECK(not var2.equivalent(var1));
-    }
-    {
-      particle::change_atom var2(var1);
-      var2.new_rij = orij;
-      BOOST_CHECK(not var2.equivalent(var1));
-    }
-    {
-      particle::change_atom var2(var1);
-      var2.old_rij = nrij;
-      BOOST_CHECK(not var2.equivalent(var1));
-    }
+    BOOST_CHECK(var2.equivalent(var1));
   }
   {
     // Assignment operator
@@ -221,11 +127,146 @@ std::stringstream store;
   BOOST_CHECK_EQUAL_COLLECTIONS( var1.new_rij.begin(), var1.new_rij.end()
         , nrij.begin(), nrij.end() );
 }
-!!!426673.cpp!!!	change_set_test() : void
-std::map< std::string, std::string > move_params;
+!!!922800.cpp!!!	change_atom_comparison_test() : void
+const std::vector< double > nrij { 1.0, 1.3, 2.4 };
+const std::vector< double > orij { 1.1, 1.4, 2.0 };
+const double epsdefault{ 80.0 };
 const double epsw{ 70.0 };
-move_params[ "delta" ] = "1.1";
-auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2 )->void{
+
+// Ctor with arg
+particle::change_atom var1( 2 );
+// Set atom "start" values
+var1.do_old = true;
+var1.do_new = true;
+var1.index = 10;
+var1.old_position.x = 1.0;
+var1.old_position.y = 10.0;
+var1.old_position.z = 2.0;
+var1.new_position.x = 0.9;
+var1.new_position.y = 9.8;
+var1.new_position.z = 2.15;
+var1.eps_old = epsdefault;
+var1.eps_new = epsw;
+// Set "calculated" values
+var1.energy_old = 0.001;
+var1.energy_new = 0.02;
+var1.old_rij = orij;
+var1.new_rij = nrij;
+// Use var1 to make copies
+{
+  // Copy ctor.
+  particle::change_atom var2( var1 );
+  BOOST_CHECK_EQUAL( var2.new_position.x, var1.new_position.x );
+  BOOST_CHECK_EQUAL( var2.new_position.y, var1.new_position.y );
+  BOOST_CHECK_EQUAL( var2.new_position.z, var1.new_position.z );
+  BOOST_CHECK_EQUAL( var2.old_position.x, var1.old_position.x );
+  BOOST_CHECK_EQUAL( var2.old_position.y, var1.old_position.y );
+  BOOST_CHECK_EQUAL( var2.old_position.z, var1.old_position.z );
+  BOOST_CHECK_EQUAL( var2.index, var1.index );
+  BOOST_CHECK_EQUAL( var2.key, var1.key );
+  BOOST_CHECK_EQUAL( var2.do_old, var1.do_old );
+  BOOST_CHECK_EQUAL( var2.do_new, var1.do_new );
+  BOOST_CHECK_EQUAL( var2.energy_old, var1.energy_old );
+  BOOST_CHECK_EQUAL( var2.energy_new, var1.energy_new );
+  BOOST_CHECK_EQUAL( var2.eps_old, var1.eps_old );
+  BOOST_CHECK_EQUAL( var2.eps_new, var1.eps_new );
+  BOOST_CHECK_EQUAL_COLLECTIONS( var2.old_rij.begin(), var2.old_rij.end()
+                                 , orij.begin(), orij.end() );
+  BOOST_CHECK_EQUAL_COLLECTIONS( var2.new_rij.begin(), var2.new_rij.end()
+                                 , nrij.begin(), nrij.end() );
+  // Test equivalent is true when all data is the same
+  BOOST_CHECK_EQUAL( var2, var1 );
+}
+{
+  // TEST equivalent is sensitive to change in any one parameter
+  BOOST_CHECK( var1.equivalent( var1 ) );
+  {
+    particle::change_atom var2( var1 );
+    var2.new_position.x += 0.1;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.new_position.y += 0.1;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.new_position.z += 0.1;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.old_position.x += 0.1;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.old_position.y += 0.1;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.old_position.z += 0.1;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.energy_old += 0.1;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.energy_new += 0.1;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.eps_old += 0.1;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.eps_new += 0.1;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.do_old = not var2.do_old;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.do_new = not var2.do_new;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.key += 1;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.index += 1;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.new_rij = orij;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+  {
+    particle::change_atom var2( var1 );
+    var2.old_rij = nrij;
+    BOOST_CHECK( not var2.equivalent( var1 ) );
+  }
+}
+
+
+!!!426673.cpp!!!	change_set_lifetime_test() : void
+const double epsw { 80.0 };
+auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2 )->void
+{
   a.do_old = b1;
   a.do_new = b2;
   a.index = idx;
@@ -234,6 +275,14 @@ auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx,
   a.eps_old = eps1;
   a.eps_new = eps2;
 };
+{
+  // Test is canonical pattern
+  BOOST_CHECK( std::is_default_constructible< particle::change_set >::type {} );
+  BOOST_CHECK( std::is_copy_constructible< particle::change_set >::type {} );
+  BOOST_CHECK( std::is_move_constructible< particle::change_set >::type {} );
+  BOOST_CHECK( ( std::is_assignable< particle::change_set, particle::change_set >::type {} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< particle::change_set >::type {} );
+}
 {
   // Default ctor
   particle::change_set var1;
@@ -245,216 +294,88 @@ auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx,
   BOOST_CHECK_EQUAL( var1.metropolis_factor(), 1.0 );
   BOOST_CHECK_EQUAL( var1.probability_factor(), 1.0 );
   BOOST_CHECK_EQUAL( var1.size(), 0ul );
-//  BOOST_CHECK_EQUAL( var1.virial(), 0.0 );
 }
 {
-    // Ctor with one arg.
-    // ------------------
-    particle::change_set var1;
-    BOOST_CHECK_EQUAL( var1.accept(), false );
-    BOOST_CHECK( var1.begin() == var1.end() );
-    BOOST_CHECK_EQUAL( var1.energy(), 0.0 );
-    BOOST_CHECK_EQUAL( var1.exponential_factor(), 0.0 );
-    BOOST_CHECK_EQUAL( var1.fail(), false );
-    BOOST_CHECK_EQUAL( var1.metropolis_factor(), 1.0 );
-    BOOST_CHECK_EQUAL( var1.probability_factor(), 1.0 );
-    BOOST_CHECK_EQUAL( var1.size(), 0ul );
-//    BOOST_CHECK_EQUAL( var1.virial(), 0.0 );
-
-    // Test set_fail
-    // -------------
-    var1.set_fail();
-    BOOST_CHECK_EQUAL( var1.fail(), true );
-    BOOST_CHECK_THROW( var1.metropolis_factor(), std::runtime_error );
-}
-{
-  // Test attempt to set a bad probability value
-  // Valid only if VALUE > 0.0
-  particle::change_set var2;
-  BOOST_CHECK_EQUAL( var2.probability_factor(), 1.0 );
-  BOOST_CHECK_THROW( var2.update_probability_factor( 0.0 ), std::runtime_error );
-  BOOST_CHECK_THROW( var2.update_probability_factor( -1.0 ), std::runtime_error );
-}
-{
-  // Test add steps
-  particle::change_set var1;
-
-  particle::change_atom s1(0);
-  set_atom(s1, true, true, 0, particle::coordinate(), particle::coordinate( 0.1, 0.0, 0.1 ), epsw, epsw);
-  //  s1.charge = 2.0;
-
-  // Add once have individual jump move
-  var1.add_atom( s1 );
-  // Variable that should be changed
-  BOOST_CHECK( var1.begin() != var1.end() );
-  BOOST_REQUIRE_EQUAL( var1.size(), 1ul );
-  BOOST_CHECK( s1.equivalent( var1[0] ));
-  BOOST_CHECK( s1.equivalent( *var1.begin() ));
-
-  // Add again: now have salt jump move
-  s1.old_position.x += 3.0;
-  s1.new_position.x += 3.0;
-  s1.key = 1;
-//  s1.charge = -1.0;
-  var1.add_atom( s1 );
-  // Variable that should be changed
-  BOOST_CHECK( var1.begin() != var1.end() );
-  BOOST_CHECK_EQUAL( var1.size(), 2ul );
-  BOOST_CHECK( s1.equivalent(var1[1] ));
-  BOOST_CHECK( s1.equivalent(*(var1.begin() + 1 )));
-
-  // Add third time: still have salt jump move
-  s1.old_position.y += 3.0;
-  s1.new_position.y += 3.0;
-//  s1.charge = -1.0;
-  var1.add_atom( s1 );
-  // Variable that should be changed
-  BOOST_CHECK( var1.begin() != var1.end() );
-  BOOST_CHECK_EQUAL( var1.size(), 3ul );
-  BOOST_CHECK( s1.equivalent (var1[2] ));
-  BOOST_CHECK( s1.equivalent (*(var1.begin() + 2 )));
-  // Variables that should be unchanged
-  BOOST_CHECK_EQUAL( var1.accept(), false );
-  BOOST_CHECK_EQUAL( var1.energy(), 0.0 );
-  BOOST_CHECK_EQUAL( var1.exponential_factor(), 0.0 );
-  BOOST_CHECK_EQUAL( var1.fail(), false );
-  BOOST_CHECK_EQUAL( var1.metropolis_factor(), 1.0 );
-  BOOST_CHECK_EQUAL( var1.probability_factor(), 1.0 );
-//  BOOST_CHECK_EQUAL( var1.virial(), 0.0 );
-}
-// Test factor adjustments
-{
-  particle::change_set var2;
-  particle::change_atom a1;
-  var2.add_atom ( a1 );
-  BOOST_CHECK_EQUAL( var2.exponential_factor(), 0.0 );
-  BOOST_CHECK_EQUAL( var2.probability_factor(), 1.0 );
-  {
-    // Test metropolis factor
-    //  energy==0 exp==0.0 prob==1 beta=1
-    //  prob.e( -(beta*energy-exp ))
-    //  1 . e -( 0 - 0 ) == 1
-    const double metro( var2.metropolis_factor () );
-    if ( not utility::feq( metro, 1.0 ))
-    {
-      BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 1.0" );
-    }
-  }
-  {
-    // Test update_energy and metropolis
-    //  energy==0.1 expf==0.0 probf==1 beta=1
-    //  probf.e( -(beta*energy-expf ))
-    // 1 . e( -(0.1 - 0 )) == 0.90483741803596
-    var2.begin()->energy_new = 0.1;
-    BOOST_CHECK( utility::feq(var2.energy(), 0.1 ));
-
-    const double metro( var2.metropolis_factor () );
-    if ( not utility::feq( metro, 0.90483741803596 ))
-    {
-      BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 0.90483741803596" );
-    }
-  }
-  {
-    // Test update_probability_factor and metropolis
-    //  energy==0.1 expf==0.0 probf==0.1 beta=1
-    //  probf.e( -(beta*energy-expf ))
-    // 0.3 . e( -(0.1 - 0 )) == 0.3 * 0.90484 = 0.27145
-    var2.update_probability_factor( 0.1 );
-    BOOST_CHECK( utility::feq( var2.probability_factor(), 0.1 ));
-    var2.update_probability_factor( 3.0 );
-    BOOST_CHECK( utility::feq( var2.probability_factor(), 0.3 ));
-
-    const double metro( var2.metropolis_factor () );
-    if ( not utility::feq( metro, 0.271451225411, 1 << 12 ))
-    {
-      BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 0.271451225411" );
-    }
-  }
-  {
-    // Test update_exponential_factor
-    //  energy==0.1 expf==0.1 probf==0.1 beta=1
-    //  probf.e( -(beta*energy-expf )) ->0.1
-    // 0.3 . e( -(0.1 - 0.1 )) == 0.3 * 1 = 0.3
-    var2.update_exponential_factor( 0.1 );
-    BOOST_CHECK_EQUAL( var2.exponential_factor(), 0.1 );
-
-    const double metro ( var2.metropolis_factor () );
-    if ( not utility::feq( metro, 0.3 ))
-    {
-      BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 0.3" );
-    }
-  }
-  {
-    // Test update_exponential_factor
-    //  energy==0.1 expf==0.1 probf==0.1 beta=1
-    //  probf.e( -(beta*energy-expf )) ->0.1
-    // 0.3 . e( -(1.2 - 0.1 ) == 0.3 * 0.33287 == 0.09986
-    var2.begin ()->energy_new += 1.1;
-    BOOST_CHECK( utility::feq( var2.energy(), 1.2 ));
-
-    const double metro ( var2.metropolis_factor () );
-    BOOST_CHECK_NE( metro, 0.0 );
-    if ( not utility::feq( metro, 0.0998613251094, 1 << 12 ))
-    {
-      BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 0.0998613251094" );
-    }
-  }
-  {
-    // Test update_energy with large energy
-    //  energy==100.1 expf==0.1 probf==0.1 beta=1
-    //  probf.e( -(beta*energy-expf )) ->0.0....
-    // 0.3 . e( -(101.3 - 0.1 ) == 0.3 * 1.238e-44 == 3.3614e-45
-
-    var2.begin ()->energy_new += 100.1;
-    BOOST_CHECK( utility::feq( var2.energy(), 101.3 ));
-
-    const double metro ( var2.metropolis_factor() );
-    BOOST_CHECK_NE( metro, 0.0 );
-    if ( not utility::feq( metro, 3.36139605555e-45, 1 << 13 ))
-    {
-      BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 3.36139605555e-45" );
-    }
-  }
-}
-{
-  // Test serialise
   std::stringstream store;
   {
     particle::change_set var1;
+    // Make non-default 
     var1.update_exponential_factor( 0.05 );
     var1.update_probability_factor( 0.5 );
-    particle::change_atom s1(1);
+    particle::change_atom s1( 1 );
     set_atom( s1, true, true, 1, particle::coordinate( -0.1, 0.1, 0.1 ), particle::coordinate(), epsw, epsw );
     // Check add
-    var1.add_atom ( s1 );
-    BOOST_CHECK_EQUAL( var1.size(), 1ul );
+    var1.add_atom( s1 );
 
     boost::archive::text_oarchive oa( store );
     // write class instance to archive
     oa << var1;
+
+    // Make a copy
+    {
+      particle::change_set var2( var1 );
+      BOOST_CHECK_EQUAL( var2.energy(), var1.energy() );
+      BOOST_CHECK_EQUAL( var2.exponential_factor(), var1.exponential_factor() );
+      BOOST_CHECK_EQUAL( var2.probability_factor(), var1.probability_factor() );
+      BOOST_CHECK_EQUAL( var2.size(), var1.size() );
+
+      BOOST_CHECK_EQUAL( var2[0].new_position.x, var1[0].new_position.x );
+      BOOST_CHECK_EQUAL( var2[0].new_position.y, var1[0].new_position.y );
+      BOOST_CHECK_EQUAL( var2[0].new_position.z, var1[0].new_position.z );
+      BOOST_CHECK_EQUAL( var2[0].old_position.x, var1[0].old_position.x );
+      BOOST_CHECK_EQUAL( var2[0].old_position.y, var1[0].old_position.y );
+      BOOST_CHECK_EQUAL( var2[0].old_position.z, var1[0].old_position.z );
+      BOOST_CHECK_EQUAL( var2[0].key, var1[0].key );
+      BOOST_CHECK_EQUAL( var2[0].index, var1[0].index );
+    }
+    // Make a move
+    {
+      particle::change_set var3( var1 );
+      particle::change_set var2( std::move( var3 ) );
+      BOOST_CHECK_EQUAL( var2.energy(), var1.energy() );
+      BOOST_CHECK_EQUAL( var2.exponential_factor(), var1.exponential_factor() );
+      BOOST_CHECK_EQUAL( var2.probability_factor(), var1.probability_factor() );
+      BOOST_CHECK_EQUAL( var2.size(), var1.size() );
+
+      BOOST_CHECK_EQUAL( var2[0].new_position.x, var1[0].new_position.x );
+      BOOST_CHECK_EQUAL( var2[0].new_position.y, var1[0].new_position.y );
+      BOOST_CHECK_EQUAL( var2[0].new_position.z, var1[0].new_position.z );
+      BOOST_CHECK_EQUAL( var2[0].old_position.x, var1[0].old_position.x );
+      BOOST_CHECK_EQUAL( var2[0].old_position.y, var1[0].old_position.y );
+      BOOST_CHECK_EQUAL( var2[0].old_position.z, var1[0].old_position.z );
+      BOOST_CHECK_EQUAL( var2[0].key, var1[0].key );
+      BOOST_CHECK_EQUAL( var2[0].index, var1[0].index );
+    }
+    // Assign a copy
+    {
+      particle::change_set var2;
+      // Use var2 to stop compiler eliding assignment to a copy.
+      BOOST_CHECK_EQUAL( var2.accept(), false );
+
+      var2 = var1;
+      BOOST_CHECK_EQUAL( var2.energy(), var1.energy() );
+      BOOST_CHECK_EQUAL( var2.exponential_factor(), var1.exponential_factor() );
+      BOOST_CHECK_EQUAL( var2.probability_factor(), var1.probability_factor() );
+      BOOST_CHECK_EQUAL( var2.size(), var1.size() );
+
+      BOOST_CHECK_EQUAL( var2[0].new_position.x, var1[0].new_position.x );
+      BOOST_CHECK_EQUAL( var2[0].new_position.y, var1[0].new_position.y );
+      BOOST_CHECK_EQUAL( var2[0].new_position.z, var1[0].new_position.z );
+      BOOST_CHECK_EQUAL( var2[0].old_position.x, var1[0].old_position.x );
+      BOOST_CHECK_EQUAL( var2[0].old_position.y, var1[0].old_position.y );
+      BOOST_CHECK_EQUAL( var2[0].old_position.z, var1[0].old_position.z );
+      BOOST_CHECK_EQUAL( var2[0].key, var1[0].key );
+      BOOST_CHECK_EQUAL( var2[0].index, var1[0].index );
+    }
   }
   {
+    // Test serialization
     particle::change_set var2;
-    particle::change_atom s1(0);
-    set_atom( s1, false, true, 0, particle::coordinate(), particle::coordinate( 0.1, -0.1, 0.1 ), epsw, epsw );
-    var2.add_atom ( s1 );
-    var2.add_atom ( s1 );
-    BOOST_CHECK_EQUAL( var2.size(), 2ul );
-    BOOST_CHECK_EQUAL( var2[0].key, 0 );
-    BOOST_CHECK_EQUAL( var2[0].index, 0 );
-    BOOST_CHECK_EQUAL( var2[0].new_position.x, 0.1 );
-    BOOST_CHECK_EQUAL( var2[0].new_position.y, -0.1 );
-    BOOST_CHECK_EQUAL( var2[0].new_position.z, 0.1 );
-    BOOST_CHECK_EQUAL( var2[0].old_position.x, 0.0 );
-    BOOST_CHECK_EQUAL( var2[0].old_position.y, 0.0 );
-    BOOST_CHECK_EQUAL( var2[0].old_position.z, 0.0 );
-
     boost::archive::text_iarchive ia( store );
-    // get class instance from archive and over-write existing data
+    // get class instance from archive
     ia >> var2;
 
     BOOST_CHECK_EQUAL( var2.energy(), 0.0 );
-//    BOOST_CHECK_EQUAL( var2.virial(), 0.0 );
     BOOST_CHECK_EQUAL( var2.exponential_factor(), 0.05 );
     BOOST_CHECK_EQUAL( var2.probability_factor(), 0.5 );
     BOOST_CHECK_EQUAL( var2.size(), 1ul );
@@ -469,6 +390,179 @@ auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx,
     BOOST_CHECK_EQUAL( var2[0].index, 1 );
   }
 }
+
+!!!922928.cpp!!!	change_set_methods_test() : void
+const double epsw { 70.0 };
+auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2 )->void
+{
+  a.do_old = b1;
+  a.do_new = b2;
+  a.index = idx;
+  a.old_position = p1;
+  a.new_position = p2;
+  a.eps_old = eps1;
+  a.eps_new = eps2;
+};
+
+{
+  // Test attempt to set a bad probability value
+  // Valid only if VALUE > 0.0
+  particle::change_set var2;
+  BOOST_CHECK_EQUAL( var2.probability_factor(), 1.0 );
+  BOOST_CHECK_THROW( var2.update_probability_factor( 0.0 ), std::runtime_error );
+  BOOST_CHECK_THROW( var2.update_probability_factor( -1.0 ), std::runtime_error );
+}
+{
+  // Test add steps
+  particle::change_set var1;
+
+  particle::change_atom s1( 0 );
+  set_atom( s1, true, true, 0, particle::coordinate(), particle::coordinate( 0.1, 0.0, 0.1 ), epsw, epsw );
+
+  // Add once have individual jump move
+  var1.add_atom( s1 );
+  // Variable that should be changed
+  BOOST_CHECK( var1.begin() != var1.end() );
+  BOOST_REQUIRE_EQUAL( var1.size(), 1ul );
+  BOOST_CHECK( s1.equivalent( var1[0] ) );
+  BOOST_CHECK( s1.equivalent( *var1.begin() ) );
+
+  // Add again: now have salt jump move
+  s1.old_position.x += 3.0;
+  s1.new_position.x += 3.0;
+  s1.key = 1;
+  var1.add_atom( s1 );
+  // Variable that should be changed
+  BOOST_CHECK( var1.begin() != var1.end() );
+  BOOST_CHECK_EQUAL( var1.size(), 2ul );
+  BOOST_CHECK( s1.equivalent( var1[1] ) );
+  BOOST_CHECK( s1.equivalent( *( var1.begin() + 1 ) ) );
+
+  // Add third time: still have salt jump move
+  s1.old_position.y += 3.0;
+  s1.new_position.y += 3.0;
+  var1.add_atom( s1 );
+  // Variable that should be changed
+  BOOST_CHECK( var1.begin() != var1.end() );
+  BOOST_CHECK_EQUAL( var1.size(), 3ul );
+  BOOST_CHECK( s1.equivalent( var1[2] ) );
+  BOOST_CHECK( s1.equivalent( *( var1.begin() + 2 ) ) );
+  // Variables that should be unchanged
+  BOOST_CHECK_EQUAL( var1.accept(), false );
+  BOOST_CHECK_EQUAL( var1.energy(), 0.0 );
+  BOOST_CHECK_EQUAL( var1.exponential_factor(), 0.0 );
+  BOOST_CHECK_EQUAL( var1.fail(), false );
+  BOOST_CHECK_EQUAL( var1.metropolis_factor(), 1.0 );
+  BOOST_CHECK_EQUAL( var1.probability_factor(), 1.0 );
+
+  // test equivalent()
+  particle::change_set var2( var1 );
+  // Verify individually
+  BOOST_CHECK_EQUAL( var1.accept(), var2.accept() );
+  BOOST_CHECK_EQUAL( var1.exponential_factor(), var2.exponential_factor() );
+  BOOST_CHECK_EQUAL( var1.fail(), var2.fail() );
+  BOOST_CHECK_EQUAL( var1.probability_factor(), var2.probability_factor() );
+  BOOST_CHECK_EQUAL_COLLECTIONS( var1.begin(), var1.end()
+                                 , var2.begin(), var2.end() );
+  // before using class method.
+  BOOST_CHECK_EQUAL( var1, var2 );
+
+}
+// Test factor adjustments
+{
+  particle::change_set var2;
+  particle::change_atom a1;
+  var2.add_atom( a1 );
+  BOOST_CHECK_EQUAL( var2.exponential_factor(), 0.0 );
+  BOOST_CHECK_EQUAL( var2.probability_factor(), 1.0 );
+  {
+    // Test metropolis factor
+    //  energy==0 exp==0.0 prob==1 beta=1
+    //  prob.e( -(beta*energy-exp ))
+    //  1 . e -( 0 - 0 ) == 1
+    const double metro( var2.metropolis_factor() );
+    if( not utility::feq( metro, 1.0 ) )
+    {
+      BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 1.0" );
+    }
+  }
+  {
+    // Test update_energy and metropolis
+    //  energy==0.1 expf==0.0 probf==1 beta=1
+    //  probf.e( -(beta*energy-expf ))
+    // 1 . e( -(0.1 - 0 )) == 0.90483741803596
+    var2.begin()->energy_new = 0.1;
+    BOOST_CHECK( utility::feq( var2.energy(), 0.1 ) );
+
+    const double metro( var2.metropolis_factor() );
+    if( not utility::feq( metro, 0.90483741803596 ) )
+    {
+      BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 0.90483741803596" );
+    }
+  }
+  {
+    // Test update_probability_factor and metropolis
+    //  energy==0.1 expf==0.0 probf==0.1 beta=1
+    //  probf.e( -(beta*energy-expf ))
+    // 0.3 . e( -(0.1 - 0 )) == 0.3 * 0.90484 = 0.27145
+    var2.update_probability_factor( 0.1 );
+    BOOST_CHECK( utility::feq( var2.probability_factor(), 0.1 ) );
+    var2.update_probability_factor( 3.0 );
+    BOOST_CHECK( utility::feq( var2.probability_factor(), 0.3 ) );
+
+    const double metro( var2.metropolis_factor() );
+    if( not utility::feq( metro, 0.271451225411, 1 << 12 ) )
+    {
+      BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 0.271451225411" );
+    }
+  }
+  {
+    // Test update_exponential_factor
+    //  energy==0.1 expf==0.1 probf==0.1 beta=1
+    //  probf.e( -(beta*energy-expf )) ->0.1
+    // 0.3 . e( -(0.1 - 0.1 )) == 0.3 * 1 = 0.3
+    var2.update_exponential_factor( 0.1 );
+    BOOST_CHECK_EQUAL( var2.exponential_factor(), 0.1 );
+
+    const double metro( var2.metropolis_factor() );
+    if( not utility::feq( metro, 0.3 ) )
+    {
+      BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 0.3" );
+    }
+  }
+  {
+    // Test update_exponential_factor
+    //  energy==0.1 expf==0.1 probf==0.1 beta=1
+    //  probf.e( -(beta*energy-expf )) ->0.1
+    // 0.3 . e( -(1.2 - 0.1 ) == 0.3 * 0.33287 == 0.09986
+    var2.begin()->energy_new += 1.1;
+    BOOST_CHECK( utility::feq( var2.energy(), 1.2 ) );
+
+    const double metro( var2.metropolis_factor() );
+    BOOST_CHECK_NE( metro, 0.0 );
+    if( not utility::feq( metro, 0.0998613251094, 1 << 12 ) )
+    {
+      BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 0.0998613251094" );
+    }
+  }
+  {
+    // Test update_energy with large energy
+    //  energy==100.1 expf==0.1 probf==0.1 beta=1
+    //  probf.e( -(beta*energy-expf )) ->0.0....
+    // 0.3 . e( -(101.3 - 0.1 ) == 0.3 * 1.238e-44 == 3.3614e-45
+
+    var2.begin()->energy_new += 100.1;
+    BOOST_CHECK( utility::feq( var2.energy(), 101.3 ) );
+
+    const double metro( var2.metropolis_factor() );
+    BOOST_CHECK_NE( metro, 0.0 );
+    if( not utility::feq( metro, 3.36139605555e-45, 1 << 13 ) )
+    {
+      BOOST_ERROR( "metropolis_factor ["<<metro<<"] not expected value 3.36139605555e-45" );
+    }
+  }
+}
+
 !!!413489.cpp!!!	coordinate_test() : void
 auto test_coord = [](particle::coordinate const& p1, double x, double y, double z)
 {
@@ -476,7 +570,16 @@ auto test_coord = [](particle::coordinate const& p1, double x, double y, double 
   BOOST_CHECK_EQUAL(p1.y, y);
   BOOST_CHECK_EQUAL(p1.z, z);
 };
- 
+
+{
+  // Test is canonical pattern
+  BOOST_CHECK( std::is_default_constructible< particle::coordinate >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< particle::coordinate >::type{} );
+  BOOST_CHECK( std::is_move_constructible< particle::coordinate >::type{} );
+  BOOST_CHECK( (std::is_assignable< particle::coordinate, particle::coordinate >::type{}) );
+  BOOST_CHECK( not std::has_virtual_destructor< particle::coordinate >::type{} );
+}
+
 // Constructor tests:
 std::stringstream store;
 {
@@ -549,7 +652,14 @@ auto test_coord = [](particle::centroid const& p1, double r, double x, double y,
   BOOST_CHECK_EQUAL(p1.y, y);
   BOOST_CHECK_EQUAL(p1.z, z);
 };
- 
+{
+  // Test is canonical pattern
+  BOOST_CHECK( std::is_default_constructible< particle::centroid >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< particle::centroid >::type{} );
+  BOOST_CHECK( std::is_move_constructible< particle::centroid >::type{} );
+  BOOST_CHECK( (std::is_assignable< particle::centroid, particle::centroid >::type{}) );
+  BOOST_CHECK( not std::has_virtual_destructor< particle::centroid >::type{} );
+} 
 // Constructor tests:
 std::stringstream store;
 {

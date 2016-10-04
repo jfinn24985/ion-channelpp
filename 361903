@@ -1,6 +1,6 @@
 format 75
 "particle" // particle
-  revision 179
+  revision 180
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -68,7 +68,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     //activity diagram settings
     package_name_in_tab default show_context default show_opaque_action_definition default auto_label_position default write_flow_label_horizontally default draw_all_relations default shadow default
     show_infonote default drawing_language default show_stereotype_properties default
-    classdiagram 438575 "Trials"
+    classdiagram 438575 "Ensemble delta definition"
       draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
       size A4
     end
@@ -114,33 +114,6 @@ purpose, only the source task will be generating and approving
 change_sets and so sink tasks do not need the link to the
 choice object that generated the change_set.
 "
-      classrelation 1132079 // <generalisation>
-	relation 1094959 ---|>
-	  a public
-	    cpp default "${type}"
-	    python "${type}"
-	    classrelation_ref 1132079 // <generalisation>
-	  b parent class_ref 275887 // noncopyable
-      end
-
-      classrelation 1083183 // <dependency>
-	relation 1046063 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 1083183 // <dependency>
-	  b parent class_ref 276015 // runtime_error
-      end
-
-      classrelation 1139375 // <dependency>
-	relation 1102255 -_->
-	  a package
-	    cpp default "#include in header"
-	    python "${type}"
-	    classrelation_ref 1139375 // <dependency>
-	  b parent class_ref 449327 // ftoi
-      end
-
       class 986671 "const_iterator"
 	visibility package stereotype "typedef" base_type class_ref 986415 // change_atom
 	cpp_decl "${comment}typedef std::vector< ${type} >::${name} ${name};
@@ -561,6 +534,26 @@ return val"
 	
       end
 
+      operation 923056 "equivalent"
+	const cpp_inline public explicit_return_type "bool"
+	nparams 1
+	  param in name "other" type class_ref 986543 // change_set
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Test if two change_atoms have the same data."
+      end
+
       operation 1988015 "exponential_factor"
 	const public explicit_return_type "double"
 	nparams 0
@@ -755,6 +748,42 @@ ${docstring}self.probability_factor *= ${p0}
 	comment " Stream insert function for visualizing object, possibly
  for debugging etc."
       end
+
+      operation 923568 "operator=="
+	friend public explicit_return_type "bool"
+	nparams 2
+	  param in name "lhs" type class_ref 986543 // change_set
+	  param in name "rhs" type class_ref 986543 // change_set
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  return lhs.equivalent( rhs );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 923440 "operator!="
+	friend public explicit_return_type "bool"
+	nparams 2
+	  param in name "lhs" type class_ref 986543 // change_set
+	  param in name "rhs" type class_ref 986543 // change_set
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  return not lhs.equivalent( rhs );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
     end
 
     class 986415 "change_atom"
@@ -774,13 +803,13 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment "Describe a change to a single particle."
-      classrelation 1155631 // <dependency>
-	relation 1118511 -_->
+      classrelation 581168 // <dependency>
+	relation 580272 -_->
 	  a default
 	    cpp default "#include in source"
 	    python "${type}"
-	    classrelation_ref 1155631 // <dependency>
-	  b parent class_ref 134959 // ensemble
+	    classrelation_ref 581168 // <dependency>
+	  b parent class_ref 303025 // specie_key
       end
 
       attribute 346033 "old_rij"
@@ -937,6 +966,15 @@ ${self}${name} = coordinate()
 	  b parent class_ref 986799 // coordinate
       end
 
+      extra_member 403888 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
       operation 1769775 "change_atom"
 	protected explicit_return_type ""
 	nparams 8
@@ -1053,23 +1091,6 @@ ${body}"
 	
       end
 
-      operation 427057 "equivalent"
-	const public explicit_return_type "bool"
-	nparams 1
-	  param in name "rhs" type class_ref 986415 // change_atom
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	
-	
-      end
-
       operation 1772463 "operator="
 	public return_type class_ref 986415 // change_atom
 	nparams 1
@@ -1151,6 +1172,32 @@ ${body}"
 	
       end
 
+      extra_member 404016 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 427057 "equivalent"
+	const public explicit_return_type "bool"
+	nparams 1
+	  param in name "rhs" type class_ref 986415 // change_atom
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
       operation 686257 "operator<<"
 	friend public explicit_return_type "std::ostream"
 	nparams 2
@@ -1166,6 +1213,42 @@ ${body}"
 	
 	
 	
+	
+      end
+
+      operation 923184 "operator=="
+	friend public explicit_return_type "bool"
+	nparams 2
+	  param in name "lhs" type class_ref 986415 // change_atom
+	  param in name "rhs" type class_ref 986415 // change_atom
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  return lhs.equivalent( rhs );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 923312 "operator!="
+	friend public explicit_return_type "bool"
+	nparams 2
+	  param in name "lhs" type class_ref 986415 // change_atom
+	  param in name "rhs" type class_ref 986415 // change_atom
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  return not lhs.equivalent( rhs );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
 	
       end
     end
@@ -1190,22 +1273,6 @@ ${body}"
     associated_deployment_view deploymentview_ref 321199 // libparticle deployment
     classdiagram 174128 "particle heirachy"
       draw_all_relations default hide_attributes yes hide_operations yes hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
-      size A4
-    end
-
-    classdiagram 610223 "System input"
-      draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
-      size A4
-    end
-
-    classdiagram 471983 "formation and specie"
-      draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
-      comment "formation and specie types related with flyweight pattern"
-      size A4
-    end
-
-    classdiagram 544047 "Compare Formations"
-      draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
       size A4
     end
 
@@ -2680,6 +2747,15 @@ ${docstring}${members}
 	comment "The list of deleted particles."
       end
 
+      classrelation 230321 // <dependency>
+	relation 230065 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 230321 // <dependency>
+	  b parent class_ref 1016239 // strngs
+      end
+
       attribute 1330479 "key"
 	private explicit_type "size_t"
 	multiplicity "*"
@@ -3384,24 +3460,6 @@ ${docstring}${body}
 	comment "Write a dense debug representation of the 
 ensemble to 'out'"
       end
-    end
-
-    class 210608 "ensemble_bloat"
-      visibility package 
-      cpp_decl "${comment}${template}class ${name}${inherit}
- {
-${members}
-};
-${inlines}
-"
-      java_decl ""
-      php_decl ""
-      python_decl "class ${name}${inherit}:
-${docstring}${members}
-"
-      idl_decl ""
-      explicit_switch_type ""
-      
     end
 
     class 134577 "specie"
@@ -4679,7 +4737,7 @@ ${docstring}${body}
     end
 
     class 1012527 "spec"
-      visibility package 
+      visibility package stereotype "EXAMPLE"
       cpp_decl "${comment}${template}class ${name}${inherit}
  {
 ${members}
@@ -5764,7 +5822,6 @@ ${docstring}${body}
 	
 	comment " Perform checks at the end of reading a section."
       end
-
     end
   end
 
