@@ -1,6 +1,6 @@
 format 75
 "particle" // particle
-  revision 180
+  revision 181
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -2404,6 +2404,26 @@ ${docstring}${body}
 	
       end
 
+      operation 335536 "swap"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "source" type class_ref 223792 // coordinate_set
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+   std::swap( this->x_, source.x_ );
+   std::swap( this->y_, source.y_ );
+   std::swap( this->z_, source.z_ );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Swap contents of two objects"
+      end
+
       operation 349232 "clear"
 	public explicit_return_type "void"
 	nparams 0
@@ -2587,26 +2607,6 @@ ${docstring}${body}
 	comment " Number of coordinates"
       end
 
-      operation 335536 "swap"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "source" type class_ref 223792 // coordinate_set
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-   std::swap( this->x_, source.x_ );
-   std::swap( this->y_, source.y_ );
-   std::swap( this->z_, source.z_ );
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Swap contents of two objects"
-      end
-
       operation 335664 "x"
 	const public explicit_return_type "double"
 	nparams 1
@@ -2714,16 +2714,11 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
-      comment " A collection of particles defined by their position and specie ID."
-      classrelation 1277103 // <generalisation>
-	relation 1239215 ---|>
-	  a public
-	    cpp default "${type}"
-	    python "${type}"
-	    classrelation_ref 1277103 // <generalisation>
-	  b parent class_ref 275887 // noncopyable
-      end
+      comment " A collection of particles defined by their position and specie ID.
 
+ TODO: The number of particles of each specie is state of the ensemble
+ not of the specie -> move here.  The charge is a meta property between the specie
+ set and the number of each specie -> move to particle_manager"
       classrelation 581552 // <dependency>
 	relation 580656 -_->
 	  a default
@@ -2731,6 +2726,15 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 581552 // <dependency>
 	  b parent class_ref 303025 // specie_key
+      end
+
+      classrelation 230321 // <dependency>
+	relation 230065 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 230321 // <dependency>
+	  b parent class_ref 1016239 // strngs
       end
 
       attribute 1330351 "deletion_list_"
@@ -2747,13 +2751,18 @@ ${docstring}${members}
 	comment "The list of deleted particles."
       end
 
-      classrelation 230321 // <dependency>
-	relation 230065 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 230321 // <dependency>
-	  b parent class_ref 1016239 // strngs
+      attribute 481584 "key_counts_"
+	private explicit_type "size_t"
+	multiplicity "*"
+	stereotype "vector"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${stereotype}()
+"
+	idl_decl ""
+	comment " Cached count of the number of particles of each specie in the ensemble."
       end
 
       attribute 1330479 "key"
@@ -2796,19 +2805,6 @@ ${docstring}${members}
 	comment "The value of the permittivity around the particle"
       end
 
-      attribute 191537 "charge"
-	private explicit_type "double"
-	init_value "0"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}_${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "The current charge"
-      end
-
       attribute 325297 "inuse_particles_"
 	private explicit_type "size_t"
 	init_value "0"
@@ -2845,20 +2841,6 @@ Number of valid particles = inuse_particle - deletion_list.size"
 	php ""
 	python ""
 	idl ""
-      end
-
-      operation 233393 "charge"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->charge_;
-}
-"
-	
-	
-	
-	
       end
 
       operation 434096 "eps"
@@ -2931,11 +2913,11 @@ sim.nspec() then particle is not active."
 	comment "Determine the actual index of the nth valid 
 position when deletion list is not empty
 
-This conformation class does not rearrange 
+This ensemble class does not rearrange 
 indices after a particle deletion. This
 results in invalid definitions within the 
 particle list that are detectable with 
-key(i) == 0. 
+key(i) == nkey. 
 Therefore the nth index position is not 
 necessarily the nth valid particle. This 
 method returns the index of the nth valid particle
@@ -3179,6 +3161,28 @@ ${docstring}return self.inuse_particles_
 all positions may be active)"
       end
 
+      operation 930736 "specie_count"
+	const public explicit_return_type "size_t"
+	nparams 1
+	  param in name "ispec" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The count of particles of each specie index in ensemble
+
+ \\pre gidx < specie_count"
+      end
+
       operation 320944 "specie_index"
 	const public explicit_return_type "size_t"
 	nparams 1
@@ -3199,6 +3203,9 @@ ${docstring}${body}
 	comment " Get the specie local index of the particle at gidx. Complementary
  method to nth_specie_index.
 
+ The return value is the ordinal of this particle in the set of particles
+ of this specie.
+
  \\pre gidx < size"
       end
 
@@ -3214,12 +3221,11 @@ ${docstring}${body}
 
       operation 1768495 "commit"
 	public explicit_return_type "void"
-	nparams 2
+	nparams 1
 	  param inout name "atomset" type class_ref 986543 // change_set
-	  param inout name "spcs" type class_ref 134577 // specie
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, std::vector< ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, std::vector< ${t1} >& ${p1}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -3235,14 +3241,13 @@ ${docstring}${body}
 
       operation 284592 "append_position"
 	public explicit_return_type "void"
-	nparams 4
+	nparams 3
 	  param in name "key" explicit_type "size_t"
-	  param in name "charge" explicit_type "double"
 	  param in name "pos" type class_ref 986799 // coordinate
 	  param in name "eps" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, const ${t2} & ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, const ${t2} & ${p2}, ${t3} ${p3}${)}${const}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}${)}${const}${throw}
 {
   ${body}
 }
@@ -3340,10 +3345,10 @@ ${docstring}${body}
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
 : deletion_list_ ()
+, key_counts_()
 , key_()
 , xyz_ ()
 , eps_()
-, charge_(0.0)
 , inuse_particles_(0)
 , max_particles_(0)
 {}"
@@ -3354,19 +3359,77 @@ ${docstring}${body}
 	comment "Default constructor."
       end
 
-      operation 550321 "__init__"
+      operation 930096 "ensemble"
+	stereotype "move"
 	public explicit_return_type ""
 	nparams 1
-	  param inout name "self" explicit_type ""
-	
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}super(${class}, ${p0}).__init__()
+	  param inout name "source" type class_ref 134959 // ensemble
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} && ${p0}${)}${volatile}${throw}
 ${body}
 "
 	
-	comment "Python constructor"
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 930224 "ensemble"
+	stereotype "copy"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 134959 // ensemble
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
+${body}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 930352 "operator="
+	public return_type class_ref 134959 // ensemble
+	nparams 1
+	  param in name "source" type class_ref 134959 // ensemble
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
+{
+   this->swap( source );
+   return *this;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 930480 "swap"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "source" type class_ref 134959 // ensemble
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
       end
 
       operation 549937 "~ensemble"
@@ -3400,10 +3463,10 @@ ${body}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
     ar & deletion_list_;
+    ar & key_counts_;
     ar & key_;
     ar & xyz_;
     ar & eps_;
-    ar & charge_;
     ar & inuse_particles_;
     ar & max_particles_;
   }
@@ -3416,11 +3479,10 @@ ${body}
 
       operation 692913 "check_invariants"
 	const public explicit_return_type "bool"
-	nparams 1
-	  param in name "spcs" type class_ref 134577 // specie
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::vector< ${t0} > & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::vector< ${t0} > & ${p0}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
 {
   ${body}
 }

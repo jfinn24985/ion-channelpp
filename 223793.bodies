@@ -740,7 +740,109 @@ std::stringstream store;
    var.read(ss);
    test_coord( var, 0.1, 1.1, 2.0, 1.0 );
 }
-!!!413617.cpp!!!	ensemble_test() : void
+!!!413617.cpp!!!	ensemble_lifetime_test() : void
+// Test framework
+std::vector< particle::specie > specie_list( 3 );
+specie_list[ 0 ].set_label( "Na" );
+specie_list[ 0 ].set_valency( 1.0 );
+specie_list[ 0 ].set_type( particle::specie::SOLUTE );
+specie_list[ 1 ].set_label( "Ka" );
+specie_list[ 1 ].set_valency( 1.0 );
+specie_list[ 1 ].set_type( particle::specie::SOLUTE );
+specie_list[ 2 ].set_label( "Cl" );
+specie_list[ 2 ].set_valency( -1.0 );
+specie_list[ 2 ].set_type( particle::specie::SOLUTE );
+const double epsw = 80.0;
+
+auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2 )->void
+{
+  a.do_old = b1;
+  a.do_new = b2;
+  a.index = idx;
+  a.old_position = p1;
+  a.new_position = p2;
+  a.eps_old = eps1;
+  a.eps_new = eps2;
+};
+{
+  // Test is canonical pattern
+  BOOST_CHECK( std::is_default_constructible< particle::ensemble >::type {} );
+  BOOST_CHECK( std::is_copy_constructible< particle::ensemble >::type {} );
+  BOOST_CHECK( std::is_move_constructible< particle::ensemble >::type {} );
+  BOOST_CHECK( ( std::is_assignable< particle::ensemble, particle::ensemble >::type {} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< particle::ensemble >::type {} );
+}
+{
+  // default ctor.
+  particle::ensemble ens;
+  BOOST_CHECK_EQUAL( ens.charge(), 0.0 );
+  BOOST_CHECK_EQUAL( ens.count(), 0 );
+  BOOST_CHECK_EQUAL( ens.max_size(), 0 );
+  BOOST_CHECK_EQUAL( ens.size(), 0 );
+  BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+
+  // Resize ensemble
+  ens.resize( 64 );
+  // Max size should be multiple of 64 larger than
+  // argument given to resize
+  BOOST_CHECK_EQUAL( ens.count(), 0 );
+  BOOST_CHECK_GE( ens.max_size(), 64 );
+  BOOST_CHECK_EQUAL( ( ens.max_size() % 64 ), 0 );
+  BOOST_CHECK_EQUAL( ens.size(), 0 );
+
+  // Add a Na particle so no longer default object
+  std::size_t ispec( 0 );
+  {
+    const particle::coordinate pos
+    {
+      1.62127193214, 9.29177995257, 5.25370757073
+    };
+    ens.append_position( ispec, specie_list[ ispec ].valency(), pos, epsw );
+    // size should increase by one, charge should be set but specie
+    // count should be unaltered.
+    BOOST_CHECK_EQUAL( ens.count(), 1 );
+    BOOST_CHECK_GE( ens.max_size(), 64 );
+    BOOST_CHECK_EQUAL( ens.size(), 1 );
+    BOOST_CHECK_EQUAL( ens.charge(), 1.0 );
+    BOOST_CHECK_EQUAL( specie_list[ ispec ].count(), 0 );
+    // Invariant should fail before setting count in specie_list.
+    BOOST_CHECK_THROW( ens.check_invariants( specie_list ), std::runtime_error );
+    specie_list[ ispec ].set_count( 1 );
+    // Invariant should now pass.
+    BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+    // Check set values
+    BOOST_CHECK_EQUAL( ens.key( 0 ), ispec );
+    BOOST_CHECK_EQUAL( ens.x( 0 ), pos.x );
+    BOOST_CHECK_EQUAL( ens.y( 0 ), pos.y );
+    BOOST_CHECK_EQUAL( ens.z( 0 ), pos.z );
+    BOOST_CHECK_EQUAL( ens.position( 0 ), pos );
+    BOOST_CHECK_EQUAL( ens.eps( 0 ), epsw );
+  }
+
+  // copy ctor
+  {
+    particle::ensemble ens1( ens );
+    BOOST_CHECK( ens == ens1 );
+  }
+  // move ctor
+  {
+    particle::ensemble ens2( ens );
+    particle::ensemble ens1( std::move( ens2 ) );
+
+    BOOST_CHECK( ens == ens1 );
+  }
+
+  // assignment
+  {
+    particle::ensemble ens1;
+    BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+    ens1 = ens;
+    BOOST_CHECK( ens == ens1 );
+  }
+
+}
+
+!!!930608.cpp!!!	ensemble_methods_test() : void
 // Test framework
 std::vector< particle::specie > specie_list( 3 );
 specie_list[ 0 ].set_label( "Na" );

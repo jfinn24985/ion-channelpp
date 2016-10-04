@@ -34,10 +34,13 @@ for jspec in self.key:
       return jdx
   jdx += 1
 raise IndexError, "Index out of range, less particles of the given specie in ensemble"
+!!!930736.cpp!!!	specie_count(in ispec : size_t) : size_t
+UTILITY_REQUIRE( ispec < this->counts_.size(), "Index out of range." );
+return this->key_counts_[ ispec ];
 !!!320944.cpp!!!	specie_index(in gidx : size_t) : size_t
 UTILITY_REQUIRE( gidx < this->size(), "Index out of range." );
 return std::count( this->key_.begin(), this->key_.begin() + gidx, this->key_.at( gidx ) );
-!!!1768495.cpp!!!	commit(inout atomset : change_set, inout spcs : specie) : void
+!!!1768495.cpp!!!	commit(inout atomset : change_set) : void
 for (auto & atom: atomset)
 {
   if (atom.do_old)
@@ -51,8 +54,8 @@ for (auto & atom: atomset)
       if (this->key_[atom.index] != atom.key)
       {
         // SWAP trial
-        spcs[ this->key_[atom.index] ].decrement();
-        spcs[ atom.key ].increment();
+        --this->key_counts_[ this->key_[atom.index] ];
+        ++this->key_counts_[ atom.key ];
         this->key_[atom.index] = atom.key;
         this->eps_[atom.index] = atom.eps_new;
       }
@@ -61,8 +64,7 @@ for (auto & atom: atomset)
     {
       // REMOVE
       this->key_[atom.index] = particle::specie_key::nkey;
-      spcs[ atom.key ].decrement();
-      this->charge_ -= spcs[ atom.key ].valency();
+      --this->key_counts_[ atom.key ];
       // Add index to deletion list
       if (this->inuse_particles_ - 1 == atom.index)
       {
@@ -97,15 +99,14 @@ for (auto & atom: atomset)
     }
     this->key_[atom.index] = atom.key;
     this->eps_[atom.index] = atom.eps_new;
-    spcs[ atom.key ].increment();
-    this->charge_ += spcs[ atom.key ].valency();
+    ++this->key_counts_[ atom.key ];
     this->xyz_.set_x( atom.index, atom.new_position.x );
     this->xyz_.set_y( atom.index, atom.new_position.y );
     this->xyz_.set_z( atom.index, atom.new_position.z );
   }
 }
 
-!!!1768495.python!!!	commit(inout atomset : change_set, inout spcs : specie) : void
+!!!1768495.python!!!	commit(inout atomset : change_set) : void
 for atom in atomset.changes:
   if atom.do_old:
     if atom.do_new:
@@ -153,7 +154,7 @@ for atom in atomset.changes:
     self.y[ii] = atom.new_position.y
     self.z[ii] = atom.new_position.z
     self.key[ii] = atom.key
-!!!284592.cpp!!!	append_position(in key : size_t, in charge : double, in pos : coordinate, in eps : double) : void
+!!!284592.cpp!!!	append_position(in key : size_t, in pos : coordinate, in eps : double) : void
 UTILITY_REQUIRE( key != particle::specie_key::nkey, "Cannot append positions of invalid specie" );
 //
 std::size_t cursor { this->inuse_particles_ };
@@ -172,10 +173,14 @@ this->xyz_.set_x( cursor, pos.x );
 this->xyz_.set_y( cursor, pos.y );
 this->xyz_.set_z( cursor, pos.z );
 
-this->charge_ += charge;
+if ( key >= this->key_counts_.size() )
+{
+  this->key_counts_.resize( key + 1 );
+}
+++this->key_counts_[ key ];
 
 ++this->inuse_particles_;
-!!!284592.python!!!	append_position(in key : size_t, in charge : double, in pos : coordinate, in eps : double) : void
+!!!284592.python!!!	append_position(in key : size_t, in pos : coordinate, in eps : double) : void
 for atom in atomset.changes:
   if atom.do_old:
     if atom.do_new:
@@ -255,75 +260,94 @@ self.x = np.zeros( pmax )
 self.y = np.zeros( pmax )
 self.z = np.zeros( pmax )
 self.key = np.zeros( pmax, dtype=np.uint8 )
-!!!692913.cpp!!!	check_invariants(in spcs : specie) : bool
-UTILITY_ALWAYS(this->key_.size() == this->eps_.size(), "Array size difference");
-if (not this->deletion_list_.empty())
+!!!930096.cpp!!!	ensemble(inout source : ensemble)
+: deletion_list_( std::move( source.deletion_list_ ) )
+, key_counts_( std::move( source.key_counts_ ) )
+, key_( std::move( source.key_ ) )
+, xyz_( std::move( source.xyz_ ) )
+, eps_( std::move( source.eps_ ) )
+, inuse_particles_( std::move( source.inuse_particles_ ) )
+, max_particles_( std::move( source.max_particles_ ) )
+{}
+
+!!!930224.cpp!!!	ensemble(in source : ensemble)
+: deletion_list_( source.deletion_list_ )
+, key_counts_( source.key_counts_ )
+, key_( source.key_ )
+, xyz_( source.xyz_ )
+, eps_( source.eps_ )
+, inuse_particles_( source.inuse_particles_ )
+, max_particles_( source.max_particles_ )
+{}
+
+!!!930480.cpp!!!	swap(inout source : ensemble) : void
+std::swap( this->deletion_list_, source.deletion_list_ );
+std::swap( this->key_counts_, source.key_counts_ );
+std::swap( this->key_, source.key_ );
+std::swap( this->xyz_, source.xyz_ );
+std::swap( this->eps_, source.eps_ );
+std::swap( this->inuse_particles_, source.inuse_particles_ );
+std::swap( this->max_particles_, source.max_particles_ );
+
+!!!692913.cpp!!!	check_invariants() : bool
+UTILITY_ALWAYS( this->key_.size() == this->eps_.size(), "Array size difference" );
+if( not this->deletion_list_.empty() )
 {
-   std::size_t topvalue = this->inuse_particles_ + 1;
-   for (auto index : this->deletion_list_)
-   {
-      // deletion list is sorted high to low
-      UTILITY_ALWAYS(index < topvalue, "deletion_list is not correctly sorted");
-      // for each index in the deletion list key_[idx] = nkey
-      UTILITY_ALWAYS(this->key_[index] == particle::specie_key::nkey, "key entry for an index in deletion_list is not 'nkey'");
-      topvalue = index;
-   }
+  std::size_t topvalue = this->inuse_particles_ + 1;
+  for( auto index : this->deletion_list_ )
+  {
+    // deletion list is sorted high to low
+    UTILITY_ALWAYS( index < topvalue, "deletion_list is not correctly sorted" );
+    // for each index in the deletion list key_[idx] = nkey
+    UTILITY_ALWAYS( this->key_[index] == particle::specie_key::nkey, "key entry for an index in deletion_list is not 'nkey'" );
+    topvalue = index;
+  }
 }
 {
-   std::vector< std::size_t > counts; // count per specie
-   std::size_t nspec = 0; // max specie index seen
-   if ( not spcs.empty() )
-   {
-      counts.resize( spcs.size() );
-      std::fill( counts.begin(), counts.end(), 0 );
-      nspec = spcs.size();
-   }
-   std::size_t deleted_ = 0; // count of deleted elements
-   for (std::size_t idx = 0; idx != this->inuse_particles_; ++idx)
-   {
-      const std::size_t keyval = this->key_[idx];
-      if (keyval == particle::specie_key::nkey)
-      {
-         ++deleted_;
-      }
-      else
-      {
-         if (keyval >= nspec)
-         {
-            UTILITY_ALWAYS(spcs.empty() or keyval < spcs.size(), "Specie index out of range." ); 
-            counts.resize( keyval + 1 );
-            std::fill( counts.begin() + nspec, counts.end(), 0 );
-            nspec = keyval + 1;
-         }
-         ++counts[keyval];
-      }
-   }
-   // any value in key_ equal to nkey has index in deletion list
-   UTILITY_ALWAYS(deleted_ == this->deletion_list_.size()
-                  , "number fo 'nkey' entries in key_ does not match size of deletion list");
-   if ( not spcs.empty() )
-   {
-      // count of species in key_ equal to value stored in each specie
-      double test_charge = 0.0;
-      for (std::size_t idx = 0; idx != nspec; ++idx)
-      {
-         UTILITY_ALWAYS(spcs[ idx ].count() == counts[ idx ]
-                        , "count of a specie in key_ does not match with specie object");
-         test_charge += counts[ idx ] * spcs[ idx ].valency();
-      }
-      // charge is correct
-      UTILITY_ALWAYS(this->charge_ == test_charge, "value of charge (" + std::to_string( this->charge_ ) + ") is not correct (" + std::to_string( test_charge ) + ")");
-   }
+  std::size_t nspec = this->key_counts_.size(); // max specie index
+  std::vector< std::size_t > counts(nspec, 0ul); // count per specie
+  std::size_t deleted_ = 0; // count of deleted elements
+  for( std::size_t idx = 0; idx != this->inuse_particles_; ++idx )
+  {
+    const std::size_t keyval = this->key_[idx];
+    if( keyval == particle::specie_key::nkey )
+    {
+      ++deleted_;
+    }
+    else
+    {
+      UTILITY_ALWAYS( keyval < nspec, "Key value out of range" )
+      ++counts[keyval];
+    }
+  }
+  // any value in key_ equal to nkey has index in deletion list
+  UTILITY_ALWAYS( deleted_ == this->deletion_list_.size()
+                  , "number fo 'nkey' entries in key_ does not match size of deletion list" );
+  // count of species in key_ equal to value stored in each specie
+  double test_charge = 0.0;
+  for( std::size_t idx = 0; idx != nspec; ++idx )
+  {
+    UTILITY_ALWAYS( this->key_counts_[ idx ] == counts[ idx ]
+                    , "count of a specie in key_ does not match with specie object" );
+  }
+}
 }
 return true;
+
 !!!706353.cpp!!!	dump(inout out : ostream) : void
 out << "[ensemble]\n";
-out << "charge " << this->charge_ << " len(del) " << this->deletion_list_.size();
+out << "len(del) " << this->deletion_list_.size();
 out << " count " << this->count() << " size " << this->inuse_particles_ << "\n";
 for (std::size_t ii = 0; ii != this->inuse_particles_; ++ii)
 {
   out << ii << " " << this->x( ii ) << " " << this->y( ii ) << " " << this->z( ii ) << " " << this->key_[ii] << " " << this->eps_[ii]  << "\n";
 }
+out << "key counts:";
+for (std::size_t ii = 0; ii != this->key_counts_.size(); ++ii)
+{
+out << " [ " << ii << " ]=" << this->counts_[ii];
+}
+out << "\n";
 !!!706353.python!!!	dump(inout out : ostream) : void
 print >>out, "[ensemble] of particles"
 print >>out, "   particle # :",self.count()
