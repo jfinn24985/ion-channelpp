@@ -1,5 +1,5 @@
 class ensemble
-!!!1963055.cpp!!!	nth_index_private_(in index : size_t) : size_t
+!!!1963055.cpp!!!	do_nth_index(in index : size_t) : size_t
 // Have deletions
 UTILITY_CHECK( not this->deletion_list_.empty (), "No need to call this function when deletion list is empty" );
 UTILITY_REQUIRE( index < this->count (), "Particle number out of range" );
@@ -13,8 +13,8 @@ for (auto ith = this->deletion_list_.rbegin(); ith != this->deletion_list_.rend(
   if (*ith <= result) ++result;
 }
 UTILITY_ENSURE( result < size (), "Calculated index is out of range" );
-UTILITY_ENSURE( this->key_[result] != particle::ensemble::nkey, "Calculated index is not a valid index" );
-UTILITY_CHECK( result == nth + std::count( this->key_.begin(), this->key_.begin () + result, particle::ensemble::nkey )
+UTILITY_ENSURE( this->key_[result] != particle::specie_key::nkey, "Calculated index is not a valid index" );
+UTILITY_CHECK( result == nth + std::count( this->key_.begin(), this->key_.begin () + result, particle::specie_key::nkey )
                 , "Calculated nth index is not the nth valid index" );
 return result;
 
@@ -60,7 +60,7 @@ for (auto & atom: atomset)
     else
     {
       // REMOVE
-      this->key_[atom.index] = nkey;
+      this->key_[atom.index] = particle::specie_key::nkey;
       spcs[ atom.key ].decrement();
       this->charge_ -= spcs[ atom.key ].valency();
       // Add index to deletion list
@@ -154,7 +154,7 @@ for atom in atomset.changes:
     self.z[ii] = atom.new_position.z
     self.key[ii] = atom.key
 !!!284592.cpp!!!	append_position(in key : size_t, in charge : double, in pos : coordinate, in eps : double) : void
-UTILITY_REQUIRE( key != nkey, "Cannot append positions of invalid specie" );
+UTILITY_REQUIRE( key != particle::specie_key::nkey, "Cannot append positions of invalid specie" );
 //
 std::size_t cursor { this->inuse_particles_ };
 if (this->key_.size() == cursor)
@@ -230,7 +230,7 @@ out << "         size :" << this->inuse_particles_ << "\n";
 boost::format row(" %4d %9.5f %9.5f %9.5f %2d\n");
 for (std::size_t ii = 0; ii != this->inuse_particles_; ++ii)
 {
-  if (ensemble::nkey != this->key_[ii])
+  if (particle::specie_key::nkey != this->key_[ii])
   {
     out << boost::format(row) % ii % this->x( ii ) % this->y( ii ) % this->z( ii ) % this->key_[ii];
   }
@@ -244,7 +244,7 @@ for ii,(x,y,z,key) in enumerate(zip(self.x,self.y,self.z,self.key)):
     print >>out, " %4d %9.5f %9.5f %9.5f %2d" % (ii,x,y,z,key)
 !!!1872559.cpp!!!	resize(in npart : size_t) : void
 this->max_particles_ = utility::mathutil::next64(2*npart);
-this->key_.resize( this->max_particles_, nkey );
+this->key_.resize( this->max_particles_, particle::specie_key::nkey );
 this->eps_.resize( this->max_particles_, 0.0 );
 this->xyz_.resize( this->max_particles_ );
 !!!1872559.python!!!	resize(in npart : size_t) : void
@@ -265,7 +265,7 @@ if (not this->deletion_list_.empty())
       // deletion list is sorted high to low
       UTILITY_ALWAYS(index < topvalue, "deletion_list is not correctly sorted");
       // for each index in the deletion list key_[idx] = nkey
-      UTILITY_ALWAYS(this->key_[index] == nkey, "key entry for an index in deletion_list is not 'nkey'");
+      UTILITY_ALWAYS(this->key_[index] == particle::specie_key::nkey, "key entry for an index in deletion_list is not 'nkey'");
       topvalue = index;
    }
 }
@@ -282,7 +282,7 @@ if (not this->deletion_list_.empty())
    for (std::size_t idx = 0; idx != this->inuse_particles_; ++idx)
    {
       const std::size_t keyval = this->key_[idx];
-      if (keyval == particle::ensemble::nkey)
+      if (keyval == particle::specie_key::nkey)
       {
          ++deleted_;
       }
