@@ -742,28 +742,8 @@ std::stringstream store;
 }
 !!!413617.cpp!!!	ensemble_lifetime_test() : void
 // Test framework
-std::vector< particle::specie > specie_list( 3 );
-specie_list[ 0 ].set_label( "Na" );
-specie_list[ 0 ].set_valency( 1.0 );
-specie_list[ 0 ].set_type( particle::specie::SOLUTE );
-specie_list[ 1 ].set_label( "Ka" );
-specie_list[ 1 ].set_valency( 1.0 );
-specie_list[ 1 ].set_type( particle::specie::SOLUTE );
-specie_list[ 2 ].set_label( "Cl" );
-specie_list[ 2 ].set_valency( -1.0 );
-specie_list[ 2 ].set_type( particle::specie::SOLUTE );
 const double epsw = 80.0;
 
-auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2 )->void
-{
-  a.do_old = b1;
-  a.do_new = b2;
-  a.index = idx;
-  a.old_position = p1;
-  a.new_position = p2;
-  a.eps_old = eps1;
-  a.eps_new = eps2;
-};
 {
   // Test is canonical pattern
   BOOST_CHECK( std::is_default_constructible< particle::ensemble >::type {} );
@@ -775,11 +755,10 @@ auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx,
 {
   // default ctor.
   particle::ensemble ens;
-  BOOST_CHECK_EQUAL( ens.charge(), 0.0 );
   BOOST_CHECK_EQUAL( ens.count(), 0 );
   BOOST_CHECK_EQUAL( ens.max_size(), 0 );
   BOOST_CHECK_EQUAL( ens.size(), 0 );
-  BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+  BOOST_CHECK_NO_THROW( ens.check_invariants() );
 
   // Resize ensemble
   ens.resize( 64 );
@@ -797,19 +776,14 @@ auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx,
     {
       1.62127193214, 9.29177995257, 5.25370757073
     };
-    ens.append_position( ispec, specie_list[ ispec ].valency(), pos, epsw );
-    // size should increase by one, charge should be set but specie
-    // count should be unaltered.
+    ens.append_position( ispec, pos, epsw );
+    // size should increase by one, specie count should be altered.
     BOOST_CHECK_EQUAL( ens.count(), 1 );
     BOOST_CHECK_GE( ens.max_size(), 64 );
     BOOST_CHECK_EQUAL( ens.size(), 1 );
-    BOOST_CHECK_EQUAL( ens.charge(), 1.0 );
-    BOOST_CHECK_EQUAL( specie_list[ ispec ].count(), 0 );
-    // Invariant should fail before setting count in specie_list.
-    BOOST_CHECK_THROW( ens.check_invariants( specie_list ), std::runtime_error );
-    specie_list[ ispec ].set_count( 1 );
-    // Invariant should now pass.
-    BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+    BOOST_CHECK_EQUAL( ens.specie_count( ispec ), 1 );
+    // Invariant should pass.
+    BOOST_CHECK_NO_THROW( ens.check_invariants() );
     // Check set values
     BOOST_CHECK_EQUAL( ens.key( 0 ), ispec );
     BOOST_CHECK_EQUAL( ens.x( 0 ), pos.x );
@@ -835,25 +809,13 @@ auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx,
   // assignment
   {
     particle::ensemble ens1;
-    BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+    BOOST_CHECK_NO_THROW( ens.check_invariants() );
     ens1 = ens;
     BOOST_CHECK( ens == ens1 );
   }
-
 }
 
 !!!930608.cpp!!!	ensemble_methods_test() : void
-// Test framework
-std::vector< particle::specie > specie_list( 3 );
-specie_list[ 0 ].set_label( "Na" );
-specie_list[ 0 ].set_valency( 1.0 );
-specie_list[ 0 ].set_type( particle::specie::SOLUTE );
-specie_list[ 1 ].set_label( "Ka" );
-specie_list[ 1 ].set_valency( 1.0 );
-specie_list[ 1 ].set_type( particle::specie::SOLUTE );
-specie_list[ 2 ].set_label( "Cl" );
-specie_list[ 2 ].set_valency( -1.0 );
-specie_list[ 2 ].set_type( particle::specie::SOLUTE );
 const double epsw = 80.0;
 
 auto set_atom = [](particle::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2)->void{
@@ -870,11 +832,10 @@ auto set_atom = [](particle::change_atom &a, bool b1, bool b2, std::size_t idx, 
 std::stringstream store;
 {
    particle::ensemble ens;
-   BOOST_CHECK_EQUAL( ens.charge (), 0.0 );
    BOOST_CHECK_EQUAL( ens.count (), 0 );
    BOOST_CHECK_EQUAL( ens.max_size (), 0 );
    BOOST_CHECK_EQUAL( ens.size (), 0 );
-   BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+   BOOST_CHECK_NO_THROW( ens.check_invariants() );
 
    // Resize ensemble
    ens.resize( 64 );
@@ -889,20 +850,13 @@ std::stringstream store;
    std::size_t ispec( 0 );
    {
       const particle::coordinate pos { 1.62127193214, 9.29177995257, 5.25370757073 };
-      ens.append_position( ispec, specie_list[ ispec ].valency(), pos, epsw );
-      // size should increase by one, charge should be set but specie
-      // count should be unaltered.
+      ens.append_position( ispec, pos, epsw );
+      // size should increase by one, specie count should be altered.
       BOOST_CHECK_EQUAL( ens.count(), 1 );
       BOOST_CHECK_GE( ens.max_size(), 64 );
       BOOST_CHECK_EQUAL( ens.size(), 1 );
-      BOOST_CHECK_EQUAL( ens.charge (), 1.0 );
-      BOOST_CHECK_EQUAL( specie_list[ ispec ].count(), 0 );
-      // Invariant should fail before setting count in specie_list.
-      BOOST_CHECK_THROW( ens.check_invariants( specie_list ), std::runtime_error );
-      specie_list[ ispec ].set_count( 1 );
-      // Invariant should now pass.
-      BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
-      ens.check_invariants( specie_list );
+      BOOST_CHECK_EQUAL( ens.specie_count( ispec ), 1 );
+      BOOST_CHECK_NO_THROW( ens.check_invariants() );
       // Check set values
       BOOST_CHECK_EQUAL( ens.key( 0 ), ispec );
       BOOST_CHECK_EQUAL( ens.x( 0 ), pos.x );
@@ -914,21 +868,21 @@ std::stringstream store;
 
    // Add some more particles
    ispec = 1;
-   ens.append_position( 1, specie_list[ 1 ].valency(), { 0.629669015988, 9.4781017778, 0.436567124972 }, epsw );
+   ens.append_position( 1, { 0.629669015988, 9.4781017778, 0.436567124972 }, epsw );
    ispec = 2;
-   ens.append_position( 2, specie_list[ 2 ].valency(), { 1.81235688249, 6.99878476378, 6.05346341778 }, epsw );
-   ens.append_position( 2, specie_list[ 2 ].valency(), { 9.86409500135, 8.03444072878, 6.96346891359 }, epsw );
-   ens.append_position( 0, specie_list[ 0 ].valency(), { 6.12488878987, 0.936444546808, 7.92035117147 }, epsw );
-   ens.append_position( 2, specie_list[ 2 ].valency(), { 4.02705270915, 4.9878484368, 9.33967304135 }, epsw );
-   ens.append_position( 1, specie_list[ 1 ].valency(), { 8.8153046596, 8.25296759285, 9.27222366556 }, epsw );
-   ens.append_position( 2, specie_list[ 2 ].valency(), { 3.01632820001, 3.43431356454, 0.880214873216 }, epsw );
+   ens.append_position( 2, { 1.81235688249, 6.99878476378, 6.05346341778 }, epsw );
+   ens.append_position( 2, { 9.86409500135, 8.03444072878, 6.96346891359 }, epsw );
+   ens.append_position( 0, { 6.12488878987, 0.936444546808, 7.92035117147 }, epsw );
+   ens.append_position( 2, { 4.02705270915, 4.9878484368, 9.33967304135 }, epsw );
+   ens.append_position( 1, { 8.8153046596, 8.25296759285, 9.27222366556 }, epsw );
+   ens.append_position( 2, { 3.01632820001, 3.43431356454, 0.880214873216 }, epsw );
    ispec = 0;
 
-   specie_list[ 0 ].set_count( 2 );
-   specie_list[ 1 ].set_count( 2 );
-   specie_list[ 2 ].set_count( 4 );
+   BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 2 );
+   BOOST_CHECK_EQUAL( ens.specie_count( 1 ), 2 );
+   BOOST_CHECK_EQUAL( ens.specie_count( 2 ), 4 );
 
-   BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+   BOOST_CHECK_NO_THROW( ens.check_invariants() );
 
    std::size_t gidx;
    std::size_t lidx;
@@ -995,17 +949,15 @@ std::stringstream store;
       // Check system before change
       BOOST_CHECK_EQUAL( ens.count(), 8 );
       BOOST_CHECK_EQUAL( ens.size(), 8 );
-      BOOST_CHECK_EQUAL( ens.charge (), 0.0 );
-      BOOST_CHECK_EQUAL( specie_list[ 0 ].count(), 2 );
+      BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 2 );
 
-      ens.commit( trial, specie_list );
+      ens.commit( trial );
 
       // Check for changes.
-      BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+      BOOST_CHECK_NO_THROW( ens.check_invariants() );
       BOOST_CHECK_EQUAL( ens.count(), 9 );
       BOOST_CHECK_EQUAL( ens.size(), 9 );
-      BOOST_CHECK_EQUAL( ens.charge (), 1.0 );
-      BOOST_CHECK_EQUAL( specie_list[ 0 ].count(), 3 );
+      BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 3 );
       BOOST_CHECK_EQUAL( ens.position( 8 ), pos );
       BOOST_CHECK_EQUAL( ens.key( 8 ), 0 );
       BOOST_CHECK_EQUAL( ens.eps( 8 ), epsw );
@@ -1025,18 +977,16 @@ std::stringstream store;
       // Check system before change
       BOOST_CHECK_EQUAL( ens.count(), 9 );
       BOOST_CHECK_EQUAL( ens.size(), 9 );
-      BOOST_CHECK_EQUAL( ens.charge (), 1.0 );
-      BOOST_CHECK_EQUAL( specie_list[ 0 ].count(), 3 );
+      BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 3 );
       BOOST_CHECK_EQUAL( ens.key( index ), 0 );
 
-      ens.commit( trial, specie_list );
+      ens.commit( trial );
 
       // Check there are no changes.
-      BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+      BOOST_CHECK_NO_THROW( ens.check_invariants() );
       BOOST_CHECK_EQUAL( ens.count(), 9 );
       BOOST_CHECK_EQUAL( ens.size(), 9 );
-      BOOST_CHECK_EQUAL( ens.charge (), 1.0 );
-      BOOST_CHECK_EQUAL( specie_list[ 0 ].count(), 3 );
+      BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 3 );
       BOOST_CHECK_EQUAL( ens.key( index ), 0 );
       BOOST_CHECK_EQUAL( ens.position( index ), pos );
       BOOST_CHECK_EQUAL( ens.eps( index ), epsw );
@@ -1053,17 +1003,15 @@ std::stringstream store;
       // Check system before change
       BOOST_CHECK_EQUAL( ens.count(), 9 );
       BOOST_CHECK_EQUAL( ens.size(), 9 );
-      BOOST_CHECK_EQUAL( ens.charge (), 1.0 );
-      BOOST_CHECK_EQUAL( specie_list[ 0 ].count(), 3 );
+      BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 3 );
 
-      ens.commit( trial, specie_list );
+      ens.commit( trial );
 
       // Check for changes.
-      BOOST_CHECK_NO_THROW( ens.check_invariants( specie_list ) );
+      BOOST_CHECK_NO_THROW( ens.check_invariants() );
       BOOST_CHECK_EQUAL( ens.count(), 8 );
       BOOST_CHECK_EQUAL( ens.size(), 9 );
-      BOOST_CHECK_EQUAL( ens.charge (), 0.0 );
-      BOOST_CHECK_EQUAL( specie_list[ 0 ].count(), 2 );
+      BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 2 );
       BOOST_CHECK_EQUAL( ens.key( index ), particle::specie_key::nkey );
       BOOST_CHECK_NE( ens.count(), ens.size() );
       BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 0, 1 ) );
@@ -1092,20 +1040,19 @@ std::stringstream store;
    // ---------------
    boost::archive::text_oarchive oa(store);
    // write class instance to archive
-   oa << ens << specie_list;
+   oa << ens;
 }
 {
    particle::ensemble ens2;
    boost::archive::text_iarchive ia( store );
    // get class instance from archive
-   ia >> ens2 >> specie_list;
-   BOOST_CHECK_EQUAL( ens2.charge (), 0.0 );
+   ia >> ens2;
    BOOST_CHECK_EQUAL( ens2.count (), 8 );
    BOOST_CHECK_EQUAL( ens2.size(), 9 );
    BOOST_CHECK_EQUAL( ens2.max_size (), 64*2 );
-   BOOST_CHECK_EQUAL( specie_list[ 0 ].count(), 2 );
-   BOOST_CHECK_EQUAL( specie_list[ 1 ].count(), 2 );
-   BOOST_CHECK_EQUAL( specie_list[ 2 ].count(), 4 );
+   BOOST_CHECK_EQUAL( ens2.specie_count( 0 ), 2 );
+   BOOST_CHECK_EQUAL( ens2.specie_count( 1 ), 2 );
+   BOOST_CHECK_EQUAL( ens2.specie_count( 2 ), 4 );
    BOOST_CHECK_NE( ens2.count(), ens2.size() );
 
    std::size_t gidx;
@@ -1114,7 +1061,7 @@ std::stringstream store;
    BOOST_CHECK_NO_THROW( gidx = ens2.nth_specie_index( 0, 0 ) );
    BOOST_CHECK_EQUAL( gidx, 0 );
 
-   BOOST_CHECK_NO_THROW( ens2.check_invariants( specie_list ) );
+   BOOST_CHECK_NO_THROW( ens2.check_invariants() );
 }
 !!!413105.cpp!!!	specie_meta_test() : void
 // TEST management of keywords

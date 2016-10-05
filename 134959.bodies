@@ -35,7 +35,7 @@ for jspec in self.key:
   jdx += 1
 raise IndexError, "Index out of range, less particles of the given specie in ensemble"
 !!!930736.cpp!!!	specie_count(in ispec : size_t) : size_t
-UTILITY_REQUIRE( ispec < this->counts_.size(), "Index out of range." );
+UTILITY_REQUIRE( ispec < this->key_counts_.size(), "Index out of range." );
 return this->key_counts_[ ispec ];
 !!!320944.cpp!!!	specie_index(in gidx : size_t) : size_t
 UTILITY_REQUIRE( gidx < this->size(), "Index out of range." );
@@ -316,7 +316,7 @@ if( not this->deletion_list_.empty() )
     }
     else
     {
-      UTILITY_ALWAYS( keyval < nspec, "Key value out of range" )
+      UTILITY_ALWAYS( keyval < nspec, "Key value out of range" );
       ++counts[keyval];
     }
   }
@@ -324,13 +324,11 @@ if( not this->deletion_list_.empty() )
   UTILITY_ALWAYS( deleted_ == this->deletion_list_.size()
                   , "number fo 'nkey' entries in key_ does not match size of deletion list" );
   // count of species in key_ equal to value stored in each specie
-  double test_charge = 0.0;
   for( std::size_t idx = 0; idx != nspec; ++idx )
   {
     UTILITY_ALWAYS( this->key_counts_[ idx ] == counts[ idx ]
                     , "count of a specie in key_ does not match with specie object" );
   }
-}
 }
 return true;
 
@@ -345,7 +343,7 @@ for (std::size_t ii = 0; ii != this->inuse_particles_; ++ii)
 out << "key counts:";
 for (std::size_t ii = 0; ii != this->key_counts_.size(); ++ii)
 {
-out << " [ " << ii << " ]=" << this->counts_[ii];
+out << " [ " << ii << " ]=" << this->key_counts_[ii];
 }
 out << "\n";
 !!!706353.python!!!	dump(inout out : ostream) : void
@@ -355,3 +353,31 @@ print >>out, "   array size :",self.inuse_particles_
 for ii,(x,y,z,key) in enumerate(zip(self.x,self.y,self.z,self.key)):
   if self.parent_.specie_count() != key:
     print >>out, " %4d %9.5f %9.5f %9.5f %2d" % (ii,x,y,z,key)
+!!!937264.cpp!!!	equivalent(in other : ensemble) : bool
+auto xyz_equal = [](coordinate_set const& lhs, coordinate_set const& rhs, std::size_t count)->bool
+{
+  std::size_t equal = 0;
+  for(std::size_t ii = 0; ii != count; ++ii)
+  {
+    equal += (lhs.x(ii) == rhs.x(ii) ? 1ul : 0ul );
+  }
+  if (equal != count) return false;
+  equal = 0;
+  for(std::size_t ii = 0; ii != count; ++ii)
+  {
+    equal += (lhs.y(ii) == rhs.y(ii) ? 1ul : 0ul );
+  }
+  if (equal != count) return false;
+  equal = 0;
+  for(std::size_t ii = 0; ii != count; ++ii)
+  {
+    equal += (lhs.y(ii) == rhs.y(ii) ? 1ul : 0ul );
+  }
+  return equal == count;
+};
+return this->inuse_particles_ == other.inuse_particles_
+ and this->deletion_list_ == other.deletion_list_
+ and this->key_counts_ == other.key_counts_
+ and std::equal( this->key_.begin(), this->key_.begin() + this->inuse_particles_, other.key_.begin() )
+ and std::equal( this->eps_.begin(), this->eps_.begin() + this->inuse_particles_, other.eps_.begin() )
+ and xyz_equal(this->xyz_, other.xyz_, this->inuse_particles_);
