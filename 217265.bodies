@@ -1478,21 +1478,22 @@ core_test_suite::test_input_base_meta< test_meta >();
 !!!891952.cpp!!!	test_meta_read_section_test() : void
 const std::string label( "name" );
 {
-  // 
+  //
   // Read section with no name/value pairs
-  // 
+  //
   std::unique_ptr< test_meta > dobj( new test_meta( label ) );
   {
     core::input_reader dummy;
     dummy.add_buffer( "test_filename", "name\n# comment\nend\n" );
     while( dummy.next() )
     {
-      if ( dummy.name() == "name" )
+      if( dummy.name() == "name" )
       {
         dobj->read_section( dummy );
         BOOST_CHECK_EQUAL( dobj->entry_map().size(), 0ul );
         BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 0ul );
         BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
+        BOOST_CHECK_EQUAL( dobj->get_reset_count(), 1ul );
         BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 0ul );
       }
     }
@@ -1503,45 +1504,48 @@ const std::string label( "name" );
     BOOST_CHECK_EQUAL( dobj->entry_map().size(), 0ul );
     BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 0ul );
     BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
+    BOOST_CHECK_EQUAL( dobj->get_reset_count(), 1ul );
     BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 1ul );
   }
 }
 {
-  // 
+  //
   // Read section with one name/value pair
-  // 
+  //
   std::unique_ptr< test_meta > dobj( new test_meta( label ) );
   {
     core::input_reader dummy;
     dummy.add_buffer( "test_filename", "name\nhello world\nend\n" );
     while( dummy.next() )
     {
-      if ( dummy.name() == "name" )
+      if( dummy.name() == "name" )
       {
         dobj->read_section( dummy );
         BOOST_CHECK_EQUAL( dobj->entry_map().size(), 1ul );
         BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 1ul );
         BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
+        BOOST_CHECK_EQUAL( dobj->get_reset_count(), 1ul );
       }
     }
   }
 }
 {
-  // 
+  //
   // Read section with three name/value pair
-  // 
+  //
   std::unique_ptr< test_meta > dobj( new test_meta( label ) );
   {
     core::input_reader dummy;
     dummy.add_buffer( "test_filename", "name\n# comment\na\nb c\nd e # hmm\nend\n" );
     while( dummy.next() )
     {
-      if ( dummy.name() == "name" )
+      if( dummy.name() == "name" )
       {
         dobj->read_section( dummy );
         BOOST_CHECK_EQUAL( dobj->entry_map().size(), 3ul );
         BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 3ul );
         BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
+        BOOST_CHECK_EQUAL( dobj->get_reset_count(), 1ul );
         BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 0ul );
       }
     }
@@ -1552,24 +1556,25 @@ const std::string label( "name" );
     BOOST_CHECK_EQUAL( dobj->entry_map().size(), 3ul );
     BOOST_CHECK_EQUAL( dobj->entry_map().count( "a" ), 1 );
     BOOST_CHECK_EQUAL( dobj->entry_map().count( "b" ), 1 );
-    if ( dobj->entry_map().count( "b" ) >= 1 )
+    if( dobj->entry_map().count( "b" ) >= 1 )
     {
-       BOOST_CHECK_EQUAL( dobj->entry_map().find( "b" )->second, "c" );
+      BOOST_CHECK_EQUAL( dobj->entry_map().find( "b" )->second, "c" );
     }
     BOOST_CHECK_EQUAL( dobj->entry_map().count( "d" ), 1 );
-    if ( dobj->entry_map().count( "d" ) >= 1 )
+    if( dobj->entry_map().count( "d" ) >= 1 )
     {
-       BOOST_CHECK_EQUAL( dobj->entry_map().find( "d" )->second, "e" );
+      BOOST_CHECK_EQUAL( dobj->entry_map().find( "d" )->second, "e" );
     }
     BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 3ul );
     BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
+    BOOST_CHECK_EQUAL( dobj->get_reset_count(), 1ul );
     BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 1ul );
   }
 }
 {
-  // 
+  //
   // Read section with three name/value pair, one duplicated
-  // 
+  //
   std::unique_ptr< test_meta > dobj( new test_meta( label ) );
   {
     core::input_reader dummy;
@@ -1577,12 +1582,13 @@ const std::string label( "name" );
     // second value of "b" silently ignored.
     while( dummy.next() )
     {
-      if ( dummy.name() == "name" )
+      if( dummy.name() == "name" )
       {
         dobj->read_section( dummy );
         BOOST_CHECK_EQUAL( dobj->entry_map().size(), 2ul );
         BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 3ul );
         BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
+        BOOST_CHECK_EQUAL( dobj->get_reset_count(), 1ul );
         BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 0ul );
       }
     }
@@ -1593,16 +1599,18 @@ const std::string label( "name" );
     BOOST_CHECK_EQUAL( dobj->entry_map().size(), 2ul );
     BOOST_CHECK_EQUAL( dobj->entry_map().count( "a" ), 1 );
     BOOST_CHECK_EQUAL( dobj->entry_map().count( "b" ), 1 );
-    if ( dobj->entry_map().count( "b" ) >= 1 )
+    if( dobj->entry_map().count( "b" ) >= 1 )
     {
-       BOOST_CHECK_EQUAL( dobj->entry_map().find( "b" )->second, "c" );
+      BOOST_CHECK_EQUAL( dobj->entry_map().find( "b" )->second, "c" );
     }
     BOOST_CHECK_EQUAL( dobj->entry_map().count( "d" ), 0 );
     BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 3ul );
     BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
+    BOOST_CHECK_EQUAL( dobj->get_reset_count(), 1ul );
     BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 1ul );
   }
 }
+
 
 
 !!!405553.cpp!!!	input_delegater_lifetime_test() : void
