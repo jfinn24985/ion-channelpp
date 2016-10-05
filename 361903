@@ -1,6 +1,6 @@
 format 75
 "particle" // particle
-  revision 182
+  revision 183
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -1405,9 +1405,26 @@ ${docstring}${members}
 ${docstring}self.species_.append( ${p0} )
 "
 	
-	comment " Add (copy) specie to set and return the index of the specie
+	comment " Add (copy) specie to set and return the index of the specie"
+      end
 
- (non C++)"
+      operation 937520 "charge"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Current charge of system"
       end
 
       operation 907952 "description"
@@ -1598,25 +1615,6 @@ ${docstring}return self.target_particles_
 
  The intended average (solute) particle number in the
  simulation."
-      end
-
-      operation 937520 "charge"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Current charge of system"
       end
     end
 
@@ -3770,18 +3768,6 @@ ${items}
 	comment " target salt concentrations (in SI Molar (mol/l)"
       end
 
-      attribute 325169 "count_"
-	private explicit_type "size_t"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "The number of this specie in the simulation"
-      end
-
       attribute 268593 "excess_potential_"
 	private explicit_type "double"
 	init_value "None"
@@ -3906,23 +3892,6 @@ ${docstring}return self.concentration_
 
  The target concentration of specie is the sum of the partial
  target concentrations from all salts it is a component of."
-      end
-
-      operation 634033 "count"
-	const public explicit_return_type "size_t"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->count_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}return self.${name}_
-"
-	
-	comment "Get the number of particles of this type"
       end
 
       operation 549425 "description"
@@ -4326,7 +4295,6 @@ ${docstring}${body}
 , locations_()
 , localize_data_()
 , concentration_ (0.0)
-, count_ ()
 , excess_potential_ (0.0)
 , label_ ()
 , radius_(0.0)
@@ -4413,7 +4381,6 @@ ${body}
     ar & locations_;
     ar & localize_data_;
     ar & concentration_;
-    ar & count_;
     ar & excess_potential_;
     ar & label_;
     ar & radius_;
@@ -4467,48 +4434,6 @@ ${body}
 	idl ""
       end
 
-      operation 550577 "decrement"
-	public explicit_return_type "void"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}self.count_ -= 1
-"
-	
-	comment " Reduce the particle count by one
-
- Result of calling decrement when count = 0 is undefined."
-      end
-
-      operation 550449 "increment"
-	public explicit_return_type "void"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}self.count_ += 1
-"
-	
-	comment " Increase the particle count by one
-
- Result of calling increment when count = MAX_SIZE_T is undefined."
-      end
-
       operation 276017 "set_concentration"
 	public explicit_return_type "void"
 	nparams 1
@@ -4528,23 +4453,6 @@ ${docstring}self.concentration_ = ${p0}
 
  The target concentration of specie is the sum of the partial
  target concentrations from all salts it is a component of."
-      end
-
-      operation 550705 "set_count"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "val" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  this->count_ = ${p0};
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}self.count_ = ${p0}
-"
-	
       end
 
       operation 458929 "set_excess_potential"
@@ -4715,7 +4623,9 @@ ${docstring}${body}
 	comment " Write representation of this specie object in the input file format.
 
  Adds standard data and parameter list. Adds x,y,z coordinates
- of all particles with the given key in the ensemble."
+ of cached particles. The position data must have been updated 
+ (using update_position) from the ensemble if the generated file 
+ is to have latest position information."
       end
 
       operation 283952 "update_position"
@@ -4737,8 +4647,31 @@ ${docstring}${body}
 "
 	
 	comment " Update the cached position of a particular particle. The index 'lidx' refers
- to the index of the particle within the species, and therefore fills the range
- 0 to 'count()'."
+ to the index of the particle within the species. This method automatically
+ updates the size of the array, such resizing can be avoided by first calling
+ update_position_size. Such resizing is only allowed for species that can  
+ have particles added/removed from the simulation."
+      end
+
+      operation 944048 "update_position_size"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "count" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Update the number cached positions. This is only allowed for types that support
+ addition/deletion."
       end
 
       operation 284080 "append_position"
@@ -4762,7 +4695,12 @@ ${docstring}${body}
 	comment " Add a particle to the specie from the input file when centroid information
  is available. This implicitly sets specie type to MOBILE if it is currently
  set to INVALID, otherwise the specie type must support localisation (e.g.
- MOBILE or FLEXIBLE)."
+ MOBILE or FLEXIBLE).
+
+ This method should only be called while the simulation is being 
+ instantiated (specifically before simulator::generate_simulation is
+ called). Calling this method after the simulation has begun is
+ undefined."
       end
 
       operation 284208 "append_position"
@@ -4783,7 +4721,12 @@ ${docstring}${body}
 "
 	
 	comment " Add a particle to the specie from the input file when no centroid information
- is available. This does not implicitly set the specie type."
+ is available. This does not implicitly set the specie type.
+
+ This method should only be called while the simulation is being 
+ instantiated (specifically before simulator::generate_simulation is
+ called). Calling this method after the simulation has begun is
+ undefined."
       end
 
       operation 284464 "get_position"
@@ -4804,18 +4747,29 @@ ${docstring}${body}
 "
 	
 	comment " Get the cached position of a particular particle. The index 'lidx' refers
- to the index of the particle within the species, and therefore fills the range
- 0 to 'count()'.
+ to the index of the particle within the species, and is in the range 0
+ to get_position_size().
 
- \\pre lidx < count()
+ \\pre lidx < get_position_size()
 
- This method is well-defined only directly after reading the input file (or 
- updating the position information) and before running a simulation trial.
- At other times the result of this operation 
- is undefined. Basically, the only time to use this method is between 
- reading the input file and starting the simulation, during which time
- getting position information from the ensemble object is undefined. At 
- all other times get position information directly from the ensemble object."
+ This data is the position data read from the input file. "
+      end
+
+      operation 944176 "get_position_size"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->locations_.size();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the number of cached position.object."
       end
 
       operation 320816 "get_localization_data"
@@ -4837,16 +4791,9 @@ ${docstring}${body}
 	
 	comment " Get the localization data of a particular particle. The index 'lidx' refers
  to the index of the particle within the species, and therefore fills the range
- 0 to 'count()'.
+ 0 to get_position_size() for localized species.
 
- \\pre is_localized
- This method is well-defined only directly after reading the input file (or 
- updating the position information) and before running a simulation trial.
- At other times the result of this operation 
- is undefined. Basically, the only time to use this method is between 
- reading the input file and starting the simulation, during which time
- getting position information from the ensemble object is undefined. At 
- all other times get position information directly from the ensemble object."
+ \\pre is_localized and ldx < get_postion_size()"
       end
     end
 
@@ -5919,6 +5866,25 @@ throw an error if input file is incorrect (using UTILITY_INPUT macro)"
       end
 
       operation 203440 "do_read_end"
+	cpp_virtual protected explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Perform checks at the end of reading a section."
+      end
+
+      operation 944688 "do_reset"
 	cpp_virtual protected explicit_return_type "void"
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw} override;

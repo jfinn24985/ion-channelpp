@@ -10,7 +10,6 @@ out << "      valency :" << this->valency_ << "\n";
 out << "  excess c.p. :" << this->excess_potential_ << "\n";
 out << "   chem. pot. :" << this->chemical_potential() << "\n";
 out << " target conc. :" << this->concentration_ << "\n";
-out << "        count :" << this->count_ << "\n";
 out << "         type :" << type_label(this->type_) << "\n";
 if (not this->parameter_set_.empty())
 {
@@ -35,7 +34,6 @@ return
   this->locations_ == other.locations_ and
   this->localize_data_ == other.localize_data_ and
   this->concentration_ == other.concentration_ and
-  this->count_ == other.count_ and
   this->excess_potential_ == other.excess_potential_ and
   this->label_ == other.label_ and
   this->radius_ == other.radius_ and
@@ -72,7 +70,6 @@ case INVALID:
 , locations_ ( other.locations_ )
 , localize_data_ ( other.localize_data_ )
 , concentration_ ( other.concentration_ )
-, count_ ( other.count_ )
 , excess_potential_ ( other.excess_potential_ )
 , label_ ( other.label_ )
 , radius_ ( other.radius_ )
@@ -85,7 +82,6 @@ case INVALID:
 , locations_ ( std::move( other.locations_ ) )
 , localize_data_ ( std::move( other.localize_data_ ) )
 , concentration_( std::move( other.concentration_ ) )
-, count_( std::move( other.count_ ) )
 , excess_potential_( std::move( other.excess_potential_ ) )
 , label_( std::move( other.label_ ) )
 , radius_( std::move( other.radius_ ) )
@@ -98,19 +94,12 @@ std::swap(this->parameter_set_, other.parameter_set_);
 std::swap(this->locations_, other.locations_);
 std::swap(this->localize_data_, other.localize_data_);
 std::swap(this->concentration_, other.concentration_);
-std::swap(this->count_, other.count_);
 std::swap(this->excess_potential_, other.excess_potential_);
 std::swap(this->label_, other.label_);
 std::swap(this->radius_, other.radius_);
 std::swap(this->rate_, other.rate_);
 std::swap(this->valency_, other.valency_);
 std::swap(this->type_, other.type_);
-!!!550577.cpp!!!	decrement() : void
-UTILITY_REQUIRE( this->type_ == SOLUTE, "Only solute particles can change in number" );
---this->count_;
-!!!550449.cpp!!!	increment() : void
-UTILITY_REQUIRE( this->type_ == SOLUTE, "Only solute particles can change in number" );
-++this->count_;
 !!!799921.cpp!!!	set_parameter(in name : string, in value : string) : void
 UTILITY_REQUIRE( not this->has_parameter( name ),
       "Can not change value of an existing parameter." );
@@ -154,14 +143,13 @@ for (auto const& nvpair : this->parameter_set_)
 {
   sec.add_entry( quote( nvpair.first ), quote( nvpair.second ) );
 }
-if (this->count() != 0)
+if (this->locations_.size() != 0)
 {
-   UTILITY_REQUIRE( this->locations_.size() == this->count(), "Cache has not been updated" );
    std::stringstream ss;
    if ( this->is_localized() )
    {
-     UTILITY_REQUIRE( this->localize_data_.size() == this->count(), "Cache has not been updated" );
-      for (std::size_t ix = 0; ix != this->count(); ++ix)
+     UTILITY_REQUIRE( this->localize_data_.size() == this->locations_.size(), "Number of particles does not match number of localization points" );
+      for (std::size_t ix = 0; ix != this->locations_.size(); ++ix)
       {
          ss << this->locations_[ ix ] << " " << this->localize_data_[ ix ];
          ss << "\n";
@@ -169,7 +157,7 @@ if (this->count() != 0)
    }
    else
    {
-      for (std::size_t ix = 0; ix != this->count(); ++ix)
+      for (std::size_t ix = 0; ix != this->locations_.size(); ++ix)
       {
          ss << this->locations_[ ix ] << "\n";
       }
@@ -179,16 +167,20 @@ if (this->count() != 0)
    {
       result.pop_back();
    }
-   sec.add_entry( core::strngs::fsn(), std::to_string( this->count() ) + "\n" +
+   sec.add_entry( core::strngs::fsn(), std::to_string( this->locations_.size() ) + "\n" +
 result );
 }
 !!!283952.cpp!!!	update_position(in lidx : size_t, in pos : coordinate) : void
-UTILITY_REQUIRE( lidx < this->count(), "Index is out of range" );
-if ( this->locations_.size() != this->count() )
+if( this->locations_.size() <= lidx )
 {
-   this->locations_.resize( this->count() );
+  UTILITY_REQUIRE( this->sub_type() == SOLUTE, "Only solute particles can be added or removed." );
+  this->locations_.resize( lidx + 1 );
 }
 this->locations_[ lidx ] = pos;
+
+!!!944048.cpp!!!	update_position_size(in count : size_t) : void
+UTILITY_REQUIRE( this->sub_type() == SOLUTE, "Only solute particles can be added or removed." );
+this->locations_.resize( count );
 !!!284080.cpp!!!	append_position(in pos : coordinate, in cntr : centroid) : void
 if ( this->type_ == INVALID )
 {
@@ -209,7 +201,6 @@ UTILITY_REQUIRE( this->localize_data_.empty(),
       "Error in location cache, appending only the position requires no centre information." );
 this->locations_.push_back( pos );
 !!!284464.cpp!!!	get_position(in lidx : size_t) : coordinate
-UTILITY_REQUIRE( this->locations_.size() == this->count(), "Locations information is out-of-date" );
 return this->locations_.at( lidx );
 !!!320816.cpp!!!	get_localization_data(in lidx : size_t) : centroid
 UTILITY_REQUIRE( this->is_localized(), "Only localized species have localization data" );

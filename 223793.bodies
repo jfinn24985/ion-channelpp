@@ -742,7 +742,6 @@ std::stringstream store;
 }
 !!!413617.cpp!!!	ensemble_lifetime_test() : void
 // Test framework
-const double epsw = 80.0;
 
 {
   // Test is canonical pattern
@@ -769,9 +768,10 @@ const double epsw = 80.0;
   BOOST_CHECK_EQUAL( ( ens.max_size() % 64 ), 0 );
   BOOST_CHECK_EQUAL( ens.size(), 0 );
 
-  // Add a Na particle so no longer default object
-  std::size_t ispec( 0 );
+  // Add a particle so no longer default object
   {
+    std::size_t ispec( 0 );
+    const double epsw = 80.0;
     const particle::coordinate pos
     {
       1.62127193214, 9.29177995257, 5.25370757073
@@ -1346,13 +1346,6 @@ auto specie_validation = [](particle::specie const& aspec)
       var.append_position( pos1 );
       var.append_position( pos2 );
       var.append_position( pos3 );
-      BOOST_CHECK_EQUAL( var.count(), 0ul );
-      BOOST_CHECK_NO_THROW( var.set_count( count ) );
-      BOOST_CHECK_EQUAL( var.count(), count );
-      BOOST_CHECK_NO_THROW( var.increment() );
-      BOOST_CHECK_EQUAL( var.count(), count + 1 );
-      BOOST_CHECK_NO_THROW( var.decrement() );
-      BOOST_CHECK_EQUAL( var.count(), count );
       BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
       BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
       BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
@@ -1417,8 +1410,6 @@ auto specie_validation = [](particle::specie const& aspec)
       var.append_position( pos1, ctr1 );
       var.append_position( pos2, ctr2 );
       var.append_position( pos3, ctr3 );
-      BOOST_CHECK_EQUAL( var.count(), 0ul );
-      BOOST_CHECK_NO_THROW( var.set_count( count ) );
 
       BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
       BOOST_CHECK_EQUAL( var.get_localization_data( 0 ), ctr1 );
@@ -1428,11 +1419,8 @@ auto specie_validation = [](particle::specie const& aspec)
       BOOST_CHECK_EQUAL( var.get_localization_data( 2 ), ctr3 );
 
       BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::MOBILE );
-
-      // Current count (3) should disallow next update
+      // Attempts to add particles to MOBILE specie fail
       BOOST_CHECK_THROW( var.update_position( 3, pos4 ), std::runtime_error );
-      // Increment count (to 4) disallowed
-      BOOST_CHECK_THROW( var.increment(), std::runtime_error );
 
       // Test serialization
       boost::archive::text_oarchive oa(store);
@@ -1454,7 +1442,6 @@ auto specie_validation = [](particle::specie const& aspec)
       BOOST_CHECK_EQUAL( var.radius(), radius );
       BOOST_CHECK_EQUAL( var.rate(), rate );
       BOOST_CHECK_EQUAL( var.valency(), valency );
-      BOOST_CHECK_EQUAL( var.count(), count );
       BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
       BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
       BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
@@ -1508,11 +1495,9 @@ auto specie_validation = [](particle::specie const& aspec)
       var4.update_position( 0, pos2 );
       var4.update_position( 1, pos3 );
       var4.update_position( 2, pos1 );
-      // Current count (3) should disallow next update
+      // Cannot add particle to MOBILE specie
       BOOST_CHECK_THROW( var4.update_position( 3, pos4 ), std::runtime_error );
-      // Increment count (to 4) should allow next update
       var4.set_type( particle::specie::SOLUTE );
-      var4.increment();
       var4.update_position( 3, pos4 );
       BOOST_CHECK_EQUAL( var4.get_position( 0 ), pos2 );
       BOOST_CHECK_EQUAL( var4.get_position( 1 ), pos3 );
@@ -1531,7 +1516,6 @@ auto specie_validation = [](particle::specie const& aspec)
       BOOST_CHECK_EQUAL( var.radius(), radius );
       BOOST_CHECK_EQUAL( var.rate(), rate );
       BOOST_CHECK_EQUAL( var.valency(), valency );
-      BOOST_CHECK_EQUAL( var.count(), count );
       BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
       BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
       BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
@@ -1680,10 +1664,6 @@ auto specie_validation = [](particle::specie const& aspec)
             else if (name == "target conc." )
             {
                BOOST_CHECK( utility::feq( std::stod( value ), concentration ) );
-            }
-            else if (name == "count" )
-            {
-               BOOST_CHECK_EQUAL( std::stoul( value ), count );
             }
             else if (name == "type" )
             {
