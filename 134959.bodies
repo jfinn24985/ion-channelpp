@@ -57,7 +57,6 @@ for (auto & atom: atomset)
         --this->key_counts_[ this->key_[atom.index] ];
         ++this->key_counts_[ atom.key ];
         this->key_[atom.index] = atom.key;
-        this->eps_[atom.index] = atom.eps_new;
       }
     }
     else
@@ -98,7 +97,6 @@ for (auto & atom: atomset)
       this->deletion_list_.pop_back ();
     }
     this->key_[atom.index] = atom.key;
-    this->eps_[atom.index] = atom.eps_new;
     ++this->key_counts_[ atom.key ];
     this->xyz_.set_x( atom.index, atom.new_position.x );
     this->xyz_.set_y( atom.index, atom.new_position.y );
@@ -154,7 +152,7 @@ for atom in atomset.changes:
     self.y[ii] = atom.new_position.y
     self.z[ii] = atom.new_position.z
     self.key[ii] = atom.key
-!!!284592.cpp!!!	append_position(in key : size_t, in pos : coordinate, in eps : double) : void
+!!!284592.cpp!!!	append_position(in key : size_t, in pos : coordinate) : void
 UTILITY_REQUIRE( key != particle::specie_key::nkey, "Cannot append positions of invalid specie" );
 //
 std::size_t cursor { this->inuse_particles_ };
@@ -162,12 +160,10 @@ if (this->key_.size() == cursor)
 {
    this->xyz_.resize( this->key_.size() + 1 ); 
    this->key_.push_back( key );
-   this->eps_.push_back( eps );
 }
 else
 {
    this->key_[ cursor ] = key;
-   this->eps_[ cursor ] = eps;
 }
 this->xyz_.set_x( cursor, pos.x );
 this->xyz_.set_y( cursor, pos.y );
@@ -180,7 +176,7 @@ if ( key >= this->key_counts_.size() )
 ++this->key_counts_[ key ];
 
 ++this->inuse_particles_;
-!!!284592.python!!!	append_position(in key : size_t, in pos : coordinate, in eps : double) : void
+!!!284592.python!!!	append_position(in key : size_t, in pos : coordinate) : void
 for atom in atomset.changes:
   if atom.do_old:
     if atom.do_new:
@@ -250,7 +246,6 @@ for ii,(x,y,z,key) in enumerate(zip(self.x,self.y,self.z,self.key)):
 !!!1872559.cpp!!!	resize(in npart : size_t) : void
 this->max_particles_ = utility::mathutil::next64(2*npart);
 this->key_.resize( this->max_particles_, particle::specie_key::nkey );
-this->eps_.resize( this->max_particles_, 0.0 );
 this->xyz_.resize( this->max_particles_ );
 !!!1872559.python!!!	resize(in npart : size_t) : void
 import numpy as np
@@ -265,7 +260,6 @@ self.key = np.zeros( pmax, dtype=np.uint8 )
 , key_counts_( std::move( source.key_counts_ ) )
 , key_( std::move( source.key_ ) )
 , xyz_( std::move( source.xyz_ ) )
-, eps_( std::move( source.eps_ ) )
 , inuse_particles_( std::move( source.inuse_particles_ ) )
 , max_particles_( std::move( source.max_particles_ ) )
 {}
@@ -275,7 +269,6 @@ self.key = np.zeros( pmax, dtype=np.uint8 )
 , key_counts_( source.key_counts_ )
 , key_( source.key_ )
 , xyz_( source.xyz_ )
-, eps_( source.eps_ )
 , inuse_particles_( source.inuse_particles_ )
 , max_particles_( source.max_particles_ )
 {}
@@ -285,12 +278,10 @@ std::swap( this->deletion_list_, source.deletion_list_ );
 std::swap( this->key_counts_, source.key_counts_ );
 std::swap( this->key_, source.key_ );
 std::swap( this->xyz_, source.xyz_ );
-std::swap( this->eps_, source.eps_ );
 std::swap( this->inuse_particles_, source.inuse_particles_ );
 std::swap( this->max_particles_, source.max_particles_ );
 
 !!!692913.cpp!!!	check_invariants() : bool
-UTILITY_ALWAYS( this->key_.size() == this->eps_.size(), "Array size difference" );
 if( not this->deletion_list_.empty() )
 {
   std::size_t topvalue = this->inuse_particles_ + 1;
@@ -338,7 +329,7 @@ out << "len(del) " << this->deletion_list_.size();
 out << " count " << this->count() << " size " << this->inuse_particles_ << "\n";
 for (std::size_t ii = 0; ii != this->inuse_particles_; ++ii)
 {
-  out << ii << " " << this->x( ii ) << " " << this->y( ii ) << " " << this->z( ii ) << " " << this->key_[ii] << " " << this->eps_[ii]  << "\n";
+  out << ii << " " << this->x( ii ) << " " << this->y( ii ) << " " << this->z( ii ) << " " << this->key_[ii] << "\n";
 }
 out << "key counts:";
 for (std::size_t ii = 0; ii != this->key_counts_.size(); ++ii)
@@ -379,5 +370,4 @@ return this->inuse_particles_ == other.inuse_particles_
  and this->deletion_list_ == other.deletion_list_
  and this->key_counts_ == other.key_counts_
  and std::equal( this->key_.begin(), this->key_.begin() + this->inuse_particles_, other.key_.begin() )
- and std::equal( this->eps_.begin(), this->eps_.begin() + this->inuse_particles_, other.eps_.begin() )
  and xyz_equal(this->xyz_, other.xyz_, this->inuse_particles_);

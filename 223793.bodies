@@ -2,8 +2,6 @@ class particle_test
 !!!420145.cpp!!!	change_atom_lifetime_test() : void
 const std::vector< double > nrij { 1.0, 1.3, 2.4 };
 const std::vector< double > orij { 1.1, 1.4, 2.0 };
-const double epsdefault{ 80.0 };
-const double epsw{ 70.0 };
 {
   // Test is canonical pattern
   BOOST_CHECK( std::is_default_constructible< particle::change_atom >::type{} );
@@ -23,8 +21,6 @@ const double epsw{ 70.0 };
   BOOST_CHECK_EQUAL(var1.old_position.z, 0.0);
   BOOST_CHECK_EQUAL(var1.energy_old, 0.0);
   BOOST_CHECK_EQUAL(var1.energy_new, 0.0);
-  BOOST_CHECK_EQUAL(var1.eps_old, 0.0);
-  BOOST_CHECK_EQUAL(var1.eps_new, 0.0);
   BOOST_CHECK_EQUAL(var1.index, 0);
   BOOST_CHECK_EQUAL(var1.key, static_cast< std::size_t >(particle::specie_key::nkey));
   BOOST_CHECK_EQUAL(var1.do_old, true);
@@ -45,8 +41,6 @@ std::stringstream store;
   BOOST_CHECK_EQUAL(var1.old_position.z, 0.0);
   BOOST_CHECK_EQUAL(var1.energy_old, 0.0);
   BOOST_CHECK_EQUAL(var1.energy_new, 0.0);
-  BOOST_CHECK_EQUAL(var1.eps_old, 0.0);
-  BOOST_CHECK_EQUAL(var1.eps_new, 0.0);
   BOOST_CHECK_EQUAL(var1.index, 0);
   BOOST_CHECK_EQUAL(var1.key, 2); // ONLY NON-DEFAULT VALUE
   BOOST_CHECK_EQUAL(var1.do_old, true);
@@ -64,8 +58,6 @@ std::stringstream store;
   var1.new_position.x = 0.9;
   var1.new_position.y = 9.8;
   var1.new_position.z = 2.15;
-  var1.eps_old = epsdefault;
-  var1.eps_new = epsw;
   // Set "calculated" values
   var1.energy_old = 0.001;
   var1.energy_new = 0.02;
@@ -120,8 +112,6 @@ std::stringstream store;
   BOOST_CHECK_EQUAL( var1.key, 2 );
   BOOST_CHECK_EQUAL( var1.energy_old, 0.001 );
   BOOST_CHECK_EQUAL( var1.energy_new, 0.02 );
-  BOOST_CHECK_EQUAL( var1.eps_old, epsdefault );
-  BOOST_CHECK_EQUAL( var1.eps_new, epsw );
   BOOST_CHECK_EQUAL_COLLECTIONS( var1.old_rij.begin(), var1.old_rij.end()
         , orij.begin(), orij.end() );
   BOOST_CHECK_EQUAL_COLLECTIONS( var1.new_rij.begin(), var1.new_rij.end()
@@ -130,8 +120,6 @@ std::stringstream store;
 !!!922800.cpp!!!	change_atom_comparison_test() : void
 const std::vector< double > nrij { 1.0, 1.3, 2.4 };
 const std::vector< double > orij { 1.1, 1.4, 2.0 };
-const double epsdefault{ 80.0 };
-const double epsw{ 70.0 };
 
 // Ctor with arg
 particle::change_atom var1( 2 );
@@ -145,8 +133,6 @@ var1.old_position.z = 2.0;
 var1.new_position.x = 0.9;
 var1.new_position.y = 9.8;
 var1.new_position.z = 2.15;
-var1.eps_old = epsdefault;
-var1.eps_new = epsw;
 // Set "calculated" values
 var1.energy_old = 0.001;
 var1.energy_new = 0.02;
@@ -168,8 +154,6 @@ var1.new_rij = nrij;
   BOOST_CHECK_EQUAL( var2.do_new, var1.do_new );
   BOOST_CHECK_EQUAL( var2.energy_old, var1.energy_old );
   BOOST_CHECK_EQUAL( var2.energy_new, var1.energy_new );
-  BOOST_CHECK_EQUAL( var2.eps_old, var1.eps_old );
-  BOOST_CHECK_EQUAL( var2.eps_new, var1.eps_new );
   BOOST_CHECK_EQUAL_COLLECTIONS( var2.old_rij.begin(), var2.old_rij.end()
                                  , orij.begin(), orij.end() );
   BOOST_CHECK_EQUAL_COLLECTIONS( var2.new_rij.begin(), var2.new_rij.end()
@@ -222,16 +206,6 @@ var1.new_rij = nrij;
   }
   {
     particle::change_atom var2( var1 );
-    var2.eps_old += 0.1;
-    BOOST_CHECK( not var2.equivalent( var1 ) );
-  }
-  {
-    particle::change_atom var2( var1 );
-    var2.eps_new += 0.1;
-    BOOST_CHECK( not var2.equivalent( var1 ) );
-  }
-  {
-    particle::change_atom var2( var1 );
     var2.do_old = not var2.do_old;
     BOOST_CHECK( not var2.equivalent( var1 ) );
   }
@@ -264,16 +238,13 @@ var1.new_rij = nrij;
 
 
 !!!426673.cpp!!!	change_set_lifetime_test() : void
-const double epsw { 80.0 };
-auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2 )->void
+auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2 )->void
 {
   a.do_old = b1;
   a.do_new = b2;
   a.index = idx;
   a.old_position = p1;
   a.new_position = p2;
-  a.eps_old = eps1;
-  a.eps_new = eps2;
 };
 {
   // Test is canonical pattern
@@ -303,7 +274,7 @@ auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx,
     var1.update_exponential_factor( 0.05 );
     var1.update_probability_factor( 0.5 );
     particle::change_atom s1( 1 );
-    set_atom( s1, true, true, 1, particle::coordinate( -0.1, 0.1, 0.1 ), particle::coordinate(), epsw, epsw );
+    set_atom( s1, true, true, 1, particle::coordinate( -0.1, 0.1, 0.1 ), particle::coordinate() );
     // Check add
     var1.add_atom( s1 );
 
@@ -392,16 +363,13 @@ auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx,
 }
 
 !!!922928.cpp!!!	change_set_methods_test() : void
-const double epsw { 70.0 };
-auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2 )->void
+auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2 )->void
 {
   a.do_old = b1;
   a.do_new = b2;
   a.index = idx;
   a.old_position = p1;
   a.new_position = p2;
-  a.eps_old = eps1;
-  a.eps_new = eps2;
 };
 
 {
@@ -417,7 +385,7 @@ auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx,
   particle::change_set var1;
 
   particle::change_atom s1( 0 );
-  set_atom( s1, true, true, 0, particle::coordinate(), particle::coordinate( 0.1, 0.0, 0.1 ), epsw, epsw );
+  set_atom( s1, true, true, 0, particle::coordinate(), particle::coordinate( 0.1, 0.0, 0.1 ) );
 
   // Add once have individual jump move
   var1.add_atom( s1 );
@@ -771,12 +739,11 @@ std::stringstream store;
   // Add a particle so no longer default object
   {
     std::size_t ispec( 0 );
-    const double epsw = 80.0;
     const particle::coordinate pos
     {
       1.62127193214, 9.29177995257, 5.25370757073
     };
-    ens.append_position( ispec, pos, epsw );
+    ens.append_position( ispec, pos );
     // size should increase by one, specie count should be altered.
     BOOST_CHECK_EQUAL( ens.count(), 1 );
     BOOST_CHECK_GE( ens.max_size(), 64 );
@@ -790,7 +757,6 @@ std::stringstream store;
     BOOST_CHECK_EQUAL( ens.y( 0 ), pos.y );
     BOOST_CHECK_EQUAL( ens.z( 0 ), pos.z );
     BOOST_CHECK_EQUAL( ens.position( 0 ), pos );
-    BOOST_CHECK_EQUAL( ens.eps( 0 ), epsw );
   }
 
   // copy ctor
@@ -816,16 +782,12 @@ std::stringstream store;
 }
 
 !!!930608.cpp!!!	ensemble_methods_test() : void
-const double epsw = 80.0;
-
-auto set_atom = [](particle::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2)->void{
+auto set_atom = [](particle::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2)->void{
   a.do_old = b1;
   a.do_new = b2;
   a.index = idx;
   a.old_position = p1;
   a.new_position = p2;
-  a.eps_old = eps1;
-  a.eps_new = eps2;
 };
 
 // for testing serialization
@@ -850,7 +812,7 @@ std::stringstream store;
    std::size_t ispec( 0 );
    {
       const particle::coordinate pos { 1.62127193214, 9.29177995257, 5.25370757073 };
-      ens.append_position( ispec, pos, epsw );
+      ens.append_position( ispec, pos );
       // size should increase by one, specie count should be altered.
       BOOST_CHECK_EQUAL( ens.count(), 1 );
       BOOST_CHECK_GE( ens.max_size(), 64 );
@@ -863,19 +825,18 @@ std::stringstream store;
       BOOST_CHECK_EQUAL( ens.y( 0 ), pos.y );
       BOOST_CHECK_EQUAL( ens.z( 0 ), pos.z );
       BOOST_CHECK_EQUAL( ens.position( 0 ), pos );
-      BOOST_CHECK_EQUAL( ens.eps( 0 ), epsw );
    }
 
    // Add some more particles
    ispec = 1;
-   ens.append_position( 1, { 0.629669015988, 9.4781017778, 0.436567124972 }, epsw );
+   ens.append_position( 1, { 0.629669015988, 9.4781017778, 0.436567124972 } );
    ispec = 2;
-   ens.append_position( 2, { 1.81235688249, 6.99878476378, 6.05346341778 }, epsw );
-   ens.append_position( 2, { 9.86409500135, 8.03444072878, 6.96346891359 }, epsw );
-   ens.append_position( 0, { 6.12488878987, 0.936444546808, 7.92035117147 }, epsw );
-   ens.append_position( 2, { 4.02705270915, 4.9878484368, 9.33967304135 }, epsw );
-   ens.append_position( 1, { 8.8153046596, 8.25296759285, 9.27222366556 }, epsw );
-   ens.append_position( 2, { 3.01632820001, 3.43431356454, 0.880214873216 }, epsw );
+   ens.append_position( 2, { 1.81235688249, 6.99878476378, 6.05346341778 } );
+   ens.append_position( 2, { 9.86409500135, 8.03444072878, 6.96346891359 } );
+   ens.append_position( 0, { 6.12488878987, 0.936444546808, 7.92035117147 } );
+   ens.append_position( 2, { 4.02705270915, 4.9878484368, 9.33967304135 } );
+   ens.append_position( 1, { 8.8153046596, 8.25296759285, 9.27222366556 } );
+   ens.append_position( 2, { 3.01632820001, 3.43431356454, 0.880214873216 } );
    ispec = 0;
 
    BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 2 );
@@ -943,7 +904,7 @@ std::stringstream store;
       particle::change_set trial;
       const particle::coordinate pos { 7.45423699019, 5.14523134204, 2.44775178272 };
       particle::change_atom at(0);
-      set_atom(at, false, true, ens.size(), {}, pos, epsw, epsw);
+      set_atom(at, false, true, ens.size(), {}, pos);
       trial.add_atom(at);
 
       // Check system before change
@@ -960,7 +921,6 @@ std::stringstream store;
       BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 3 );
       BOOST_CHECK_EQUAL( ens.position( 8 ), pos );
       BOOST_CHECK_EQUAL( ens.key( 8 ), 0 );
-      BOOST_CHECK_EQUAL( ens.eps( 8 ), epsw );
       BOOST_CHECK_EQUAL( ens.count(), ens.size() );
       BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 0, 2 ) );
       BOOST_CHECK_EQUAL( gidx, 8 );
@@ -971,7 +931,7 @@ std::stringstream store;
       const std::size_t index { 4 };
       const particle::coordinate pos { 3.51095035114, 1.08643570153, 0.603658014653 };
       particle::change_atom at( ens.key( index ) );
-      set_atom( at, true, true, index, ens.position( index ), pos, ens.eps( index ), epsw );
+      set_atom( at, true, true, index, ens.position( index ), pos );
       trial.add_atom(at);
 
       // Check system before change
@@ -989,7 +949,6 @@ std::stringstream store;
       BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 3 );
       BOOST_CHECK_EQUAL( ens.key( index ), 0 );
       BOOST_CHECK_EQUAL( ens.position( index ), pos );
-      BOOST_CHECK_EQUAL( ens.eps( index ), epsw );
       BOOST_CHECK_EQUAL( ens.count(), ens.size() );
    }
    {
@@ -997,7 +956,7 @@ std::stringstream store;
       particle::change_set trial;
       const std::size_t index { 4 };
       particle::change_atom at( 0 );
-      set_atom( at, true, false, index, ens.position( index ), {}, epsw, epsw );
+      set_atom( at, true, false, index, ens.position( index ), {} );
       trial.add_atom(at);
 
       // Check system before change
@@ -1065,35 +1024,35 @@ std::stringstream store;
 }
 !!!413105.cpp!!!	specie_meta_test() : void
 // TEST management of keywords
-for ( std::string kw : { core::strngs::fsname(), core::strngs::fstype(), core::strngs::fsrtsp(), core::strngs::fsd(), core::strngs::fsz(), core::strngs::fsctrg(), core::strngs::fschex(), core::strngs::fsn() } )
+for( std::string kw : {
+       core::strngs::fsname(), core::strngs::fstype(), core::strngs::fsrtsp(), core::strngs::fsd(), core::strngs::fsz(), core::strngs::fsctrg(), core::strngs::fschex(), core::strngs::fsn()
+     } )
 {
-   BOOST_CHECK( particle::specie_meta::is_standard_keyword( kw ) );
+  BOOST_CHECK( particle::specie_meta::is_standard_keyword( kw ) );
 }
 // Matches keyword so should throw an error
 BOOST_CHECK_THROW( particle::specie_meta::add_keyword( "ratspc" ), std::runtime_error );
 
-if ( not particle::specie_meta::has_keyword( "ratexc" ) )
+if( not particle::specie_meta::has_keyword( "ratexc" ) )
 {
-   particle::specie_meta::add_keyword( "ratexc" );
+  particle::specie_meta::add_keyword( "ratexc" );
 }
-if ( not particle::specie_meta::has_keyword( "ratgr" ) )
+if( not particle::specie_meta::has_keyword( "ratgr" ) )
 {
-   particle::specie_meta::add_keyword( "ratgr" );
+  particle::specie_meta::add_keyword( "ratgr" );
 }
-if ( not particle::specie_meta::has_keyword( "ratreg" ) )
+if( not particle::specie_meta::has_keyword( "ratreg" ) )
 {
-   particle::specie_meta::add_keyword( "ratreg" );
+  particle::specie_meta::add_keyword( "ratreg" );
 }
-if ( not particle::specie_meta::has_keyword( "ratmov" ) )
+if( not particle::specie_meta::has_keyword( "ratmov" ) )
 {
-   particle::specie_meta::add_keyword( "ratmov" );
+  particle::specie_meta::add_keyword( "ratmov" );
 }
-
-// Need a dummy application
-boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
 
 // Test read input (specie meta)
 {
+  boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
   core::input_delegater dg( 1 );
   {
     boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
@@ -1104,12 +1063,11 @@ boost::shared_ptr< particle::particle_manager > appl( new particle::particle_man
 
   core::input_preprocess reader;
   reader.add_buffer( "dummy", canon_input );
-  dg.read_input( reader );
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
 
   BOOST_CHECK_EQUAL( appl->specie_count(), 1ul );
-  BOOST_CHECK_NO_THROW( appl->get_specie( 0 ) );
   BOOST_CHECK( appl->has_specie( "Ca" ) );
-  const particle::specie &var1( appl->get_specie( appl->get_specie_key("Ca") ) );
+  const particle::specie &var1( appl->get_specie( appl->get_specie_key( "Ca" ) ) );
   BOOST_CHECK( var1.is_valid() );
   BOOST_CHECK( var1.has_parameter( "ratreg" ) );
   BOOST_CHECK( var1.has_parameter( "ratmov" ) );
@@ -1126,46 +1084,73 @@ boost::shared_ptr< particle::particle_manager > appl( new particle::particle_man
   BOOST_CHECK_EQUAL( var1.excess_potential(), 0.792 );
   BOOST_CHECK_EQUAL( var1.is_solute(), true );
   BOOST_CHECK_EQUAL( var1.parameter( "ratreg" ), "0.3 0.3 0.3 0.1" );
-
-// TEST WRITE OUTPUT
-//  std::string alt_input( "specie\nname \"Ca\"\ntype free\nd 1.1\nz 2\nchex 0.792\nratexc 2.0\nratgr 3.0\nratmov 1.0\nratreg 0.3 0.3 0.3 0.1\nratspc 1.0\nend\n\n" );
-//
-//  std::stringstream os;
-//  dg.write_input_file( os );
-//  std::string actual_input( os.str() );
-//
-//  BOOST_CHECK_EQUAL(alt_input, actual_input);
-
-  // Invalid/Valid inputs
-  {
-    std::string canon_input( "specie\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 -0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\ntype freeze\nend\n\n" );
-    core::input_preprocess reader;
-    reader.add_buffer( "dummy", canon_input );
-    BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
-  }
-  {
-    std::string canon_input( "specie freeze\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 -0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
-    core::input_preprocess reader;
-    reader.add_buffer( "dummy", canon_input );
-    BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
-  }
-
-  {
-    std::string canon_input( "specie\ntype \"free\"  \nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 -0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
-    core::input_preprocess reader;
-    reader.add_buffer( "dummy", canon_input );
-    BOOST_CHECK_NO_THROW( dg.read_input( reader ) );
-  }
-
-  {
-    std::string canon_input("specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 -0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n");
-    core::input_preprocess reader;
-    reader.add_buffer( "dummy", canon_input );
-    BOOST_CHECK_NO_THROW( dg.read_input( reader ) );
-  }
 }
+{
+  boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+    dg.add_input_delegate( m );
+  }
 
+  // Valid : sub-type known : free
+  ////////////////////////////////
+  std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  BOOST_CHECK( appl->get_specie( 0 ).is_solute() );
+}
+{
+  boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+    dg.add_input_delegate( m );
+  }
 
+  // Valid : sub-type known : mob
+  ///////////////////////////////
+  std::string canon_input( "specie\ntype mob\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  BOOST_CHECK( appl->get_specie( 0 ).is_mobile() );
+}
+{
+  boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+    dg.add_input_delegate( m );
+  }
+
+  // Valid : sub-type known : chonly
+  //////////////////////////////////
+  std::string canon_input( "specie\ntype chonly\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  BOOST_CHECK_EQUAL( appl->specie_count(), 1 );
+  BOOST_CHECK( appl->get_specie( 0 ).is_channel_only() );
+}
+{
+  boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+    dg.add_input_delegate( m );
+  }
+
+  // Valid : sub-type known : flex
+  ////////////////////////////////
+  std::string canon_input( "specie\ntype flex\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  BOOST_CHECK_EQUAL( appl->specie_count(), 1 );
+  BOOST_CHECK( appl->get_specie( 0 ).is_flexible() );
+}
 !!!413361.cpp!!!	specie_test() : void
 //Lambda to test specie validity
 auto specie_validation = [](particle::specie const& aspec)
@@ -1192,30 +1177,31 @@ auto specie_validation = [](particle::specie const& aspec)
 // Test static methods
 {
    bool ifset { false };
-   const particle::specie::specie_type orig { particle::specie::INVALID };
    BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::MOBILE ), core::strngs::fsmobl() );
-   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsmobl(), orig, ifset ), particle::specie::MOBILE );
+   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsmobl(), ifset ), particle::specie::MOBILE );
    BOOST_CHECK( ifset );
    ifset = false;
    BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::FLEXIBLE ), core::strngs::fsflxd() );
-   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsflxd(), orig, ifset ), particle::specie::FLEXIBLE );
+   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsflxd(), ifset ), particle::specie::FLEXIBLE );
    BOOST_CHECK( ifset );
    ifset = false;
    BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::CHANNEL_ONLY ), core::strngs::fschon() );
-   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fschon(), orig, ifset ), particle::specie::CHANNEL_ONLY );
+   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fschon(), ifset ), particle::specie::CHANNEL_ONLY );
    BOOST_CHECK( ifset );
    ifset = false;
    BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::SOLUTE ), core::strngs::fsfree() );
-   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsfree(), orig, ifset ), particle::specie::SOLUTE );
+   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsfree(), ifset ), particle::specie::SOLUTE );
    BOOST_CHECK( ifset );
    ifset = false;
-   // Unrecognised string value, should return orig and ifset = false
-   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsspec(), orig, ifset ), particle::specie::INVALID );
+   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( "free", ifset ), particle::specie::SOLUTE );
+   BOOST_CHECK( ifset );
+   ifset = false;
+   // Unrecognised string value, should return INVALID and ifset = false
+   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsspec(), ifset ), particle::specie::INVALID );
    BOOST_CHECK( not ifset );
-   // Unrecognised string value, should return particle::specie::SOLUTE and
-   // ifset = false
+   // Unrecognised string value, should return INVALID and ifset = false
    ifset = true;
-   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsspec(), particle::specie::SOLUTE, ifset ), particle::specie::SOLUTE );
+   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsspec(), ifset ), particle::specie::INVALID );
    BOOST_CHECK( not ifset );
 
    BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::INVALID ), "invalid" );
@@ -1705,3 +1691,463 @@ auto specie_validation = [](particle::specie const& aspec)
       }
    }
 }
+!!!958000.cpp!!!	specie_input_bad_subtype_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "specie\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\ntype freeze\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!958128.cpp!!!	specie_input_missing_subtype_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+// Invalid : missing value for sub-type 
+///////////////////////////////////////
+std::string canon_input( "specie\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\ntype\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+!!!958256.cpp!!!	specie_input_section_has_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : value after section keyword
+////////////////////////////////////////
+std::string canon_input( "specie freeze\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!958384.cpp!!!	specie_input_PASS_bad_parameter_value_test_() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : negative "ratreg" rate value which is an extended input value so it
+// is not checked.
+////////////////////////////////////////////////////////////////////////////////
+std::string canon_input( "specie\ntype \"free\"  \nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 -0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+BOOST_CHECK_EQUAL( appl->specie_count(), 1 );
+BOOST_CHECK( appl->get_specie( 0 ).has_parameter( "ratreg" ) );
+BOOST_CHECK_EQUAL( appl->get_specie( 0 ).parameter( "ratreg" ), "0.3 -0.3 0.3 0.1" );
+
+
+!!!958512.cpp!!!	specie_input_missing_name_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : missing specie name value
+//////////////////////////////////////
+std::string canon_input( "specie\ntype free\nname\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!958640.cpp!!!	specie_input_bad_name_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : One letter specie name.
+////////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"C\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!958768.cpp!!!	specie_input_negative_rate_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : negative "ratspc" value
+////////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc -1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!958896.cpp!!!	specie_input_bad_rate_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : non-numerical "ratspc" value
+/////////////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc -FF.F\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!959024.cpp!!!	specie_input_missing_rate_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : missing "ratspc" value
+///////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!959152.cpp!!!	specie_input_malformed_rate_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : number with trailing characters for "ratspc" value
+///////////////////////////////////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 0.5G\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!959280.cpp!!!	specie_input_malformed_valency_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : half numeric valency.
+//////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0C\nd 1.1\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!959408.cpp!!!	specie_input_bad_valency_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : non-numerical valency.
+///////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz two\nd 1.1\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!959536.cpp!!!	specie_input_missing_valency_value() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : missing valency value
+//////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz\nd 1.1\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!959664.cpp!!!	specie_input_negative_diameter_value() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : negative diameter.
+///////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd -1.1\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!959792.cpp!!!	specie_input_bad_diameter_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : non-numerical diameter.
+////////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd three\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!959920.cpp!!!	specie_input_missing_diameter_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : missing diameter value
+///////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!960048.cpp!!!	specie_input_bad_conc_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : "conc" has non-numeric parameter value.
+////////////////////////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd 1.1\nconc twelve\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!960176.cpp!!!	specie_input_missing_conc_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : "conc" missing value.
+//////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd 1.1\nconc\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!960304.cpp!!!	specie_input_bad_chex_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : "chex" has non-numeric parameter value.
+////////////////////////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd 1.1\nchex twelve\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!960432.cpp!!!	specie_input_missing_chex_value_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : "chex" has no value.
+/////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd 1.1\nchex\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!960560.cpp!!!	specie_input_bad_localization_data_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : Localization data has non-numeric parameter value.
+///////////////////////////////////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd 1.1\nchex 0.792\nn 1\n0.3 0.1 0.4 0.1 0.2 f.0 3.4\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!960688.cpp!!!	specie_input_bad_position_data_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : Position data has non-numeric parameter value.
+///////////////////////////////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd 1.1\nchex 0.792\nn 1\n0.3 D.1 0.4 0.1 0.2 0.0 3.4\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!960816.cpp!!!	specie_input_negative_localization_radius_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : Localization diameter is negative.
+///////////////////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd 1.1\nchex 0.792\nn 1\n0.3 0.1 0.4 -0.1 0.2 0.0 3.4\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!960944.cpp!!!	specie_input_zero_localization_radius_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : Localization diameter is zero.
+///////////////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd 1.1\nchex 0.792\nn 1\n0.3 0.1 0.4 0.0 0.2 0.0 3.4\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+!!!961072.cpp!!!	specie_input_short_position_data_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : Not enough location values
+///////////////////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd 1.1\nchex 0.792\nn 1\n0.3 0.1\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!961200.cpp!!!	specie_input_short_localization_data_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : Not enough localization values
+///////////////////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd 1.1\nchex 0.792\nn 1\n0.3 0.1 -0.1 0.2 0.0 3.4\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+!!!957872.cpp!!!	specie_input_short_position_lines_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+
+// Invalid : Not enough entries
+///////////////////////////////
+std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nz 2.0\nd 1.1\nchex 0.792\nn 2\n0.3 0.1 -0.1 0.1 0.2 0.0 3.4\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!!!961328.cpp!!!	specie_input_missing_type_keyword_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "specie\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+!!!961456.cpp!!!	specie_input_missing_name_keyword_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "specie\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\ntype free\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+
+!!!961584.cpp!!!	specie_input_missing_valency_keyword_test() : void
+boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( appl ) );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "specie\nname \"Ca\"\nd 1.1\nchex 0.792\ntype free\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_CHECK_THROW( dg.read_input( reader ), std::runtime_error );
+

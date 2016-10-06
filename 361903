@@ -1,6 +1,6 @@
 format 75
 "particle" // particle
-  revision 183
+  revision 187
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -892,30 +892,6 @@ this atom."
 	idl_decl ""
       end
 
-      attribute 306992 "eps_old"
-	public explicit_type "double"
-	init_value "0.0"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-      end
-
-      attribute 306864 "eps_new"
-	public explicit_type "double"
-	init_value "0.0"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-      end
-
       attribute 1352111 "key"
 	public explicit_type "size_t"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -977,18 +953,16 @@ ${self}${name} = coordinate()
 
       operation 1769775 "change_atom"
 	protected explicit_return_type ""
-	nparams 8
+	nparams 6
 	  param in name "use_old" explicit_type "bool"
 	  param in name "use_new" explicit_type "bool"
 	  param in name "aindex" explicit_type "size_t"
 	  param in name "aoldpos" type class_ref 986799 // coordinate
 	  param in name "anewpos" type class_ref 986799 // coordinate
 	  param in name "akey" explicit_type "size_t"
-	  param in name "aoldeps" explicit_type "double"
-	  param in name "aneweps" explicit_type "double"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, const ${t3} & ${p3}${v3}, const ${t4} & ${p4}${v4}, ${t5} ${p5}${v5}, ${t6} ${p6}${v6}, ${t7} ${p7}${v7}${)}${volatile}${throw};
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, const ${t3} & ${p3}${v3}, const ${t4} & ${p4}${v4}, ${t5} ${p5}${v5}${)}${volatile}${throw};
 "
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, const ${t3} & ${p3}, const ${t4} & ${p4}, ${t5} ${p5}, ${t6} ${p6}, ${t7} ${p7}${)}${throw}
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, const ${t3} & ${p3}, const ${t4} & ${p4}, ${t5} ${p5}${)}${throw}
 ${body}
 "
 	
@@ -1009,8 +983,6 @@ ${body}
 , do_new (true)
 , energy_old (0.0)
 , energy_new (0.0)
-, eps_old (0.0)
-, eps_new (0.0)
 , key (particle::specie_key::nkey)
 , index(0)
 , new_position ()
@@ -1037,8 +1009,6 @@ ${body}
 , do_new(true)
 , energy_old(0.0)
 , energy_new(0.0)
-, eps_old(0.0)
-, eps_new(0.0)
 , key(${p0})
 , index(0)
 , new_position()
@@ -1120,8 +1090,6 @@ ${body}"
   std::swap (do_new, source.do_new);
   std::swap (energy_old, source.energy_old);
   std::swap (energy_new, source.energy_new);
-  std::swap (eps_old, source.eps_old);
-  std::swap (eps_new, source.eps_new);
   std::swap (key, source.key);
   std::swap (index, source.index);
   std::swap (new_position, source.new_position);
@@ -1158,8 +1126,6 @@ ${body}"
     ar & do_new;
     ar & energy_old;
     ar & energy_new;
-    ar & eps_old;
-    ar & eps_new;
     ar & key;
     ar & index;
     ar & new_position;
@@ -1292,7 +1258,12 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
-      comment " Manage the ensemble of particles and their type information"
+      comment " Manage the ensemble of particles and their type information
+
+ TODO: write_document (need to update specie location info)
+     generate_simulation (copy from specie location info)
+    ** Scan simulator class for places where ensemble and specie state
+    ** is changed."
       classrelation 567984 // <dependency>
 	relation 567088 -_->
 	  a package
@@ -1338,6 +1309,20 @@ ${docstring}${members}
 "
 	idl_decl ""
 	comment "The target number of particles"
+      end
+
+      attribute 306736 "eps_"
+	private explicit_type "double"
+	multiplicity "*"
+	stereotype "vector"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${stereotype}()
+"
+	idl_decl ""
+	comment "The value of the permittivity around the particle"
       end
 
       extra_member 390320 "LIFETIME"
@@ -1408,6 +1393,26 @@ ${docstring}self.species_.append( ${p0} )
 	comment " Add (copy) specie to set and return the index of the specie"
       end
 
+      operation 951344 "add_predefined_particles"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Copy particles defined in the input file into the ensemble 
+ (Should only be called when generating the initial ensemble)"
+      end
+
       operation 937520 "charge"
 	const public explicit_return_type "double"
 	nparams 0
@@ -1445,6 +1450,24 @@ ${docstring}${body}
 "
 	
 	comment " Details about the current ensemble of particles."
+      end
+
+      operation 434096 "eps"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "aindex" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->${name}_[${p0}];
+}
+"
+	
+	
+	
+	
+	comment "Get the permittivity of the media around the particle.
+
+\\undefined aindex >= size"
       end
 
       operation 907824 "get_ensemble"
@@ -1581,6 +1604,27 @@ ${docstring}return len(self.species_)
  ( equivalent to get_species().size() ("
       end
 
+      operation 434224 "set_eps"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "idx" explicit_type "size_t"
+	  param in name "val" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  this->eps_[ ${p0} ] = ${p1};
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Set the permittivity around the given particle"
+      end
+
       operation 908720 "set_target_count"
 	public explicit_return_type "void"
 	nparams 1
@@ -1615,6 +1659,26 @@ ${docstring}return self.target_particles_
 
  The intended average (solute) particle number in the
  simulation."
+      end
+
+      operation 951216 "write_document"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "wr" type class_ref 163632 // input_document
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Write contents of simulation as an input document"
       end
     end
 
@@ -2799,20 +2863,6 @@ ${docstring}${members}
 	  b parent class_ref 223792 // coordinate_set
       end
 
-      attribute 306736 "eps_"
-	private explicit_type "double"
-	multiplicity "*"
-	stereotype "vector"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${stereotype}()
-"
-	idl_decl ""
-	comment "The value of the permittivity around the particle"
-      end
-
       attribute 325297 "inuse_particles_"
 	private explicit_type "size_t"
 	init_value "0"
@@ -2849,24 +2899,6 @@ Number of valid particles = inuse_particle - deletion_list.size"
 	php ""
 	python ""
 	idl ""
-      end
-
-      operation 434096 "eps"
-	const public explicit_return_type "double"
-	nparams 1
-	  param in name "aindex" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->${name}_[${p0}];
-}
-"
-	
-	
-	
-	
-	comment "Get the permittivity of the media around the particle.
-
-\\undefined aindex >= size"
       end
 
       operation 336048 "get_coordinates"
@@ -3249,13 +3281,12 @@ ${docstring}${body}
 
       operation 284592 "append_position"
 	public explicit_return_type "void"
-	nparams 3
+	nparams 2
 	  param in name "key" explicit_type "size_t"
 	  param in name "pos" type class_ref 986799 // coordinate
-	  param in name "eps" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}${)}${const}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -3317,27 +3348,6 @@ object can hold more particles
 "
       end
 
-      operation 434224 "set_eps"
-	public explicit_return_type "void"
-	nparams 2
-	  param in name "idx" explicit_type "size_t"
-	  param in name "val" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
-{
-  this->eps_[ ${p0} ] = ${p1};
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Set the permittivity around the given particle"
-      end
-
       extra_member 250929 "common ctor/dtor"
 	
 	stereotype "lifetime"
@@ -3356,7 +3366,6 @@ ${docstring}${body}
 , key_counts_()
 , key_()
 , xyz_ ()
-, eps_()
 , inuse_particles_(0)
 , max_particles_(0)
 {}"
@@ -3474,7 +3483,6 @@ ${docstring}${body}
     ar & key_counts_;
     ar & key_;
     ar & xyz_;
-    ar & eps_;
     ar & inuse_particles_;
     ar & max_particles_;
   }
@@ -4572,13 +4580,12 @@ ${docstring}self.excess_potential_ = ${p0};
 
       operation 204464 "string_to_specie_type"
 	class_operation public return_type class_ref 134833 // specie_type
-	nparams 3
+	nparams 2
 	  param in name "val" explicit_type "string"
-	  param in name "orig" type class_ref 134833 // specie_type
 	  param out name "set" explicit_type "bool"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} & ${p2}${)}${const}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -4589,9 +4596,11 @@ ${docstring}self.excess_potential_ = ${p0};
 ${docstring}${body}
 "
 	
-	comment " Convert a text representation of a specie type (eg from input file) into  the specie type enum value.
+	comment " Convert a text representation of a specie type (eg from input file) into 
+ the specie type enum value. Users should \"dequote\" and \"trim\" values
+ before calling this method.
 
- Sets 'set' if valid value is found and set otherwise 'orig' value is returned."
+ Sets 'set' to true if valid value is found, otherwise INVALID value is returned."
       end
 
       extra_member 134705 "IN PROGRESS"
@@ -5625,9 +5634,33 @@ ${items}};
 	  comment " Index of specie type option "
 	end
 
-	attribute 198704 "SPECIE_TAG_COUNT"
+	attribute 494640 "SPECIE_DIAMETER"
 	  public type class_ref 155824 // anonymous_specie_meta
 	  init_value "2"
+	  cpp_decl "  ${name}${value},${comment}"
+	  java_decl ""
+	  php_decl ""
+	  python_decl "${comment}${self}${name} = ${value}
+"
+	  idl_decl ""
+	  comment " Index of specie diameter option"
+	end
+
+	attribute 494768 "SPECIE_VALENCY"
+	  public type class_ref 155824 // anonymous_specie_meta
+	  init_value "3"
+	  cpp_decl "  ${name}${value},${comment}"
+	  java_decl ""
+	  php_decl ""
+	  python_decl "${comment}${self}${name} = ${value}
+"
+	  idl_decl ""
+	  comment " Index of specie valency option"
+	end
+
+	attribute 198704 "SPECIE_TAG_COUNT"
+	  public type class_ref 155824 // anonymous_specie_meta
+	  init_value "4"
 	  cpp_decl "  ${name}${value},${comment}"
 	  java_decl ""
 	  php_decl ""
@@ -5721,10 +5754,12 @@ ${docstring}${body}
 "
 	cpp_def "${comment}${inline}${class}::${name}${(}boost::shared_ptr< ${t0} > ${p0}${)}${throw} 
 : input_base_meta( core::strngs::fsspec (), true, true )
-, missing_required_tags_( true )
+, missing_required_tags_()
 , manager_( ${p0} )
 , specie_obj_()
-{}
+{
+  missing_required_tags_.set();
+}
 "
 	
 	
@@ -6185,6 +6220,9 @@ ${namespace_end}
 #endif
 
 ${includes}
+// manual includes
+#include \"core/strngs.hpp\"
+//-
 ${namespace_start}
 ${members}
 ${namespace_end}"
@@ -6272,6 +6310,7 @@ ${includes}
 #include \"particle/coordinate.hpp\"
 #include \"particle/centroid.hpp\"
 #include \"utility/utility.hpp\"
+#include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 // -
 #include <bitset>
@@ -6330,12 +6369,13 @@ ${includes}
 //--
 #include \"core/strngs.hpp\"
 #include \"core/input_help.hpp\"
-#include \"core/input_reader.hpp\"
-#include <boost/lexical_cast.hpp>
+//#include \"core/input_reader.hpp\"
 #include \"utility/config.hpp\"
 #include \"utility/fuzzy_equals.hpp\"
-#include <iostream>
+// -
 #include <bitset>
+#include <boost/lexical_cast.hpp>
+#include <iostream>
 
 ${namespace_start}
 ${members}
