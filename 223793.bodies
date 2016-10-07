@@ -1111,11 +1111,17 @@ if( not particle::specie_meta::has_keyword( "ratmov" ) )
 
   // Valid : sub-type known : mob
   ///////////////////////////////
-  std::string canon_input( "specie\ntype mob\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
+  std::string canon_input( "specie\ntype mob\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nn 1\n0.3 0.1 0.4 1.0 0.2 0.0 3.4\nend\n\n" );
   core::input_preprocess reader;
   reader.add_buffer( "dummy", canon_input );
   BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
   BOOST_CHECK( appl->get_specie( 0 ).is_mobile() );
+  BOOST_CHECK_EQUAL( appl->get_specie( 0 ).get_position_size(), 1 );
+  BOOST_CHECK_EQUAL( appl->get_specie( 0 ).get_localization_size(), 1 );
+  particle::coordinate pos( 0.3, 0.1, 0.4 );
+  particle::centroid ctr( 1.0, 0.2, 0.0, 3.4 );
+  BOOST_CHECK_EQUAL( appl->get_specie( 0 ).get_position( 0 ), pos );
+  BOOST_CHECK_EQUAL( appl->get_specie( 0 ).get_localization_data( 0 ), ctr );
 }
 {
   boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );

@@ -162,7 +162,7 @@ else if( reader.name() == core::strngs::fstype() )
   boost::algorithm::trim( value );
   const std::size_t subtype = this->specie_obj_.string_to_specie_type( value, valid_type );
   UTILITY_INPUT( valid_type, "Specie type must be one of allowed values.", this->section_label() );
-  if ( valid_type )
+  if( valid_type )
   {
     this->specie_obj_.set_type( subtype );
     missing_required_tags_.reset( SPECIE_TYPE );
@@ -259,56 +259,55 @@ else if( reader.name() == core::strngs::fschex() )
   this->specie_obj_.set_excess_potential( chex );
 }
 else if( reader.name() == core::strngs::fsn() )
+
 {
   // --------------------
   // Initial particle positions of this specie
+  std::size_t initial_count( 0 );
   try
   {
-    const std::size_t initial_count
+    initial_count = boost::lexical_cast < std::size_t >( reader.value() );
+  }
+  catch( std::bad_cast const& err )
+  {
+    const bool value_is_a_number = false;
+    UTILITY_INPUT( value_is_a_number, std::string( "Predefined particle \"n\" value not a number: " ) + err.what(), this->section_label() );
+  }
+  for( std::size_t cursor_ = 0; cursor_ != initial_count; ++cursor_ )
+  {
+    reader.next();
+    std::string line_( reader.line() );
+    std::vector< double > values;
+    UTILITY_INPUT( reader.read_as_floats( line_, values ), "Bad values in position data line", this->section_label() );
+    // Non-position line data should begin with a keyword so should give no values
+    UTILITY_INPUT( not values.empty(), "Fewer position data lines than expected", this->section_label() );
+    UTILITY_INPUT( values.size() == 3 or values.size() == 4 or values.size() == 7, "Position data should have 3, 4 or 7 values", this->section_label() );
+    particle::coordinate pos { values[0], values[1], values[2] };
+    if( values.size() > 3 )
     {
-      boost::lexical_cast < std::size_t >( reader.value() )
-    };
-    for( std::size_t cursor_ = 0; cursor_ != initial_count; ++cursor_ )
-    {
-      reader.next();
-      std::string line_( reader.line() );
-      std::vector< double > values;
-      UTILITY_INPUT( reader.read_as_floats( line_, values ), "Bad values in position data line", this->section_label() );;
-      // Non-position line data should begin with a keyword so should give no values
-      UTILITY_INPUT( values.empty(), "Fewer position data lines than expected", this->section_label() );
-      UTILITY_INPUT( values.size() == 3 or values.size() == 4 or values.size() == 7, "Position data should have 3, 4 or 7 values", this->section_label() );
-      particle::coordinate pos{ values[0], values[1], values[2] };
-      if (values.size() > 3)
+      UTILITY_INPUT( values[3] >= 0.0, "Localization radius must be greater than zero", this->section_label() );
+      particle::centroid cntr;
+      cntr.r = values[3]; // = update radius
+      if( values.size() == 7 )
       {
-        UTILITY_INPUT( values[3] >= 0.0, "Localization radius must be greater than zero", this->section_label() );
-        particle::centroid cntr;
-        cntr.r = values[3]; // = update radius
-        if( values.size() == 7 )
-        {
-          cntr.x = values[4];
-          cntr.y = values[5];
-          cntr.z = values[6];
-        }
-        else
-        {
-          cntr.x = pos.x;
-          cntr.y = pos.y;
-          cntr.z = pos.z;
-        }
-        // append location and centroid information
-        this->specie_obj_.append_position( pos, cntr );
+        cntr.x = values[4];
+        cntr.y = values[5];
+        cntr.z = values[6];
       }
       else
       {
-        // append only location.
-        this->specie_obj_.append_position( pos );
+        cntr.x = pos.x;
+        cntr.y = pos.y;
+        cntr.z = pos.z;
       }
+      // append location and centroid information
+      this->specie_obj_.append_position( pos, cntr );
     }
-  }
-  catch( std::runtime_error const &err )
-  {
-    bool invalid_coordinate_definition( false );
-    UTILITY_INPUT( invalid_coordinate_definition, err.what(), this->section_label() );
+    else
+    {
+      // append only location.
+      this->specie_obj_.append_position( pos );
+    }
   }
 }
 else
@@ -322,6 +321,8 @@ else
   // required parameters are present
 }
 return true;
+
+
 
 !!!203440.cpp!!!	do_read_end() : void
 if ( this->missing_required_tags_[ SPECIE_TYPE ] )
