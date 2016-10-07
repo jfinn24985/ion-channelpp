@@ -1157,396 +1157,491 @@ if( not particle::specie_meta::has_keyword( "ratmov" ) )
   BOOST_CHECK_EQUAL( appl->specie_count(), 1 );
   BOOST_CHECK( appl->get_specie( 0 ).is_flexible() );
 }
-!!!413361.cpp!!!	specie_test() : void
+!!!413361.cpp!!!	specie_lifetime_test() : void
 //Lambda to test specie validity
-auto specie_validation = [](particle::specie const& aspec)
+auto specie_validation = []( particle::specie const& aspec )
 {
-   if (not aspec.is_valid ())
-   {
-      BOOST_CHECK(not (aspec.is_localized () or aspec.is_flexible ()
-                       or aspec.is_solute () or aspec.is_channel_only ()
-                       or aspec.is_mobile ()));
-      BOOST_CHECK(aspec.label ().empty ());
-      BOOST_CHECK_EQUAL(aspec.sub_type(), particle::specie::INVALID);
-   }
-   else
-   {
-      BOOST_CHECK(aspec.is_flexible () xor aspec.is_channel_only ()
-                  xor aspec.is_mobile () xor aspec.is_solute ());
-      BOOST_CHECK(not aspec.is_localized () or (aspec.is_flexible () or aspec.is_mobile ()));
-      BOOST_CHECK_NE(aspec.sub_type(), particle::specie::INVALID);
-      BOOST_CHECK(not aspec.label ().empty ());
-      BOOST_CHECK_EQUAL(aspec.label ().size (), 2u);
-   }
+  if( not aspec.is_valid() )
+  {
+    BOOST_CHECK( not( aspec.is_localized() or aspec.is_flexible()
+                      or aspec.is_solute() or aspec.is_channel_only()
+                      or aspec.is_mobile() ) );
+    BOOST_CHECK( aspec.label().empty() );
+    BOOST_CHECK_EQUAL( aspec.sub_type(), particle::specie::INVALID );
+  }
+  else
+  {
+    BOOST_CHECK( aspec.is_flexible() xor aspec.is_channel_only()
+                 xor aspec.is_mobile() xor aspec.is_solute() );
+    BOOST_CHECK( not aspec.is_localized() or ( aspec.is_flexible() or aspec.is_mobile() ) );
+    BOOST_CHECK_NE( aspec.sub_type(), particle::specie::INVALID );
+    BOOST_CHECK( not aspec.label().empty() );
+    BOOST_CHECK_EQUAL( aspec.label().size(), 2u );
+  }
 };
 
-// Test static methods
 {
-   bool ifset { false };
-   BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::MOBILE ), core::strngs::fsmobl() );
-   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsmobl(), ifset ), particle::specie::MOBILE );
-   BOOST_CHECK( ifset );
-   ifset = false;
-   BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::FLEXIBLE ), core::strngs::fsflxd() );
-   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsflxd(), ifset ), particle::specie::FLEXIBLE );
-   BOOST_CHECK( ifset );
-   ifset = false;
-   BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::CHANNEL_ONLY ), core::strngs::fschon() );
-   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fschon(), ifset ), particle::specie::CHANNEL_ONLY );
-   BOOST_CHECK( ifset );
-   ifset = false;
-   BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::SOLUTE ), core::strngs::fsfree() );
-   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsfree(), ifset ), particle::specie::SOLUTE );
-   BOOST_CHECK( ifset );
-   ifset = false;
-   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( "free", ifset ), particle::specie::SOLUTE );
-   BOOST_CHECK( ifset );
-   ifset = false;
-   // Unrecognised string value, should return INVALID and ifset = false
-   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsspec(), ifset ), particle::specie::INVALID );
-   BOOST_CHECK( not ifset );
-   // Unrecognised string value, should return INVALID and ifset = false
-   ifset = true;
-   BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsspec(), ifset ), particle::specie::INVALID );
-   BOOST_CHECK( not ifset );
-
-   BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::INVALID ), "invalid" );
-   BOOST_CHECK_THROW( particle::specie::type_label( particle::specie::INVALID + 1 ), std::runtime_error );
+  // Test is canonical pattern
+  BOOST_CHECK( std::is_default_constructible< particle::specie >::type {} );
+  BOOST_CHECK( std::is_copy_constructible< particle::specie >::type {} );
+  BOOST_CHECK( std::is_move_constructible< particle::specie >::type {} );
+  BOOST_CHECK( ( std::is_assignable< particle::specie, particle::specie >::type {} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< particle::specie >::type {} );
 }
 // Test default ctor
 {
-   particle::specie var1;
-   BOOST_CHECK(not var1.is_valid ());
-   specie_validation(var1);
+  particle::specie var;
+  specie_validation( var );
+  // Test default values
+  BOOST_CHECK( not var.is_valid() );
+  BOOST_CHECK_EQUAL( var.concentration(), 0.0 );
+
+  BOOST_CHECK_EQUAL( var.excess_potential(), 0.0 );
+  BOOST_CHECK_EQUAL( var.chemical_potential(), 0.0 );
+  BOOST_CHECK_EQUAL( var.radius(), 0.0 );
+  BOOST_CHECK_EQUAL( var.rate(), 0.0 );
+  BOOST_CHECK_EQUAL( var.valency(), 0.0 );
+  BOOST_CHECK( var.label().empty() );
+  BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::INVALID );
+  BOOST_CHECK( not var.is_channel_only() );
+  BOOST_CHECK( not var.is_flexible() );
+  BOOST_CHECK( not var.is_localized() );
+  BOOST_CHECK( not var.is_mobile() );
+  BOOST_CHECK( not var.is_solute() );
+  BOOST_CHECK( not var.is_valid() );
+  BOOST_CHECK_EQUAL( var.get_position_size(), 0 );
 }
 {
-   // store for serialize test.
-   std::stringstream store;
-   // store for description test.
-   std::stringstream desc;
-   // Test values
-   const double concentration { 0.1 };
-   const double excess_potential { 0.1 };
-   const double chem_pot { std::log( concentration/core::constants::to_SI() ) + excess_potential };
-   const double radius { 0.9 };
-   const double rate { 0.5 };
-   const double valency { -1.0 };
-   const std::size_t count { 3ul };
-   const std::string label { "Na" };
-   const std::string k1 { "key1" };
-   const std::string v1 { "value 1" };
-   const std::string k2 { "key 2" };
-   const std::string v2 { "value2" };
-   const std::string k3 { "key3" };
-   const std::string v3 { "value\n3" };
-   const std::string k4 { "key4" };
-   const std::string v4 { "value\t4" };
-   const std::string k5 { "key5" };
-   const std::string v5 { "value5" };
-   const particle::coordinate pos1( 2.0, 0.0, 0.0 );
-   const particle::coordinate pos2( 0.0, 2.0, 0.0 );
-   const particle::coordinate pos3( 0.0, 0.0, 2.0 );
-   const particle::coordinate pos4( -2.0, 0.0, 2.0 );
-   const particle::centroid ctr1( 2.4, 2.1, 0.0, 0.0 );
-   const particle::centroid ctr2( 2.4, 0.0, 2.1, 0.0 );
-   const particle::centroid ctr3( 2.4, 0.0, 0.0, 2.1 );
-   {
-      particle::specie var;
-      BOOST_CHECK(not var.is_valid ());
+  // store for serialize test.
+  std::stringstream store;
+  // Test values
+  const double concentration( 0.1 );
+  const double excess_potential( 0.1 );
+  const double chem_pot( std::log( concentration/core::constants::to_SI() ) + excess_potential );
+  const double radius( 0.9 );
+  const double rate( 0.5 );
+  const double valency( -1.0 );
+  const std::string label( "Na" );
+  const std::string k1( "key1" );
+  const std::string v1( "value 1" );
+  const std::string k2( "key 2" );
+  const std::string v2( "value2" );
+  const std::string k3( "key3" );
+  const std::string v3( "value\n3" );
+  const std::string k4( "key4" );
+  const std::string v4( "value\t4" );
+  const std::string k5( "key5" );
+  const std::string v5( "value5" );
+  const particle::coordinate pos1( 2.0, 0.0, 0.0 );
+  const particle::coordinate pos2( 0.0, 2.0, 0.0 );
+  const particle::coordinate pos3( 0.0, 0.0, 2.0 );
+  const particle::coordinate pos4( -2.0, 0.0, 2.0 );
+  const particle::centroid ctr1( 2.4, 2.1, 0.0, 0.0 );
+  const particle::centroid ctr2( 2.4, 0.0, 2.1, 0.0 );
+  const particle::centroid ctr3( 2.4, 0.0, 0.0, 2.1 );
+  auto test_specie = [&]( const particle::specie &spc )->void
+  {
+    BOOST_CHECK_EQUAL( spc.concentration(), concentration );
+    BOOST_CHECK_EQUAL( spc.excess_potential(), excess_potential );
+    BOOST_CHECK_EQUAL( spc.chemical_potential(), chem_pot );
+    BOOST_CHECK_EQUAL( spc.radius(), radius );
+    BOOST_CHECK_EQUAL( spc.rate(), rate );
+    BOOST_CHECK_EQUAL( spc.valency(), valency );
+    BOOST_CHECK_EQUAL( spc.get_position( 0 ), pos1 );
+    BOOST_CHECK_EQUAL( spc.get_position( 1 ), pos2 );
+    BOOST_CHECK_EQUAL( spc.get_position( 2 ), pos3 );
+    BOOST_CHECK_EQUAL( spc.label(), label );
+    BOOST_CHECK_EQUAL( spc.sub_type(), particle::specie::SOLUTE );
+    BOOST_CHECK( not spc.is_channel_only() );
+    BOOST_CHECK( not spc.is_flexible() );
+    BOOST_CHECK( not spc.is_localized() );
+    BOOST_CHECK( not spc.is_mobile() );
+    BOOST_CHECK( spc.is_solute() );
+    BOOST_CHECK( spc.is_valid() );
 
-      // Test getters/setters
-      BOOST_CHECK_EQUAL( var.concentration(), 0.0 );
-      BOOST_CHECK_NO_THROW( var.set_concentration( concentration ) );
-      BOOST_CHECK_EQUAL( var.concentration(), concentration );
+    BOOST_CHECK( spc.has_parameter( k1 ) );
+    BOOST_CHECK_EQUAL( spc.parameter( k1 ), v1 );
+    BOOST_CHECK( spc.has_parameter( k2 ) );
+    BOOST_CHECK_EQUAL( spc.parameter( k2 ), v2 );
+    BOOST_CHECK( spc.has_parameter( k3 ) );
+    BOOST_CHECK_EQUAL( spc.parameter( k3 ), v3 );
+    BOOST_CHECK( spc.has_parameter( k4 ) );
+    BOOST_CHECK_EQUAL( spc.parameter( k4 ), v4 );
+    BOOST_CHECK( spc.has_parameter( k5 ) );
+    BOOST_CHECK_EQUAL( spc.parameter( k5 ), v5 );
 
-      BOOST_CHECK_EQUAL( var.excess_potential(), 0.0 );
-      BOOST_CHECK_NO_THROW( var.set_excess_potential( excess_potential ) );
-      BOOST_CHECK_EQUAL( var.excess_potential(), excess_potential );
-      BOOST_CHECK_EQUAL( var.chemical_potential(), chem_pot );
+    BOOST_CHECK_EQUAL( spc.get_position( 0 ), pos1 );
+    BOOST_CHECK_EQUAL( spc.get_position( 1 ), pos2 );
+    BOOST_CHECK_EQUAL( spc.get_position( 2 ), pos3 );
+  };
+  {
+    particle::specie var;
+    BOOST_CHECK( not var.is_valid() );
 
-      BOOST_CHECK_EQUAL( var.radius(), 0.0 );
-      BOOST_CHECK_NO_THROW( var.set_radius( radius ) );
-      BOOST_CHECK_EQUAL( var.radius(), radius );
+    BOOST_CHECK_NO_THROW( var.set_concentration( concentration ) );
+    BOOST_CHECK_NO_THROW( var.set_excess_potential( excess_potential ) );
+    BOOST_CHECK_NO_THROW( var.set_radius( radius ) );
+    BOOST_CHECK_NO_THROW( var.set_rate( rate ) );
+    BOOST_CHECK_NO_THROW( var.set_valency( valency ) );
+    BOOST_CHECK_NO_THROW( var.set_label( label ) );
+    BOOST_CHECK_NO_THROW( var.set_type( particle::specie::SOLUTE ) );
+    // DO these test after setting type to SOLUTE
+    BOOST_CHECK_NO_THROW( var.append_position( pos1 ) );
+    BOOST_CHECK_NO_THROW( var.append_position( pos2 ) );
+    BOOST_CHECK_NO_THROW( var.append_position( pos3 ) );
+    BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
+    BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
+    BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
+    BOOST_CHECK_NO_THROW( var.set_parameter( k1, v1 ) );
+    BOOST_CHECK_NO_THROW( var.set_parameter( k2, v2 ) );
+    BOOST_CHECK_NO_THROW( var.set_parameter( k3, v3 ) );
+    BOOST_CHECK_NO_THROW( var.set_parameter( k4, v4 ) );
+    BOOST_CHECK_NO_THROW( var.set_parameter( k5, v5 ) );
+    specie_validation( var );
+    test_specie( var );
+    // Test serialization
+    boost::archive::text_oarchive oa( store );
+    // write class instance to archive
+    oa << var;
 
-      BOOST_CHECK_EQUAL( var.rate(), 0.0 );
-      BOOST_CHECK_NO_THROW( var.set_rate( rate ) );
-      BOOST_CHECK_EQUAL( var.rate(), rate );
+    // Test copy ctor
+    {
+      particle::specie var2( var );
+      BOOST_CHECK( var == var2 );
+      test_specie( var2 );
+    }
 
-      BOOST_CHECK_EQUAL( var.valency(), 0.0 );
-      BOOST_CHECK_NO_THROW( var.set_valency( valency ) );
-      BOOST_CHECK_EQUAL( var.valency(), valency );
+    // Test move ctor
+    {
+      particle::specie var3( var );
+      BOOST_CHECK( var == var3 );
+      particle::specie var2( std::move( var3 ) );
+      BOOST_CHECK( var == var2 );
+      test_specie( var2 );
+    }
 
-     BOOST_CHECK( var.label().empty() );
-      // NOTE : set_label assume label is valid and will not throw
-      // an error with an invalid label
-      BOOST_CHECK_NO_THROW( var.set_label( "" ) ); // Empty string is invalid
-      BOOST_CHECK_NO_THROW( var.set_label( "  " ) ); // All white space is invalid
-      BOOST_CHECK_NO_THROW( var.set_label( "N" ) ); // Single character is invalid
-      BOOST_CHECK_NO_THROW( var.set_label( "Nab" ) ); // More than two characters is invalid
-      BOOST_CHECK_NO_THROW( var.set_label( label ) );
-      BOOST_CHECK_EQUAL( var.label(), label );
+    // Test assignment
+    {
+      particle::specie var2;
+      BOOST_CHECK( not var2.is_valid() );
+      var2 = var;
+      BOOST_CHECK( var == var2 );
+      test_specie( var2 );
+    }
 
-      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::INVALID );
-      BOOST_CHECK( not var.is_valid() );
+  }
+  {
+    // Test (de)serialization
+    particle::specie var;
+    boost::archive::text_iarchive ia( store );
+    // get class instance from archive
+    ia >> var;
 
-      BOOST_CHECK_NO_THROW( var.set_type( particle::specie::MOBILE ) );
-      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::MOBILE );
-      BOOST_CHECK( not var.is_channel_only() );
-      BOOST_CHECK( not var.is_flexible() );
-      BOOST_CHECK(     var.is_localized() );
-      BOOST_CHECK(     var.is_mobile() );
-      BOOST_CHECK( not var.is_solute() );
-      BOOST_CHECK(     var.is_valid() );
+    specie_validation( var );
+    test_specie( var );
 
-      BOOST_CHECK_NO_THROW( var.set_type( particle::specie::FLEXIBLE ) );
-      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::FLEXIBLE );
-      BOOST_CHECK( not var.is_channel_only() );
-      BOOST_CHECK(     var.is_flexible() );
-      BOOST_CHECK(     var.is_localized() );
-      BOOST_CHECK( not var.is_mobile() );
-      BOOST_CHECK( not var.is_solute() );
-      BOOST_CHECK(     var.is_valid() );
+  }
+}
 
-      BOOST_CHECK_NO_THROW( var.set_type( particle::specie::CHANNEL_ONLY ) );
-      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::CHANNEL_ONLY );
-      BOOST_CHECK(     var.is_channel_only() );
-      BOOST_CHECK( not var.is_flexible() );
-      BOOST_CHECK( not var.is_localized() );
-      BOOST_CHECK( not var.is_mobile() );
-      BOOST_CHECK( not var.is_solute() );
-      BOOST_CHECK(     var.is_valid() );
 
-      BOOST_CHECK_NO_THROW( var.set_type( particle::specie::INVALID ) );
-      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::INVALID );
-      BOOST_CHECK( not var.is_channel_only() );
-      BOOST_CHECK( not var.is_flexible() );
-      BOOST_CHECK( not var.is_localized() );
-      BOOST_CHECK( not var.is_mobile() );
-      BOOST_CHECK( not var.is_solute() );
-      BOOST_CHECK( not var.is_valid() );
 
-      BOOST_CHECK_NO_THROW( var.set_type( particle::specie::SOLUTE ) );
-      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::SOLUTE );
-      BOOST_CHECK( not var.is_channel_only() );
-      BOOST_CHECK( not var.is_flexible() );
-      BOOST_CHECK( not var.is_localized() );
-      BOOST_CHECK( not var.is_mobile() );
-      BOOST_CHECK(     var.is_solute() );
-      BOOST_CHECK(     var.is_valid() );
+!!!968368.cpp!!!	specie_static_methods_test() : void
+// Test static methods
+bool ifset { false };
+BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::MOBILE ), core::strngs::fsmobl() );
+BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsmobl(), ifset ), particle::specie::MOBILE );
+BOOST_CHECK( ifset );
+ifset = false;
+BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::FLEXIBLE ), core::strngs::fsflxd() );
+BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsflxd(), ifset ), particle::specie::FLEXIBLE );
+BOOST_CHECK( ifset );
+ifset = false;
+BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::CHANNEL_ONLY ), core::strngs::fschon() );
+BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fschon(), ifset ), particle::specie::CHANNEL_ONLY );
+BOOST_CHECK( ifset );
+ifset = false;
+BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::SOLUTE ), core::strngs::fsfree() );
+BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsfree(), ifset ), particle::specie::SOLUTE );
+BOOST_CHECK( ifset );
+ifset = false;
+BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( "free", ifset ), particle::specie::SOLUTE );
+BOOST_CHECK( ifset );
+ifset = false;
+// Unrecognised string value, should return INVALID and ifset = false
+BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsspec(), ifset ), particle::specie::INVALID );
+BOOST_CHECK( not ifset );
+// Unrecognised string value, should return INVALID and ifset = false
+ifset = true;
+BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsspec(), ifset ), particle::specie::INVALID );
+BOOST_CHECK( not ifset );
 
-      // DO these test after setting type to SOLUTE
-      var.append_position( pos1 );
-      var.append_position( pos2 );
-      var.append_position( pos3 );
-      BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
-      BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
-      BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
+BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::INVALID ), "invalid" );
+BOOST_CHECK_THROW( particle::specie::type_label( particle::specie::INVALID + 1 ), std::runtime_error );
 
-       // Test parameter handling
-      BOOST_CHECK( not var.has_parameter( k1 ) );
-      BOOST_CHECK_NO_THROW( var.set_parameter( k1, v1 ) );
-      BOOST_CHECK( var.has_parameter( k1 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k1 ), v1 );
+!!!968240.cpp!!!	specie_methods_test() : void
+//Lambda to test specie validity
+auto specie_validation = []( particle::specie const& aspec )
+{
+  if( not aspec.is_valid() )
+  {
+    BOOST_CHECK( not( aspec.is_localized() or aspec.is_flexible()
+                      or aspec.is_solute() or aspec.is_channel_only()
+                      or aspec.is_mobile() ) );
+    BOOST_CHECK( aspec.label().empty() );
+    BOOST_CHECK_EQUAL( aspec.sub_type(), particle::specie::INVALID );
+  }
+  else
+  {
+    BOOST_CHECK( aspec.is_flexible() xor aspec.is_channel_only()
+                 xor aspec.is_mobile() xor aspec.is_solute() );
+    BOOST_CHECK( not aspec.is_localized() or ( aspec.is_flexible() or aspec.is_mobile() ) );
+    BOOST_CHECK_NE( aspec.sub_type(), particle::specie::INVALID );
+    BOOST_CHECK( not aspec.label().empty() );
+    BOOST_CHECK_EQUAL( aspec.label().size(), 2u );
+  }
+};
+{
+  // store for serialize test.
+  std::stringstream store;
+  // store for description test.
+  std::stringstream desc;
+  // Test values
+  const double concentration( 0.1 );
+  const double excess_potential( 0.1 );
+  const double chem_pot( std::log( concentration/core::constants::to_SI() ) + excess_potential );
+  const double radius( 0.9 );
+  const double rate( 0.5 );
+  const double valency( -1.0 );
+  const std::size_t count( 3ul );
+  const std::string label( "Na" );
+  const std::string k1( "key1" );
+  const std::string v1( "value 1" );
+  const std::string k2( "key 2" );
+  const std::string v2( "value2" );
+  const std::string k3( "key3" );
+  const std::string v3( "value\n3" );
+  const std::string k4( "key4" );
+  const std::string v4( "value\t4" );
+  const std::string k5( "key5" );
+  const std::string v5( "value5" );
+  const particle::coordinate pos1( 2.0, 0.0, 0.0 );
+  const particle::coordinate pos2( 0.0, 2.0, 0.0 );
+  const particle::coordinate pos3( 0.0, 0.0, 2.0 );
+  const particle::coordinate pos4( -2.0, 0.0, 2.0 );
+  const particle::centroid ctr1( 2.4, 2.1, 0.0, 0.0 );
+  const particle::centroid ctr2( 2.4, 0.0, 2.1, 0.0 );
+  const particle::centroid ctr3( 2.4, 0.0, 0.0, 2.1 );
+  {
+    particle::specie var;
+    BOOST_CHECK( not var.is_valid() );
 
-      BOOST_CHECK( not var.has_parameter( k2 ) );
-      BOOST_CHECK_NO_THROW( var.set_parameter( k2, v2 ) );
-      BOOST_CHECK( var.has_parameter( k2 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k2 ), v2 );
+    // Test getters/setters
+    BOOST_CHECK_EQUAL( var.concentration(), 0.0 );
+    BOOST_CHECK_NO_THROW( var.set_concentration( concentration ) );
+    BOOST_CHECK_EQUAL( var.concentration(), concentration );
 
-      BOOST_CHECK( not var.has_parameter( k3 ) );
-      BOOST_CHECK_NO_THROW( var.set_parameter( k3, v3 ) );
-      BOOST_CHECK( var.has_parameter( k3 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k3 ), v3 );
+    BOOST_CHECK_EQUAL( var.excess_potential(), 0.0 );
+    BOOST_CHECK_NO_THROW( var.set_excess_potential( excess_potential ) );
+    BOOST_CHECK_EQUAL( var.excess_potential(), excess_potential );
+    BOOST_CHECK_EQUAL( var.chemical_potential(), chem_pot );
 
-      BOOST_CHECK( not var.has_parameter( k4 ) );
-      BOOST_CHECK_NO_THROW( var.set_parameter( k4, v4 ) );
-      BOOST_CHECK( var.has_parameter( k4 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k4 ), v4 );
+    BOOST_CHECK_EQUAL( var.radius(), 0.0 );
+    BOOST_CHECK_NO_THROW( var.set_radius( radius ) );
+    BOOST_CHECK_EQUAL( var.radius(), radius );
 
-      BOOST_CHECK( not var.has_parameter( k5 ) );
-      BOOST_CHECK_NO_THROW( var.set_parameter( k5, v5 ) );
-      BOOST_CHECK( var.has_parameter( k5 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k5 ), v5 );
+    BOOST_CHECK_EQUAL( var.rate(), 0.0 );
+    BOOST_CHECK_NO_THROW( var.set_rate( rate ) );
+    BOOST_CHECK_EQUAL( var.rate(), rate );
 
-      // overwrite existing value not allowed
-      BOOST_CHECK( var.has_parameter( k1 ) );
-      BOOST_CHECK_THROW( var.set_parameter( k1, v2 ), std::runtime_error );
-      BOOST_CHECK( var.has_parameter( k1 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k1 ), v1 );
+    BOOST_CHECK_EQUAL( var.valency(), 0.0 );
+    BOOST_CHECK_NO_THROW( var.set_valency( valency ) );
+    BOOST_CHECK_EQUAL( var.valency(), valency );
 
-      specie_validation(var);
+    BOOST_CHECK( var.label().empty() );
+    // NOTE : set_label assume label is valid and will not throw
+    // an error with an invalid label
+    BOOST_CHECK_NO_THROW( var.set_label( "" ) ); // Empty string is invalid
+    BOOST_CHECK_NO_THROW( var.set_label( "  " ) ); // All white space is invalid
+    BOOST_CHECK_NO_THROW( var.set_label( "N" ) ); // Single character is invalid
+    BOOST_CHECK_NO_THROW( var.set_label( "Nab" ) ); // More than two characters is invalid
+    BOOST_CHECK_NO_THROW( var.set_label( label ) );
+    BOOST_CHECK_EQUAL( var.label(), label );
 
-      var.description( desc );
-      // Test serialization
-      boost::archive::text_oarchive oa(store);
-      // write class instance to archive
-      oa << var;
-   }
-   {
-      particle::specie var;
-      BOOST_CHECK(not var.is_valid ());
+    BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::INVALID );
+    BOOST_CHECK( not var.is_valid() );
 
-      // Test centroid append_position
-      BOOST_CHECK_NO_THROW( var.set_concentration( concentration ) );
-      BOOST_CHECK_NO_THROW( var.set_excess_potential( excess_potential ) );
-      BOOST_CHECK_NO_THROW( var.set_radius( radius ) );
-      BOOST_CHECK_NO_THROW( var.set_rate( rate ) );
-      BOOST_CHECK_NO_THROW( var.set_valency( valency ) );
-      BOOST_CHECK_NO_THROW( var.set_label( label ) );
-      BOOST_CHECK_NO_THROW( var.set_parameter( k1, v1 ) );
-      BOOST_CHECK_NO_THROW( var.set_parameter( k2, v2 ) );
-      BOOST_CHECK_NO_THROW( var.set_parameter( k3, v3 ) );
-      BOOST_CHECK_NO_THROW( var.set_parameter( k4, v4 ) );
-      BOOST_CHECK_NO_THROW( var.set_parameter( k5, v5 ) );
+    BOOST_CHECK_NO_THROW( var.set_type( particle::specie::MOBILE ) );
+    BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::MOBILE );
+    BOOST_CHECK( not var.is_channel_only() );
+    BOOST_CHECK( not var.is_flexible() );
+    BOOST_CHECK( var.is_localized() );
+    BOOST_CHECK( var.is_mobile() );
+    BOOST_CHECK( not var.is_solute() );
+    BOOST_CHECK( var.is_valid() );
 
-      var.append_position( pos1, ctr1 );
-      var.append_position( pos2, ctr2 );
-      var.append_position( pos3, ctr3 );
+    BOOST_CHECK_NO_THROW( var.set_type( particle::specie::FLEXIBLE ) );
+    BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::FLEXIBLE );
+    BOOST_CHECK( not var.is_channel_only() );
+    BOOST_CHECK( var.is_flexible() );
+    BOOST_CHECK( var.is_localized() );
+    BOOST_CHECK( not var.is_mobile() );
+    BOOST_CHECK( not var.is_solute() );
+    BOOST_CHECK( var.is_valid() );
 
-      BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
-      BOOST_CHECK_EQUAL( var.get_localization_data( 0 ), ctr1 );
-      BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
-      BOOST_CHECK_EQUAL( var.get_localization_data( 1 ), ctr2 );
-      BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
-      BOOST_CHECK_EQUAL( var.get_localization_data( 2 ), ctr3 );
+    BOOST_CHECK_NO_THROW( var.set_type( particle::specie::CHANNEL_ONLY ) );
+    BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::CHANNEL_ONLY );
+    BOOST_CHECK( var.is_channel_only() );
+    BOOST_CHECK( not var.is_flexible() );
+    BOOST_CHECK( not var.is_localized() );
+    BOOST_CHECK( not var.is_mobile() );
+    BOOST_CHECK( not var.is_solute() );
+    BOOST_CHECK( var.is_valid() );
 
-      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::MOBILE );
-      // Attempts to add particles to MOBILE specie fail
-      BOOST_CHECK_THROW( var.update_position( 3, pos4 ), std::runtime_error );
+    BOOST_CHECK_NO_THROW( var.set_type( particle::specie::INVALID ) );
+    BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::INVALID );
+    BOOST_CHECK( not var.is_channel_only() );
+    BOOST_CHECK( not var.is_flexible() );
+    BOOST_CHECK( not var.is_localized() );
+    BOOST_CHECK( not var.is_mobile() );
+    BOOST_CHECK( not var.is_solute() );
+    BOOST_CHECK( not var.is_valid() );
 
-      // Test serialization
-      boost::archive::text_oarchive oa(store);
-      // write class instance to archive
-      oa << var;
-   }
-   {
-      // Test (de)serialization
-      particle::specie var;
-      boost::archive::text_iarchive ia(store);
-      // get class instance from archive
-      ia >> var;
+    BOOST_CHECK_NO_THROW( var.set_type( particle::specie::SOLUTE ) );
+    BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::SOLUTE );
+    BOOST_CHECK( not var.is_channel_only() );
+    BOOST_CHECK( not var.is_flexible() );
+    BOOST_CHECK( not var.is_localized() );
+    BOOST_CHECK( not var.is_mobile() );
+    BOOST_CHECK( var.is_solute() );
+    BOOST_CHECK( var.is_valid() );
+    // Test parameter handling
+    BOOST_CHECK( not var.has_parameter( k1 ) );
+    BOOST_CHECK_NO_THROW( var.set_parameter( k1, v1 ) );
+    BOOST_CHECK( var.has_parameter( k1 ) );
+    BOOST_CHECK_EQUAL( var.parameter( k1 ), v1 );
 
-      specie_validation(var);
+    BOOST_CHECK( not var.has_parameter( k2 ) );
+    BOOST_CHECK_NO_THROW( var.set_parameter( k2, v2 ) );
+    BOOST_CHECK( var.has_parameter( k2 ) );
+    BOOST_CHECK_EQUAL( var.parameter( k2 ), v2 );
 
-      BOOST_CHECK_EQUAL( var.concentration(), concentration );
-      BOOST_CHECK_EQUAL( var.excess_potential(), excess_potential );
-      BOOST_CHECK_EQUAL( var.chemical_potential(), chem_pot );
-      BOOST_CHECK_EQUAL( var.radius(), radius );
-      BOOST_CHECK_EQUAL( var.rate(), rate );
-      BOOST_CHECK_EQUAL( var.valency(), valency );
-      BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
-      BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
-      BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
-      BOOST_CHECK_EQUAL( var.label(), label );
-      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::SOLUTE );
-      BOOST_CHECK( not var.is_channel_only() );
-      BOOST_CHECK( not var.is_flexible() );
-      BOOST_CHECK( not var.is_localized() );
-      BOOST_CHECK( not var.is_mobile() );
-      BOOST_CHECK(     var.is_solute() );
-      BOOST_CHECK(     var.is_valid() );
+    BOOST_CHECK( not var.has_parameter( k3 ) );
+    BOOST_CHECK_NO_THROW( var.set_parameter( k3, v3 ) );
+    BOOST_CHECK( var.has_parameter( k3 ) );
+    BOOST_CHECK_EQUAL( var.parameter( k3 ), v3 );
 
-      BOOST_CHECK( var.has_parameter( k1 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k1 ), v1 );
-      BOOST_CHECK( var.has_parameter( k2 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k2 ), v2 );
-      BOOST_CHECK( var.has_parameter( k3 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k3 ), v3 );
-      BOOST_CHECK( var.has_parameter( k4 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k4 ), v4 );
-      BOOST_CHECK( var.has_parameter( k5 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k5 ), v5 );
+    BOOST_CHECK( not var.has_parameter( k4 ) );
+    BOOST_CHECK_NO_THROW( var.set_parameter( k4, v4 ) );
+    BOOST_CHECK( var.has_parameter( k4 ) );
+    BOOST_CHECK_EQUAL( var.parameter( k4 ), v4 );
 
-      BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
-      BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
-      BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
+    BOOST_CHECK( not var.has_parameter( k5 ) );
+    BOOST_CHECK_NO_THROW( var.set_parameter( k5, v5 ) );
+    BOOST_CHECK( var.has_parameter( k5 ) );
+    BOOST_CHECK_EQUAL( var.parameter( k5 ), v5 );
 
-      // Test copy ctor
-      particle::specie var2(var);
+    // Make copy of specie for later tests without
+    // predefined particles for later tests
+    //////////////////////////////////////////////
+    particle::specie var4( var );
 
-      BOOST_CHECK( var.equivalent( var2 ) );
-      BOOST_CHECK( var2.equivalent( var ) );
+    // DO these test after setting type to SOLUTE
+    BOOST_CHECK_NO_THROW( var.append_position( pos1 ) );
+    BOOST_CHECK_NO_THROW( var.append_position( pos2 ) );
+    BOOST_CHECK_NO_THROW( var.append_position( pos3 ) );
+    BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
+    BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
+    BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
 
-      // Test assignment
-      particle::specie var3;
-      BOOST_CHECK( not var.equivalent( var3 ) );
-      var3 = var;
-      BOOST_CHECK( var.equivalent( var3 ) );
+    specie_validation( var );
+    var.description( desc );
 
-      // Test move
-      particle::specie var4( std::move( particle::specie( var ) ) );
-      BOOST_CHECK( var.equivalent( var4 ) );
+    // overwrite existing value not allowed
+    {
+      particle::specie var2( var );
+      BOOST_CHECK( var2.has_parameter( k1 ) );
+      BOOST_CHECK_THROW( var2.set_parameter( k1, v2 ), std::runtime_error );
+      BOOST_CHECK( var2.has_parameter( k1 ) );
+      BOOST_CHECK_EQUAL( var2.parameter( k1 ), v1 );
+    }
 
+    // Attempts to add particles using "update_position" to MOBILE specie
+    // fail
+    {
+      particle::specie var2( var );
+      BOOST_CHECK_NO_THROW( var2.set_type( particle::specie::MOBILE ) );
+      BOOST_CHECK_THROW( var2.update_position( 3, pos4 ), std::runtime_error );
+    }
+    // Attempts to add particles using "update_position" to FLEXIBLE specie
+    // fail
+    {
+      particle::specie var2( var );
+      BOOST_CHECK_NO_THROW( var2.set_type( particle::specie::FLEXIBLE ) );
+      BOOST_CHECK_THROW( var2.update_position( 3, pos4 ), std::runtime_error );
+    }
+    // Attempts to add particles using "update_position" to CHANNEL_ONLY
+    // specie fail
+    {
+      particle::specie var2( var );
+      BOOST_CHECK_NO_THROW( var2.set_type( particle::specie::CHANNEL_ONLY ) );
+      BOOST_CHECK_THROW( var2.update_position( 3, pos4 ), std::runtime_error );
+    }
+    // Attempts to add particles using "update_position" to SOLUTE
+    // specie work
+    {
+      particle::specie var2( var );
+      BOOST_CHECK_NO_THROW( var2.set_type( particle::specie::SOLUTE ) );
+      BOOST_CHECK_NO_THROW( var2.update_position( 3, pos4 ) );
+    }
+    {
       // Test invalid append_position (NOT MOBILE or FLEXIBLE)
-      BOOST_CHECK_THROW( var.append_position( pos1, ctr1 ), std::runtime_error );
-      var4.set_type( particle::specie::MOBILE );
-      // Test invalid append_position (already have locations without local_data)
-      BOOST_CHECK_THROW( var4.append_position( pos1, ctr1 ), std::runtime_error );
+      particle::specie var2( var );
+      BOOST_CHECK_NO_THROW( var2.set_type( particle::specie::SOLUTE ) );
+      BOOST_CHECK_THROW( var2.append_position( pos1, ctr1 ), std::runtime_error );
+    }
+    {
+      // Test invalid append_position to mobile specie without centroid
+      particle::specie var2;
+      BOOST_CHECK_NO_THROW( var2.set_type( particle::specie::MOBILE ) );
+      BOOST_CHECK_THROW( var2.append_position( pos2 ), std::runtime_error );
+    }
+    {
+      // Test invalid append_position (already have locations without
+      // local_data)
+      particle::specie var2;
+      BOOST_CHECK_NO_THROW( var2.append_position( pos2 ) );
+      BOOST_CHECK_THROW( var2.append_position( pos1, ctr1 ), std::runtime_error );
+    }
 
-      // Test update_position.
-      var4.update_position( 0, pos2 );
-      var4.update_position( 1, pos3 );
-      var4.update_position( 2, pos1 );
-      // Cannot add particle to MOBILE specie
-      BOOST_CHECK_THROW( var4.update_position( 3, pos4 ), std::runtime_error );
-      var4.set_type( particle::specie::SOLUTE );
-      var4.update_position( 3, pos4 );
-      BOOST_CHECK_EQUAL( var4.get_position( 0 ), pos2 );
-      BOOST_CHECK_EQUAL( var4.get_position( 1 ), pos3 );
-      BOOST_CHECK_EQUAL( var4.get_position( 2 ), pos1 );
-      BOOST_CHECK_EQUAL( var4.get_position( 3 ), pos4 );
-   }
-   {
-      // Test (de)serialization (should have ctrd)
-      particle::specie var;
-      boost::archive::text_iarchive ia(store);
-      // get class instance from archive
-      ia >> var;
-      BOOST_CHECK_EQUAL( var.concentration(), concentration );
-      BOOST_CHECK_EQUAL( var.excess_potential(), excess_potential );
-      BOOST_CHECK_EQUAL( var.chemical_potential(), chem_pot );
-      BOOST_CHECK_EQUAL( var.radius(), radius );
-      BOOST_CHECK_EQUAL( var.rate(), rate );
-      BOOST_CHECK_EQUAL( var.valency(), valency );
-      BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
-      BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
-      BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
-      BOOST_CHECK_EQUAL( var.label(), label );
-      BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::MOBILE );
 
-      BOOST_CHECK( var.has_parameter( k1 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k1 ), v1 );
-      BOOST_CHECK( var.has_parameter( k2 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k2 ), v2 );
-      BOOST_CHECK( var.has_parameter( k3 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k3 ), v3 );
-      BOOST_CHECK( var.has_parameter( k4 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k4 ), v4 );
-      BOOST_CHECK( var.has_parameter( k5 ) );
-      BOOST_CHECK_EQUAL( var.parameter( k5 ), v5 );
-
-      BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
-      BOOST_CHECK_EQUAL( var.get_localization_data( 0 ), ctr1 );
-      BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
-      BOOST_CHECK_EQUAL( var.get_localization_data( 1 ), ctr2 );
-      BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
-      BOOST_CHECK_EQUAL( var.get_localization_data( 2 ), ctr3 );
+    {
       // Test write_document
+      particle::specie var1( var4 );
+      BOOST_CHECK_NO_THROW( var1.set_type( particle::specie::MOBILE ) );
+      BOOST_CHECK_NO_THROW( var1.append_position( pos1, ctr1 ) );
+      BOOST_CHECK_NO_THROW( var1.append_position( pos2, ctr2 ) );
+      BOOST_CHECK_NO_THROW( var1.append_position( pos3, ctr3 ) );
+
       core::input_document wrtr( 1 );
       BOOST_CHECK( wrtr.empty() );
-      var.write_document( wrtr );
+      var1.write_document( wrtr );
       BOOST_CHECK( not wrtr.empty() );
       BOOST_CHECK_EQUAL( wrtr.size(), 1 );
       auto const& isec = wrtr[ 0 ];
       // DEBUG isec.write( std::cout );
       BOOST_CHECK_EQUAL( isec.label(), core::strngs::fsspec() );
       // Check for all entries
-      auto quote = [](std::string s){ return '"' + s + '"'; };
+      auto quote = []( std::string s )
+      {
+        return '"' + s + '"';
+      };
 
+      BOOST_REQUIRE( isec.has_entry( core::strngs::fstype() ) );
+      BOOST_CHECK_EQUAL( isec.get_entry( core::strngs::fstype() ), particle::specie::type_label( particle::specie::MOBILE ) );
       BOOST_REQUIRE( isec.has_entry( core::strngs::fsctrg() ) );
       BOOST_CHECK_EQUAL( std::stod( isec.get_entry( core::strngs::fsctrg() ) ), concentration );
       BOOST_CHECK( isec.has_entry( core::strngs::fsname() ) );
-      BOOST_CHECK_EQUAL( isec.get_entry( core::strngs::fsname() ), quote(label) );
+      BOOST_CHECK_EQUAL( isec.get_entry( core::strngs::fsname() ), quote( label ) );
       BOOST_REQUIRE( isec.has_entry( core::strngs::fsd() ) );
       BOOST_CHECK_EQUAL( std::stod( isec.get_entry( core::strngs::fsd() ) )/2, radius );
       BOOST_REQUIRE( isec.has_entry( core::strngs::fsz() ) );
@@ -1584,119 +1679,121 @@ auto specie_validation = [](particle::specie const& aspec)
       iss >> pos >> ctr;
       BOOST_CHECK_EQUAL( pos, pos3 );
       BOOST_CHECK_EQUAL( ctr, ctr3 );
-
-   }
-   {
-      // Parse description
-      while( true )
+    }
+    // Parse description
+    while( true )
+    {
+      std::string line;
+      std::getline( desc, line );
+      // DEBUG : std::cout << "LINE[" << line << "]\n";
+      if( desc.eof() )
       {
-         std::string line;
-         std::getline( desc, line );
-         // DEBUG : std::cout << "LINE[" << line << "]\n";
-         if ( desc.eof() )
-         {
-            break;
-         }
-         if ( line.empty() )
-         {
-            continue;
-         }
-         const std::size_t split_pos { line.find(':') };
-         if ( std::string::npos != split_pos )
-         {
-            std::size_t beg( 0 ), end( 0 );
-            for (end = split_pos - 1; std::isspace(line[end]) and end != 0; --end)
-               {}
-            if (not std::isspace(line[end])) ++end;
-            BOOST_REQUIRE( end != 0 );
-
-            for (beg = 0; std::isspace( line[beg] ) and beg != end; ++beg)
-               {};
-            BOOST_REQUIRE_NE( beg, end );
-
-            const std::string name( line.substr( beg, end - beg ) );
-
-            end = line.size();
-            for ( end = line.size() - 1; std::isspace( line[end] ) and end != split_pos + 1; --end )
-               {}
-            if ( not std::isspace( line[end] ) ) ++end;
-            for ( beg = split_pos + 1; std::isspace( line[beg] ) and beg != end; ++beg )
-               {};
-            if (beg != split_pos + 1) --beg;
-            BOOST_REQUIRE_LE( beg, end );
-
-            const std::string value( line.substr( beg, end - beg ) );
-            // DEBUG std::cout << "CHECK [" << name << "][" << value << "]\n";
-            if (name == "label")
-            {
-               BOOST_CHECK_EQUAL( value, label );
-            }
-            else if (name == "radius" )
-            {
-               BOOST_CHECK( utility::feq( std::stod( value ), radius ) );
-            }
-            else if (name == "rate" )
-            {
-               BOOST_CHECK( utility::feq( std::stod( value ), rate ) );
-            }
-            else if (name == "valency" )
-            {
-               BOOST_CHECK( utility::feq( std::stod( value ), valency ) );
-            }
-            else if (name == "excess c.p." )
-            {
-               BOOST_CHECK( utility::feq( std::stod( value ), excess_potential ) );
-            }
-            else if (name == "chem. pot." )
-            {
-               const double cp { std::stod( value ) };
-               BOOST_CHECK_LT( cp, chem_pot + 0.000005 );
-               BOOST_CHECK_GT( cp, chem_pot - 0.000005 );
-            }
-            else if (name == "target conc." )
-            {
-               BOOST_CHECK( utility::feq( std::stod( value ), concentration ) );
-            }
-            else if (name == "type" )
-            {
-               BOOST_CHECK_EQUAL( value, particle::specie::type_label(particle::specie::SOLUTE) );
-            }
-            else if (name == "radius" )
-            {
-               BOOST_CHECK( utility::feq( std::stod( value ), radius ) );
-            }
-            else if (name == k1 )
-            {
-               BOOST_CHECK_EQUAL( v1, value );
-            }
-            else if (name == k2 )
-            {
-               BOOST_CHECK_EQUAL( v2, value );
-            }
-            else if (name == k3 )
-            {
-               std::string value2;
-               std::getline( desc, value2 );
-               value2.insert( 0, "\n" );
-               value2.insert( 0, value );
-               BOOST_CHECK_EQUAL( v3, value2 );
-            }
-            else if (name == k4 )
-            {
-               BOOST_CHECK_EQUAL( v4, value );
-            }
-            else if (name == k5 )
-            {
-               BOOST_CHECK_EQUAL( v5, value );
-            }
-            else
-            {
-               std::cout << "Unchecked [" << name << "][" << value << "]\n";
-            }
-         }
+        break;
       }
-   }
+      if( line.empty() )
+      {
+        continue;
+      }
+      const std::size_t split_pos { line.find( ':' ) };
+      if( std::string::npos != split_pos )
+      {
+        std::size_t beg( 0 ), end( 0 );
+        for( end = split_pos - 1; std::isspace( line[end] ) and end != 0; --end )
+        {}
+        if( not std::isspace( line[end] ) ) ++end;
+        BOOST_REQUIRE( end != 0 );
+
+        for( beg = 0; std::isspace( line[beg] ) and beg != end; ++beg )
+        {};
+        BOOST_REQUIRE_NE( beg, end );
+
+        const std::string name( line.substr( beg, end - beg ) );
+
+        end = line.size();
+        for( end = line.size() - 1; std::isspace( line[end] ) and end != split_pos + 1; --end )
+        {}
+        if( not std::isspace( line[end] ) ) ++end;
+        for( beg = split_pos + 1; std::isspace( line[beg] ) and beg != end; ++beg )
+        {};
+        if( beg != split_pos + 1 ) --beg;
+        BOOST_REQUIRE_LE( beg, end );
+
+        const std::string value( line.substr( beg, end - beg ) );
+        // DEBUG std::cout << "CHECK [" << name << "][" << value << "]\n";
+        if( name == "label" )
+        {
+          BOOST_CHECK_EQUAL( value, label );
+        }
+        else if( name == "radius" )
+        {
+          BOOST_CHECK( utility::feq( std::stod( value ), radius ) );
+        }
+        else if( name == "rate" )
+        {
+          BOOST_CHECK( utility::feq( std::stod( value ), rate ) );
+        }
+        else if( name == "valency" )
+        {
+          BOOST_CHECK( utility::feq( std::stod( value ), valency ) );
+        }
+        else if( name == "excess c.p." )
+        {
+          BOOST_CHECK( utility::feq( std::stod( value ), excess_potential ) );
+        }
+        else if( name == "chem. pot." )
+        {
+          const double cp
+          {
+            std::stod( value )
+          };
+          BOOST_CHECK_LT( cp, chem_pot + 0.000005 );
+          BOOST_CHECK_GT( cp, chem_pot - 0.000005 );
+        }
+        else if( name == "target conc." )
+        {
+          BOOST_CHECK( utility::feq( std::stod( value ), concentration ) );
+        }
+        else if( name == "type" )
+        {
+          BOOST_CHECK_EQUAL( value, particle::specie::type_label( particle::specie::SOLUTE ) );
+        }
+        else if( name == "radius" )
+        {
+          BOOST_CHECK( utility::feq( std::stod( value ), radius ) );
+        }
+        else if( name == k1 )
+        {
+          BOOST_CHECK_EQUAL( v1, value );
+        }
+        else if( name == k2 )
+        {
+          BOOST_CHECK_EQUAL( v2, value );
+        }
+        else if( name == k3 )
+        {
+          std::string value2;
+          std::getline( desc, value2 );
+          value2.insert( 0, "\n" );
+          value2.insert( 0, value );
+          BOOST_CHECK_EQUAL( v3, value2 );
+        }
+        else if( name == k4 )
+        {
+          BOOST_CHECK_EQUAL( v4, value );
+        }
+        else if( name == k5 )
+        {
+          BOOST_CHECK_EQUAL( v5, value );
+        }
+        else
+        {
+          std::cout << "Unchecked [" << name << "][" << value << "]\n";
+        }
+      }
+    }
+  }
 }
+
 !!!958000.cpp!!!	specie_input_bad_subtype_value_test() : void
 boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
 core::input_delegater dg( 1 );
