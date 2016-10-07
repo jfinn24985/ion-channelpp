@@ -2,38 +2,9 @@ class particle_manager
 !!!908336.cpp!!!	serialize(inout ar : Archive, in version : unsigned int) : void
 ar & species_;
 ar & ensemble_;
-ar & target_particles_;
-!!!951344.cpp!!!	add_predefined_particles() : void
-// Local reference to the ensemble.
-particle::ensemble &ens( *this->ensemble_ );
-
-// Add any predifined particles to the ensemble
-for (std::size_t ispec { 0 }; ispec != this->species_.size(); ++ispec)
-{
-   auto const& spc = this->species_[ ispec ];
-   if ( spc.get_position_size() != 0 )
-   {
-      for (std::size_t idx { 0 }; idx != spc.get_position_size(); ++idx)
-      {
-         ens.append_position( ispec, spc.get_position( idx ) );
-      }
-   }
-}
-!!!951344.python!!!	add_predefined_particles() : void
-from constants import constants
-## Generate a list of trial types
-self.update_choices()
-sumconc = self.ionic_strength()
-# Use a PBC system.
-from periodic_system import periodic_system
-self.cell_region_ = periodic_system(self.target_particles_ * constants.to_SI() / sumconc)
-# Generate initial ensemble on a grid
-gridder = self.cell_region_.make_grid_generator( self.target_particles_, self.get_random() ) 
-self.ensemble_.generate_ensemble( gridder, self.target_particles_, self.get_random() )
-pass
 !!!937520.cpp!!!	charge() : double
 double result = 0.0;
-for( std::size_t ii = 0; ii != this->species_.size(); ++ii )
+for( std::size_t ii = 0; ii != this->ensemble_->known_keys(); ++ii )
 {
   result += ( this->species_[ii].valency() * this->ensemble_->specie_count( ii ) );
 }
@@ -42,7 +13,6 @@ return result;
 !!!907952.cpp!!!	description(inout os : ostream) : void
 os << "[ensemble]\n- base settings\n";
 os << "            specie count : " << this->specie_count() << "\n";
-os << " starting particle count : " << this->target_count() << "\n"; 
 if( 0 != this->specie_count() )
 {
   os << core::strngs::horizontal_bar() << "\n";
@@ -108,27 +78,59 @@ for (auto const& spc: this->species_)
 return false;
 !!!951216.cpp!!!	write_document(inout wr : input_document) : void
 // Add specie definitions.
+if( this->specie_count() != 0ul )
 {
-   // Update specie position information.
-   //////////////////////////////////////
+  // Update specie position information.
+  //////////////////////////////////////
+  if( this->ensemble_->count() != 0ul )
+  {
+    // local index of each specie
+    std::vector< std::size_t > cursors( this->specie_count(), 0ul );
 
-   // local index of each specie
-   std::vector< std::size_t > cursors( this->specie_count(), 0ul );
-
-   for(std::size_t idx = 0; idx != this->ensemble_->size(); ++ idx)
-   {
+    for( std::size_t idx = 0ul; idx != this->ensemble_->size(); ++ idx )
+    {
       const std::size_t ispec { this->ensemble_->key( idx ) };
-      if ( ispec != particle::specie_key::nkey )
+      if( ispec != particle::specie_key::nkey )
       {
-         this->species_[ ispec ].update_position( cursors[ ispec ], this->ensemble_->position( idx ) );
-         ++cursors[ ispec ];
+        this->species_[ ispec ].update_position( cursors[ ispec ], this->ensemble_->position( idx ) );
+        ++cursors[ ispec ];
       }
-   }
-   // Write updated specie definitions.
-   ////////////////////////////////////
-   for(auto const& spc : this->species_)
-   {
-      spc.write_document( wr );
-   }
+    }
+  }
+  // Write updated specie definitions.
+  ////////////////////////////////////
+  for( auto const& spc : this->species_ )
+  {
+    spc.write_document( wr );
+  }
 }
 
+
+!!!951344.cpp!!!	add_predefined_particles() : void
+// Local reference to the ensemble.
+particle::ensemble &ens( *this->ensemble_ );
+
+// Add any predifined particles to the ensemble
+for (std::size_t ispec { 0 }; ispec != this->species_.size(); ++ispec)
+{
+   auto const& spc = this->species_[ ispec ];
+   if ( spc.get_position_size() != 0 )
+   {
+      for (std::size_t idx { 0 }; idx != spc.get_position_size(); ++idx)
+      {
+         ens.append_position( ispec, spc.get_position( idx ) );
+      }
+   }
+}
+!!!951344.python!!!	add_predefined_particles() : void
+from constants import constants
+## Generate a list of trial types
+self.update_choices()
+sumconc = self.ionic_strength()
+# Use a PBC system.
+from periodic_system import periodic_system
+self.cell_region_ = periodic_system(self.target_particles_ * constants.to_SI() / sumconc)
+# Generate initial ensemble on a grid
+gridder = self.cell_region_.make_grid_generator( self.target_particles_, self.get_random() ) 
+self.ensemble_.generate_ensemble( gridder, self.target_particles_, self.get_random() )
+pass
