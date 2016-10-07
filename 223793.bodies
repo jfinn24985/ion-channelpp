@@ -1022,7 +1022,167 @@ std::stringstream store;
 
    BOOST_CHECK_NO_THROW( ens2.check_invariants() );
 }
+!!!975920.cpp!!!	particle_manager_lifetime_test() : void
+
+{
+  // Test is canonical pattern
+  BOOST_CHECK( std::is_default_constructible< particle::particle_manager >::type {} );
+  BOOST_CHECK( std::is_copy_constructible< particle::particle_manager >::type {} );
+  BOOST_CHECK( std::is_move_constructible< particle::particle_manager >::type {} );
+  BOOST_CHECK( ( std::is_assignable< particle::particle_manager, particle::particle_manager >::type {} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< particle::particle_manager >::type {} );
+}
+{
+  // default ctor.
+  particle::particle_manager mgr;
+  BOOST_CHECK_EQUAL( mgr.charge(), 0.0 );
+  BOOST_CHECK_EQUAL( mgr.get_ensemble().count(), 0 );
+  BOOST_CHECK_EQUAL( mgr.specie_count(), 0 );
+}
+
+auto check_manager = []( particle::particle_manager const& mgr )->void
+{
+  BOOST_REQUIRE_EQUAL( mgr.specie_count(), 1 );
+  BOOST_REQUIRE_EQUAL( mgr.get_ensemble().count(), 1 );
+  BOOST_CHECK_EQUAL( mgr.get_ensemble().specie_count( 0 ), 1 );
+  particle::coordinate pos( 0.3, 0.1, 0.4 );
+  BOOST_CHECK_EQUAL( mgr.get_ensemble().position( 0 ), pos );
+  BOOST_CHECK( mgr.has_specie( "PC" ) );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 0 ).label(), "PC" );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 0 ).valency(), 2.0 );
+};
+std::stringstream store;
+{
+  boost::shared_ptr< particle::particle_manager > mgr( new particle::particle_manager );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( mgr ) );
+    dg.add_input_delegate( m );
+  }
+  // Use input file to add data to manager
+  std::string canon_input( "specie\ntype mob\nname \"PC\"\nz 2.0\nd 1.1\nn 1\n0.3 0.1 0.4 1.0 0.2 0.0 3.4\nend\n\n" );
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  BOOST_REQUIRE_NO_THROW( mgr->add_predefined_particles() );
+
+  check_manager( *mgr );
+  // copy ctor
+  {
+    particle::particle_manager mgr1( *mgr );
+    check_manager( mgr1 );
+  }
+  // move ctor
+  {
+    particle::particle_manager mgr2( *mgr );
+    particle::particle_manager mgr1( std::move( mgr2 ) );
+    check_manager( mgr1 );
+  }
+
+  // assignment
+  {
+    particle::particle_manager mgr1;
+    BOOST_REQUIRE_EQUAL( mgr1.specie_count(), 0 );
+    mgr1 = *mgr;
+    check_manager( mgr1 );
+  }
+
+  // Test serialization
+  boost::archive::text_oarchive oa( store );
+  // write class instance to archive
+  oa << mgr;
+}
+{
+  // Test (de)serialization
+  boost::shared_ptr< particle::particle_manager > mgr;
+  boost::archive::text_iarchive ia( store );
+  // get class instance from archive
+  ia >> mgr;
+  BOOST_REQUIRE( mgr ); 
+  check_manager( *mgr );
+}
+
+!!!968112.cpp!!!	particle_manager_methods_test() : void
+boost::shared_ptr< particle::particle_manager > mgr( new particle::particle_manager );
+
+// Use input file to add data to manager
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( mgr ) );
+  dg.add_input_delegate( m );
+}
+std::string canon_input( "specie\ntype mob\nname \"PC\"\nz 2.0\nd 1.1\nn 1\n0.3 0.1 0.4 1.0 0.2 0.0 3.4\nend\n\n" );
+const particle::coordinate pos0( 0.3, 0.1, 0.4 );
+const particle::coordinate pos1( 2.0, 0.0, 0.0 );
+const particle::coordinate pos2( 0.0, 2.0, 0.0 );
+const particle::coordinate pos3( 0.0, 0.0, 2.0 );
+const particle::centroid ctr0( 1.0, 0.2, 0.0, 3.4 );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+BOOST_REQUIRE_EQUAL( mgr->specie_count(), 1 );
+BOOST_REQUIRE( mgr->has_specie( "PC" ) );
+BOOST_REQUIRE_EQUAL( mgr->get_specie_key( "PC" ), 0 );
+BOOST_CHECK_EQUAL( mgr->get_specie( 0 ).label(), "PC" );
+BOOST_CHECK_EQUAL( mgr->get_species().at( 0 ).label(), "PC" );
+BOOST_CHECK_EQUAL( mgr->get_specie( 0 ).valency(), 2.0 );
+BOOST_CHECK( mgr->get_specie( 0 ).is_mobile() );
+BOOST_REQUIRE_EQUAL( mgr->get_specie( 0 ).get_position_size(), 1 );
+BOOST_REQUIRE_EQUAL( mgr->get_specie( 0 ).get_localization_size(), 1 );
+BOOST_CHECK_EQUAL( mgr->get_specie( 0 ).get_position( 0 ), pos0 );
+BOOST_CHECK_EQUAL( mgr->get_specie( 0 ).get_localization_data( 0 ), ctr0 );
+
+BOOST_REQUIRE_EQUAL( mgr->get_ensemble().count(), 0 );
+
+BOOST_REQUIRE_EQUAL( mgr->charge(), 0.0 );
+
+// Manually build and add specie
+{
+  particle::specie var;
+  var.set_radius( 0.9 );
+  var.set_rate( 0.5 );
+  var.set_valency( -1.0 );
+  var.set_label( "Cl" );
+  var.append_position( pos1 );
+  var.append_position( pos2 );
+  var.append_position( pos3 );
+  var.set_type( particle::specie::SOLUTE );
+  mgr->add_specie( var );
+}
+BOOST_REQUIRE( mgr->has_specie( "Cl" ) );
+BOOST_REQUIRE_EQUAL( mgr->get_specie_key( "Cl" ), 1 );
+BOOST_CHECK_EQUAL( mgr->get_specie( 1 ).label(), "Cl" );
+BOOST_CHECK_EQUAL( mgr->get_species().at( 1 ).label(), "Cl" );
+BOOST_CHECK_EQUAL( mgr->get_specie( 1 ).valency(), -1.0 );
+BOOST_CHECK( mgr->get_specie( 1 ).is_solute() );
+BOOST_REQUIRE_EQUAL( mgr->get_specie( 1 ).get_position_size(), 3 );
+BOOST_REQUIRE_EQUAL( mgr->get_specie( 1 ).get_localization_size(), 0 );
+BOOST_CHECK_EQUAL( mgr->get_specie( 1 ).get_position( 0 ), pos1 );
+BOOST_CHECK_EQUAL( mgr->get_specie( 1 ).get_position( 1 ), pos2 );
+BOOST_CHECK_EQUAL( mgr->get_specie( 1 ).get_position( 2 ), pos3 );
+
+// copy position from species to ensemble
+BOOST_REQUIRE_NO_THROW( mgr->add_predefined_particles() );
+BOOST_REQUIRE_EQUAL( mgr->get_ensemble().count(), 4 );
+BOOST_CHECK_EQUAL( mgr->get_ensemble().specie_count( 0 ), 1 );
+BOOST_CHECK_EQUAL( mgr->get_ensemble().specie_count( 1 ), 3 );
+BOOST_CHECK_EQUAL( mgr->get_ensemble().position( 0 ), pos0 );
+BOOST_CHECK_EQUAL( mgr->get_ensemble().position( 1 ), pos1 );
+BOOST_CHECK_EQUAL( mgr->get_ensemble().position( 2 ), pos2 );
+BOOST_CHECK_EQUAL( mgr->get_ensemble().position( 3 ), pos3 );
+
+BOOST_REQUIRE_EQUAL( mgr->charge(), -1.0 );
+
 !!!413105.cpp!!!	specie_meta_test() : void
+{
+  // Test is virtual + noncopyable object type
+  BOOST_CHECK( not std::is_default_constructible< particle::specie_meta >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< particle::specie_meta >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< particle::specie_meta >::type {} );
+  BOOST_CHECK( not( std::is_assignable< particle::specie_meta, particle::specie_meta >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< particle::specie_meta >::type {} );
+}
 // TEST management of keywords
 for( std::string kw : {
        core::strngs::fsname(), core::strngs::fstype(), core::strngs::fsrtsp(), core::strngs::fsd(), core::strngs::fsz(), core::strngs::fsctrg(), core::strngs::fschex(), core::strngs::fsn()
