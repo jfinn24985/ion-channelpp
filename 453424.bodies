@@ -1,0 +1,38 @@
+class open_cylinder_region
+!!!995888.cpp!!!	fits(in radius : double) : bool
+return this->radius_ >= radius;
+!!!996016.cpp!!!	is_inside(in pos : coordinate, in radius : double) : bool
+if( this->radius_ < radius )
+{
+  // sphere can not fit in cylinder
+  return false;
+}
+if( ( this->half_length_ ) < std::abs( pos.y ) )
+{
+  // sphere centre outside end
+  return false;
+}
+if( std::pow( this->radius_ - radius, 2 ) < ( pos.x * pos.x + pos.y * pos.y ) )
+{
+  // sphere too close to wall
+  return false;
+}
+return true;
+
+!!!996144.cpp!!!	do_new_position(inout rgnr : random_distribution, in radius : double) : coordinate
+// A random position within cylinder
+particle::coordinate pos( 0.0, 0.0, 0.0 );
+if( radius < this->radius_ )
+{
+  const double r( rgnr.uniform( this->radius_ - radius ) );
+  const double phi( rgnr.uniform( 0.0, core::constants::pi() * 2 ) );
+  pos.x = r * std::cos( phi );
+  pos.y = r * std::sin( phi );
+}
+// else x = 0, y = 0
+
+{
+  pos.z = rgnr.uniform( -this->half_length_, this->half_length_ );
+}
+return pos;
+
