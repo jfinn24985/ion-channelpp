@@ -1,6 +1,6 @@
 format 75
 "geometry" // geometry
-  revision 1
+  revision 2
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -106,6 +106,23 @@ format 75
       size A4
     end
 
+    sequencediagram 272304 "Use grid to generate new positions"
+      show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
+      comment " Look at interactions between geometry system and the
+ simulation while using a gridder to generate new
+ positions"
+      overlapping_bars size A4
+    end
+
+    sequencediagram 272560 "New, random particle postion"
+      show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
+      comment " Finding a new position for a particle that is to be added or jump moved.
+
+ This sequence is similar for both the initial system generation and 
+ when particles are added or jump moved during the simulation."
+      overlapping_bars size A4
+    end
+
     class 452656 "geometry_manager"
       abstract visibility package 
       cpp_decl "${comment}${template}class ${name}${inherit}
@@ -139,12 +156,12 @@ ${docstring}${members}
 
  * Managing access to regions and region nesting"
       operation 989488 "calculate_distances"
-	abstract cpp_virtual public explicit_return_type "void"
+	abstract const cpp_virtual public explicit_return_type "void"
 	nparams 3
 	  param in name "pos" type class_ref 986799 // coordinate
 	  param in name "others" type class_ref 223792 // coordinate_set
 	  param inout name "result" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, std::vector< ${t2} >& ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
 "
 	
 	
@@ -159,7 +176,7 @@ ${docstring}${body}
       end
 
       operation 989616 "calculate_distance"
-	abstract cpp_virtual public explicit_return_type "double"
+	abstract const cpp_virtual public explicit_return_type "double"
 	nparams 2
 	  param in name "pos1" type class_ref 986799 // coordinate
 	  param in name "pos2" type class_ref 986799 // coordinate
@@ -175,11 +192,11 @@ ${docstring}${body}
       end
 
       operation 989744 "locate_region"
-	abstract cpp_virtual public explicit_return_type "void"
+	abstract const cpp_virtual public explicit_return_type "void"
 	nparams 2
 	  param in name "pos" type class_ref 986799 // coordinate
 	  param inout name "regns" type class_ref 452912 // base_region
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, std::vector< boost::shared_ptr< ${t1} > >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
 	
 	
@@ -193,9 +210,9 @@ ${docstring}${body}
       end
 
       operation 989872 "system_region"
-	abstract cpp_virtual public return_type class_ref 452912 // base_region
+	abstract const cpp_virtual public return_type class_ref 452912 // base_region
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} const& ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${)}${const}${volatile}${throw}${abstract};
 "
 	
 	
@@ -204,28 +221,6 @@ ${docstring}${body}
 "
 	
 	comment " Get the region representing the entire system."
-      end
-
-      operation 990000 "make_gridder"
-	abstract cpp_virtual public return_type class_ref 289841 // grid_generator
-	nparams 3
-	  param in name "min_inter_node" explicit_type "double"
-	  param in name "min_count" explicit_type "size_t"
-	  param inout name "rgenr" type class_ref 463407 // random_distribution
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type}& ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Create a gridder object for this system. A gridder object
- provides a sequence of positions on a lattice within the
- system. The inter-node distance is guarranteed to have the
- given minimum distance and the given minimum number of
- points.  The gridder provides the positions in a random
- sequence."
       end
     end
 
@@ -334,6 +329,26 @@ ${docstring}${body}
  this implies the radius must be ignored in the periodic
  dimension(s).
 "
+      end
+
+      operation 990000 "make_gridder"
+	abstract const cpp_virtual public return_type class_ref 289841 // grid_generator
+	nparams 1
+	  param inout name "rgenr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create a gridder object for this system. A gridder object
+ provides a sequence of positions on a lattice within the
+ system. The inter-node distance is guarranteed to have the
+ given minimum distance and the given minimum number of
+ points.  The gridder provides the positions in a random
+ sequence."
       end
 
       operation 989360 "new_position"
@@ -504,7 +519,6 @@ ${docstring}${body}
 	comment " Attempt to bring a position outside the region to one inside.
  Returns false if this can not be done, otherwise true."
       end
-
     end
 
     class 183856 "cylinder_region"
@@ -908,7 +922,6 @@ ${docstring}${body}
 
  * NOTE: len is cylinder length **not** half length"
       end
-
     end
 
     class 453424 "open_cylinder_region"
@@ -1651,7 +1664,6 @@ ${docstring}${body}
  with the given radius. For this periodic system this is always 
  equivalent to volume()."
       end
-
     end
 
     class 453040 "base_solid_object"
@@ -1735,6 +1747,7 @@ ${docstring}${body}
  object."
       end
     end
+
   end
 
   classview 501551 "grid builders"
