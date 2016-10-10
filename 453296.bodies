@@ -1,4 +1,53 @@
 class periodic_cube_region
+!!!296881.cpp!!!	calculate_distances(in pos : coordinate, in others : coordinate_set, inout result : double, in endindex : size_t, in startindex : size_t) : void
+const particle::coordinate newpos(pos);
+const double box = this->length_;
+const double hbox = box/2;
+result.resize( endindex );
+if( startindex != 0 )
+{
+  for (std::size_t jj = o, jj != startindex; ++jj)
+  {
+    result[jj] = 0.0;
+  }
+}
+for (std::size_t jj = startindex; jj != endindex; ++jj)
+{
+   // --------------
+   // Calculate r_ij
+   double dx = newpos.x - others.x( jj );
+   double dy = newpos.y - others.y( jj );
+   double dz = newpos.z - others.z( jj );
+   dx += (dx > hbox ? -box : ( dx < -hbox ? box : 0.0));
+   dy += (dy > hbox ? -box : ( dy < -hbox ? box : 0.0));
+   dz += (dz > hbox ? -box : ( dz < -hbox ? box : 0.0));
+   result[jj] = std::sqrt(dx*dx + dy*dy + dz*dz);
+}
+!!!296881.python!!!	calculate_distances(in pos : coordinate, in others : coordinate_set, inout result : double, in endindex : size_t, in startindex : size_t) : void
+dx = position[0] - ens.x[start_index:len(ens)]
+dy = position[1] - ens.y[start_index:len(ens)]
+dz = position[2] - ens.z[start_index:len(ens)]
+# Calculate minimum distance in PBC cube
+# using numpy array operations
+import numpy as np
+box = self.length_
+hbox = box/2
+dx = np.where(dx > hbox, dx - box, np.where (dx < -hbox, dx + box, dx))
+dy = np.where(dy > hbox, dy - box, np.where (dy < -hbox, dy + box, dy))
+dz = np.where(dz > hbox, dz - box, np.where (dz < -hbox, dz + box, dz))
+result = np.zeros(len(ens))
+result[start_index:len(ens)] = np.sqrt(dx*dx + dy*dy + dz*dz)
+return result
+!!!218673.cpp!!!	calculate_distance_squared(in pos1 : coordinate, in pos2 : coordinate) : double
+const double box (this->length_);
+const double hbox (box/2);
+double dx = pos1.x - pos2.x;
+double dy = pos1.y - pos2.y;
+double dz = pos1.z - pos2.z;
+dx = (dx > hbox ? dx - box : (dx < -hbox ? dx + box : dx));
+dy = (dy > hbox ? dy - box : (dy < -hbox ? dy + box : dy));
+dz = (dz > hbox ? dz - box : (dz < -hbox ? dz + box : dz));
+return dx*dx + dy*dy + dz*dz;
 !!!992816.cpp!!!	do_new_position(inout rgnr : random_distribution, in radius : double) : coordinate
 return particle::coordinate( rgnr.uniform( this->length_ ), rgnr.uniform( this->length_ ), rgnr.uniform( this->length_ ) );
 !!!994224.cpp!!!	do_new_position_wrap(inout pos : coordinate, in radius : double) : bool

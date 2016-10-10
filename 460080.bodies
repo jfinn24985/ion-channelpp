@@ -1,0 +1,31 @@
+class open_split_cylinder_region
+!!!1008048.cpp!!!	is_inside(in pos : coordinate, in radius : double) : bool
+if( ( this->offset_ ) > std::abs( pos.y ) )
+{
+  // sphere centre between two parts.
+  return false;
+}
+if( ( this->offset_ + this->half_length_ ) > std::abs( pos.y ) )
+{
+  // sphere beyond end.
+  return false;
+}
+if( std::pow( this->radius_, 2 ) < ( pos.x * pos.x + pos.y * pos.y ) )
+{
+  // sphere outside wall
+  return false;
+}
+return true;
+
+!!!1008176.cpp!!!	do_new_position(inout rgnr : random_distribution, in radius : double) : coordinate
+// A random position within either cylinder part
+particle::coordinate pos( 0.0, 0.0, 0.0 );
+const double r( rgnr.uniform( this->radius_ ) );
+const double phi( rgnr.uniform( 0.0, core::constants::pi() * 2 ) );
+pos.x = r * std::cos( phi );
+pos.y = r * std::sin( phi );
+pos.z = rgnr.uniform( -this->half_length_, this->half_length_ );
+pos.z = ( pos.z < 0.0 ? pos.z - this->offset_ : pos.z + this->offset_ );
+return pos;
+
+

@@ -1,6 +1,6 @@
 format 75
 "geometry" // geometry
-  revision 2
+  revision 3
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -123,8 +123,211 @@ format 75
       overlapping_bars size A4
     end
 
+    activity 128048 "generate ensemble"
+      comment " What the geometry library does during initialisation of the
+ ensemble.
+
+ * For the simulation you need particles in the solution.
+ These are provided in the input file or randomly generated.
+ Non-solute specie types must have all particles defined in
+ the input. Solute specie particles will be randomly
+ generated on a grid if not present in the input file. If
+ present in the input file the actual number of particles
+ is compared to the target number (as determined from
+ the input file OR from concentration and volume). If
+ the simulation includes grand canonical moves then 
+ if actual number from the input file is within a 
+ reasonable number of the target no new particles are
+ generated, otherwise particles are added or removed.
+ If the simulation does not include grand canonical
+ moves then particles are added/removed until the
+ target number is reached. In this case insertion at 
+random positions are attempted."
+      activitydiagram 272432 "fill ensemble"
+	package_name_in_tab default show_context default show_opaque_action_definition default auto_label_position default write_flow_label_horizontally default draw_all_relations no shadow default
+	show_infonote default drawing_language default show_stereotype_properties default
+	size A4
+      end
+
+      activityobject 128048 "initialise solute particles in simulation"
+	 explicit_type ""
+	unordered 
+      end
+
+      activityaction 128048 "calc. per-specie target particle number"
+	opaque_action
+	flow 137136 "<flow>"
+	  on activitynode_ref 135344 // join
+	end
+      end
+
+      activitynode 128048 decision "compare( input, target )"
+	flow 128432 "target << input count OR non-GC"
+	  on activityaction_ref 128176 // activity action place particles randomly
+	end
+
+	flow 129456 "GC AND target ~ input count"
+	  on activitynode_ref 128560 // activity_final
+	end
+      end
+
+      activityaction 128176 "place particles randomly"
+	opaque_action
+	flow 129328 "<flow>"
+	  on activitynode_ref 128560 // activity_final
+	end
+      end
+
+      activitynode 128304 decision ""
+	flow 128688 "particles defined in input"
+	  on activitynode_ref 128048 // decision
+	end
+
+	flow 128816 "no particles predefined"
+	  on activityaction_ref 128304 // activity action place particles on a grid
+	end
+      end
+
+      activityaction 128304 "place particles on a grid"
+	opaque_action
+	flow 129200 "<flow>"
+	  on activitynode_ref 128560 // activity_final
+	end
+      end
+
+      activitynode 128432 initial_node "initialise solute particles"
+	flow 136240 "species have target count"
+	  on activitynode_ref 135216 // decision
+	end
+      end
+
+      activitynode 128560 activity_final "continue initialisation"
+      end
+
+      activityaction 134832 "volume = concentration / particles"
+	opaque_action
+	flow 136752 "<flow>"
+	  on activityaction_ref 135088 // activity action set volume
+	end
+      end
+
+      activityaction 134960 "total particles = concentration / volume"
+	opaque_action
+	flow 136624 "<flow>"
+	  on activityaction_ref 128048 // activity action calc. per-specie target particle number
+	end
+      end
+
+      activitynode 135216 decision ""
+	flow 136368 "yes"
+	  on activityaction_ref 134832 // activity action volume = concentration / particles
+	end
+
+	flow 136496 "no"
+	  on activityaction_ref 134960 // activity action total particles = concentration / volume
+	end
+      end
+
+      activityaction 135088 "set volume"
+	opaque_action
+	flow 136880 "<flow>"
+	  on activitynode_ref 128304 // decision
+	end
+
+	flow 137008 "<flow>"
+	  on activitynode_ref 135344 // join
+	end
+      end
+
+      activitynode 135344 join ""
+	flow 137264 "have solute particles defined in input?"
+	  on activitynode_ref 128304 // decision
+	end
+      end
+    end
+
+    activity 134704 "generate trial"
+      comment " What the geometry library does during trial generation."
+      activitydiagram 279088 "generate trial coordinate"
+	package_name_in_tab default show_context default show_opaque_action_definition default auto_label_position default write_flow_label_horizontally default draw_all_relations default shadow default
+	show_infonote default drawing_language default show_stereotype_properties default
+	size A4
+      end
+
+      activitynode 135472 initial_node ""
+	flow 137392 "<flow>"
+	  on activityaction_ref 135472 // activity action get region
+	end
+      end
+
+      activitynode 135600 decision ""
+	flow 137648 "move"
+	  on activityaction_ref 135344 // activity action new_position_offset
+	end
+
+	flow 137776 "jump or add"
+	  on activityaction_ref 135216 // activity action new_position
+	end
+      end
+
+      activityaction 135216 "new_position"
+	opaque_action
+	flow 138160 "<flow>"
+	  on activitynode_ref 135856 // join
+	end
+      end
+
+      activityaction 135344 "new_position_offset"
+	opaque_action
+	flow 138544 "is_inside"
+	  on activitynode_ref 136240 // decision
+	end
+      end
+
+      activityobject 134576 "select region"
+	 explicit_type ""
+	unordered 
+      end
+
+      activityaction 135472 "get region"
+	opaque_action
+	flow 137520 "<flow>"
+	  on activitynode_ref 135600 // decision
+	end
+      end
+
+      activitynode 135856 join ""
+	flow 138288 "<flow>"
+	  on activityaction_ref 135600 // activity action calculate_distances
+	end
+      end
+
+      activityaction 135600 "calculate_distances"
+	opaque_action
+	flow 138416 "<flow>"
+	  on activitynode_ref 135984 // activity_final
+	end
+      end
+
+      activitynode 135984 activity_final "run trial"
+      end
+
+      activitynode 136112 activity_final "fail"
+      end
+
+      activitynode 136240 decision ""
+	flow 138672 "true"
+	  on activitynode_ref 135856 // join
+	end
+
+	flow 138800 "false"
+	  on activitynode_ref 136112 // activity_final
+	end
+      end
+    end
+
     class 452656 "geometry_manager"
-      abstract visibility package 
+      visibility package 
       cpp_decl "${comment}${template}class ${name}${inherit}
  {
 ${members}
@@ -155,32 +358,48 @@ ${docstring}${members}
    for periodicity).
 
  * Managing access to regions and region nesting"
-      operation 989488 "calculate_distances"
-	abstract const cpp_virtual public explicit_return_type "void"
-	nparams 3
-	  param in name "pos" type class_ref 986799 // coordinate
-	  param in name "others" type class_ref 223792 // coordinate_set
-	  param inout name "result" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, std::vector< ${t2} >& ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Calculate distance between the given position and
- all positions in the given coordinate set. The
- result vector will contain the distances in the
- same sequence as the coordinate set."
+      classrelation 596912 // <generalisation>
+	relation 596016 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 596912 // <generalisation>
+	  b parent class_ref 275887 // noncopyable
       end
 
-      operation 989616 "calculate_distance"
-	abstract const cpp_virtual public explicit_return_type "double"
-	nparams 2
-	  param in name "pos1" type class_ref 986799 // coordinate
-	  param in name "pos2" type class_ref 986799 // coordinate
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+      classrelation 596656 // regions_ (<directional composition>)
+	relation 595760 *-->
+	  stereotype "vector"
+	  a role_name "regions_" multiplicity "*" private
+	    comment " Regions in the simulation. The order implies no inter-region
+ relationships. The first entry will always encompass the entire
+ simulation (ie is the \"system\" region.) The vector will always
+ have at least this system region."
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< boost::shared_ptr< ${type} > > ${name}${value};
+"
+	    python "${comment}${self}${name} = ${stereotype}()
+"
+	    classrelation_ref 596656 // regions_ (<directional composition>)
+	  b parent class_ref 452912 // base_region
+      end
+
+      classrelation 597040 // solids_ (<directional composition>)
+	relation 596144 *-->
+	  stereotype "vector"
+	  a role_name "solids_" multiplicity "*" private
+	    comment " Any solid objects in the simulation."
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< boost::shared_ptr< ${type} > > ${name}${value};
+"
+	    python "${comment}${self}${name} = ${stereotype}()
+"
+	    classrelation_ref 597040 // solids_ (<directional composition>)
+	  b parent class_ref 453040 // base_solid_object
+      end
+
+      operation 1004464 "geometry_manager"
+	private explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
 "
 	
 	
@@ -188,31 +407,293 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Calculate distance between two points."
+	comment " For serialization only."
+      end
+
+      operation 1005360 "geometry_manager"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "system_region" type class_ref 452912 // base_region
+	cpp_decl "    ${comment}${inline}${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}boost::shared_ptr< ${t0} > ${p0}${)}${throw}
+: regions_()
+{
+  this->regions_.push_back( ${p0} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1004592 "~geometry_manager"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 424496 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1005872 "serialize"
+	stereotype "template"
+	private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ar & this->regions_;
+  ar & this->solids_;
+}
+"
+	
+	
+	
+	
+	comment "Write the grid parameters to an archive"
+      end
+
+      operation 1005232 "add_region"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "regn" type class_ref 452912 // base_region
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add region to manager. If a region with the same label
+ exists in the manager, the new object replaces the old."
+      end
+
+      operation 1005744 "add_solid"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "solid" type class_ref 453040 // base_solid_object
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->solids_.push_back( solid );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add solid to system"
+      end
+
+      operation 1003696 "change_volume"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "volume" explicit_type "double"
+	  param in name "rad" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  this->regions_[0].${name}( ${p0} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Increase or decrease the system dimensions to match the new
+ volume. Derived classes each have rules to decide how the
+ region's dimensions change to accomodate the new volume. For
+ example a cube simply adjusts one length while a cylinder must
+ distribute the change over the radial and linear dimensions.
+
+ * NOTE : This is expected to be used only during system
+ initialization, ie before checking particle positions or
+ asking for new particle positions. Whether any check or
+ particle postion calculated before calling this method is
+ still valid is undefined.
+"
+      end
+
+      operation 1003952 "get_region"
+	private return_type class_ref 452912 // base_region
+	nparams 1
+	  param in name "idx" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return *(this->region_.at(${p0}));
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get a (editable) region by index.
+
+ \\pre idx < region_count : (throws same error as vector::at)"
+      end
+
+      operation 1004080 "get_region"
+	stereotype "const"
+	const public return_type class_ref 452912 // base_region
+	nparams 1
+	  param in name "idx" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} const& ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return *(this->region_.at(${p0}));
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get a region by index.
+
+ \\pre idx < region_count : (throws same error as vector::at)"
+      end
+
+      operation 1005616 "has_solids"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return 0 != this->solids_.size();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Are there any solids?"
       end
 
       operation 989744 "locate_region"
-	abstract const cpp_virtual public explicit_return_type "void"
+	const public explicit_return_type "void"
 	nparams 2
 	  param in name "pos" type class_ref 986799 // coordinate
 	  param inout name "regns" type class_ref 452912 // base_region
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, std::vector< boost::shared_ptr< ${t1} > >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, std::vector< boost::shared_ptr< ${t1} > >& ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
 	
 	
 	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
 ${docstring}${body}
 "
 	
-	comment " Return set of regions the given point is in. Vector is
- ordered from highest to lowest priority.  The lowest
- priority region will always be the entire system."
+	comment " Puts the set of regions the given point is in into
+ regns. The set may be empty."
+      end
+
+      operation 1005488 "overlap_solid"
+	public explicit_return_type "bool"
+	nparams 2
+	  param in name "pos" type class_ref 986799 // coordinate
+	  param in name "rad" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Does a sphere of the given size at the given
+ coordinate overlap with any solid?"
+      end
+
+      operation 1004720 "region_count"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->regions_.size();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The number of regions"
+      end
+
+      operation 1003824 "region_key"
+	public explicit_return_type "size_t"
+	nparams 1
+	  param in name "label" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Find a regions key from its label/name"
       end
 
       operation 989872 "system_region"
-	abstract const cpp_virtual public return_type class_ref 452912 // base_region
+	const public return_type class_ref 452912 // base_region
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} const& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return *(this->region_[0]);
+}
 "
 	
 	
@@ -222,6 +703,7 @@ ${docstring}${body}
 	
 	comment " Get the region representing the entire system."
       end
+
     end
 
     class 452912 "base_region"
@@ -248,6 +730,18 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 589360 // <generalisation>
 	  b parent class_ref 275887 // noncopyable
+      end
+
+      attribute 508848 "label_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " A user-defined label for the region."
       end
 
       operation 990128 "~base_region"
@@ -287,6 +781,105 @@ ${docstring}${body}
 	
 	
 	comment "Write the grid parameters to an archive"
+      end
+
+      operation 1005104 "calculate_distances"
+	const cpp_virtual public explicit_return_type "void"
+	nparams 5
+	  param in name "pos" type class_ref 986799 // coordinate
+	  param in name "others" type class_ref 223792 // coordinate_set
+	  param inout name "result" explicit_type "double"
+	  param in name "endindex" explicit_type "size_t"
+	  param in name "startindex" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, std::vector< ${t2} > & ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}${)}${const}${volatile}${throw}${abstract}
+{
+  UTILITY_REQUIRE(${p4} < ${p3}, \"Start index not before end index.\");
+  UTILITY_REQUIRE(${p3} <= ${p1}.size(), \"End index out of range.\");
+  this->do_${name}${(}${p0}, ${p1}, ${p2}, ${p3}, ${p4});
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate distance between the given position and
+ all positions in the given coordinate set. The
+ result vector will contain the distances in the
+ same sequence as the coordinate set.
+
+ \\pre startindex < endindex
+ \\pre endindex <= others.size
+ \\post result.size == end_index
+ \\post result[0:start_index] == 0.0"
+      end
+
+      operation 1007280 "do_calculate_distances"
+	abstract const cpp_virtual private explicit_return_type "void"
+	nparams 5
+	  param in name "pos" type class_ref 986799 // coordinate
+	  param in name "others" type class_ref 223792 // coordinate_set
+	  param inout name "result" explicit_type "double"
+	  param in name "endindex" explicit_type "size_t"
+	  param in name "startindex" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, std::vector< ${t2} > & ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate distance between the given position and
+ all positions in the given coordinate set. The
+ result vector will contain the distances in the
+ same sequence as the coordinate set.
+
+ \\post result.size == end_index
+ \\post result[0:start_index] == 0.0"
+      end
+
+      operation 1004976 "calculate_distance_squared"
+	abstract const cpp_virtual public explicit_return_type "double"
+	nparams 2
+	  param in name "pos1" type class_ref 986799 // coordinate
+	  param in name "pos2" type class_ref 986799 // coordinate
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate square of distance between two points."
+      end
+
+      operation 1004848 "change_volume"
+	abstract cpp_virtual public explicit_return_type "void"
+	nparams 2
+	  param in name "volume" explicit_type "double"
+	  param in name "rad" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Increase or decrease the system dimensions to match the new
+ volume. Derived classes each have rules to decide how the
+ region's dimensions change to accomodate the new volume. For
+ example a cube simply adjusts one length while a cylinder must
+ distribute the change over the radial and linear dimensions.
+
+ * NOTE : This is expected to be used only during system
+ initialization, ie before checking particle positions or
+ asking for new particle positions. Whether any check or
+ particle postion calculated before calling this method is
+ still valid is undefined.
+"
       end
 
       operation 991152 "fits"
@@ -329,6 +922,23 @@ ${docstring}${body}
  this implies the radius must be ignored in the periodic
  dimension(s).
 "
+      end
+
+      operation 1004208 "label"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} const& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->label_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the region label"
       end
 
       operation 990000 "make_gridder"
@@ -474,10 +1084,14 @@ ${docstring}${body}
  \\return is_inside(pos, radius)"
       end
 
-      operation 988592 "volume"
-	abstract const cpp_virtual public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+      operation 1004336 "set_label"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "label" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->label_ = ${p0};
+}
 "
 	
 	
@@ -485,7 +1099,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Calculate full volume"
+	comment " Set the region label"
       end
 
       operation 988720 "volume"
@@ -501,14 +1115,44 @@ ${docstring}${body}
 "
 	
 	comment " Calculate volume accessible to centre-points of spherical particles
- with the given radius"
+ with the given radius. "
       end
 
-      operation 994096 "do_wrap_position"
-	abstract const cpp_virtual private explicit_return_type "bool"
-	nparams 1
-	  param inout name "pos" type class_ref 986799 // coordinate
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+    end
+
+    class 459952 "non_periodic_region"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      classrelation 597168 // <generalisation>
+	relation 596272 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 597168 // <generalisation>
+	  b parent class_ref 452912 // base_region
+      end
+
+      operation 1006896 "non_periodic_region"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+: base_region()
+{}
 "
 	
 	
@@ -516,8 +1160,98 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Attempt to bring a position outside the region to one inside.
- Returns false if this can not be done, otherwise true."
+      end
+
+      operation 1007024 "~non_periodic_region"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 424624 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1007152 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+    ar & boost::serialization::base_object< geometry::base_region >(*this);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1006768 "do_calculate_distances"
+	const private explicit_return_type "void"
+	nparams 5
+	  param in name "pos" type class_ref 986799 // coordinate
+	  param in name "others" type class_ref 223792 // coordinate_set
+	  param inout name "result" explicit_type "double"
+	  param in name "endindex" explicit_type "size_t"
+	  param in name "startindex" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, std::vector< ${t2} >& ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, std::vector< ${t2} >& ${p2}, ${t3} ${p3}, ${t4} ${p4}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment "Compute the distances between given position and existing positions.
+
+\\pre rij.size == endindex
+\\post rij[0:startindex] === 0"
+      end
+
+      operation 1006640 "calculate_distance_squared"
+	const public explicit_return_type "double"
+	nparams 2
+	  param in name "pos1" type class_ref 986799 // coordinate
+	  param in name "pos2" type class_ref 986799 // coordinate
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}${)}${const}${volatile}${throw}
+{
+  const double dx = ${p0}.x - ${p1}.x;
+  const double dy = ${p0}.y - ${p1}.y;
+  const double dz = ${p0}.z - ${p1}.z;
+  return (dx*dx + dy*dy + dz*dz);
+}
+"
+	
+	
+	
+	
+	comment "Compute distance between two coordinates."
       end
     end
 
@@ -544,13 +1278,13 @@ ${docstring}${members}
  Coordinate range:
  * x*x + y*y <= rad*rad
  * -len/2 <= x <= +len/2"
-      classrelation 589232 // <generalisation>
-	relation 588336 ---|>
+      classrelation 597296 // <generalisation>
+	relation 596400 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 589232 // <generalisation>
-	  b parent class_ref 452912 // base_region
+	    classrelation_ref 597296 // <generalisation>
+	  b parent class_ref 459952 // non_periodic_region
       end
 
       classrelation 189872 // <dependency>
@@ -585,18 +1319,6 @@ ${docstring}${members}
 	idl_decl ""
       end
 
-      attribute 214448 "volume_"
-	private explicit_type "double"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment " Cached volume"
-      end
-
       extra_member 171056 "LIFETIME"
 	
 	cpp "" ""
@@ -628,7 +1350,6 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
 : radius_( ${p0} )
 , half_length_( ${p1} / 2 )
-, volume_( ${class}::compute_volume( rad, len ) )
 {}
 "
 	
@@ -677,10 +1398,9 @@ ${docstring}${body}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-    ar & boost::serialization::base_object< geometry::base_region >(*this);
+    ar & boost::serialization::base_object< geometry::non_periodic_region >(*this);
     ar & this->radius_;
     ar & this->half_length_;
-    ar & this->volume_;
 }
 "
 	
@@ -865,23 +1585,6 @@ ${docstring}${body}
 	comment " Set the half length"
       end
 
-      operation 254896 "volume"
-	stereotype "get"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override
-{
-  return this->${name}_;
-}"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Get the volume"
-      end
-
       operation 990640 "volume"
 	const public explicit_return_type "double"
 	nparams 1
@@ -901,7 +1604,7 @@ ${docstring}${body}
       end
 
       operation 255024 "compute_volume"
-	class_operation private explicit_return_type "double"
+	class_operation public explicit_return_type "double"
 	nparams 2
 	  param in name "rad" explicit_type "double"
 	  param in name "len" explicit_type "double"
@@ -947,13 +1650,13 @@ ${docstring}${members}
  Coordinate range:
  * x*x + y*y <= rad*rad
  * -len/2 <= x <= +len/2"
-      classrelation 589872 // <generalisation>
-	relation 588976 ---|>
+      classrelation 597424 // <generalisation>
+	relation 596528 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 589872 // <generalisation>
-	  b parent class_ref 452912 // base_region
+	    classrelation_ref 597424 // <generalisation>
+	  b parent class_ref 183856 // cylinder_region
       end
 
       classrelation 590000 // <dependency>
@@ -963,41 +1666,6 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 590000 // <dependency>
 	  b parent class_ref 912431 // access
-      end
-
-      attribute 501936 "radius_"
-	private explicit_type "double"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment " Radius of the cylinder"
-      end
-
-      attribute 502064 "half_length_"
-	private explicit_type "double"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-      end
-
-      attribute 502192 "volume_"
-	private explicit_type "double"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment " Cached volume"
       end
 
       extra_member 417712 "LIFETIME"
@@ -1029,9 +1697,7 @@ ${docstring}${body}
 	  param in name "rad" explicit_type "double"
 	  param in name "len" explicit_type "double"
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
-: radius_( ${p0} )
-, half_length_( ${p1} / 2 )
-, volume_( ${class}::compute_volume( rad, len ) )
+: cylinder_region( ${p0}, ${p1} )
 {}
 "
 	
@@ -1080,10 +1746,7 @@ ${docstring}${body}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-    ar & boost::serialization::base_object< geometry::base_region >(*this);
-    ar & this->radius_;
-    ar & this->half_length_;
-    ar & this->volume_;
+    ar & boost::serialization::base_object< geometry::cylinder_region >(*this);
 }
 "
 	
@@ -1197,97 +1860,6 @@ ${docstring}${body}
  \\return is_inside(pos, radius)"
       end
 
-      operation 996400 "radius"
-	stereotype "get"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->${name}_;
-}"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Get the radius"
-      end
-
-      operation 996528 "radius"
-	stereotype "set"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "val" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} set_${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  this->${name}_ = ${p0};
-  this->volume_ = ${class}::compute_volume( val, this->half_length_ * 2 );
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Set the radius"
-      end
-
-      operation 996656 "half_length"
-	stereotype "get"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->${name}_;
-}"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Get the half length"
-      end
-
-      operation 996784 "half_length"
-	stereotype "set"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "val" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} set_${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  this->${name}_ = ${p0};
-  this->volume_ = ${class}::compute_volume( this->radius_, ${p0} * 2 );
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Set the half length"
-      end
-
-      operation 996912 "volume"
-	stereotype "get"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override
-{
-  return this->${name}_;
-}"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Get the volume"
-      end
-
       operation 997040 "volume"
 	const public explicit_return_type "double"
 	nparams 1
@@ -1306,28 +1878,6 @@ ${docstring}${body}
  with the given radius"
       end
 
-      operation 997168 "compute_volume"
-	class_operation private explicit_return_type "double"
-	nparams 2
-	  param in name "rad" explicit_type "double"
-	  param in name "len" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
-{
-  return core::constants::pi() * rad * rad * len;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " volume = pi * rad * rad * len
-
- * NOTE: len is cylinder length **not** half length"
-      end
     end
 
     class 453296 "periodic_cube_region"
@@ -1492,6 +2042,54 @@ ${docstring}${body}
 	php ""
 	python ""
 	idl ""
+      end
+
+      operation 296881 "do_calculate_distances"
+	const private explicit_return_type "void"
+	nparams 5
+	  param in name "pos" type class_ref 986799 // coordinate
+	  param in name "others" type class_ref 223792 // coordinate_set
+	  param inout name "result" explicit_type "double"
+	  param in name "endindex" explicit_type "size_t"
+	  param in name "startindex" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, std::vector< ${t2} >& ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}${)}${const}${volatile}${throw} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, std::vector< ${t2} >& ${p2}, ${t3} ${p3}, ${t4} ${p4}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}, ${p1}${v1}, ${p3}${v3}${)}:
+${docstring}${body}
+"
+	
+	comment "Compute the distances between any new position and existing positions.
+
+\\post result.size == end_index
+\\post result[0:start_index] == 0.0
+"
+      end
+
+      operation 218673 "calculate_distance_squared"
+	const public explicit_return_type "double"
+	nparams 2
+	  param in name "pos1" type class_ref 986799 // coordinate
+	  param in name "pos2" type class_ref 986799 // coordinate
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Compute square of distance between two coordinates in 
+ a periodic box."
       end
 
       operation 992304 "fits"
@@ -1666,6 +2264,276 @@ ${docstring}${body}
       end
     end
 
+    class 460080 "open_split_cylinder_region"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Cylindrical region centred on the origin with linear axis in z
+ direction. All walls are considered soft. Cylinder is cut in the
+ centre and the two parts displaced \"offset\" from the origin
+ along the z-axis.
+
+ Coordinate range:
+ * x*x + y*y <= rad*rad
+ * -len/2 <= x <= +len/2"
+      classrelation 597552 // <generalisation>
+	relation 596656 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 597552 // <generalisation>
+	  b parent class_ref 183856 // cylinder_region
+      end
+
+      classrelation 597680 // <dependency>
+	relation 596784 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 597680 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      extra_member 424752 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      attribute 508976 "offset"
+	private explicit_type "double"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Offset from origin along z-axis."
+      end
+
+      operation 1007408 "open_split_cylinder_region"
+	private explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " For serialization only"
+      end
+
+      operation 1007536 "open_split_cylinder_region"
+	public explicit_return_type ""
+	nparams 3
+	  param in name "rad" explicit_type "double"
+	  param in name "len" explicit_type "double"
+	  param in name "offset" explicit_type "double"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
+: cylinder_region( ${p0}, ${p1} )
+, offset_( ${p2} )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create new cylinder with the given dimensions.
+
+ Cylinder extent is z in +/-(offset + len/2) 
+
+ \\param rad : the radius of the cylinder.
+ \\param len : the _full_ length of the cylinder (not half length).
+ \\param offset : the offset along the z-axis."
+      end
+
+      operation 1007664 "~open_split_cylinder_region"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} = default;"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 424880 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1007792 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ar & boost::serialization::base_object< geometry::cylinder_region >(*this);
+  ar & this->offset_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 425008 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1007920 "fits"
+	const cpp_virtual public explicit_return_type "bool"
+	nparams 1
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  return true;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " True if there is any position in the region where a spherical
+ particle of the given size can be completely included, this
+ ignores the length."
+      end
+
+      operation 1008048 "is_inside"
+	const cpp_virtual public explicit_return_type "bool"
+	nparams 2
+	  param in name "pos" type class_ref 986799 // coordinate
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate if a sphere centred at the given point and with
+ the given radius is within the region. This class ignores the 
+ radius when considering the z direction."
+      end
+
+      operation 1008176 "do_new_position"
+	const cpp_virtual private return_type class_ref 986799 // coordinate
+	nparams 2
+	  param inout name "rgnr" type class_ref 463407 // random_distribution
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate new random position for particle of the given radius to
+ be inside the region. This class ignores the radius when calculating
+ the new z coordinate.
+
+ \\pre fits(radius)
+ \\post is_inside(pos, radius)"
+      end
+
+      operation 1008304 "do_new_position_wrap"
+	const cpp_virtual private explicit_return_type "bool"
+	nparams 2
+	  param inout name "pos" type class_ref 986799 // coordinate
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  return this->${class}::is_inside( ${p0}, ${p1} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Can not wrap particle so just return is_inside(pos, radius)
+
+ \\return is_inside(pos, radius)"
+      end
+
+      operation 1008432 "volume"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override
+{
+  return compute_volume( this->radius_, this->half_length_ * 2 );
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate volume accessible to centre-points of spherical particles
+ with the given radius"
+      end
+    end
+
     class 453040 "base_solid_object"
       abstract visibility package 
       cpp_decl "${comment}${template}class ${name}${inherit}
@@ -1747,7 +2615,6 @@ ${docstring}${body}
  object."
       end
     end
-
   end
 
   classview 501551 "grid builders"
@@ -3491,6 +4358,37 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----------------------------------------------------------------------
 "
+    end
+
+    artifact 458288 "non_periodic_region"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 459952 // non_periodic_region
+      end
     end
   end
 
