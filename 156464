@@ -1,6 +1,6 @@
 format 75
 "geometry" // geometry
-  revision 3
+  revision 4
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -484,7 +484,7 @@ ${docstring}${body}
 	  param in name "regn" type class_ref 452912 // base_region
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}boost::shared_ptr< ${t0} > ${p0}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -526,7 +526,7 @@ ${docstring}${body}
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
-  this->regions_[0].${name}( ${p0} );
+  this->regions_[0]->${name}( ${p0} );
 }
 "
 	
@@ -555,7 +555,7 @@ ${docstring}${body}
 	  param in name "idx" explicit_type "size_t"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  return *(this->region_.at(${p0}));
+  return *(this->regions_.at(${p0}));
 }
 "
 	
@@ -576,7 +576,7 @@ ${docstring}${body}
 	  param in name "idx" explicit_type "size_t"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} const& ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  return *(this->region_.at(${p0}));
+  return *(this->regions_.at(${p0}));
 }"
 	
 	
@@ -608,12 +608,13 @@ ${docstring}${body}
 
       operation 989744 "locate_region"
 	const public explicit_return_type "void"
-	nparams 2
+	nparams 3
 	  param in name "pos" type class_ref 986799 // coordinate
+	  param in name "rad" explicit_type "double"
 	  param inout name "regns" type class_ref 452912 // base_region
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, std::vector< boost::shared_ptr< ${t1} > >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}, std::vector< boost::shared_ptr< ${t2} > >& ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, std::vector< boost::shared_ptr< ${t1} > >& ${p1}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} ${p1}, std::vector< boost::shared_ptr< ${t2} > >& ${p2}${)}${const}${throw}
 {
   ${body}
 }
@@ -633,9 +634,9 @@ ${docstring}${body}
 	nparams 2
 	  param in name "pos" type class_ref 986799 // coordinate
 	  param in name "rad" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -684,7 +685,9 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Find a regions key from its label/name"
+	comment " Find a regions key from its label/name
+
+ \\return index if found or region_count if not found."
       end
 
       operation 989872 "system_region"
@@ -692,7 +695,7 @@ ${docstring}${body}
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} const& ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
-  return *(this->region_[0]);
+  return *(this->regions_[0]);
 }
 "
 	
@@ -703,7 +706,6 @@ ${docstring}${body}
 	
 	comment " Get the region representing the entire system."
       end
-
     end
 
     class 452912 "base_region"
@@ -791,12 +793,14 @@ ${docstring}${body}
 	  param inout name "result" explicit_type "double"
 	  param in name "endindex" explicit_type "size_t"
 	  param in name "startindex" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, std::vector< ${t2} > & ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, std::vector< ${t2} > & ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}${)}${const}${volatile}${throw}${abstract};"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, std::vector< ${t2} > & ${p2}, ${t3} ${p3}, ${t4} ${p4}${)}${const}${throw}
 {
   UTILITY_REQUIRE(${p4} < ${p3}, \"Start index not before end index.\");
   UTILITY_REQUIRE(${p3} <= ${p1}.size(), \"End index out of range.\");
   this->do_${name}${(}${p0}, ${p1}, ${p2}, ${p3}, ${p4});
-}"
+}
+"
 	
 	
 	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
@@ -1117,7 +1121,6 @@ ${docstring}${body}
 	comment " Calculate volume accessible to centre-points of spherical particles
  with the given radius. "
       end
-
     end
 
     class 459952 "non_periodic_region"
@@ -1536,7 +1539,6 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} set_${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
   this->${name}_ = ${p0};
-  this->volume_ = ${class}::compute_volume( val, 2 * this->half_length_ );
 }
 "
 	
@@ -1573,7 +1575,6 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} set_${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
   this->${name}_ = ${p0};
-  this->volume_ = ${class}::compute_volume( this->radius_, 2 * ${p0} );
 }
 "
 	
@@ -1866,7 +1867,7 @@ ${docstring}${body}
 	  param in name "radius" explicit_type "double"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override
 {
-  return compute_volume( this->radius_ - radius, this->half_length_ * 2 );
+  return compute_volume( this->radius() - radius, this->half_length() * 2 );
 }"
 	
 	
@@ -1877,7 +1878,276 @@ ${docstring}${body}
 	comment " Calculate volume accessible to centre-points of spherical particles
  with the given radius"
       end
+    end
 
+    class 460080 "open_split_cylinder_region"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Cylindrical region centred on the origin with linear axis in z
+ direction. All walls are considered soft. Cylinder is cut in the
+ centre and the two parts displaced \"offset\" from the origin
+ along the z-axis.
+
+ Coordinate range:
+ * x*x + y*y <= rad*rad
+ * -len/2 <= x <= +len/2"
+      classrelation 597552 // <generalisation>
+	relation 596656 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 597552 // <generalisation>
+	  b parent class_ref 183856 // cylinder_region
+      end
+
+      classrelation 597680 // <dependency>
+	relation 596784 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 597680 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      extra_member 424752 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      attribute 508976 "offset_"
+	private explicit_type "double"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Offset from origin along z-axis."
+      end
+
+      operation 1007408 "open_split_cylinder_region"
+	private explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " For serialization only"
+      end
+
+      operation 1007536 "open_split_cylinder_region"
+	public explicit_return_type ""
+	nparams 3
+	  param in name "rad" explicit_type "double"
+	  param in name "len" explicit_type "double"
+	  param in name "offset" explicit_type "double"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
+: cylinder_region( ${p0}, ${p1} )
+, offset_( ${p2} )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create new cylinder with the given dimensions.
+
+ Cylinder extent is z in +/-(offset + len/2) 
+
+ \\param rad : the radius of the cylinder.
+ \\param len : the _full_ length of the cylinder (not half length).
+ \\param offset : the offset along the z-axis."
+      end
+
+      operation 1007664 "~open_split_cylinder_region"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} = default;"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 424880 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1007792 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ar & boost::serialization::base_object< geometry::cylinder_region >(*this);
+  ar & this->offset_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 425008 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1007920 "fits"
+	const cpp_virtual public explicit_return_type "bool"
+	nparams 1
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  return true;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " True if there is any position in the region where a spherical
+ particle of the given size can be completely included, this
+ ignores the length."
+      end
+
+      operation 1008048 "is_inside"
+	const cpp_virtual public explicit_return_type "bool"
+	nparams 2
+	  param in name "pos" type class_ref 986799 // coordinate
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate if a sphere centred at the given point and with
+ the given radius is within the region. This class ignores the 
+ radius when considering the z direction."
+      end
+
+      operation 1008176 "do_new_position"
+	const cpp_virtual private return_type class_ref 986799 // coordinate
+	nparams 2
+	  param inout name "rgnr" type class_ref 463407 // random_distribution
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate new random position for particle of the given radius to
+ be inside the region. This class ignores the radius when calculating
+ the new z coordinate.
+
+ \\pre fits(radius)
+ \\post is_inside(pos, radius)"
+      end
+
+      operation 1008304 "do_new_position_wrap"
+	const cpp_virtual private explicit_return_type "bool"
+	nparams 2
+	  param inout name "pos" type class_ref 986799 // coordinate
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  return this->${class}::is_inside( ${p0}, ${p1} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Can not wrap particle so just return is_inside(pos, radius)
+
+ \\return is_inside(pos, radius)"
+      end
+
+      operation 1008432 "volume"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override
+{
+  return compute_volume( this->radius(), this->half_length() * 2 );
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate volume accessible to centre-points of spherical particles
+ with the given radius"
+      end
     end
 
     class 453296 "periodic_cube_region"
@@ -2227,30 +2497,13 @@ ${docstring}${body}
 	comment " Set the radius"
       end
 
-      operation 993456 "volume"
-	stereotype "get"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override
-{
-  return this->${name}_;
-}"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Get the radius"
-      end
-
       operation 993584 "volume"
 	const public explicit_return_type "double"
 	nparams 1
 	  param in name "radius" explicit_type "double"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override
 {
-  return this->${class}::${name}();
+  return this->volume_;
 }"
 	
 	
@@ -2261,276 +2514,6 @@ ${docstring}${body}
 	comment " Calculate volume accessible to centre-points of spherical particles
  with the given radius. For this periodic system this is always 
  equivalent to volume()."
-      end
-    end
-
-    class 460080 "open_split_cylinder_region"
-      visibility package 
-      cpp_decl "${comment}${template}class ${name}${inherit}
- {
-${members}
-};
-${inlines}
-"
-      java_decl ""
-      php_decl ""
-      python_decl "class ${name}${inherit}:
-${docstring}${members}
-"
-      idl_decl ""
-      explicit_switch_type ""
-      
-      comment " Cylindrical region centred on the origin with linear axis in z
- direction. All walls are considered soft. Cylinder is cut in the
- centre and the two parts displaced \"offset\" from the origin
- along the z-axis.
-
- Coordinate range:
- * x*x + y*y <= rad*rad
- * -len/2 <= x <= +len/2"
-      classrelation 597552 // <generalisation>
-	relation 596656 ---|>
-	  a public
-	    cpp default "${type}"
-	    python "${type}"
-	    classrelation_ref 597552 // <generalisation>
-	  b parent class_ref 183856 // cylinder_region
-      end
-
-      classrelation 597680 // <dependency>
-	relation 596784 -_->
-	  a package
-	    cpp default "#include in header"
-	    python "${type}"
-	    classrelation_ref 597680 // <dependency>
-	  b parent class_ref 912431 // access
-      end
-
-      extra_member 424752 "LIFETIME"
-	
-	cpp "" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      attribute 508976 "offset"
-	private explicit_type "double"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment " Offset from origin along z-axis."
-      end
-
-      operation 1007408 "open_split_cylinder_region"
-	private explicit_return_type ""
-	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " For serialization only"
-      end
-
-      operation 1007536 "open_split_cylinder_region"
-	public explicit_return_type ""
-	nparams 3
-	  param in name "rad" explicit_type "double"
-	  param in name "len" explicit_type "double"
-	  param in name "offset" explicit_type "double"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
-: cylinder_region( ${p0}, ${p1} )
-, offset_( ${p2} )
-{}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Create new cylinder with the given dimensions.
-
- Cylinder extent is z in +/-(offset + len/2) 
-
- \\param rad : the radius of the cylinder.
- \\param len : the _full_ length of the cylinder (not half length).
- \\param offset : the offset along the z-axis."
-      end
-
-      operation 1007664 "~open_split_cylinder_region"
-	cpp_virtual public explicit_return_type ""
-	nparams 0
-	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} = default;"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
-      extra_member 424880 "friend"
-	
-	cpp "
-  friend class boost::serialization::access;" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      operation 1007792 "serialize"
-	stereotype "template"
-	cpp_inline private explicit_return_type "void"
-	nparams 2
-	  param inout name "ar" explicit_type "Archive"
-	  param in name "version" explicit_type "unsigned int"
-	cpp_decl "    ${comment}template<class Archive>
-  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
-{
-  ar & boost::serialization::base_object< geometry::cylinder_region >(*this);
-  ar & this->offset_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-      end
-
-      extra_member 425008 "METHODS"
-	
-	cpp "" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      operation 1007920 "fits"
-	const cpp_virtual public explicit_return_type "bool"
-	nparams 1
-	  param in name "radius" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
-{
-  return true;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " True if there is any position in the region where a spherical
- particle of the given size can be completely included, this
- ignores the length."
-      end
-
-      operation 1008048 "is_inside"
-	const cpp_virtual public explicit_return_type "bool"
-	nparams 2
-	  param in name "pos" type class_ref 986799 // coordinate
-	  param in name "radius" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Calculate if a sphere centred at the given point and with
- the given radius is within the region. This class ignores the 
- radius when considering the z direction."
-      end
-
-      operation 1008176 "do_new_position"
-	const cpp_virtual private return_type class_ref 986799 // coordinate
-	nparams 2
-	  param inout name "rgnr" type class_ref 463407 // random_distribution
-	  param in name "radius" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Calculate new random position for particle of the given radius to
- be inside the region. This class ignores the radius when calculating
- the new z coordinate.
-
- \\pre fits(radius)
- \\post is_inside(pos, radius)"
-      end
-
-      operation 1008304 "do_new_position_wrap"
-	const cpp_virtual private explicit_return_type "bool"
-	nparams 2
-	  param inout name "pos" type class_ref 986799 // coordinate
-	  param in name "radius" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
-{
-  return this->${class}::is_inside( ${p0}, ${p1} );
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Can not wrap particle so just return is_inside(pos, radius)
-
- \\return is_inside(pos, radius)"
-      end
-
-      operation 1008432 "volume"
-	const public explicit_return_type "double"
-	nparams 1
-	  param in name "radius" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override
-{
-  return compute_volume( this->radius_, this->half_length_ * 2 );
-}"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Calculate volume accessible to centre-points of spherical particles
- with the given radius"
       end
     end
 
@@ -2653,6 +2636,15 @@ ${inlines}
       idl_decl ""
       explicit_switch_type ""
       
+      classrelation 604208 // <generalisation>
+	relation 603312 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 604208 // <generalisation>
+	  b parent class_ref 275887 // noncopyable
+      end
+
       operation 699697 "empty"
 	abstract const cpp_virtual public explicit_return_type "bool"
 	nparams 0
@@ -3780,7 +3772,7 @@ ${docstring}${members}
 	preserve_cpp_body_indent public explicit_return_type ""
 	nparams 5
 	  param in name "offset" explicit_type "double"
-	  param in name "halflength" explicit_type "double"
+	  param in name "length" explicit_type "double"
 	  param in name "radius" explicit_type "double"
 	  param in name "npart" explicit_type "size_t"
 	  param inout name "ranf" type class_ref 463407 // random_distribution
@@ -3796,13 +3788,14 @@ ${docstring}${body}
 "
 	
 	comment " Create a cubic grid of points within a bisected tube of the given 
- half length, bisection offset and radius. 
+ half length, bisection offset and radius. NOTE: the outer extent
+ of the tube is offset + length/2 in -ve and +ve z direction.
 
  NOTES:
 
  * Grid z coordinate will be either +ve or -ve
 
- * Z coordinate range offset < |z| < halflength
+ * Z coordinate range offset < |z| < length/2 + offset
 
  * XY coordinates in circle of given radius
 
@@ -3816,7 +3809,7 @@ ${docstring}${body}
 	preserve_cpp_body_indent public explicit_return_type ""
 	nparams 4
 	  param in name "offset" explicit_type "double"
-	  param in name "halflength" explicit_type "double"
+	  param in name "length" explicit_type "double"
 	  param in name "radius" explicit_type "double"
 	  param in name "npart" explicit_type "size_t"
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${volatile}${throw};
@@ -3831,13 +3824,160 @@ ${docstring}${body}
 "
 	
 	comment " Create a cubic grid of points within a bisected tube of the given 
- half length, bisection offset and radius. 
+ half length, bisection offset and radius.  NOTE: the outer extent
+ of the tube is -/+(offset + length/2) in z direction.
 
  NOTES:
 
  * Grid z coordinate will be either +ve or -ve
 
- * Z coordinate range offset < |z| < halflength
+ * Z coordinate range offset < |z| < length/2 + offset
+
+ * XY coordinates in circle of given radius
+
+ * Sequence of coordinates generated by next are sequential
+ in z.
+
+"
+      end
+
+      operation 1015856 "split_tube_grid"
+	preserve_cpp_body_indent public explicit_return_type ""
+	nparams 5
+	  param in name "offset" explicit_type "double"
+	  param in name "length" explicit_type "double"
+	  param in name "radius" explicit_type "double"
+	  param in name "npart" explicit_type "int"
+	  param inout name "ranf" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} & ${p4}${v4}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}, ${t4} & ${p4}${)}${throw}
+${body}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Create a cubic grid of points within a bisected tube of the given 
+ half length, bisection offset and radius. NOTE: the outer extent
+ of the tube is +/-(offset + length/2) in z direction.
+
+ NOTES:
+
+ * Grid z coordinate will be either +ve or -ve
+
+ * Z coordinate range offset < |z| < length/2 + offset
+
+ * XY coordinates in circle of given radius
+
+ * Sequence of coordinates generated by next are in random
+ a order.
+
+"
+      end
+
+      operation 1015984 "split_tube_grid"
+	preserve_cpp_body_indent public explicit_return_type ""
+	nparams 4
+	  param in name "offset" explicit_type "double"
+	  param in name "length" explicit_type "double"
+	  param in name "radius" explicit_type "double"
+	  param in name "npart" explicit_type "int"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}${)}${throw}
+${body}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Create a cubic grid of points within a bisected tube of the given 
+ half length, bisection offset and radius.  NOTE: the outer extent
+ of the tube is +/-(offset + length/2) in z direction.
+
+ NOTES:
+
+ * Grid z coordinate will be either +ve or -ve
+
+ * Z coordinate range offset < |z| < length/2 + offset
+
+ * XY coordinates in circle of given radius
+
+ * Sequence of coordinates generated by next are sequential
+ in z.
+
+"
+      end
+
+      operation 1015600 "split_tube_grid"
+	preserve_cpp_body_indent public explicit_return_type ""
+	nparams 5
+	  param in name "offset" explicit_type "double"
+	  param in name "length" explicit_type "double"
+	  param in name "radius" explicit_type "double"
+	  param in name "spacing" explicit_type "double"
+	  param inout name "ranf" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} & ${p4}${v4}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}, ${t4} & ${p4}${)}${throw}
+${body}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Create a cubic grid of points within a bisected tube of the given 
+ half length, bisection offset and radius. NOTE: the outer extent
+ of the tube is +/-(offset + length/2) in z direction.
+
+ NOTES:
+
+ * Grid z coordinate will be either +ve or -ve
+
+ * Z coordinate range offset < |z| < length/2 + offset
+
+ * XY coordinates in circle of given radius
+
+ * Sequence of coordinates generated by next are in random
+ a order.
+
+"
+      end
+
+      operation 1015728 "split_tube_grid"
+	preserve_cpp_body_indent public explicit_return_type ""
+	nparams 4
+	  param in name "offset" explicit_type "double"
+	  param in name "length" explicit_type "double"
+	  param in name "radius" explicit_type "double"
+	  param in name "spacing" explicit_type "double"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}${)}${throw}
+${body}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Create a cubic grid of points within a bisected tube of the given 
+ half length, bisection offset and radius.  NOTE: the outer extent
+ of the tube is +/-(offset + length/2) in z direction.
+
+ NOTES:
+
+ * Grid z coordinate will be either +ve or -ve
+
+ * Z coordinate range offset < |z| < length/2 + offset
 
  * XY coordinates in circle of given radius
 
@@ -4080,6 +4220,9 @@ ${declarations}
 ${namespace_start}
 ${definition}
 ${namespace_end}
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_KEY(geometry::cubic_grid);
 #endif
 "
       cpp_src "${comment}
@@ -4093,8 +4236,7 @@ ${namespace_start}
 ${members}
 ${namespace_end}
 
-#include <boost/serialization/export.hpp>
-BOOST_CLASS_EXPORT_GUID(geometry::cubic_grid, \"geometry::cubic_grid\");"
+BOOST_CLASS_EXPORT_IMPLEMENT(geometry::cubic_grid);"
       python_src "${comment}
 ${import}
 ${definition}"
@@ -4189,9 +4331,58 @@ ${namespace_end}
 ${includes}
 ${namespace_start}
 ${members}
-${namespace_end}"
+${namespace_end}
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_GUID(geometry::grid_generator, \"geometry::grid_generator\");"
       associated_classes
 	class_ref 289841 // grid_generator
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 458288 "non_periodic_region"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 459952 // non_periodic_region
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
@@ -4242,6 +4433,70 @@ ${definition}"
       associated_classes
 	class_ref 453424 // open_cylinder_region
       end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 464816 "open_split_cylinder_region"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// Manual includes
+#include \"core/constants.hpp\"
+// =
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 460080 // open_split_cylinder_region
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
     end
 
     artifact 450736 "periodic_cube_region"
@@ -4273,6 +4528,21 @@ ${definition}"
       associated_classes
 	class_ref 453296 // periodic_cube_region
       end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
     end
 
     artifact 450992 "tubular_grid"
@@ -4287,7 +4557,10 @@ ${namespace_start}
 ${definition}
 ${namespace_end}
 #endif
-"
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_KEY(geometry::tubular_grid);
+BOOST_CLASS_EXPORT_KEY(geometry::split_tube_grid);"
       cpp_src "${comment}
 
 #ifndef DEBUG
@@ -4303,9 +4576,8 @@ ${namespace_start}
 ${members}
 ${namespace_end}
 
-#include <boost/serialization/export.hpp>
-BOOST_CLASS_EXPORT_GUID(geometry::tubular_grid, \"geometry::tubular_grid\");
-BOOST_CLASS_EXPORT_GUID(geometry::split_tube_grid, \"geometry::split_tube_grid\");"
+BOOST_CLASS_EXPORT_IMPLEMENT(geometry::tubular_grid);
+BOOST_CLASS_EXPORT_IMPLEMENT(geometry::split_tube_grid);"
       python_src "${comment}
 ${import}
 ${definition}"
@@ -4341,6 +4613,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 450736 // periodic_cube_region
 	artifact_ref 450864 // cubic_grid
 	artifact_ref 450992 // tubular_grid
+	artifact_ref 458288 // non_periodic_region
+	artifact_ref 464816 // open_split_cylinder_region
 	artifact_ref 578479 // grid
       end
       comment "----------------------------------------------------------------------
@@ -4358,37 +4632,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----------------------------------------------------------------------
 "
-    end
-
-    artifact 458288 "non_periodic_region"
-      stereotype "source"
-      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
-#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
-
-${comment}
-${includes}
-${declarations}
-${namespace_start}
-${definition}
-${namespace_end}
-#endif
-"
-      cpp_src "${comment}
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
-
-${includes}
-${namespace_start}
-${members}
-${namespace_end}"
-      python_src "${comment}
-${import}
-${definition}"
-      associated_classes
-	class_ref 459952 // non_periodic_region
-      end
     end
   end
 
