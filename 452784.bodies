@@ -7,6 +7,47 @@ BOOST_REQUIRE_NO_THROW( full = reg.volume( 0.0 ) );
 BOOST_REQUIRE_NO_THROW( access = reg.volume( radius ) );
 BOOST_CHECK_EQUAL( full, full_volume );
 BOOST_CHECK_EQUAL( access, reduced_volume );
+!!!1022512.cpp!!!	region_new_position_test(in regn : base_region, in inside : coordinate, in outside : coordinate, in okradius : double, in bigradius : double) : void
+boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+utility::random_distribution rand( generator );
+const double offset( 1.0 );
+// region = regn
+BOOST_REQUIRE( regn.fits( okradius ) );
+BOOST_REQUIRE( ((bigradius < 0.0) or (not regn.fits( bigradius ))) );
+BOOST_REQUIRE( regn.is_inside( inside, okradius  ) );
+BOOST_REQUIRE( not regn.is_inside( outside, okradius ) );
+
+// Test methods that should throw first
+if( bigradius > 0.0 )
+{
+  BOOST_CHECK( not regn.is_inside( outside, bigradius ) );
+  BOOST_CHECK( not regn.is_inside( inside, bigradius ) );
+  particle::coordinate pos;
+  BOOST_CHECK_THROW( pos = regn.new_position( rand, bigradius ), std::runtime_error );
+  pos = inside;
+  BOOST_CHECK_THROW( regn.new_position_offset( rand, pos, offset, bigradius ), std::runtime_error );
+  pos = outside;
+  BOOST_CHECK_THROW( regn.new_position_offset( rand, pos, offset, bigradius ), std::runtime_error );
+}
+{
+  particle::coordinate pos( outside );
+  BOOST_CHECK_THROW( regn.new_position_offset( rand, pos, offset, okradius ), std::runtime_error );
+}
+for( std::size_t count = 0; count != 1000; ++count )
+{
+  {
+    particle::coordinate pos;
+    BOOST_REQUIRE_NO_THROW( pos = regn.new_position( rand, okradius ) );
+    BOOST_CHECK( regn.is_inside( pos, okradius ) );
+  }
+  {
+    particle::coordinate pos( inside );
+    bool result;
+    BOOST_REQUIRE_NO_THROW( result = regn.new_position_offset( rand, pos, offset, okradius ) );
+    BOOST_CHECK( result = regn.is_inside( pos, okradius ) );
+  }
+}
+
 !!!262320.cpp!!!	test_grid_generator(inout gridder : grid_generator) : void
 // Store generated coordinates
 std::vector< particle::coordinate > postns;
@@ -746,3 +787,126 @@ const double offset( 10.0 );
   const std::size_t mod_8{ counter_ntarget_r2 % 8 };
   BOOST_WARN_MESSAGE( 0 == mod_8, "8 FOLD SYMMETRY FAILURE: 0 == (counter_ntarget_r2 % 8)" );
 }
+!!!1022640.cpp!!!	periodic_cube_region_lifetime_test() : void
+{
+  // Test is virtual object pattern
+  BOOST_CHECK( not std::is_default_constructible< geometry::periodic_cube_region >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< geometry::periodic_cube_region >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< geometry::periodic_cube_region >::type {} );
+  BOOST_CHECK( not( std::is_assignable< geometry::periodic_cube_region, geometry::periodic_cube_region >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< geometry::periodic_cube_region >::type {} );
+}
+std::stringstream ss;
+{
+  // Cubic grid main ctor
+  boost::shared_ptr< geometry::periodic_cube_region > var1( new geometry::periodic_cube_region( "bulk", 10.0 ) );
+  BOOST_CHECK_EQUAL( var1->length(), 10.0 );
+  BOOST_CHECK_EQUAL( var1->label(), "bulk" );
+  BOOST_CHECK_EQUAL( var1->volume( 1.0 ), 1000.0 );
+
+  boost::archive::text_oarchive oa( ss );
+  // write class instance to archive
+  BOOST_REQUIRE_NO_THROW( oa << var1 );
+}
+{
+  boost::shared_ptr< geometry::periodic_cube_region > var1;
+  boost::archive::text_iarchive ia( ss );
+  // read class instance from archive
+  BOOST_REQUIRE_NO_THROW( ia >> var1 );
+  BOOST_CHECK_EQUAL( var1->length(), 10.0 );
+  BOOST_CHECK_EQUAL( var1->label(), "bulk" );
+  BOOST_CHECK_EQUAL( var1->volume( 1.0 ), 1000.0 );
+}
+!!!1022768.cpp!!!	periodic_cube_region_method_test() : void
+const std::string label( "bulk" );
+// Cubic grid main ctor
+boost::shared_ptr< geometry::periodic_cube_region > var1( new geometry::periodic_cube_region( label, 10.0 ) );
+BOOST_CHECK_EQUAL( var1->length(), 10.0 );
+
+{
+  particle::coordinate inside( 0.0, 10.0, 10.0 );
+  particle::coordinate outside( 0.0, -0.1, 10.0 );
+  double okradius( 1.0 );
+  double bigradius( 10.1 );
+  // tests fits, is_inside, new_position and new_position_offset
+  geometry_test::region_new_position_test( *var1, inside, outside, okradius, bigradius );
+}
+// Test volume (should be the same regardless of size)
+{
+  BOOST_CHECK_EQUAL( var1->volume( 1.0 ), 1000.0 );
+  BOOST_CHECK_EQUAL( var1->volume( 0.0 ), 1000.0 );
+  // should throw on non-fitting radius
+  BOOST_CHECK_THROW( var1->volume( 100.0 ), std::runtime_error );
+}
+// label / set_label
+{
+  BOOST_CHECK_EQUAL( var1->label(), "bulk" );
+  BOOST_CHECK_NO_THROW( var1->set_label( "100" ) );
+  BOOST_CHECK_EQUAL( var1->label(), "100" );
+  BOOST_CHECK_NO_THROW( var1->set_label( label ) );
+  BOOST_CHECK_EQUAL( var1->label(), label );
+}
+// Calculate distances
+{
+  // Uses wrapping
+  particle::coordinate_set pnts;
+  std::vector< double > target, result;
+  pnts.resize( 10 );
+  // First five points effectively wrap to origin
+  pnts.set_x( 0, 0.0 );
+  pnts.set_y( 0, 0.0 );
+  pnts.set_z( 0 , 0.0 );
+  pnts.set_x( 1, 10.0 );
+  pnts.set_y( 1, 0.0 );
+  pnts.set_z( 1 , 0.0 );
+  pnts.set_x( 2, 0.0 );
+  pnts.set_y( 2, 10.0 );
+  pnts.set_z( 2 , 0.0 );
+  pnts.set_x( 3, 0.0 );
+  pnts.set_y( 3, 0.0 );
+  pnts.set_z( 3 , 10.0 );
+  pnts.set_x( 4, 10.0 );
+  pnts.set_y( 4, 10.0 );
+  pnts.set_z( 4 , 10.0 );
+  pnts.set_x( 5, 1.0 );
+  pnts.set_y( 5, 0.0 );
+  pnts.set_z( 5 , 0.0 );
+  pnts.set_x( 6, 0.0 );
+  pnts.set_y( 6, 1.0 );
+  pnts.set_z( 6 , 1.0 );
+  pnts.set_x( 7, 1.0 );
+  pnts.set_y( 7, 1.0 );
+  pnts.set_z( 7 , 1.0 );
+  pnts.set_x( 8, 2.0 );
+  pnts.set_y( 8, 2.0 );
+  pnts.set_z( 8 , 2.0 );
+  pnts.set_x( 9, 5.0 );
+  pnts.set_y( 9, 5.0 );
+  pnts.set_z( 9 , 5.0 );
+
+  target.resize( 10 );
+  particle::coordinate newpos( 0.0, 5.0, 0.0 );
+  target[0] = 5.0;
+  target[1] = 5.0;
+  target[2] = 5.0;
+  target[3] = 5.0;
+  target[4] = 5.0;
+  target[5] = std::sqrt( 26.0 );
+  target[6] = std::sqrt( 17.0 );
+  target[7] = std::sqrt( 18.0 );
+  target[8] = std::sqrt( 17.0 );
+  target[9] = std::sqrt( 50.0 );
+
+  var1->calculate_distances( newpos, pnts, result, 10, 0 );
+  for( std::size_t ii = 0; ii != 10; ++ii )
+  {
+    BOOST_CHECK( utility::feq( result[ii], target[ii] ) );
+    particle::coordinate otherpos( pnts.x( ii ), pnts.y( ii ), pnts.z( ii ) );
+    BOOST_CHECK( utility::feq( var1->calculate_distance_squared( newpos, otherpos ), std::pow( target[ii], 2 ) ) );
+  }
+
+}
+// change volume
+// make_gridder
+
+

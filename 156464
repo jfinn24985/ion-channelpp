@@ -1,6 +1,6 @@
 format 75
 "geometry" // geometry
-  revision 4
+  revision 5
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -522,11 +522,11 @@ ${docstring}${body}
 	nparams 2
 	  param in name "volume" explicit_type "double"
 	  param in name "rad" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
 {
-  this->regions_[0]->${name}( ${p0} );
+  this->regions_[0]->${name}( ${p0}, ${p1} );
 }
 "
 	
@@ -746,6 +746,36 @@ ${docstring}${members}
 	comment " A user-defined label for the region."
       end
 
+      operation 1023152 "base_region"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "label" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
+: label_( ${p0} )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1023280 "base_region"
+	protected explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Default ctor for serialization only"
+      end
+
       operation 990128 "~base_region"
 	cpp_virtual public explicit_return_type ""
 	nparams 0
@@ -776,7 +806,9 @@ ${docstring}${body}
 	  param inout name "ar" explicit_type "Archive"
 	  param in name "version" explicit_type "unsigned int"
 	cpp_decl "    ${comment}template<class Archive>
-  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {}
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+  ar & this->label_;
+}
 "
 	
 	
@@ -864,7 +896,7 @@ ${docstring}${body}
 	nparams 2
 	  param in name "volume" explicit_type "double"
 	  param in name "rad" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
 	
 	
@@ -887,7 +919,30 @@ ${docstring}${body}
       end
 
       operation 991152 "fits"
-	abstract const cpp_virtual public explicit_return_type "bool"
+	const public explicit_return_type "bool"
+	nparams 1
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return ${p0} >= 0.0 and this->do_${name}( ${p0} );
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " True if there is any position in the region where a spherical
+ particle of the given size can be in a valid position.
+
+ False if radius is negative.
+
+ * NOTE: for periodic systems the sphere diameter must be 
+ less than the periodicity in the periodic dimensions."
+      end
+
+      operation 1023664 "do_fits"
+	abstract const cpp_virtual private explicit_return_type "bool"
 	nparams 1
 	  param in name "radius" explicit_type "double"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
@@ -901,12 +956,43 @@ ${docstring}${body}
 	comment " True if there is any position in the region where a spherical
  particle of the given size can be in a valid position.
 
+ False if radius is negative.
+
  * NOTE: for periodic systems the sphere diameter must be 
  less than the periodicity in the periodic dimensions."
       end
 
       operation 988976 "is_inside"
-	abstract const cpp_virtual public explicit_return_type "bool"
+	const public explicit_return_type "bool"
+	nparams 2
+	  param in name "pos" type class_ref 986799 // coordinate
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->fits( ${p1} ) and this->do_${name}( ${p0}, ${p1} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate if a sphere centred at the given point and with
+ the given radius is in a valid position within the region.
+
+ false if r < 0
+ not fits(r) --> not is_inside(..., r)
+
+ * NOTE: Key point is that this returns whether the position
+ is a valid position in the region. For periodic systems
+ this implies the radius must be ignored in the periodic
+ dimension(s).
+"
+      end
+
+      operation 1023792 "do_is_inside"
+	abstract const cpp_virtual private explicit_return_type "bool"
 	nparams 2
 	  param in name "pos" type class_ref 986799 // coordinate
 	  param in name "radius" explicit_type "double"
@@ -920,6 +1006,8 @@ ${docstring}${body}
 	
 	comment " Calculate if a sphere centred at the given point and with
  the given radius is in a valid position within the region.
+
+ not fits(r) --> not is_inside(..., r)
 
  * NOTE: Key point is that this returns whether the position
  is a valid position in the region. For periodic systems
@@ -1107,7 +1195,29 @@ ${docstring}${body}
       end
 
       operation 988720 "volume"
-	abstract const cpp_virtual public explicit_return_type "double"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  UTILITY_REQUIRE( this->fits( radius ), \"Sphere must fit in space to be able to calculate the volume.\" );
+  return this->do_${name}( ${p0} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate volume accessible to centre-points of spherical particles
+ with the given radius. 
+
+ \\pre fits(radius)"
+      end
+
+      operation 1023536 "do_volume"
+	abstract const cpp_virtual private explicit_return_type "double"
 	nparams 1
 	  param in name "radius" explicit_type "double"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
@@ -1119,7 +1229,9 @@ ${docstring}${body}
 "
 	
 	comment " Calculate volume accessible to centre-points of spherical particles
- with the given radius. "
+ with the given radius. 
+
+ NOTE: can assume fits(radius)"
       end
     end
 
@@ -1149,14 +1261,27 @@ ${docstring}${members}
       end
 
       operation 1006896 "non_periodic_region"
-	public explicit_return_type ""
+	protected explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
 "
-	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
-: base_region()
-{}
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
 "
+	
+      end
+
+      operation 1023408 "non_periodic_region"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "label" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}${)}${volatile}${throw}
+: base_region( ${p0} )
+{}"
 	
 	
 	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
@@ -1423,8 +1548,8 @@ ${docstring}${body}
 	idl ""
       end
 
-      operation 991408 "fits"
-	const cpp_virtual public explicit_return_type "bool"
+      operation 991408 "do_fits"
+	const cpp_virtual private explicit_return_type "bool"
 	nparams 1
 	  param in name "radius" explicit_type "double"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
@@ -1444,8 +1569,8 @@ ${docstring}${body}
  particle of the given size can be completely included."
       end
 
-      operation 990512 "is_inside"
-	const cpp_virtual public explicit_return_type "bool"
+      operation 990512 "do_is_inside"
+	const cpp_virtual private explicit_return_type "bool"
 	nparams 2
 	  param in name "pos" type class_ref 986799 // coordinate
 	  param in name "radius" explicit_type "double"
@@ -1586,8 +1711,8 @@ ${docstring}${body}
 	comment " Set the half length"
       end
 
-      operation 990640 "volume"
-	const public explicit_return_type "double"
+      operation 990640 "do_volume"
+	const private explicit_return_type "double"
 	nparams 1
 	  param in name "radius" explicit_type "double"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override
@@ -1601,7 +1726,9 @@ ${docstring}${body}
 "
 	
 	comment " Calculate volume accessible to centre-points of spherical particles
- with the given radius"
+ with the given radius
+
+ NOTE: can assume fits(radius)"
       end
 
       operation 255024 "compute_volume"
@@ -1767,8 +1894,8 @@ ${docstring}${body}
 	idl ""
       end
 
-      operation 995888 "fits"
-	const cpp_virtual public explicit_return_type "bool"
+      operation 995888 "do_fits"
+	const cpp_virtual private explicit_return_type "bool"
 	nparams 1
 	  param in name "radius" explicit_type "double"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
@@ -1789,8 +1916,8 @@ ${docstring}${body}
  ignores the length."
       end
 
-      operation 996016 "is_inside"
-	const cpp_virtual public explicit_return_type "bool"
+      operation 996016 "do_is_inside"
+	const cpp_virtual private explicit_return_type "bool"
 	nparams 2
 	  param in name "pos" type class_ref 986799 // coordinate
 	  param in name "radius" explicit_type "double"
@@ -1861,8 +1988,8 @@ ${docstring}${body}
  \\return is_inside(pos, radius)"
       end
 
-      operation 997040 "volume"
-	const public explicit_return_type "double"
+      operation 997040 "do_volume"
+	const private explicit_return_type "double"
 	nparams 1
 	  param in name "radius" explicit_type "double"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override
@@ -1876,7 +2003,9 @@ ${docstring}${body}
 "
 	
 	comment " Calculate volume accessible to centre-points of spherical particles
- with the given radius"
+ with the given radius
+
+ NOTE: can assume fits(radius)"
       end
     end
 
@@ -2037,8 +2166,8 @@ ${docstring}${body}
 	idl ""
       end
 
-      operation 1007920 "fits"
-	const cpp_virtual public explicit_return_type "bool"
+      operation 1007920 "do_fits"
+	const cpp_virtual private explicit_return_type "bool"
 	nparams 1
 	  param in name "radius" explicit_type "double"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
@@ -2059,8 +2188,8 @@ ${docstring}${body}
  ignores the length."
       end
 
-      operation 1008048 "is_inside"
-	const cpp_virtual public explicit_return_type "bool"
+      operation 1008048 "do_is_inside"
+	const cpp_virtual private explicit_return_type "bool"
 	nparams 2
 	  param in name "pos" type class_ref 986799 // coordinate
 	  param in name "radius" explicit_type "double"
@@ -2131,8 +2260,8 @@ ${docstring}${body}
  \\return is_inside(pos, radius)"
       end
 
-      operation 1008432 "volume"
-	const public explicit_return_type "double"
+      operation 1008432 "do_volume"
+	const private explicit_return_type "double"
 	nparams 1
 	  param in name "radius" explicit_type "double"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override
@@ -2146,7 +2275,9 @@ ${docstring}${body}
 "
 	
 	comment " Calculate volume accessible to centre-points of spherical particles
- with the given radius"
+ with the given radius
+
+ NOTE: can assume fits(radius)"
       end
     end
 
@@ -2241,12 +2372,15 @@ ${docstring}${body}
 
       operation 991920 "periodic_cube_region"
 	public explicit_return_type ""
-	nparams 1
+	nparams 2
+	  param in name "label" explicit_type "string"
 	  param in name "len" explicit_type "double"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
-: length_( ${p0} )
-, volume_( std::pow( ${p0}, 3 ) )
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
+: base_region( ${p0} )
+, length_( ${p1} )
+, volume_( std::pow( ${p1}, 3 ) )
 {}
+
 "
 	
 	
@@ -2256,6 +2390,7 @@ ${docstring}${body}
 	
 	comment " Create cube with the given dimension.
 
+ \\param label : region label
  \\param len : the length of the cube."
       end
 
@@ -2362,8 +2497,8 @@ ${docstring}${body}
  a periodic box."
       end
 
-      operation 992304 "fits"
-	const cpp_virtual public explicit_return_type "bool"
+      operation 992304 "do_fits"
+	const cpp_virtual private explicit_return_type "bool"
 	nparams 1
 	  param in name "radius" explicit_type "double"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
@@ -2387,14 +2522,16 @@ ${docstring}${body}
  would occlude themselves and are therefore said not to fit."
       end
 
-      operation 992560 "is_inside"
-	const public explicit_return_type "bool"
+      operation 992560 "do_is_inside"
+	const private explicit_return_type "bool"
 	nparams 2
 	  param in name "pos" type class_ref 986799 // coordinate
 	  param in name "radius" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
 {
-  return this->length_ >= ${p0}.x and this->length_ >= ${p0}.y and this->length_ >= ${p0}.z;
+  ${body}
 }
 "
 	
@@ -2403,10 +2540,15 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Check if sphere at the given position and radius is in a valid position
- in the cube.
+	comment " Check if sphere at the given position and radius is inside
+ the cube. As all positions can be mapped inside the
+ cube, this method answers the question of whether the
+ position is inside the primary cube. 
 
- * NOTE: Does not consider periodicity but ignores the radius."
+ not fits(r) --> not is_inside(..., r)
+
+ * NOTE: Does not consider periodicity but ignores the radius if
+ fits(radius) is true."
       end
 
       operation 992816 "do_new_position"
@@ -2497,8 +2639,8 @@ ${docstring}${body}
 	comment " Set the radius"
       end
 
-      operation 993584 "volume"
-	const public explicit_return_type "double"
+      operation 993584 "do_volume"
+	const private explicit_return_type "double"
 	nparams 1
 	  param in name "radius" explicit_type "double"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override
@@ -2513,7 +2655,73 @@ ${docstring}${body}
 	
 	comment " Calculate volume accessible to centre-points of spherical particles
  with the given radius. For this periodic system this is always 
- equivalent to volume()."
+ equivalent to volume().
+
+ NOTE: can assume fits(radius)"
+      end
+
+      extra_member 431536 "TODO"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1022896 "change_volume"
+	cpp_virtual public explicit_return_type "void"
+	nparams 2
+	  param in name "volume" explicit_type "double"
+	  param in name "rad" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Increase or decrease the system dimensions to match the new
+ volume. Derived classes each have rules to decide how the
+ region's dimensions change to accomodate the new volume. For
+ example a cube simply adjusts one length while a cylinder must
+ distribute the change over the radial and linear dimensions.
+
+ * NOTE : This is expected to be used only during system
+ initialization, ie before checking particle positions or
+ asking for new particle positions. Whether any check or
+ particle postion calculated before calling this method is
+ still valid is undefined.
+"
+      end
+
+      operation 1023024 "make_gridder"
+	const cpp_virtual public return_type class_ref 289841 // grid_generator
+	nparams 1
+	  param inout name "rgenr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  return boost::shared_ptr< ${type} >{};
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create a gridder object for this system. A gridder object
+ provides a sequence of positions on a lattice within the
+ system. The inter-node distance is guarranteed to have the
+ given minimum distance and the given minimum number of
+ points.  The gridder provides the positions in a random
+ sequence."
       end
     end
 
