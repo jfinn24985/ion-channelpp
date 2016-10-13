@@ -1,6 +1,6 @@
 format 75
 "geometry" // geometry
-  revision 5
+  revision 6
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -102,7 +102,7 @@ format 75
     show_infonote default drawing_language default show_stereotype_properties default
     associated_deployment_view deploymentview_ref 156592 // geometry source
     classdiagram 265648 "geometry classes"
-      draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
+      draw_all_relations default hide_attributes yes hide_operations yes hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
       size A4
     end
 
@@ -367,6 +367,15 @@ ${docstring}${members}
 	  b parent class_ref 275887 // noncopyable
       end
 
+      classrelation 618160 // <dependency>
+	relation 617264 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 618160 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
       classrelation 596656 // regions_ (<directional composition>)
 	relation 595760 *-->
 	  stereotype "vector"
@@ -515,6 +524,54 @@ ${docstring}${body}
 "
 	
 	comment " Add solid to system"
+      end
+
+      operation 1030448 "calculate_distances"
+	const public explicit_return_type "void"
+	nparams 5
+	  param in name "pos" type class_ref 986799 // coordinate
+	  param in name "others" type class_ref 223792 // coordinate_set
+	  param inout name "result" explicit_type "double"
+	  param in name "endindex" explicit_type "size_t"
+	  param in name "startindex" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, std::vector< ${t2} > & ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}${)}${const}${volatile}${throw}${abstract}
+{
+  this->regions_[0]->${name}( ${p0}, ${p1}, ${p2}, ${p3}, ${p4} );
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate distance between the given position and
+ all positions in the given coordinate set. The
+ result vector will contain the distances in the
+ same sequence as the coordinate set.
+
+ \\pre startindex < endindex
+ \\pre endindex <= others.size
+ \\post result.size == end_index
+ \\post result[0:start_index] == 0.0"
+      end
+
+      operation 1030320 "calculate_distance_squared"
+	const public explicit_return_type "double"
+	nparams 2
+	  param in name "pos1" type class_ref 986799 // coordinate
+	  param in name "pos2" type class_ref 986799 // coordinate
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->regions_[0]->${name}( ${p0}, ${p1} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate square of distance between two points."
       end
 
       operation 1003696 "change_volume"
@@ -708,6 +765,160 @@ ${docstring}${body}
       end
     end
 
+    class 466608 "distance_calculator"
+      abstract visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Abstract class to allow friend relation between geometry_manager and
+ distance calculation methods."
+      classrelation 617520 // <generalisation>
+	relation 616624 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 617520 // <generalisation>
+	  b parent class_ref 275887 // noncopyable
+      end
+
+      classrelation 617776 // <dependency>
+	relation 616880 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 617776 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      classrelation 618416 // <dependency>
+	relation 617520 -_->
+	  stereotype "friend"
+	  a package
+	    comment " Friend class to access distance calculation methods."
+	    cpp default "friend class ${type};"
+	    python "${type}"
+	    classrelation_ref 618416 // <dependency>
+	  b parent class_ref 452656 // geometry_manager
+      end
+
+      extra_member 417072 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 991536 "serialize"
+	stereotype "template"
+	private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {}
+"
+	
+	
+	
+	
+	comment "Write the grid parameters to an archive"
+      end
+
+      operation 1005104 "calculate_distances"
+	const protected explicit_return_type "void"
+	nparams 5
+	  param in name "pos" type class_ref 986799 // coordinate
+	  param in name "others" type class_ref 223792 // coordinate_set
+	  param inout name "result" explicit_type "double"
+	  param in name "endindex" explicit_type "size_t"
+	  param in name "startindex" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, std::vector< ${t2} > & ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}${)}${const}${volatile}${throw}${abstract};"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} & ${p2}, ${t3} ${p3}, ${t4} ${p4}${)}${const}${volatile}${throw}
+{
+  ${body}
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate distance between the given position and
+ all positions in the given coordinate set. The
+ result vector will contain the distances in the
+ same sequence as the coordinate set.
+
+ NOTE: This is hidden because it should
+ only be called throw a geometry_manager
+ object.
+
+ \\pre startindex < endindex
+ \\pre endindex <= others.size
+ \\post result.size == end_index
+ \\post result[0:start_index] == 0.0"
+      end
+
+      operation 1007280 "do_calculate_distances"
+	abstract const cpp_virtual private explicit_return_type "void"
+	nparams 5
+	  param in name "pos" type class_ref 986799 // coordinate
+	  param in name "others" type class_ref 223792 // coordinate_set
+	  param inout name "result" explicit_type "double"
+	  param in name "endindex" explicit_type "size_t"
+	  param in name "startindex" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, std::vector< ${t2} > & ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate distance between the given position and
+ all positions in the given coordinate set. The
+ result vector will contain the distances in the
+ same sequence as the coordinate set.
+
+ \\post result.size == end_index
+ \\post result[0:start_index] == 0.0"
+      end
+
+      operation 1004976 "calculate_distance_squared"
+	abstract const cpp_virtual protected explicit_return_type "double"
+	nparams 2
+	  param in name "pos1" type class_ref 986799 // coordinate
+	  param in name "pos2" type class_ref 986799 // coordinate
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate square of distance between two points.
+
+ NOTE: This is hidden because it should
+ only be called throw a geometry_manager
+ object."
+      end
+
+    end
+
     class 452912 "base_region"
       abstract visibility package 
       cpp_decl "${comment}${template}class ${name}${inherit}
@@ -725,13 +936,22 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " A region of coordinate space."
-      classrelation 589360 // <generalisation>
-	relation 588464 ---|>
+      classrelation 617648 // <generalisation>
+	relation 616752 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 589360 // <generalisation>
-	  b parent class_ref 275887 // noncopyable
+	    classrelation_ref 617648 // <generalisation>
+	  b parent class_ref 466608 // distance_calculator
+      end
+
+      classrelation 617904 // <dependency>
+	relation 617008 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 617904 // <dependency>
+	  b parent class_ref 912431 // access
       end
 
       attribute 508848 "label_"
@@ -789,7 +1009,7 @@ ${docstring}${body}
 	
       end
 
-      extra_member 417072 "friend"
+      extra_member 438064 "friend"
 	
 	cpp "
   friend class boost::serialization::access;" ""
@@ -799,7 +1019,7 @@ ${docstring}${body}
 	idl ""
       end
 
-      operation 991536 "serialize"
+      operation 1030960 "serialize"
 	stereotype "template"
 	private explicit_return_type "void"
 	nparams 2
@@ -815,80 +1035,6 @@ ${docstring}${body}
 	
 	
 	comment "Write the grid parameters to an archive"
-      end
-
-      operation 1005104 "calculate_distances"
-	const cpp_virtual public explicit_return_type "void"
-	nparams 5
-	  param in name "pos" type class_ref 986799 // coordinate
-	  param in name "others" type class_ref 223792 // coordinate_set
-	  param inout name "result" explicit_type "double"
-	  param in name "endindex" explicit_type "size_t"
-	  param in name "startindex" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, std::vector< ${t2} > & ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}${)}${const}${volatile}${throw}${abstract};"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, std::vector< ${t2} > & ${p2}, ${t3} ${p3}, ${t4} ${p4}${)}${const}${throw}
-{
-  UTILITY_REQUIRE(${p4} < ${p3}, \"Start index not before end index.\");
-  UTILITY_REQUIRE(${p3} <= ${p1}.size(), \"End index out of range.\");
-  this->do_${name}${(}${p0}, ${p1}, ${p2}, ${p3}, ${p4});
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Calculate distance between the given position and
- all positions in the given coordinate set. The
- result vector will contain the distances in the
- same sequence as the coordinate set.
-
- \\pre startindex < endindex
- \\pre endindex <= others.size
- \\post result.size == end_index
- \\post result[0:start_index] == 0.0"
-      end
-
-      operation 1007280 "do_calculate_distances"
-	abstract const cpp_virtual private explicit_return_type "void"
-	nparams 5
-	  param in name "pos" type class_ref 986799 // coordinate
-	  param in name "others" type class_ref 223792 // coordinate_set
-	  param inout name "result" explicit_type "double"
-	  param in name "endindex" explicit_type "size_t"
-	  param in name "startindex" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, std::vector< ${t2} > & ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}${)}${const}${volatile}${throw}${abstract};
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Calculate distance between the given position and
- all positions in the given coordinate set. The
- result vector will contain the distances in the
- same sequence as the coordinate set.
-
- \\post result.size == end_index
- \\post result[0:start_index] == 0.0"
-      end
-
-      operation 1004976 "calculate_distance_squared"
-	abstract const cpp_virtual public explicit_return_type "double"
-	nparams 2
-	  param in name "pos1" type class_ref 986799 // coordinate
-	  param in name "pos2" type class_ref 986799 // coordinate
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Calculate square of distance between two points."
       end
 
       operation 1004848 "change_volume"
@@ -1233,6 +1379,7 @@ ${docstring}${body}
 
  NOTE: can assume fits(radius)"
       end
+
     end
 
     class 459952 "non_periodic_region"
@@ -1258,6 +1405,15 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 597168 // <generalisation>
 	  b parent class_ref 452912 // base_region
+      end
+
+      classrelation 618032 // <dependency>
+	relation 617136 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 618032 // <dependency>
+	  b parent class_ref 912431 // access
       end
 
       operation 1006896 "non_periodic_region"
@@ -1361,7 +1517,7 @@ ${docstring}${body}
       end
 
       operation 1006640 "calculate_distance_squared"
-	const public explicit_return_type "double"
+	const protected explicit_return_type "double"
 	nparams 2
 	  param in name "pos1" type class_ref 986799 // coordinate
 	  param in name "pos2" type class_ref 986799 // coordinate
@@ -2478,7 +2634,7 @@ ${docstring}${body}
       end
 
       operation 218673 "calculate_distance_squared"
-	const public explicit_return_type "double"
+	const protected explicit_return_type "double"
 	nparams 2
 	  param in name "pos1" type class_ref 986799 // coordinate
 	  param in name "pos2" type class_ref 986799 // coordinate
@@ -2748,6 +2904,15 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 589488 // <generalisation>
 	  b parent class_ref 275887 // noncopyable
+      end
+
+      classrelation 618288 // <dependency>
+	relation 617392 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 618288 // <dependency>
+	  b parent class_ref 912431 // access
       end
 
       operation 990256 "~base_solid_object"
@@ -4291,6 +4456,8 @@ ${comment}
 ${includes}
 ${declarations}
 ${namespace_start}
+class geometry_manager;
+
 ${definition}
 ${namespace_end}
 #endif
@@ -4450,6 +4617,55 @@ ${import}
 ${definition}"
       associated_classes
 	class_ref 868655 // cubic_grid
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 471344 "distance_calculator"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+// manual decl
+#include \"utility/utility.hpp\"
+//-
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 466608 // distance_calculator
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
