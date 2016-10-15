@@ -48,6 +48,52 @@ for( std::size_t count = 0; count != 1000; ++count )
   }
 }
 
+!!!1047472.cpp!!!	region_make_gridder_test(in regn : base_region, in min_count : size_t, in max_count : size_t, in min_space : double, in max_space : double) : void
+boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+utility::random_distribution rand( generator );
+// region = regn
+
+// check count grid generation
+{
+  if( min_count > max_count )
+  {
+    std::swap( max_count, min_count );
+  }
+  const std::size_t increment = ( min_count + 10 > max_count ? 1 : ( max_count - min_count ) / 10 );
+
+  for( std::size_t count = min_count; count <= max_count; count += increment )
+  {
+    boost::shared_ptr< geometry::grid_generator > grid;
+    grid = regn.make_gridder( rand, count );
+    BOOST_CHECK_LE( count, grid->size() );
+  }
+}
+
+// check spacing grid generation
+{
+  if( min_space > max_space )
+  {
+    std::swap( min_space, max_space );
+  }
+  const double increment = ( min_space == max_space ? 1.0 : ( max_space - min_space ) / 10.0 );
+
+  double space = 0.0;
+  for( space = min_space; space <= max_space; space += increment )
+  {
+    if( regn.fits( space/2 ) )
+    {
+      boost::shared_ptr< geometry::grid_generator > grid;
+      BOOST_CHECK_NO_THROW( grid = regn.make_gridder( space, rand ) );
+      BOOST_CHECK_LE( space, grid->spacing() );
+    }
+    else
+    {
+      BOOST_CHECK_THROW( regn.make_gridder( space, rand ), std::runtime_error );
+    }
+  }
+}
+
+
 !!!262320.cpp!!!	test_grid_generator(inout gridder : grid_generator) : void
 // Store generated coordinates
 std::vector< particle::coordinate > postns;
@@ -910,9 +956,20 @@ BOOST_CHECK_EQUAL( var1->length(), 10.0 );
 
 }
 // change volume
+{
+  geometry::geometry_manager man( var1 );
+  BOOST_CHECK_EQUAL( var1->volume( 0.0 ), 1000.0 );
+
+  BOOST_REQUIRE_NO_THROW( man.change_volume( 900.0, 3.0 ) );
+  BOOST_CHECK( utility::feq( var1->volume( 3.0 ), 900.0 ) );
+  BOOST_CHECK_EQUAL( var1->volume( 3.0 ), 900.0 );
+
+  BOOST_REQUIRE_THROW( man.change_volume( 729.0, 5.0 ), std::runtime_error  );
+}
 // make_gridder
-
-
+{
+  geometry_test::region_make_gridder_test( *var1, 1, 500, 0.5, 11.0 );
+}
 !!!1039536.cpp!!!	cube_region_lifetime_test() : void
 {
   // Test is virtual object pattern
@@ -1038,9 +1095,19 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
       BOOST_CHECK( utility::feq( man.calculate_distance_squared( newpos, otherpos ), std::pow( target[ii], 2 ) ) );
     }
   }
+
+  // change volume
+  geometry::geometry_manager man( var1 );
+  BOOST_CHECK_EQUAL( var1->volume( 0.0 ), 1000.0 );
+
+  BOOST_REQUIRE_NO_THROW( man.change_volume( 900.0, 3.0 ) );
+  BOOST_CHECK( utility::feq( var1->volume( 3.0 ), 900.0 ) );
+  // No radius should be too large for open cube.
+  BOOST_CHECK_NO_THROW( man.change_volume( 729.0, 5.0 ) );
+
+  // make_gridder
+  geometry_test::region_make_gridder_test( *var1, 1, 500, 0.5, 3.0 );
 }
-// change volume
-// make_gridder
 
 
 
@@ -1136,9 +1203,18 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
       BOOST_CHECK( utility::feq( man.calculate_distance_squared( newpos, otherpos ), std::pow( target[ii], 2 ) ) );
     }
   }
+  // change volume
+  geometry::geometry_manager man( var1 );
+  BOOST_CHECK_EQUAL( var1->volume( 0.0 ), 1000.0 );
+
+  BOOST_REQUIRE_NO_THROW( man.change_volume( 900.0, 3.0 ) );
+  BOOST_CHECK( utility::feq( var1->volume( 3.0 ), 900.0 ) );
+
+  BOOST_REQUIRE_NO_THROW( man.change_volume( 729.0, 5.0 ) );
+  BOOST_CHECK( utility::feq( var1->volume( 5.0 ), 729.0 ) );
 }
-// change volume
-// make_gridder
+// make_gridder: see cube_region_method_open_test as gridder generation is
+// always independent of open/closedness.
 
 
 

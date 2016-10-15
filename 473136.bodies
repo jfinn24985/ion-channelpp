@@ -1,4 +1,15 @@
 class cube_region
+!!!1037616.cpp!!!	do_change_volume(in vol : double, in rad : double) : void
+if( this->is_open() ) 
+{
+ // we can ignore radius
+ this->length_ = std::cbrt( vol );
+}
+else
+{
+  // (len - 2r)**3 = volume
+  this->length_ = std::cbrt( vol ) + 2 * rad;
+}
 !!!1038384.cpp!!!	do_is_inside(in pos : coordinate, in radius : double) : bool
 double len( this->length_ );
 particle::coordinate orig( this->origin_ );
@@ -17,6 +28,16 @@ if( not this->is_open_ )
 return inrange( orig.x, len, pos.x )
    and inrange( orig.y, len, pos.y )
    and inrange( orig.z, len, pos.z );
+!!!1047088.cpp!!!	make_gridder(in spacing : double, inout rgenr : random_distribution) : grid_generator
+boost::shared_ptr< geometry::grid_generator > result;
+// calc max count from spacing and cube length.
+std::size_t count( std::floor(this->length_ / spacing) - 1 );
+result.reset( new geometry::cubic_grid( this->length_, std::pow( count, 3 ), rgenr ) );
+return result;
+!!!1046960.cpp!!!	make_gridder(inout rgenr : random_distribution, in count : size_t) : grid_generator
+boost::shared_ptr< geometry::grid_generator > result;
+result.reset( new geometry::cubic_grid( this->length_, count, rgenr ) );
+return result;
 !!!1038256.cpp!!!	do_new_position(inout rgnr : random_distribution, in radius : double) : coordinate
 double len( this->length_ );
 particle::coordinate orig( this->origin_ );

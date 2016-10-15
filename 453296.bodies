@@ -1,5 +1,5 @@
 class periodic_cube_region
-!!!296881.cpp!!!	do_calculate_distances(in pos : coordinate, in others : coordinate_set, inout result : double, in endindex : size_t, in startindex : size_t) : void
+!!!296881.cpp!!!	do_calculate_distances(in pos : coordinate, in others : coordinate_set, inout result : double, in startindex : size_t, in endindex : size_t) : void
 const particle::coordinate newpos(pos);
 const double box = this->length_;
 const double hbox = box/2;
@@ -23,7 +23,7 @@ for (std::size_t jj = startindex; jj != endindex; ++jj)
    dz += (dz > hbox ? -box : ( dz < -hbox ? box : 0.0));
    result[jj] = std::sqrt(dx*dx + dy*dy + dz*dz);
 }
-!!!296881.python!!!	do_calculate_distances(in pos : coordinate, in others : coordinate_set, inout result : double, in endindex : size_t, in startindex : size_t) : void
+!!!296881.python!!!	do_calculate_distances(in pos : coordinate, in others : coordinate_set, inout result : double, in startindex : size_t, in endindex : size_t) : void
 dx = position[0] - ens.x[start_index:len(ens)]
 dy = position[1] - ens.y[start_index:len(ens)]
 dz = position[2] - ens.z[start_index:len(ens)]
@@ -48,13 +48,42 @@ dx = (dx > hbox ? dx - box : (dx < -hbox ? dx + box : dx));
 dy = (dy > hbox ? dy - box : (dy < -hbox ? dy + box : dy));
 dz = (dz > hbox ? dz - box : (dz < -hbox ? dz + box : dz));
 return dx*dx + dy*dy + dz*dz;
-!!!992560.cpp!!!	is_inside(in pos : coordinate, in radius : double) : bool
+!!!1046448.cpp!!!	do_change_volume(in vol : double, in rad : double) : void
+const double oldlen( this->length_ );
+const double oldvol( this->volume_ );
+this->length_ = std::cbrt( vol );
+this->volume_ = vol;
+// We should be able to fit radius after changing the volume.
+if( rad == 0.0 )
+{
+  return;
+}
+const bool fits_radius( this->fits( rad ) );
+if( not fits_radius )
+{
+  // reset length and volume.
+  this->length_ = oldlen;
+  this->volume_ = oldvol;
+  UTILITY_REQUIRE( fits_radius, "Object can not fit in volume after volume change." );
+}
+
+!!!992560.cpp!!!	do_is_inside(in pos : coordinate, in radius : double) : bool
 const double len( this->length_ );
 auto inrange = [len](double val)->bool
 {
   return 0.0 <= val and val <= len;
 }; 
 return len >= radius and inrange( pos.x ) and inrange( pos.y ) and inrange( pos.z );
+!!!1047344.cpp!!!	make_gridder(inout rgenr : random_distribution, in count : size_t) : grid_generator
+boost::shared_ptr< geometry::grid_generator > result;
+result.reset( new geometry::cubic_grid( this->length_, count, rgenr ) );
+return result;
+!!!1047216.cpp!!!	make_gridder(in spacing : double, inout rgenr : random_distribution) : grid_generator
+boost::shared_ptr< geometry::grid_generator > result;
+// calc max count from spacing and cube length.
+std::size_t count( std::floor(this->length_ / spacing) - 1 );
+result.reset( new geometry::cubic_grid( this->length_, std::pow( count, 3 ), rgenr ) );
+return result;
 !!!992816.cpp!!!	do_new_position(inout rgnr : random_distribution, in radius : double) : coordinate
 return particle::coordinate( rgnr.uniform( this->length_ ), rgnr.uniform( this->length_ ), rgnr.uniform( this->length_ ) );
 !!!994224.cpp!!!	do_new_position_wrap(inout pos : coordinate, in radius : double) : bool

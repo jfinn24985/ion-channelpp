@@ -1,6 +1,6 @@
 format 75
 "geometry" // geometry
-  revision 7
+  revision 8
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -577,7 +577,7 @@ ${docstring}${body}
       operation 1003696 "change_volume"
 	public explicit_return_type "void"
 	nparams 2
-	  param in name "volume" explicit_type "double"
+	  param in name "vol" explicit_type "double"
 	  param in name "rad" explicit_type "double"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
@@ -597,6 +597,16 @@ ${docstring}${body}
  region's dimensions change to accomodate the new volume. For
  example a cube simply adjusts one length while a cylinder must
  distribute the change over the radial and linear dimensions.
+
+ Pre/post-conditions from region.change_volume(...)
+
+ \\pre rad >= 0
+
+ \\pre vol >= 0
+
+ \\post volume(rad) == vol
+
+ \\pre AFTER VOLUME CHANGE fits(rad)
 
  * NOTE : This is expected to be used only during system
  initialization, ie before checking particle positions or
@@ -917,6 +927,66 @@ ${docstring}${body}
  only be called throw a geometry_manager
  object."
       end
+
+      operation 1004848 "change_volume"
+	protected explicit_return_type "void"
+	nparams 2
+	  param in name "vol" explicit_type "double"
+	  param in name "rad" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  UTILITY_CHECK( not (${p0} < 0), \"A negative volume is invalid.\" );
+  UTILITY_CHECK( not (${p1} < 0), \"A negative radius is invalid.\" );
+  this->do_${name}( ${p0}, ${p1} );
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Increase or decrease the system dimensions to match the new
+ volume. Derived classes each have rules to decide how the
+ region's dimensions change to accomodate the new volume. For
+ example a cube simply adjusts one length while a cylinder must
+ distribute the change over the radial and linear dimensions.
+
+ \\pre rad >= 0 
+ \\pre vol >= 0 
+ \\post volume(rad) == vol ** may be unchecked **
+
+ \\pre AFTER VOLUME CHANGE fits(rad) : It is considered an
+ argument error if after changing the volume the system can
+ not fit an object of the given radius. ** should only checked 
+ where it may fail **"
+      end
+
+      operation 1046320 "do_change_volume"
+	abstract cpp_virtual private explicit_return_type "void"
+	nparams 2
+	  param in name "vol" explicit_type "double"
+	  param in name "rad" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Increase or decrease the system dimensions to match the new
+ volume. Derived classes each have rules to decide how the
+ region's dimensions change to accomodate the new volume. For
+ example a cube simply adjusts one length while a cylinder must
+ distribute the change over the radial and linear dimensions.
+
+ * NOTE : This is expected to be used only during system
+ initialization, ie before checking particle positions or
+ asking for new particle positions. Whether any check or
+ particle postion calculated before calling this method is
+ still valid is undefined.
+"
+      end
     end
 
     class 452912 "base_region"
@@ -1037,33 +1107,6 @@ ${docstring}${body}
 	comment "Write the grid parameters to an archive"
       end
 
-      operation 1004848 "change_volume"
-	abstract cpp_virtual public explicit_return_type "void"
-	nparams 2
-	  param in name "volume" explicit_type "double"
-	  param in name "rad" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Increase or decrease the system dimensions to match the new
- volume. Derived classes each have rules to decide how the
- region's dimensions change to accomodate the new volume. For
- example a cube simply adjusts one length while a cylinder must
- distribute the change over the radial and linear dimensions.
-
- * NOTE : This is expected to be used only during system
- initialization, ie before checking particle positions or
- asking for new particle positions. Whether any check or
- particle postion calculated before calling this method is
- still valid is undefined.
-"
-      end
-
       operation 991152 "fits"
 	const public explicit_return_type "bool"
 	nparams 1
@@ -1179,11 +1222,15 @@ ${docstring}${body}
 	comment " Get the region label"
       end
 
-      operation 990000 "make_gridder"
-	abstract const cpp_virtual public return_type class_ref 289841 // grid_generator
-	nparams 1
+      operation 1046832 "make_gridder"
+	const public return_type class_ref 289841 // grid_generator
+	nparams 2
 	  param inout name "rgenr" type class_ref 463407 // random_distribution
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	  param in name "count" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->do_${name}( ${p0}, (${p1} == 0 ? 1 : ${p1}) );
+}
 "
 	
 	
@@ -1191,12 +1238,108 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Create a gridder object for this system. A gridder object
- provides a sequence of positions on a lattice within the
- system. The inter-node distance is guarranteed to have the
- given minimum distance and the given minimum number of
- points.  The gridder provides the positions in a random
- sequence."
+	comment " Create a gridder object for this system. The gridder is
+ guarranteed to have the minimum given number of points.
+ The gridder provides the positions in a random sequence.
+
+ (if count = 0 it is incremented to 1).
+
+ As the grid is highly regular, the number of nodes will be an
+ integral function of the number of points in each dimension.
+ For a cube will always have the same number of nodes in
+ each dimension and so the total number will be the cube of a
+ whole number. The actual number of nodes will therefore be
+ the smallest solution to this node function that is larger
+ than count.
+"
+      end
+
+      operation 1047728 "do_make_gridder"
+	abstract const cpp_virtual public return_type class_ref 289841 // grid_generator
+	nparams 2
+	  param inout name "rgenr" type class_ref 463407 // random_distribution
+	  param in name "count" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create a gridder object for this system. The gridder is
+ guarranteed to have the minimum given number of points.
+ The gridder provides the positions in a random sequence.
+
+ (if count = 0 it is incremented to 1).
+
+ As the grid is highly regular, the number of nodes will be an
+ integral function of the number of points in each dimension.
+ For a cube will always have the same number of nodes in
+ each dimension and so the total number will be the cube of a
+ whole number. The actual number of nodes will therefore be
+ the smallest solution to this node function that is larger
+ than count.
+"
+      end
+
+      operation 1046704 "make_gridder"
+	const public return_type class_ref 289841 // grid_generator
+	nparams 2
+	  param in name "spacing" explicit_type "double"
+	  param inout name "rgenr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  UTILITY_REQUIRE( this->fits( ${p0} / 2 ), \"Requested inter-node spacing is too large for region.\" );
+  return this->do_${name}( ${p0}, ${p1} );
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create a gridder object for this system. The gridder inter-node
+ distance is guarranteed to have the given minimum spacing.
+ Every node is also guarranteed to be a minimum of (spacing/2)
+ distant from any side.  The gridder provides the positions
+ in a random sequence.
+
+ \\pre fits(spacing/2)
+
+ The spacing may be increased slightly to more evenly fit the
+ particles into the region. The gridder calculates the maximum
+ number of nodes that can fit within the region and have the
+ given spacing. It then relaxes the grid to evenly fit in the
+ region and recalculates the spacing.
+"
+      end
+
+      operation 1047600 "do_make_gridder"
+	abstract const cpp_virtual private return_type class_ref 289841 // grid_generator
+	nparams 2
+	  param in name "spacing" explicit_type "double"
+	  param inout name "rgenr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create a gridder object for this system. The gridder inter-node
+ distance is guarranteed to have the given minimum spacing.
+ Every node is also guarranteed to be a minimum of (spacing/2)
+ distant from any side.  The gridder provides the positions
+ in a random sequence.
+
+ The spacing may be increased slightly to more evenly fit the
+ particles into the region. The gridder calculates the maximum
+ number of nodes that can fit within the region and have the
+ given spacing. It then relaxes the grid to evenly fit in the
+ region and recalculates the spacing.
+"
       end
 
       operation 989360 "new_position"
@@ -2424,6 +2567,15 @@ ${docstring}${members}
 	  b parent class_ref 459952 // non_periodic_region
       end
 
+      classrelation 631600 // <dependency>
+	relation 630704 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 631600 // <dependency>
+	  b parent class_ref 868655 // cubic_grid
+      end
+
       attribute 515888 "origin_"
 	private type class_ref 986799 // coordinate
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -2558,6 +2710,34 @@ ${docstring}${body}
 	idl ""
       end
 
+      operation 1037616 "do_change_volume"
+	cpp_virtual private explicit_return_type "void"
+	nparams 2
+	  param in name "vol" explicit_type "double"
+	  param in name "rad" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Adjust cube length to accomodate volume.
+
+ if is_open()
+  len = cuberoot( vol )
+ else
+  len + 2 rad = cuberoot( vol )
+
+ * NOTE: can never give: not fits(rad)"
+      end
+
       operation 1038512 "do_fits"
 	const cpp_virtual private explicit_return_type "bool"
 	nparams 1
@@ -2627,6 +2807,70 @@ ${docstring}${body}
 "
 	
 	comment " Is this cube open or closed (see class desc)"
+      end
+
+      operation 1047088 "do_make_gridder"
+	const cpp_virtual private return_type class_ref 289841 // grid_generator
+	nparams 2
+	  param in name "spacing" explicit_type "double"
+	  param inout name "rgenr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create a gridder object for this system. The gridder inter-node
+ distance is guarranteed to have the given minimum spacing.
+ Every node is also guarranteed to be a minimum of (spacing/2)
+ distant from any side.  The gridder provides the positions
+ in a random sequence.
+
+ The spacing may be increased slightly to more evenly fit the
+ particles into the region. The gridder calculates the maximum
+ number of nodes that can fit within the region and have the
+ given spacing. It then relaxes the grid to evenly fit in the
+ region and recalculates the spacing.
+"
+      end
+
+      operation 1046960 "do_make_gridder"
+	const cpp_virtual private return_type class_ref 289841 // grid_generator
+	nparams 2
+	  param inout name "rgenr" type class_ref 463407 // random_distribution
+	  param in name "count" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create a gridder object for this system. The gridder is
+ guarranteed to have the minimum given number of points.
+ The gridder provides the positions in a random sequence.
+
+ As the grid is highly regular, the number of nodes will be an
+ integral function of the number of points in each dimension.
+ For a cube will always have the same number of nodes in
+ each dimension and so the total number will be the cube of a
+ whole number. The actual number of nodes will therefore be
+ the smallest solution to this node function that is larger
+ than count.
+"
       end
 
       operation 1038256 "do_new_position"
@@ -2731,69 +2975,6 @@ ${docstring}${body}
  NOTE: can assume fits(radius)"
       end
 
-      extra_member 444592 "TODO"
-	
-	cpp "" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      operation 1037616 "change_volume"
-	cpp_virtual public explicit_return_type "void"
-	nparams 2
-	  param in name "volume" explicit_type "double"
-	  param in name "rad" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
-{}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Increase or decrease the system dimensions to match the new
- volume. Derived classes each have rules to decide how the
- region's dimensions change to accomodate the new volume. For
- example a cube simply adjusts one length while a cylinder must
- distribute the change over the radial and linear dimensions.
-
- * NOTE : This is expected to be used only during system
- initialization, ie before checking particle positions or
- asking for new particle positions. Whether any check or
- particle postion calculated before calling this method is
- still valid is undefined.
-"
-      end
-
-      operation 1037488 "make_gridder"
-	const cpp_virtual public return_type class_ref 289841 // grid_generator
-	nparams 1
-	  param inout name "rgenr" type class_ref 463407 // random_distribution
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
-{
-  return boost::shared_ptr< ${type} >{};
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Create a gridder object for this system. A gridder object
- provides a sequence of positions on a lattice within the
- system. The inter-node distance is guarranteed to have the
- given minimum distance and the given minimum number of
- points.  The gridder provides the positions in a random
- sequence."
-      end
     end
 
     class 453296 "periodic_cube_region"
@@ -2836,6 +3017,15 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 589744 // <dependency>
 	  b parent class_ref 912431 // access
+      end
+
+      classrelation 631728 // <dependency>
+	relation 630832 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 631728 // <dependency>
+	  b parent class_ref 868655 // cubic_grid
       end
 
       attribute 501552 "length_"
@@ -3012,6 +3202,31 @@ ${docstring}${body}
  a periodic box."
       end
 
+      operation 1046448 "do_change_volume"
+	cpp_virtual private explicit_return_type "void"
+	nparams 2
+	  param in name "vol" explicit_type "double"
+	  param in name "rad" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Adjust cube length to accomodate volume.
+
+ len = cuberoot( vol )
+
+ * NOTE: _can_ give: not fits(rad) after volume change"
+      end
+
       operation 992304 "do_fits"
 	const cpp_virtual private explicit_return_type "bool"
 	nparams 1
@@ -3064,6 +3279,70 @@ ${docstring}${body}
 
  * NOTE: Does not consider periodicity but ignores the radius if
  fits(radius) is true."
+      end
+
+      operation 1047344 "do_make_gridder"
+	const cpp_virtual public return_type class_ref 289841 // grid_generator
+	nparams 2
+	  param inout name "rgenr" type class_ref 463407 // random_distribution
+	  param in name "count" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create a gridder object for this system. The gridder is
+ guarranteed to have the minimum given number of points.
+ The gridder provides the positions in a random sequence.
+
+ As the grid is highly regular, the number of nodes will be an
+ integral function of the number of points in each dimension.
+ For a cube will always have the same number of nodes in
+ each dimension and so the total number will be the cube of a
+ whole number. The actual number of nodes will therefore be
+ the smallest solution to this node function that is larger
+ than count.
+"
+      end
+
+      operation 1047216 "do_make_gridder"
+	const cpp_virtual public return_type class_ref 289841 // grid_generator
+	nparams 2
+	  param in name "spacing" explicit_type "double"
+	  param inout name "rgenr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create a gridder object for this system. The gridder inter-node
+ distance is guarranteed to have the given minimum spacing.
+ Every node is also guarranteed to be a minimum of (spacing/2)
+ distant from any side.  The gridder provides the positions
+ in a random sequence.
+
+ The spacing may be increased slightly to more evenly fit the
+ particles into the region. The gridder calculates the maximum
+ number of nodes that can fit within the region and have the
+ given spacing. It then relaxes the grid to evenly fit in the
+ region and recalculates the spacing.
+"
       end
 
       operation 992816 "do_new_position"
@@ -3175,69 +3454,6 @@ ${docstring}${body}
  NOTE: can assume fits(radius)"
       end
 
-      extra_member 431536 "TODO"
-	
-	cpp "" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      operation 1022896 "change_volume"
-	cpp_virtual public explicit_return_type "void"
-	nparams 2
-	  param in name "volume" explicit_type "double"
-	  param in name "rad" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
-{}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Increase or decrease the system dimensions to match the new
- volume. Derived classes each have rules to decide how the
- region's dimensions change to accomodate the new volume. For
- example a cube simply adjusts one length while a cylinder must
- distribute the change over the radial and linear dimensions.
-
- * NOTE : This is expected to be used only during system
- initialization, ie before checking particle positions or
- asking for new particle positions. Whether any check or
- particle postion calculated before calling this method is
- still valid is undefined.
-"
-      end
-
-      operation 1023024 "make_gridder"
-	const cpp_virtual public return_type class_ref 289841 // grid_generator
-	nparams 1
-	  param inout name "rgenr" type class_ref 463407 // random_distribution
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
-{
-  return boost::shared_ptr< ${type} >{};
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Create a gridder object for this system. A gridder object
- provides a sequence of positions on a lattice within the
- system. The inter-node distance is guarranteed to have the
- given minimum distance and the given minimum number of
- points.  The gridder provides the positions in a random
- sequence."
-      end
     end
 
     class 453040 "base_solid_object"
