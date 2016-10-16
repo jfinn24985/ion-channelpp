@@ -320,14 +320,19 @@ std::stringstream ss;
 {
   boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
   utility::random_distribution rgen( generator );
-  // Cubic grid main ctor
-  boost::shared_ptr< geometry::cubic_grid > var1( new geometry::cubic_grid( 30.0, 216, rgen ) );
+  // Cubic grid ctor from count
+  boost::shared_ptr< geometry::cubic_grid > var1( geometry::cubic_grid::make_grid( 30.0, rgen, 216 ) );
   BOOST_CHECK_EQUAL( var1->size(), 216 );
 
   boost::archive::text_oarchive oa( ss );
   // write class instance to archive
   BOOST_REQUIRE_NO_THROW( oa << var1 );
   BOOST_CHECK_EQUAL( var1->size(), 216 );
+
+  // Cubic grid ctor from spacing
+  boost::shared_ptr< geometry::cubic_grid > var2( geometry::cubic_grid::make_grid( 30.0, var1->spacing(), rgen ) );
+  BOOST_CHECK_EQUAL( var2->size(), 216 );
+  BOOST_CHECK_EQUAL( var2->spacing(), var1->spacing() );
 }
 {
   boost::shared_ptr< geometry::cubic_grid > var1;
@@ -348,7 +353,7 @@ std::vector< particle::coordinate > canon;
 // Min == 2.5; Max == 27.5
 {
   // cubic grid ctor(length, numpart, ranf)
-  boost::shared_ptr< geometry::grid_generator > var1( new geometry::cubic_grid( 30.0, 216, rgen ) );
+  boost::shared_ptr< geometry::grid_generator > var1( geometry::cubic_grid::make_grid( 30.0, rgen, 216 ) );
   BOOST_CHECK_EQUAL( var1->size(), 216 );
   BOOST_CHECK( not var1->empty() );
   // Test base class behavior
@@ -357,7 +362,7 @@ std::vector< particle::coordinate > canon;
 {
   // Test all coordinates are in the expected
   // range.
-  boost::shared_ptr< geometry::cubic_grid > var1( new geometry::cubic_grid( 30.0, 216, rgen ) );
+  boost::shared_ptr< geometry::cubic_grid > var1( geometry::cubic_grid::make_grid( 30.0, rgen, 216 ) );
 
   boost::shared_ptr< geometry::cubic_grid > var2;
   {
