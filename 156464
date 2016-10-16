@@ -1,6 +1,6 @@
 format 75
 "geometry" // geometry
-  revision 9
+  revision 10
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -392,19 +392,6 @@ ${docstring}${members}
 	  b parent class_ref 452912 // base_region
       end
 
-      classrelation 597040 // solids_ (<directional composition>)
-	relation 596144 *-->
-	  stereotype "vector"
-	  a role_name "solids_" multiplicity "*" private
-	    comment " Any solid objects in the simulation."
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< boost::shared_ptr< ${type} > > ${name}${value};
-"
-	    python "${comment}${self}${name} = ${stereotype}()
-"
-	    classrelation_ref 597040 // solids_ (<directional composition>)
-	  b parent class_ref 453040 // base_solid_object
-      end
-
       operation 1004464 "geometry_manager"
 	private explicit_return_type ""
 	nparams 0
@@ -506,24 +493,6 @@ ${docstring}${body}
 	
 	comment " Add region to manager. If a region with the same label
  exists in the manager, the new object replaces the old."
-      end
-
-      operation 1005744 "add_solid"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "solid" type class_ref 453040 // base_solid_object
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  this->solids_.push_back( solid );
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Add solid to system"
       end
 
       operation 1030448 "calculate_distances"
@@ -631,7 +600,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Get a (editable) region by index.
+	comment " Get an (editable) region by index.
 
  \\pre idx < region_count : (throws same error as vector::at)"
       end
@@ -2992,10 +2961,9 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
-      comment " Cube with periodic boundaries with the origin and
- one corner.
+      comment " Cube with periodic boundaries with the origin at
+ one corner. Can be used as a system region.
 
- 
  Coordinate range:
  * x % len
  * y % len
@@ -3454,96 +3422,6 @@ ${docstring}${body}
       end
     end
 
-    class 453040 "base_solid_object"
-      abstract visibility package 
-      cpp_decl "${comment}${template}class ${name}${inherit}
- {
-${members}
-};
-${inlines}
-"
-      java_decl ""
-      php_decl ""
-      python_decl "class ${name}${inherit}:
-${docstring}${members}
-"
-      idl_decl ""
-      explicit_switch_type ""
-      
-      classrelation 589488 // <generalisation>
-	relation 588592 ---|>
-	  a public
-	    cpp default "${type}"
-	    python "${type}"
-	    classrelation_ref 589488 // <generalisation>
-	  b parent class_ref 275887 // noncopyable
-      end
-
-      classrelation 618288 // <dependency>
-	relation 617392 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 618288 // <dependency>
-	  b parent class_ref 912431 // access
-      end
-
-      operation 990256 "~base_solid_object"
-	cpp_virtual public explicit_return_type ""
-	nparams 0
-	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} = default;
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
-      extra_member 177840 "friend"
-	
-	cpp "
-  friend class boost::serialization::access;" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      operation 264496 "serialize"
-	stereotype "template"
-	private explicit_return_type "void"
-	nparams 2
-	  param inout name "ar" explicit_type "Archive"
-	  param in name "version" explicit_type "unsigned int"
-	cpp_decl "    ${comment}template<class Archive>
-  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {}
-"
-	
-	
-	
-	
-	comment "Write the grid parameters to an archive"
-      end
-
-      operation 988464 "is_inside"
-	abstract const cpp_virtual public explicit_return_type "bool"
-	nparams 2
-	  param in name "pos" type class_ref 986799 // coordinate
-	  param in name "radius" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Calculate if particle of the given radius overlaps with this
- object."
-      end
-    end
   end
 
   classview 501551 "grid builders"
@@ -5100,6 +4978,374 @@ ${docstring}${body}
     end
   end
 
+  classview 187440 "geometry meta classes"
+    //class diagram settings
+    draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
+    //collaboration diagram settings
+    show_full_operations_definition default show_hierarchical_rank default write_horizontally default drawing_language default package_name_in_tab default show_context default show_msg_context default draw_all_relations default shadow default show_stereotype_properties default
+    //object diagram settings
+     write_horizontally default package_name_in_tab default show_context default auto_label_position default draw_all_relations default shadow default show_stereotype_properties default
+    //sequence diagram settings
+    show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
+    //state diagram settings
+    package_name_in_tab default show_context default auto_label_position default write_trans_label_horizontally default show_trans_definition default draw_all_relations default shadow default
+    show_activities default region_horizontally default drawing_language default show_stereotype_properties default
+    //class settings
+    //activity diagram settings
+    package_name_in_tab default show_context default show_opaque_action_definition default auto_label_position default write_flow_label_horizontally default draw_all_relations default shadow default
+    show_infonote default drawing_language default show_stereotype_properties default
+    associated_deployment_view deploymentview_ref 156592 // geometry source
+    classdiagram 285616 "geometry from input"
+      draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
+      size A4
+    end
+
+    sequencediagram 285744 "read input"
+      show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
+      overlapping_bars size A4
+    end
+
+    class 479792 "region_definition"
+      visibility package stereotype "struct"
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Information about a region class's input data."
+      class 479920 "generator_fn"
+	visibility package stereotype "typedef" base_type class_ref 452912 // base_region
+	cpp_decl "${comment}typedef boost::shared_ptr< ${type} > (*${name})(std::string label, std::map< std::string, std::string > const& params);
+"
+	java_decl ""
+	php_decl ""
+	python_decl ""
+	idl_decl "${comment}typedef ${type} ${name};
+"
+	explicit_switch_type ""
+	
+	comment " Function signature for creating new region."
+      end
+
+      attribute 523184 "documentation_"
+	private explicit_type "string"
+	multiplicity "*"
+	stereotype "map"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type}, ${type} > ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${stereotype}()
+"
+	idl_decl ""
+	comment " Map of option name, help descriptions."
+      end
+
+      attribute 522928 "type_name_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The type name to look for in the input file."
+      end
+
+      attribute 523056 "factory_"
+	private type class_ref 479920 // generator_fn
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Creator of region objects."
+      end
+
+    end
+
+    class 479664 "region_meta"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      classrelation 638256 // <generalisation>
+	relation 637360 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 638256 // <generalisation>
+	  b parent class_ref 1082671 // input_base_meta
+      end
+
+      classrelation 638384 // manager_ (<directional composition>)
+	relation 637488 *-->
+	  stereotype "shared_ptr"
+	  a role_name "manager_" multiplicity "0..1" private
+	    comment " Where we put newly defined regions"
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+"
+	    python "${comment}${self}${name} = ${stereotype}()
+"
+	    classrelation_ref 638384 // manager_ (<directional composition>)
+	  b parent class_ref 452656 // geometry_manager
+      end
+
+      classrelation 638640 // type_to_object_ (<directional composition>)
+	relation 637744 *-->
+	  stereotype "vector"
+	  a role_name "type_to_object_" multiplicity "*" private
+	    comment " Build type from object."
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+"
+	    python "${comment}${self}${name} = ${stereotype}()
+"
+	    classrelation_ref 638640 // type_to_object_ (<directional composition>)
+	  b parent class_ref 479792 // region_definition
+      end
+
+      attribute 522416 "label_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The region's label. This must be unique within a simulation."
+      end
+
+      attribute 522544 "type_name_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The label identifying the region's class."
+      end
+
+      attribute 522800 "parameter_set_"
+	private explicit_type "string"
+	multiplicity "*"
+	stereotype "map"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}, ${type}> ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${stereotype}()
+"
+	idl_decl ""
+	comment " Set of parameters for this region type. This should be 
+ defined by the individual regions."
+      end
+
+      operation 1061680 "region_meta"
+	private explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Inaccessible default ctor."
+      end
+
+      operation 1061296 "region_meta"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "man" type class_ref 452656 // geometry_manager
+	cpp_decl "    ${comment}${inline}${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}boost::shared_ptr< ${t0} > ${p0}${)}${throw}
+: manager_( ${p0} )
+, current_()
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Main ctor."
+      end
+
+      operation 1061424 "~region_meta"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1062448 "add_definition"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "defn" type class_ref 479792 // region_definition
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add a new region type definition.
+
+ \\pre not has_definition(defn.type_name_)"
+      end
+
+      operation 1061552 "add_documentation"
+	const cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param inout name "helper" type class_ref 1004335 // input_help
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1062576 "has_definition"
+	public explicit_return_type "bool"
+	nparams 1
+	  param in name "type_name" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Do we have a region with this typename?"
+      end
+
+      operation 1062064 "do_read_entry"
+	cpp_virtual private explicit_return_type "bool"
+	nparams 1
+	  param inout name "reader" type class_ref 313392 // input_base_reader
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "Read a name/value entry in the input file. Return true if the entry was processed.
+
+throw an error if input file is incorrect (using UTILITY_INPUT macro)"
+      end
+
+      operation 1061936 "do_read_end"
+	cpp_virtual private explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Perform checks at the end of reading a section and create/add result to
+ simulations. If multiple sections may be read, this method must also
+ reset the meta object state."
+      end
+
+      operation 1061808 "do_reset"
+	cpp_virtual private explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Reset the object state on entry into read_seaction. This
+ provides a stronger exception safety if the delegate is
+ reused after raising an exception in read_section."
+      end
+
+    end
+  end
+
   deploymentview 156592 "geometry source"
     //deployment diagram settings
     package_name_in_tab default show_context default write_horizontally default auto_label_position default draw_all_relations default shadow default
@@ -5173,7 +5419,6 @@ ${namespace_end}
 ${import}
 ${definition}"
       associated_classes
-	class_ref 453040 // base_solid_object
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
@@ -5654,6 +5899,53 @@ ${import}
 ${definition}"
       associated_classes
 	class_ref 453296 // periodic_cube_region
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 484400 "region_meta"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 479792 // region_definition
+	class_ref 479664 // region_meta
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify

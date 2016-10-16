@@ -1,0 +1,105 @@
+class region_meta
+!!!1061552.cpp!!!	add_documentation(inout helper : input_help) : void
+const std::string rgnlabel( core::strngs::region_label() );
+// ----------------------------------------
+// add section
+// ----------------------------------------
+
+//   Specie input section definition
+core::input_help::exemplar().add_section( rgnlabel,
+    "Region input section definition.  In addition to the listed options, each individual "
+    "region subtype may have its own specific options." );
+
+// ----------------------------------------
+// add parameters
+// ----------------------------------------
+
+//  type : [required] region subtype
+{
+  const std::string description( "[required, string] region subtype (see documentation for valid subtypes)." );
+  core::input_help::exemplar().add_option( rgnlabel, core::strngs::fstype(), description );
+}
+
+//  name : [required] region label
+{
+  const std::string description( "[required, string] region label. Must be unique in a simulation." );
+  core::input_help::exemplar().add_option( rgnlabel, core::strngs::fsname(), description );
+}
+
+// Subtype parameter documentation.
+for( auto iter = this->type_to_object_.begin(); iter != this->type_to_object_.end(); ++iter )
+{
+  for( auto jter = iter->documentation_.begin(); jter != iter->documentation_.end(); ++jter )
+  {
+    std::string desc = "(for region subtype "+ iter->type_name_ + ")" + jter->second;
+    core::input_help::exemplar().add_option( rgnlabel, jter->first, desc );
+  }
+}
+
+!!!1062064.cpp!!!	do_read_entry(inout reader : input_base_reader) : bool
+if (reader.name() == core::strngs::fstype())
+{
+   // --------------------
+   // Evaluator type
+   UTILITY_INPUT(not reader.value().empty(), "Region type must have a value.", this->section_label());
+   std::string val (reader.dequote(reader.value()));
+   UTILITY_INPUT(type_to_object_.count(val) != 0, "Sampler type ["+val+"] does not name a valid sampler for this application (see documentation).", this->section_label());
+   this->type_name_ = val;
+}
+else if (reader.name() = core::strngs::fsname())
+{
+   // --------------------
+   // Evaluator type
+   UTILITY_INPUT(not reader.value().empty(), "Region label/name must have a value.", this->section_label());
+   std::string val (reader.dequote(reader.value()));
+   this->label_ = val;
+}
+else
+{
+   // --------------------
+   // Choice specific parameters
+   UTILITY_INPUT (0 == this->parameter_set_.count (reader.name()), ("keyword \""+reader.name()+"\" appears more than once in a single in specie section"), core::strngs::fsspec());
+   this->parameter_set_.insert (std::make_pair(reader.name(), reader.value()));
+}
+return true;
+!!!1061936.cpp!!!	do_read_end() : void
+UTILITY_INPUT( not this->type_name_.empty(), "No region type was found.", core::strngs::region_label() );
+UTILITY_INPUT( not this->label_.empty(), "No region label/name was found.", core::strngs::region_label() );
+// identify type definition
+auto factory = this->type_to_object_.begin();
+for ( /* empty */; factory != this->type_to_object_.end(); ++factory )
+{
+  if (factory->type_name_ == this->type_name_ )
+  {
+    break;
+  }
+}
+UTILITY_INPUT( factory != this->type_to_object_.end(), "No region definition for type \""+this->type_name_+"\" was found.", core::strngs::region_label() );
+// check parameters.
+for(auto const& entry : this->parameter_set_)
+{
+   UTILITY_INPUT( factory->documentation_.find( entry.first ) != factory->documentation_.end(), "Parameter with name \""+entry.first+"\" is not valid for region type \""+this->type_name_+"\".", core::strngs::region_label() );
+}
+// build object and add to manager.
+boost::shared_ptr< geometry::base_region > current;
+current = (*(factory->factory_))( this->label_, this->parameter_set_ );
+if( current )
+{
+  this->manager_.add_region( current );
+}
+!!!1061808.cpp!!!	do_reset() : void
+this->label_.clear();
+this->type_name_.clear();
+this->parameter_set_.clear();
+!!!1062448.cpp!!!	add_definition(in defn : region_definition) : void
+UTILITY_REQUIRE( not this->has_definition( def.type_name_ ), "Can not add two region definitions with the same name." );
+this->type_to_object_.push_back( defn );
+!!!1062576.cpp!!!	has_definition(in type_name : string) : bool
+for (auto iter = this->type_to_object_.begin(); iter != this->type_to_object_.end(); ++iter )
+{
+  if (iter->type_name_ == type_name )
+  {
+    return true;
+  }
+}
+return false;
