@@ -1,6 +1,6 @@
 format 75
 "geometry" // geometry
-  revision 10
+  revision 11
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -464,7 +464,6 @@ ${docstring}${body}
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
   ar & this->regions_;
-  ar & this->solids_;
 }
 "
 	
@@ -585,26 +584,6 @@ ${docstring}${body}
 "
       end
 
-      operation 1003952 "get_region"
-	private return_type class_ref 452912 // base_region
-	nparams 1
-	  param in name "idx" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  return *(this->regions_.at(${p0}));
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Get an (editable) region by index.
-
- \\pre idx < region_count : (throws same error as vector::at)"
-      end
-
       operation 1004080 "get_region"
 	stereotype "const"
 	const public return_type class_ref 452912 // base_region
@@ -623,23 +602,6 @@ ${docstring}${body}
 	comment " Get a region by index.
 
  \\pre idx < region_count : (throws same error as vector::at)"
-      end
-
-      operation 1005616 "has_solids"
-	const public explicit_return_type "bool"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return 0 != this->solids_.size();
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Are there any solids?"
       end
 
       operation 989744 "locate_region"
@@ -663,28 +625,6 @@ ${docstring}${body}
 	
 	comment " Puts the set of regions the given point is in into
  regns. The set may be empty."
-      end
-
-      operation 1005488 "overlap_solid"
-	public explicit_return_type "bool"
-	nparams 2
-	  param in name "pos" type class_ref 986799 // coordinate
-	  param in name "rad" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Does a sphere of the given size at the given
- coordinate overlap with any solid?"
       end
 
       operation 1004720 "region_count"
@@ -2943,6 +2883,48 @@ ${docstring}${body}
 
  NOTE: can assume fits(radius)"
       end
+
+      operation 1069360 "region_factory"
+	class_operation private return_type class_ref 452912 // base_region
+	nparams 2
+	  param in name "label" explicit_type "string"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} > & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} > & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Factory method for creating cube_region objects from
+ input data."
+      end
+
+      operation 1069488 "add_region_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 479664 // region_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create and add a region_definition to the meta object."
+      end
     end
 
     class 453296 "periodic_cube_region"
@@ -3421,7 +3403,6 @@ ${docstring}${body}
  NOTE: can assume fits(radius)"
       end
     end
-
   end
 
   classview 501551 "grid builders"
@@ -5007,8 +4988,8 @@ ${docstring}${body}
 
     class 479792 "region_definition"
       visibility package stereotype "struct"
-      cpp_decl "${comment}${template}class ${name}${inherit}
- {
+      cpp_decl "${comment}${template}struct ${name}${inherit} 
+{
 ${members}
 };
 ${inlines}
@@ -5037,7 +5018,7 @@ ${docstring}${members}
       end
 
       attribute 523184 "documentation_"
-	private explicit_type "string"
+	public explicit_type "string"
 	multiplicity "*"
 	stereotype "map"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type}, ${type} > ${name}${value};
@@ -5051,7 +5032,7 @@ ${docstring}${members}
       end
 
       attribute 522928 "type_name_"
-	private explicit_type "string"
+	public explicit_type "string"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
 	java_decl ""
@@ -5063,7 +5044,7 @@ ${docstring}${members}
       end
 
       attribute 523056 "factory_"
-	private type class_ref 479920 // generator_fn
+	public type class_ref 479920 // generator_fn
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
 	java_decl ""
@@ -5073,7 +5054,6 @@ ${docstring}${members}
 	idl_decl ""
 	comment " Creator of region objects."
       end
-
     end
 
     class 479664 "region_meta"
@@ -5187,8 +5167,12 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${inline}${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}${)}${volatile}${throw};
 "
 	cpp_def "${comment}${inline}${class}::${name}${(}boost::shared_ptr< ${t0} > ${p0}${)}${throw}
-: manager_( ${p0} )
-, current_()
+: input_base_meta( core::strngs::fsregn(), true, false ) // multiple + not required
+, manager_( ${p0} )
+, type_to_object_()
+, label_()
+, type_name_()
+, parameter_set_()
 {}
 "
 	
@@ -5342,7 +5326,6 @@ ${docstring}${body}
  provides a stronger exception safety if the delegate is
  reused after raising an exception in read_section."
       end
-
     end
   end
 
@@ -5402,41 +5385,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
-    artifact 450480 "base_solid_object"
-      stereotype "source"
-      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
-#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
-
-${comment}
-${includes}
-${declarations}
-${namespace_start}
-${definition}
-${namespace_end}
-#endif
-"
-      python_src "${comment}
-${import}
-${definition}"
-      associated_classes
-      end
-      comment "----------------------------------------------------------------------
-This source file is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-----------------------------------------------------------------------
-"
-    end
-
     artifact 477872 "cube_region"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -5457,6 +5405,10 @@ ${namespace_end}
 #endif
 
 ${includes}
+// manual includes
+#include \"core/input_base_reader.hpp\"
+#include \"core/strngs.hpp\"
+// -
 ${namespace_start}
 ${members}
 ${namespace_end}"
@@ -5937,6 +5889,9 @@ ${namespace_end}
 #endif
 
 ${includes}
+// Manual includes
+#include \"core/strngs.hpp\"
+// -
 ${namespace_start}
 ${members}
 ${namespace_end}"
@@ -6036,6 +5991,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 464816 // open_split_cylinder_region
 	artifact_ref 471344 // distance_calculator
 	artifact_ref 477872 // cube_region
+	artifact_ref 484400 // region_meta
 	artifact_ref 578479 // grid
       end
       comment "----------------------------------------------------------------------
