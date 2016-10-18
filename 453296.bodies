@@ -87,3 +87,42 @@ pos.x = wrap( pos.x, this->length_ );
 pos.y = wrap( pos.y, this->length_ );
 pos.z = wrap( pos.z, this->length_ );
 return true;
+!!!1085232.cpp!!!	region_factory(in label : string, in params : string) : base_region
+// needed information
+// label : from label arg
+// width : from param arg
+double width {};
+
+const std::string width_label { "width" };
+
+// check for required parameters.
+UTILITY_INPUT( params.count( width_label ) == 1, "Periodic cube region \""+width_label+"\" parameter missing in input.", core::strngs::fsregn() );
+
+{
+  // --------------------
+  // Cube width
+  UTILITY_INPUT( not params.at( width_label ).empty(), "Periodic cube region \""+width_label+"\" parameter requires a value.", core::strngs::fsregn() );
+  try
+  {
+    width = boost::lexical_cast< double >( params.at( width_label ) );
+  }
+  catch( std::bad_cast const& err )
+  {
+    const bool value_is_a_number = false;
+    UTILITY_INPUT( value_is_a_number, "Periodic cube region \""+width_label+"\" parameter value (" + params.at( width_label ) + ") is not a number: " + err.what(), core::strngs::fsregn() );
+  }
+  UTILITY_INPUT( width >= 0.0, "Periodic cube region \""+width_label+"\" parameter value (" + params.at( width_label ) + ") must be greater than zero.", core::strngs::fsregn() );
+}
+// build region object.
+boost::shared_ptr< geometry::base_region > current;
+current.reset( new periodic_cube_region( label, width ) );
+return current;
+
+
+
+!!!1085104.cpp!!!	add_region_definition(inout meta : region_meta) : void
+region_definition cube_defn;
+cube_defn.type_name_ = "periodic_cube";
+cube_defn.documentation_.insert( std::make_pair< std::string, std::string >( "width", "[required, value in Angstrom] The width in each dimension of the periodic cube region" ) );
+cube_defn.factory_ = &periodic_cube_region::region_factory;
+meta.add_definition( cube_defn );
