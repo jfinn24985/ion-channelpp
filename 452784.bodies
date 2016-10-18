@@ -1251,8 +1251,21 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
     boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
     geometry::cube_region::add_region_definition( *m );
 
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--open" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--origin" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--width" ) < ss.str().size() );
+    }
     dg.add_input_delegate( m );
   }
+
+  
 
   std::string canon_input( "region\nname \"bulk\"\norigin 1.0 1.0 1.0\nwidth 8.0\ntype cube\nend\n\n" );
 
@@ -1271,75 +1284,555 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
   particle::coordinate canon_pos( 1.0, 1.0, 1.0 );
   BOOST_CHECK_EQUAL( regptr->origin(), canon_pos );
 }
-//XX {
-//XX   boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager );
-//XX   core::input_delegater dg( 1 );
-//XX   {
-//XX     boost::shared_ptr< core::input_base_meta > m( new particle::region_meta( mngr ) );
-//XX     dg.add_input_delegate( m );
-//XX   }
-//XX 
-//XX   // Valid : sub-type known : free
-//XX   ////////////////////////////////
-//XX   std::string canon_input( "specie\ntype free\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
-//XX   core::input_preprocess reader;
-//XX   reader.add_buffer( "dummy", canon_input );
-//XX   BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-//XX   BOOST_CHECK( mngr->get_specie( 0 ).is_solute() );
-//XX }
-//XX {
-//XX   boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager );
-//XX   core::input_delegater dg( 1 );
-//XX   {
-//XX     boost::shared_ptr< core::input_base_meta > m( new particle::region_meta( mngr ) );
-//XX     dg.add_input_delegate( m );
-//XX   }
-//XX 
-//XX   // Valid : sub-type known : mob
-//XX   ///////////////////////////////
-//XX   std::string canon_input( "specie\ntype mob\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nn 1\n0.3 0.1 0.4 1.0 0.2 0.0 3.4\nend\n\n" );
-//XX   core::input_preprocess reader;
-//XX   reader.add_buffer( "dummy", canon_input );
-//XX   BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-//XX   BOOST_CHECK( mngr->get_specie( 0 ).is_mobile() );
-//XX   BOOST_CHECK_EQUAL( mngr->get_specie( 0 ).get_position_size(), 1 );
-//XX   BOOST_CHECK_EQUAL( mngr->get_specie( 0 ).get_localization_size(), 1 );
-//XX   particle::coordinate pos( 0.3, 0.1, 0.4 );
-//XX   particle::centroid ctr( 1.0, 0.2, 0.0, 3.4 );
-//XX   BOOST_CHECK_EQUAL( mngr->get_specie( 0 ).get_position( 0 ), pos );
-//XX   BOOST_CHECK_EQUAL( mngr->get_specie( 0 ).get_localization_data( 0 ), ctr );
-//XX }
-//XX {
-//XX   boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager );
-//XX   core::input_delegater dg( 1 );
-//XX   {
-//XX     boost::shared_ptr< core::input_base_meta > m( new particle::region_meta( mngr ) );
-//XX     dg.add_input_delegate( m );
-//XX   }
-//XX 
-//XX   // Valid : sub-type known : chonly
-//XX   //////////////////////////////////
-//XX   std::string canon_input( "specie\ntype chonly\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
-//XX   core::input_preprocess reader;
-//XX   reader.add_buffer( "dummy", canon_input );
-//XX   BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-//XX   BOOST_CHECK_EQUAL( mngr->specie_count(), 1 );
-//XX   BOOST_CHECK( mngr->get_specie( 0 ).is_channel_only() );
-//XX }
-//XX {
-//XX   boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager );
-//XX   core::input_delegater dg( 1 );
-//XX   {
-//XX     boost::shared_ptr< core::input_base_meta > m( new particle::region_meta( mngr ) );
-//XX     dg.add_input_delegate( m );
-//XX   }
-//XX 
-//XX   // Valid : sub-type known : flex
-//XX   ////////////////////////////////
-//XX   std::string canon_input( "specie\ntype flex\nname \"Ca\"\nratspc 1.0\nratmov 1.0\nratexc 2.0\nratgr 3.0\nratreg 0.3 0.3 0.3 0.1\nz 2.0\nd 1.1\nchex 0.792\nend\n\n" );
-//XX   core::input_preprocess reader;
-//XX   reader.add_buffer( "dummy", canon_input );
-//XX   BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-//XX   BOOST_CHECK_EQUAL( mngr->specie_count(), 1 );
-//XX   BOOST_CHECK( mngr->get_specie( 0 ).is_flexible() );
-//XX }
+!!!1076144.cpp!!!	input_region_name_no_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Name is hidden by comment character
+  std::string canon_input( "region\nname #\"bulk\"\norigin 1.0 1.0 1.0\nwidth 8.0\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "name must have a value" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1076528.cpp!!!	input_region_no_name_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Name is hidden by comment character
+  std::string canon_input( "region\n#name \"bulk\"\norigin 1.0 1.0 1.0\nwidth 8.0\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "name was found" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1076656.cpp!!!	input_region_no_type_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname \"bulk\"\norigin 1.0 1.0 1.0\nwidth 8.0\n#type cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "No region type was found" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1076784.cpp!!!	input_region_type_no_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname \"bulk\"\norigin 1.0 1.0 1.0\nwidth 8.0\ntype #cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Region type must have a value" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1076912.cpp!!!	input_region_type_bad_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname \"bulk\"\norigin 1.0 1.0 1.0\nwidth 8.0\ntype cubic\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Region type [cubic] does not" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1077040.cpp!!!	input_cube_region_no_width_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname \"bulk\"\norigin 1.0 1.0 1.0\n#width 8.0\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Missing \"width\" parameter for cube region" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1077296.cpp!!!	input_cube_region_width_no_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname \"bulk\"\norigin 1.0 1.0 1.0\nwidth #8.0\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Parameter \"width\" cube region requires a value" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1077424.cpp!!!	input_cube_region_width_bad_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname \"bulk\"\norigin 1.0 1.0 1.0\nwidth eight\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Cube region \"width\" parameter value (eight) not a number" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1077552.cpp!!!	input_cube_region_width_poor_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname \"bulk\"\norigin 1.0 1.0 1.0\nwidth 0.8 pm\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Cube region \"width\" parameter value (0.8 pm) not a number" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1077168.cpp!!!	input_cube_region_no_origin_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname bulk\n#origin 1.0 1.0 1.0\nwidth 8.0\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Missing \"origin\" parameter for cube region" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1077680.cpp!!!	input_cube_region_origin_no_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname bulk\norigin #1.0 1.0 1.0\nwidth 8.0\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Parameter \"origin\" cube region requires a value" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1077808.cpp!!!	input_cube_region_origin_short_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname bulk\norigin 1.0 1.0 #1.0\nwidth 8.0\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Cube region \"origin\" coordinate data (1.0 1.0) should have 3 values" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1077936.cpp!!!	input_cube_region_origin_long_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname bulk\norigin 1.0 1.0 1.0 1.0\nwidth 8.0\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Cube region \"origin\" coordinate data (1.0 1.0 1.0 1.0) should have 3 values" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1078064.cpp!!!	input_cube_region_origin_bad_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname bulk\norigin 1.0 1.0 l.0\nwidth 8.0\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Cube region \"origin\" coordinate data (1.0 1.0 l.0) is invalid" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1078192.cpp!!!	input_cube_region_open_no_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname bulk\nopen\norigin 1.0 1.0 1.0\nwidth 8.0\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+  geometry::cube_region const* regptr;
+  regptr = dynamic_cast< geometry::cube_region const* >( &( mngr->get_region( 1ul ) ) );
+  BOOST_REQUIRE( regptr != nullptr );
+  BOOST_CHECK_EQUAL( regptr->is_open(), true );
+}
+!!!1078448.cpp!!!	input_cube_region_open_false_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname bulk\nopen false\norigin 1.0 1.0 1.0\nwidth 8.0\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+  geometry::cube_region const* regptr;
+  regptr = dynamic_cast< geometry::cube_region const* >( &( mngr->get_region( 1ul ) ) );
+  BOOST_REQUIRE( regptr != nullptr );
+  BOOST_CHECK_EQUAL( regptr->is_open(), false );
+}
+!!!1078576.cpp!!!	input_cube_region_open_true_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname bulk\nopen true\norigin 1.0 1.0 1.0\nwidth 8.0\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+  geometry::cube_region const* regptr;
+  regptr = dynamic_cast< geometry::cube_region const* >( &( mngr->get_region( 1ul ) ) );
+  BOOST_REQUIRE( regptr != nullptr );
+  BOOST_CHECK_EQUAL( regptr->is_open(), true );
+}
+!!!1078320.cpp!!!	input_cube_region_open_bad_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cube_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+  // Type is hidden by comment character
+  std::string canon_input( "region\nname bulk\nopen once\norigin 1.0 1.0 1.0\nwidth 8.0\ntype cube\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Cube region \"open\" parameter value (once) not a boolean" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
