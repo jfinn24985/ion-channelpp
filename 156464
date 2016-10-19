@@ -1,6 +1,6 @@
 format 75
 "geometry" // geometry
-  revision 13
+  revision 14
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -1164,7 +1164,7 @@ ${docstring}${body}
       end
 
       operation 1047728 "do_make_gridder"
-	abstract const cpp_virtual public return_type class_ref 289841 // grid_generator
+	abstract const cpp_virtual private return_type class_ref 289841 // grid_generator
 	nparams 2
 	  param inout name "rgenr" type class_ref 463407 // random_distribution
 	  param in name "count" explicit_type "size_t"
@@ -1702,12 +1702,14 @@ ${docstring}${body}
 
       operation 252464 "cylinder_region"
 	public explicit_return_type ""
-	nparams 2
+	nparams 3
+	  param in name "label" explicit_type "string"
 	  param in name "rad" explicit_type "double"
-	  param in name "len" explicit_type "double"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
-: radius_( ${p0} )
-, half_length_( ${p1} / 2 )
+	  param in name "half_len" explicit_type "double"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
+: non_periodic_region( ${p0} )
+, radius_( ${p1} )
+, half_length_( ${p2} )
 {}
 "
 	
@@ -1718,9 +1720,9 @@ ${docstring}${body}
 	
 	comment " Create new cylinder with the given dimensions.
 
+ \\param label : the user defined name of the region.
  \\param rad : the radius of the cylinder.
- \\param len : the _full_ length of the cylinder (not half length).
- \\param eps : the relative permittivity of the region."
+ \\param half_len : half the length of the cylinder."
       end
 
       operation 251568 "~cylinder_region"
@@ -1778,6 +1780,35 @@ ${docstring}${body}
 	idl ""
       end
 
+      operation 1094448 "do_change_volume"
+	cpp_virtual private explicit_return_type "void"
+	nparams 2
+	  param in name "vol" explicit_type "double"
+	  param in name "rad" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Increase or decrease the system dimensions to match the new
+ volume. Cylinders maintain ratio of half_length to radius.
+
+ * NOTE : This is expected to be used only during system
+ initialization, ie before checking particle positions or
+ asking for new particle positions. Whether any check or
+ particle postion calculated before calling this method is
+ still valid is undefined.
+"
+      end
+
       operation 991408 "do_fits"
 	const cpp_virtual private explicit_return_type "bool"
 	nparams 1
@@ -1819,6 +1850,72 @@ ${docstring}${body}
 	
 	comment " Calculate if a sphere centred at the given point and with
  the given radius is within the region."
+      end
+
+      operation 1094064 "do_make_gridder"
+	const private return_type class_ref 289841 // grid_generator
+	nparams 2
+	  param inout name "rgenr" type class_ref 463407 // random_distribution
+	  param in name "count" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create a gridder object for this system. The gridder is
+ guarranteed to have the minimum given number of points.
+ The gridder provides the positions in a random sequence.
+
+ (if count = 0 it is incremented to 1).
+
+ As the grid is highly regular, the number of nodes will be an
+ integral function of the number of points in each dimension.
+ For a cube will always have the same number of nodes in
+ each dimension and so the total number will be the cube of a
+ whole number. The actual number of nodes will therefore be
+ the smallest solution to this node function that is larger
+ than count.
+"
+      end
+
+      operation 1094320 "do_make_gridder"
+	const private return_type class_ref 289841 // grid_generator
+	nparams 2
+	  param in name "spacing" explicit_type "double"
+	  param inout name "rgenr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create a gridder object for this system. The gridder inter-node
+ distance is guarranteed to have the given minimum spacing.
+ Every node is also guarranteed to be a minimum of (spacing/2)
+ distant from any side.  The gridder provides the positions
+ in a random sequence.
+
+ The spacing may be increased slightly to more evenly fit the
+ particles into the region. The gridder calculates the maximum
+ number of nodes that can fit within the region and have the
+ given spacing. It then relaxes the grid to evenly fit in the
+ region and recalculates the spacing.
+"
       end
 
       operation 991024 "do_new_position"
@@ -1960,6 +2057,48 @@ ${docstring}${body}
 
  * NOTE: len is cylinder length **not** half length"
       end
+
+      operation 1093296 "region_factory"
+	class_operation private return_type class_ref 452912 // base_region
+	nparams 2
+	  param in name "label" explicit_type "string"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} > & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} > & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Factory method for creating cube_region objects from
+ input data."
+      end
+
+      operation 1093168 "add_region_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 479664 // region_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create and add a region_definition to the meta object."
+      end
     end
 
     class 453424 "open_cylinder_region"
@@ -2028,12 +2167,14 @@ ${docstring}${body}
 
       operation 995504 "open_cylinder_region"
 	public explicit_return_type ""
-	nparams 2
+	nparams 3
+	  param in name "label" explicit_type "string"
 	  param in name "rad" explicit_type "double"
-	  param in name "len" explicit_type "double"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
-: cylinder_region( ${p0}, ${p1} )
+	  param in name "half_len" explicit_type "double"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
+: cylinder_region( ${p0}, ${p1}, ${p2} )
 {}
+
 "
 	
 	
@@ -2043,9 +2184,9 @@ ${docstring}${body}
 	
 	comment " Create new cylinder with the given dimensions.
 
+ \\param label : user-defined label for the region.
  \\param rad : the radius of the cylinder.
- \\param len : the _full_ length of the cylinder (not half length).
- \\param eps : the relative permittivity of the region."
+ \\param half_len : half the length of the cylinder."
       end
 
       operation 995632 "~open_cylinder_region"
@@ -2081,7 +2222,7 @@ ${docstring}${body}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-    ar & boost::serialization::base_object< geometry::cylinder_region >(*this);
+  ar & boost::serialization::base_object< geometry::cylinder_region >(*this);
 }
 "
 	
@@ -2099,6 +2240,35 @@ ${docstring}${body}
 	php ""
 	python ""
 	idl ""
+      end
+
+      operation 1094576 "do_change_volume"
+	cpp_virtual private explicit_return_type "void"
+	nparams 2
+	  param in name "vol" explicit_type "double"
+	  param in name "rad" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Increase or decrease the system dimensions to match the new
+ volume. Cylinders maintain ratio of half_length to radius.
+
+ * NOTE : This is expected to be used only during system
+ initialization, ie before checking particle positions or
+ asking for new particle positions. Whether any check or
+ particle postion calculated before calling this method is
+ still valid is undefined.
+"
       end
 
       operation 995888 "do_fits"
@@ -2191,6 +2361,49 @@ ${docstring}${body}
 
  NOTE: can assume fits(radius)"
       end
+
+      operation 1093552 "region_factory"
+	class_operation private return_type class_ref 452912 // base_region
+	nparams 2
+	  param in name "label" explicit_type "string"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} > & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} > & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Factory method for creating cube_region objects from
+ input data."
+      end
+
+      operation 1093424 "add_region_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 479664 // region_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create and add a region_definition to the meta object."
+      end
+
     end
 
     class 460080 "open_split_cylinder_region"
@@ -2216,7 +2429,7 @@ ${docstring}${members}
 
  Coordinate range:
  * x*x + y*y <= rad*rad
- * -len/2 <= x <= +len/2"
+ * -(len/2 + offset) <= z <= -(offset) AND (offset) <= z <= +(len/2 + offset)"
       classrelation 597552 // <generalisation>
 	relation 596656 ---|>
 	  a public
@@ -2272,13 +2485,14 @@ ${docstring}${body}
 
       operation 1007536 "open_split_cylinder_region"
 	public explicit_return_type ""
-	nparams 3
+	nparams 4
+	  param in name "label" explicit_type "string"
 	  param in name "rad" explicit_type "double"
-	  param in name "len" explicit_type "double"
+	  param in name "half_len" explicit_type "double"
 	  param in name "offset" explicit_type "double"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
-: cylinder_region( ${p0}, ${p1} )
-, offset_( ${p2} )
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${volatile}${throw}
+: cylinder_region( ${p0}, ${p1}, ${p2} )
+, offset_( ${p3} )
 {}
 "
 	
@@ -2289,10 +2503,10 @@ ${docstring}${body}
 	
 	comment " Create new cylinder with the given dimensions.
 
- Cylinder extent is z in +/-(offset + len/2) 
+ Cylinder extent is z in +/-(offset + half_len) 
 
  \\param rad : the radius of the cylinder.
- \\param len : the _full_ length of the cylinder (not half length).
+ \\param half_len : half the length of the cylinder.
  \\param offset : the offset along the z-axis."
       end
 
@@ -2348,6 +2562,35 @@ ${docstring}${body}
 	php ""
 	python ""
 	idl ""
+      end
+
+      operation 1094704 "do_change_volume"
+	cpp_virtual private explicit_return_type "void"
+	nparams 2
+	  param in name "vol" explicit_type "double"
+	  param in name "rad" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Increase or decrease the system dimensions to match the new
+ volume. Cylinders maintain ratio of half_length to radius.
+
+ * NOTE : This is expected to be used only during system
+ initialization, ie before checking particle positions or
+ asking for new particle positions. Whether any check or
+ particle postion calculated before calling this method is
+ still valid is undefined.
+"
       end
 
       operation 1007920 "do_fits"
@@ -2439,6 +2682,48 @@ ${docstring}${body}
  with the given radius
 
  NOTE: can assume fits(radius)"
+      end
+
+      operation 1093808 "region_factory"
+	class_operation private return_type class_ref 452912 // base_region
+	nparams 2
+	  param in name "label" explicit_type "string"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} > & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} > & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Factory method for creating cube_region objects from
+ input data."
+      end
+
+      operation 1093680 "add_region_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 479664 // region_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create and add a region_definition to the meta object."
       end
     end
 
@@ -5550,7 +5835,10 @@ ${namespace_end}
 ${includes}
 // Manual includes
 #include \"core/constants.hpp\"
-// =
+#include \"core/input_base_reader.hpp\"
+#include \"core/strngs.hpp\"
+#include \"geometry/tubular_grid.hpp\"
+// -
 ${namespace_start}
 ${members}
 ${namespace_end}"
@@ -5789,6 +6077,8 @@ ${namespace_end}
 ${includes}
 // Manual includes
 #include \"core/constants.hpp\"
+#include \"core/input_base_reader.hpp\"
+#include \"core/strngs.hpp\"
 // =
 ${namespace_start}
 ${members}
@@ -5838,6 +6128,8 @@ ${namespace_end}
 ${includes}
 // Manual includes
 #include \"core/constants.hpp\"
+#include \"core/input_base_reader.hpp\"
+#include \"core/strngs.hpp\"
 // =
 ${namespace_start}
 ${members}

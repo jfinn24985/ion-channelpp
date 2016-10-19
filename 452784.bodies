@@ -1925,7 +1925,7 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
   catch( std::runtime_error const& err )
   {
     const std::string msg( err.what() );
-    BOOST_CHECK( msg.find( "Cube region \"open\" parameter value (once) not a boolean" ) < msg.size() );
+    BOOST_CHECK( msg.find( "Cube region \"open\" parameter value (once) is not a boolean" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -2020,7 +2020,7 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
 
   
 
-  std::string canon_input( "region\nname \"bulk\"\nwidth 8.0\ntype periodic_cube\nend\n\n" );
+  std::string canon_input( "region\nname \"bulk\"\nwidth 8.0\ntype periodic-cube\nend\n\n" );
 
   core::input_preprocess reader;
   reader.add_buffer( "dummy", canon_input );
@@ -2047,7 +2047,7 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
     dg.add_input_delegate( m );
   }
   // Type is hidden by comment character
-  std::string canon_input( "region\nname \"bulk\"\n#width 8.0\ntype periodic_cube\nend\n\n" );
+  std::string canon_input( "region\nname \"bulk\"\n#width 8.0\ntype periodic-cube\nend\n\n" );
 
   core::input_preprocess reader;
   reader.add_buffer( "dummy", canon_input );
@@ -2079,7 +2079,7 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
     dg.add_input_delegate( m );
   }
   // Type is hidden by comment character
-  std::string canon_input( "region\nname \"bulk\"\nwidth #8.0\ntype periodic_cube\nend\n\n" );
+  std::string canon_input( "region\nname \"bulk\"\nwidth #8.0\ntype periodic-cube\nend\n\n" );
 
   core::input_preprocess reader;
   reader.add_buffer( "dummy", canon_input );
@@ -2111,7 +2111,7 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
     dg.add_input_delegate( m );
   }
   // Type is hidden by comment character
-  std::string canon_input( "region\nname \"bulk\"\nwidth 8.0 pm\ntype periodic_cube\nend\n\n" );
+  std::string canon_input( "region\nname \"bulk\"\nwidth 8.0 pm\ntype periodic-cube\nend\n\n" );
 
   core::input_preprocess reader;
   reader.add_buffer( "dummy", canon_input );
@@ -2143,7 +2143,7 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
     dg.add_input_delegate( m );
   }
   // Type is hidden by comment character
-  std::string canon_input( "region\nname \"bulk\"\nwidth -8.0\ntype periodic_cube\nend\n\n" );
+  std::string canon_input( "region\nname \"bulk\"\nwidth -8.0\ntype periodic-cube\nend\n\n" );
 
   core::input_preprocess reader;
   reader.add_buffer( "dummy", canon_input );
@@ -2156,6 +2156,792 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
   {
     const std::string msg( err.what() );
     BOOST_CHECK( msg.find( "Periodic cube region \"width\" parameter value (-8.0) must be greater than zero" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1096880.cpp!!!	input_cylinder_region_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype cylinder\nradius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+  BOOST_CHECK_EQUAL( mngr->region_count(), 2ul );
+  BOOST_CHECK_EQUAL( mngr->region_key( "bulk" ), 1ul );
+
+  geometry::cylinder_region const* regptr;
+  regptr = dynamic_cast< geometry::cylinder_region const* >( &( mngr->get_region( 1ul ) ) );
+  BOOST_REQUIRE( regptr != nullptr );
+  BOOST_CHECK_EQUAL( regptr->half_length(), 8.0 );
+  BOOST_CHECK_EQUAL( regptr->radius(), 8.0 );
+  BOOST_CHECK_EQUAL( regptr->volume( 0.0 ), core::constants::pi() * 1024 );
+}
+!!!1096752.cpp!!!	input_cylinder_no_halflength_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\n#half-length 8.0\ntype cylinder\nradius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Cylinder region \"half-length\" parameter missing" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1096624.cpp!!!	input_cylinder_halflength_no_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length #8.0\ntype cylinder\nradius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Cylinder region \"half-length\" parameter requires a value" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1096496.cpp!!!	input_cylinder_halflength_bad_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length eight#8.0\ntype cylinder\nradius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Cylinder region \"half-length\" parameter value (eight) is not a number" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1096368.cpp!!!	input_cylinder_halflength_negative_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length -8.0\ntype cylinder\nradius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Cylinder region \"half-length\" parameter value (-8.0) must be greater than zero" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1096240.cpp!!!	input_cylinder_no_radius_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype cylinder\n#radius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Cylinder region \"radius\" parameter missing" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1096112.cpp!!!	input_cylinder_radius_no_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype cylinder\nradius #8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Cylinder region \"radius\" parameter requires a value" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1095984.cpp!!!	input_cylinder_radius_bad_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype cylinder\nradius eight#8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Cylinder region \"radius\" parameter value (eight) is not a number" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1095856.cpp!!!	input_cylinder_radius_negative_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype cylinder\nradius -8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Cylinder region \"radius\" parameter value (-8) must be greater than zero" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1093936.cpp!!!	input_open_cylinder_region_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype open-cylinder\nradius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+  BOOST_CHECK_EQUAL( mngr->region_count(), 2ul );
+  BOOST_CHECK_EQUAL( mngr->region_key( "bulk" ), 1ul );
+
+  geometry::open_cylinder_region const* regptr;
+  regptr = dynamic_cast< geometry::open_cylinder_region const* >( &( mngr->get_region( 1ul ) ) );
+  BOOST_REQUIRE( regptr != nullptr );
+  BOOST_CHECK_EQUAL( regptr->half_length(), 8.0 );
+  BOOST_CHECK_EQUAL( regptr->radius(), 8.0 );
+  BOOST_CHECK_EQUAL( regptr->volume( 0.0 ), core::constants::pi() * 1024 );
+}
+!!!1094832.cpp!!!	input_open_cylinder_no_halflength_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\n#half-length 8.0\ntype open-cylinder\nradius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Open cylinder region \"half-length\" parameter missing" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1094960.cpp!!!	input_open_cylinder_halflength_no_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length #8.0\ntype open-cylinder\nradius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Open cylinder region \"half-length\" parameter requires a value" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1095088.cpp!!!	input_open_cylinder_halflength_bad_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length eight#8.0\ntype open-cylinder\nradius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Open cylinder region \"half-length\" parameter value (eight) is not a number" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1095216.cpp!!!	input_open_cylinder_halflength_negative_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length -8.0\ntype open-cylinder\nradius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Open cylinder region \"half-length\" parameter value (-8.0) must be greater than zero" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1095344.cpp!!!	input_open_cylinder_no_radius_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype open-cylinder\n#radius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Open cylinder region \"radius\" parameter missing" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1095472.cpp!!!	input_open_cylinder_radius_no_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype open-cylinder\nradius #8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Open cylinder region \"radius\" parameter requires a value" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1095600.cpp!!!	input_open_cylinder_radius_bad_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype open-cylinder\nradius eight#8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Open cylinder region \"radius\" parameter value (eight) is not a number" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1095728.cpp!!!	input_open_cylinder_radius_negative_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype open-cylinder\nradius -8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Open cylinder region \"radius\" parameter value (-8) must be greater than zero" ) < msg.size() );
   }
   catch( std::exception const& err )
   {

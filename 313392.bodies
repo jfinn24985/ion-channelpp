@@ -347,3 +347,54 @@ else:
     raise ValueError, "invalid literal for conversion to boolean: '"+astr+"'"
 
 
+!!!1097008.cpp!!!	float_input(in name : string, in value : string, in title : string, in section_name : string, inout target : double, in above_zero : bool, in equal_zero : bool) : void
+UTILITY_INPUT( not value.empty(), title + " \"" + name + "\" parameter requires a value.", section_name );
+double result;
+try
+{
+  result = boost::lexical_cast< double >( value );
+}
+catch( std::bad_cast const& err )
+{
+  const bool value_is_a_number = false;
+  UTILITY_INPUT( value_is_a_number, title + " \"" + name + "\" parameter value (" + value + ") is not a number: " + err.what(), section_name );
+}
+if( above_zero )
+{
+  if( equal_zero )
+  {
+    UTILITY_INPUT( result >= 0.0, title + " \"" + name + "\" parameter value (" + value + ") must be greater than or equal to zero.", section_name );
+  }
+  else
+  {
+    UTILITY_INPUT( result > 0.0, title + " \"" + name + "\" parameter value (" + value + ") must be greater than zero.", section_name );
+  }
+}
+target = result;
+!!!1097264.cpp!!!	bool_input(in name : string, in value : string, in title : string, in section_name : string, inout target : bool, in has_default : bool, in default_value : bool) : void
+bool result = false;
+if( value.empty() )
+{
+  if( has_default )
+  {
+    result = default_value;
+  }
+  else
+  {
+    UTILITY_INPUT( not value.empty(), title + " \"" + name + "\" parameter requires a value.", section_name );
+  }
+}
+else
+{
+  try
+  {
+    result = core::input_base_reader::read_as_bool( value );
+  }
+  catch( std::bad_cast const& err )
+  {
+    const bool value_is_a_boolean = false;
+    UTILITY_INPUT( value_is_a_boolean, title + " \"" + name + "\" parameter value (" + value + ") is not a boolean: " + err.what(), section_name );
+  }
+}
+target = result;
+

@@ -1,4 +1,23 @@
 class open_cylinder_region
+!!!1094576.cpp!!!	do_change_volume(in vol : double, in rad : double) : void
+// Maintain halflength/radius ratio
+//
+//  vol = 2 * HL * pi * (R - r) * (R - r)
+//
+//  if C = HL/R then HL = C.R
+//
+//  vol = 2 * pi * CR * (R - r) * (R - r)
+//
+//  To make tractable CR --> C(R - r)
+//
+//  vol = 2C * pi * (R - r)**3
+const double ratio { this->half_length() / this->radius() };
+
+const double newradius { std::cbrt( vol / (2 * ratio * core::constants::pi() ) ) };
+
+this->set_radius( newradius + rad );
+
+this->set_half_length( vol / ( 2 * core::constants::pi() * std::pow( newradius, 2 ) ) );
 !!!995888.cpp!!!	do_fits(in radius : double) : bool
 return this->radius() >= radius;
 !!!996016.cpp!!!	do_is_inside(in pos : coordinate, in radius : double) : bool
@@ -36,3 +55,36 @@ if( radius < this->radius() )
 }
 return pos;
 
+!!!1093552.cpp!!!	region_factory(in label : string, in params : string) : base_region
+// needed information
+// label : from label arg
+// radius : from param arg
+// half_length : from param arg
+double half_length {};
+double radius {};
+
+const std::string half_length_label { "half-length" };
+const std::string radius_label { "radius" };
+
+// check for required parameters.
+UTILITY_INPUT( params.count( half_length_label ) == 1, "Open cylinder region \""+half_length_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT( params.count( radius_label ) == 1, "Open cylinder region \""+radius_label+"\" parameter missing in input.", core::strngs::fsregn() );
+
+core::input_base_reader::float_input( half_length_label, params.at( half_length_label ), "Open cylinder region", core::strngs::fsregn(), half_length, true, false );
+
+core::input_base_reader::float_input( radius_label, params.at( radius_label ), "Open cylinder region", core::strngs::fsregn(), radius, true, false );
+
+// build region object.
+boost::shared_ptr< geometry::base_region > current;
+current.reset( new open_cylinder_region( label, radius, half_length ) );
+return current;
+
+
+
+!!!1093424.cpp!!!	add_region_definition(inout meta : region_meta) : void
+region_definition cylinder_defn;
+cylinder_defn.type_name_ = "open-cylinder";
+cylinder_defn.documentation_.insert( std::make_pair< std::string, std::string >( "radius", "[required, values > 0 in Angstrom] The radius of the cylinder in the XY plane." ) );
+cylinder_defn.documentation_.insert( std::make_pair< std::string, std::string >( "half-length", "[required, value in Angstrom] Half the length of the cylinder. The cylinder is centred on the origin so |z| <= half-length." ) );
+cylinder_defn.factory_ = &open_cylinder_region::region_factory;
+meta.add_definition( cylinder_defn );

@@ -1,4 +1,26 @@
 class cylinder_region
+!!!1094448.cpp!!!	do_change_volume(in vol : double, in rad : double) : void
+// Maintain halflength/radius ratio
+// (ignore effect of rad argument).
+//
+//  vol = 2 * (HL - r) * pi * (R - r) * (R - r)
+//
+//  if C = HL/R then HL = C.R
+//
+//  vol = 2 * pi * (CR - r) * (R - r) * (R - r)
+//
+//  To make tractable (CR - r) --> C(R -r)
+//
+//  vol = 2C * pi * (R - r) * (R - r) * (R - r)
+const double ratio { this->half_length() / this->radius() };
+
+const double newradius { std::cbrt( vol / (2 * ratio * core::constants::pi() ) ) };
+
+this->radius_ = newradius + rad;
+
+const double newlength = { vol / ( 2 * core::constants::pi() * std::pow( newradius, 2 ) ) };
+
+this->half_length_ = newlength + rad;
 !!!991408.cpp!!!	do_fits(in radius : double) : bool
 return this->half_length_ >= radius and this->radius_ >= radius;
 !!!990512.cpp!!!	do_is_inside(in pos : coordinate, in radius : double) : bool
@@ -24,6 +46,14 @@ if( std::pow( this->radius_ - radius, 2 ) < ( pos.x * pos.x + pos.y * pos.y ) )
 }
 return true;
 
+!!!1094064.cpp!!!	do_make_gridder(inout rgenr : random_distribution, in count : size_t) : grid_generator
+boost::shared_ptr< grid_generator > result;
+result.reset( new tubular_grid( 2*this->half_length(), this->radius(), count, rgenr ) );
+return result;
+!!!1094320.cpp!!!	do_make_gridder(in spacing : double, inout rgenr : random_distribution) : grid_generator
+boost::shared_ptr< grid_generator > result;
+result.reset( new tubular_grid( 2*this->half_length(), this->radius(), spacing, rgenr ) );
+return result;
 !!!991024.cpp!!!	do_new_position(inout rgnr : random_distribution, in radius : double) : coordinate
 // A random position within cylinder
 particle::coordinate pos( 0.0, 0.0, 0.0 );
@@ -44,3 +74,36 @@ if( radius < this->half_length_ )
 // else z = 0
 return pos;
 
+!!!1093296.cpp!!!	region_factory(in label : string, in params : string) : base_region
+// needed information
+// label : from label arg
+// radius : from param arg
+// half_length : from param arg
+double half_length {};
+double radius {};
+
+const std::string half_length_label { "half-length" };
+const std::string radius_label { "radius" };
+
+// check for required parameters.
+UTILITY_INPUT( params.count( half_length_label ) == 1, "Cylinder region \""+half_length_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT( params.count( radius_label ) == 1, "Cylinder region \""+radius_label+"\" parameter missing in input.", core::strngs::fsregn() );
+
+core::input_base_reader::float_input( half_length_label, params.at( half_length_label ), "Cylinder region", core::strngs::fsregn(), half_length, true, false );
+
+core::input_base_reader::float_input( radius_label, params.at( radius_label ), "Cylinder region", core::strngs::fsregn(), radius, true, false );
+
+// build region object.
+boost::shared_ptr< geometry::base_region > current;
+current.reset( new cylinder_region( label, radius, half_length ) );
+return current;
+
+
+
+!!!1093168.cpp!!!	add_region_definition(inout meta : region_meta) : void
+region_definition cylinder_defn;
+cylinder_defn.type_name_ = "cylinder";
+cylinder_defn.documentation_.insert( std::make_pair< std::string, std::string >( "radius", "[required, values > 0 in Angstrom] The radius of the cylinder in the XY plane." ) );
+cylinder_defn.documentation_.insert( std::make_pair< std::string, std::string >( "half-length", "[required, value in Angstrom] Half the length of the cylinder. The cylinder is centred on the origin so |z| <= half-length." ) );
+cylinder_defn.factory_ = &cylinder_region::region_factory;
+meta.add_definition( cylinder_defn );

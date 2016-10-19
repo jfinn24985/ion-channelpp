@@ -60,53 +60,13 @@ const std::string isopen_label { "open" };
 UTILITY_INPUT( params.count( width_label ) == 1, "Cube region \""+width_label+"\" parameter missing in input.", core::strngs::fsregn() );
 UTILITY_INPUT( params.count( origin_label ) == 1, "Cube region \""+origin_label+"\" parameter missing in input.", core::strngs::fsregn() );
 
-{
-  // --------------------
-  // Cube width
-  UTILITY_INPUT( not params.at( width_label ).empty(), "Cube region \""+width_label+"\" parameter requires a value.", core::strngs::fsregn() );
-  try
-  {
-    width = boost::lexical_cast< double >( params.at( width_label ) );
-  }
-  catch( std::bad_cast const& err )
-  {
-    const bool value_is_a_number = false;
-    UTILITY_INPUT( value_is_a_number, "Cube region \""+width_label+"\" parameter value (" + params.at( width_label ) + ") is not a number: " + err.what(), core::strngs::fsregn() );
-  }
-  UTILITY_INPUT( width >= 0.0, "Cube region \""+width_label+"\" parameter value (" + params.at( width_label ) + ") must be greater than zero.", core::strngs::fsregn() );
-}
+core::input_base_reader::float_input( width_label, params.at( width_label ), "Cube region", core::strngs::fsregn(), width, true, false );
 
-{
-  // --------------------
-  // Cube origin
-  UTILITY_INPUT( not params.at( origin_label ).empty(), "Cube region \""+origin_label+"\" parameter requires a value.", core::strngs::fsregn() );
-  std::vector< double > values;
-  UTILITY_INPUT( core::input_base_reader::read_as_floats( params.at( origin_label ), values ), "Cube region \""+origin_label+"\" coordinate data (" + params.at( origin_label ) + ") is invalid", core::strngs::fsregn() );
-  UTILITY_INPUT( values.size() == 3, "Cube region \""+origin_label+"\" coordinate data (" + params.at( origin_label ) + ") should have 3 values", core::strngs::fsregn() );
-  origin = particle::coordinate( values[0], values[1], values[2] );
-}
+particle::coordinate::coordinate_input( origin_label, params.at( origin_label ), "Cube region", core::strngs::fsregn(), origin );
 
-if( params.count( isopen_label ) == 1 )
+if ( params.count( isopen_label ) == 1 )
 {
-  // --------------------
-  // Cube open/closed state
-  if( params.at( isopen_label ).empty() )
-  {
-    // name without value implies isopen = true
-    isopen = true;
-  }
-  else
-  {
-    try
-    {
-      isopen = core::input_base_reader::read_as_bool( params.at( isopen_label ) );
-    }
-    catch( std::bad_cast const& err )
-    {
-      const bool value_is_a_boolean = false;
-      UTILITY_INPUT( value_is_a_boolean, "Cube region \""+isopen_label+"\" parameter value (" + params.at( isopen_label ) + ") not a boolean: " + err.what(), core::strngs::fsregn() );
-    }
-  }
+  core::input_base_reader::bool_input( isopen_label, params.at( isopen_label ), "Cube region", core::strngs::fsregn(), isopen, true, true );
 }
 
 // build region object.
