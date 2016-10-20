@@ -1,6 +1,6 @@
 format 75
 "geometry" // geometry
-  revision 15
+  revision 16
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -444,6 +444,59 @@ ${docstring}${body}
 	comment "Write the grid parameters to an archive"
       end
 
+      operation 1114672 "extent"
+	const public explicit_return_type "void"
+	nparams 3
+	  param out name "small_corner" type class_ref 986799 // coordinate
+	  param out name "big_corner" type class_ref 986799 // coordinate
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}, ${t2} ${p2}${)}${const}${volatile}${throw}
+{
+  UTILITY_REQUIRE( this->fits( ${p2} ), \"Can not calculate extent for sphere that does not fit the region.\" );
+  return this->do_${name}( ${p0}, ${p1}, ${p2} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate a bounding box for the valid positions of spheres
+ of the given radius within the region. The bounding box is
+ defined by its most negative (small_corner) and most positive
+ (big_corner).
+
+ \\pre fits(radius) 
+ \\post big.(x|y|z) - small.(x|y|z) >= 0
+"
+      end
+
+      operation 1114800 "do_extent"
+	abstract const cpp_virtual private explicit_return_type "void"
+	nparams 3
+	  param out name "small_corner" type class_ref 986799 // coordinate
+	  param out name "big_corner" type class_ref 986799 // coordinate
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate a bounding box for the valid positions of
+ spheres of the given radius within the region. The
+ bounding box is defined by its most negative
+ (small_corner) and most positive (big_corner).
+
+ \\pre fits(radius)
+ \\post big.(x|y|z) - small.(x|y|z) >= 0"
+      end
+
       operation 991152 "fits"
 	const public explicit_return_type "bool"
 	nparams 1
@@ -699,7 +752,8 @@ ${docstring}${body}
 "
 	
 	comment " Calculate new random position for particle of the given radius to
- be in a valid position in the region.
+ be in a valid position in the region.  The position distribution
+ function should be equivolumetric.
 
  \\pre fits(radius)
  \\post is_inside(result, radius)"
@@ -1064,6 +1118,34 @@ ${docstring}${body}
   len + 2 rad = cuberoot( vol )
 
  * NOTE: can never give: not fits(rad)"
+      end
+
+      operation 1115056 "do_extent"
+	const private explicit_return_type "void"
+	nparams 3
+	  param out name "small_corner" type class_ref 986799 // coordinate
+	  param out name "big_corner" type class_ref 986799 // coordinate
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}, ${t2} ${p2}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate a bounding box for the valid positions of
+ spheres of the given radius within the region. The
+ bounding box is defined by its most negative
+ (small_corner) and most positive (big_corner).
+
+ \\pre fits(radius)
+ \\post big.(x|y|z) - small.(x|y|z) >= 0"
       end
 
       operation 1038512 "do_fits"
@@ -1540,6 +1622,34 @@ ${docstring}${body}
  particle postion calculated before calling this method is
  still valid is undefined.
 "
+      end
+
+      operation 1114928 "do_extent"
+	const private explicit_return_type "void"
+	nparams 3
+	  param out name "small_corner" type class_ref 986799 // coordinate
+	  param out name "big_corner" type class_ref 986799 // coordinate
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}, ${t2} ${p2}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate a bounding box for the valid positions of
+ spheres of the given radius within the region. The
+ bounding box is defined by its most negative
+ (small_corner) and most positive (big_corner).
+
+ \\pre fits(radius)
+ \\post big.(x|y|z) - small.(x|y|z) >= 0"
       end
 
       operation 991408 "do_fits"
@@ -2422,14 +2532,31 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
-      comment " Cylindrical region centred on the origin with linear axis in z
- direction. All walls are considered soft. Cylinder is cut in the
- centre and the two parts displaced \"offset\" from the origin
- along the z-axis.
+      comment " Cylindrical region centred on the origin with linear axis
+ in z direction. All walls are considered hard. Cylinder has
+ a membrane bissecting the cell in the centre providing two
+ large compartments.  The two compartments are displaced by
+ \"offset\" from the origin along the z-axis. A tube with rounded
+ edges links the two compartments.
 
- Coordinate range:
- * x*x + y*y <= rad*rad
- * -(len/2 + offset) <= z <= -(offset) AND (offset) <= z <= +(len/2 + offset)"
+ Dimensions:
+
+ Rad : Compartment radius
+ HL  : Compartment length
+ offset : Membrane half width
+ rad : Radius of joining tube (rad << Rad)
+ arc : Radius of rounded edge at tube mouth (rad + arc < Rad and arc < offset) 
+
+ Valid coordinate range: 
+
+ Compartments
+ * [offset <= |z| <= offset + HL] and [x*x + y*y <= Rad*Rad]
+
+ Tube
+ * [|z| < offset] and [x*x + y*y <= rad*rad]
+ * plus [offset - arc < |z| < offset] and in arc section.
+
+"
       classrelation 658480 // <generalisation>
 	relation 657584 ---|>
 	  a public
@@ -2457,7 +2584,7 @@ ${docstring}${members}
 	idl ""
       end
 
-      attribute 529712 "offset_"
+      attribute 529712 "channel_half_length_"
 	private explicit_type "double"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
@@ -2466,7 +2593,31 @@ ${docstring}${members}
 	python_decl "${comment}${self}${name} = ${value}
 "
 	idl_decl ""
-	comment " Offset from origin along z-axis."
+	comment " Offset of cell compartments from origin along z-axis."
+      end
+
+      attribute 536240 "channel_radius_"
+	private explicit_type "double"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The radius of the connecting tube/channel."
+      end
+
+      attribute 536368 "arc_radius_"
+	private explicit_type "double"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The radius of the arc that rounds the tube into the membrane wall."
       end
 
       operation 1105712 "membrane_cylinder_region"
@@ -2485,14 +2636,18 @@ ${docstring}${body}
 
       operation 1105840 "membrane_cylinder_region"
 	public explicit_return_type ""
-	nparams 4
+	nparams 6
 	  param in name "label" explicit_type "string"
 	  param in name "rad" explicit_type "double"
 	  param in name "half_len" explicit_type "double"
 	  param in name "offset" explicit_type "double"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${volatile}${throw}
+	  param in name "tube_radius" explicit_type "double"
+	  param in name "arc_radius" explicit_type "double"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}, ${t5} ${p5}${v5}${)}${volatile}${throw}
 : cylinder_region( ${p0}, ${p1}, ${p2} )
-, offset_( ${p3} )
+, channel_half_length_( ${p3} )
+, channel_radius_( ${p4} )
+, arc_radius_( ${p5} )
 {}
 "
 	
@@ -2545,6 +2700,8 @@ ${docstring}${body}
 {
   ar & boost::serialization::base_object< geometry::cylinder_region >(*this);
   ar & this->offset_;
+  ar & this->tube_radius_;
+  ar & this->arc_radius_;
 }
 "
 	
@@ -2562,6 +2719,43 @@ ${docstring}${body}
 	php ""
 	python ""
 	idl ""
+      end
+
+      operation 1114160 "arc_radius"
+	stereotype "get"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->${name}_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the halflength of the gap between the two cylinder halves"
+      end
+
+      operation 1114032 "arc_radius"
+	stereotype "set"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "val" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->${name}_ = ${p0};
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Set the halflength of the gap between the two cylinder halves"
       end
 
       operation 1106224 "do_change_volume"
@@ -2591,6 +2785,80 @@ ${docstring}${body}
  particle postion calculated before calling this method is
  still valid is undefined.
 "
+      end
+
+      operation 1106736 "channel_half_length"
+	stereotype "get"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->${name}_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the halflength of the gap between the two cylinder halves"
+      end
+
+      operation 1106864 "channel_half_length"
+	stereotype "set"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "val" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->${name}_ = ${p0};
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Set the halflength of the gap between the two cylinder halves"
+      end
+
+      operation 1113776 "channel_radius"
+	stereotype "get"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->${name}_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the halflength of the gap between the two cylinder halves"
+      end
+
+      operation 1113904 "channel_radius"
+	stereotype "set"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "val" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->${name}_ = ${p0};
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Set the halflength of the gap between the two cylinder halves"
       end
 
       operation 1106352 "do_fits"
@@ -2634,8 +2902,8 @@ ${docstring}${body}
 "
 	
 	comment " Calculate if a sphere centred at the given point and with
- the given radius is within the region. This class ignores the 
- radius when considering the z direction."
+ the given radius is within the region. The checks if the
+ sphere is in the cell compartments or the channel."
       end
 
       operation 1106608 "do_new_position"
@@ -2657,48 +2925,11 @@ ${docstring}${body}
 "
 	
 	comment " Calculate new random position for particle of the given radius to
- be inside the region. This class ignores the radius when calculating
- the new z coordinate.
+ be inside the region. The position distribution should be uniform 
+ over the volume.
 
  \\pre fits(radius)
  \\post is_inside(pos, radius)"
-      end
-
-      operation 1106736 "offset"
-	stereotype "get"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->offset_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Get the halflength of the gap between the two cylinder halves"
-      end
-
-      operation 1106864 "offset"
-	stereotype "set"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "val" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  this->offset_ = ${p0};
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Set the halflength of the gap between the two cylinder halves"
       end
 
       operation 1106992 "do_volume"
@@ -2761,6 +2992,63 @@ ${docstring}${body}
 "
 	
 	comment " Create and add a region_definition to the meta object."
+      end
+
+      operation 1114416 "volume_of_rotation"
+	class_operation public explicit_return_type "double"
+	nparams 5
+	  param in name "axial_disp" explicit_type "double"
+	  param in name "radial_disp" explicit_type "double"
+	  param in name "arc_radius" explicit_type "double"
+	  param in name "z_0" explicit_type "double"
+	  param in name "z_1" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}, ${t4} ${p4}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate the volume of rotation _underneath_ an arc between z_0
+ and z_1.
+
+ This calculates the volume of rotation underneath an arc whose
+ centrepoint is (axial_disp,radial_disp) and has the given arc_radius.
+ The volume is the slice between the z_0 and z_1 .
+
+ \\pre radial_disp > arc_radius
+"
+      end
+
+      operation 1114288 "volume_of_rotation"
+	class_operation public explicit_return_type "double"
+	nparams 2
+	  param in name "radial_disp" explicit_type "double"
+	  param in name "arc_radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  return volume_of_rotation( 0.0, ${p0}, ${p1}, 0.0, ${p1} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate the volume of rotation _underneath_ an arc whose
+ centrepoint is (0.0,radial_disp) and has the given arc_radius.
+ The volume is the slice between the 0.0 and arc_radius. In
+ other words it is the volume under the half arc.
+
+ \\pre radial_disp > arc_radius
+"
       end
     end
 
@@ -3853,6 +4141,34 @@ ${docstring}${body}
  len = cuberoot( vol )
 
  * NOTE: _can_ give: not fits(rad) after volume change"
+      end
+
+      operation 1115184 "do_extent"
+	const private explicit_return_type "void"
+	nparams 3
+	  param out name "small_corner" type class_ref 986799 // coordinate
+	  param out name "big_corner" type class_ref 986799 // coordinate
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}, ${t2} ${p2}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate a bounding box for the valid positions of
+ spheres of the given radius within the region. The
+ bounding box is defined by its most negative
+ (small_corner) and most positive (big_corner).
+
+ \\pre fits(radius)
+ \\post big.(x|y|z) - small.(x|y|z) >= 0"
       end
 
       operation 992304 "do_fits"

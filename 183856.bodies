@@ -21,6 +21,13 @@ this->radius_ = newradius + rad;
 const double newlength = { vol / ( 2 * core::constants::pi() * std::pow( newradius, 2 ) ) };
 
 this->half_length_ = newlength + rad;
+!!!1114928.cpp!!!	do_extent(out small_corner : coordinate, out big_corner : coordinate, in radius : double) : void
+big_corner.x = this->radius() - radius;
+big_corner.y = big_corner.x;
+big_corner.z = this->half_length() - radius;
+small_corner.x = -big_corner.x;
+small_corner.y = -big_corner.y;
+small_corner.z = -big_corner.z;
 !!!991408.cpp!!!	do_fits(in radius : double) : bool
 return this->half_length_ >= radius and this->radius_ >= radius;
 !!!990512.cpp!!!	do_is_inside(in pos : coordinate, in radius : double) : bool
@@ -59,7 +66,8 @@ return result;
 particle::coordinate pos( 0.0, 0.0, 0.0 );
 if( radius < this->radius_ )
 {
-  const double r( rgnr.uniform( this->radius_ - radius ) );
+  // Volume is linear in square of radius
+  const double r( std::qrt( rgnr.uniform( std::pow( this->radius_ - radius, 2 ) ) ) );
   const double phi( rgnr.uniform( 0.0, core::constants::pi() * 2 ) );
   pos.x = r * std::cos( phi );
   pos.y = r * std::sin( phi );

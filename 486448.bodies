@@ -15,32 +15,142 @@ this->set_radius( std::cbrt( vol / (2 * ratio * core::constants::pi() ) ) );
 
 this->set_half_length( vol / ( 2 * core::constants::pi() * std::pow( this->radius(), 2 ) ) );
 !!!1106480.cpp!!!	do_is_inside(in pos : coordinate, in radius : double) : bool
-if( ( this->offset_ ) > std::abs( pos.y ) )
+// Absolute Z position
+const double abs_z_pos { std::abs( pos.z ) };
+// Radial position
+const double radial_sq_pos { pos.x * pos.x + pos.y * pos.y };
+// Radius of channel mouth at at the membrane surface (tube radius + arc
+// radius)
+const double mouth_radius { this->channel_radius_ + this->arc_radius_ };
+
+// Outside of membrane
+if( abs_z_pos >= ( this->channel_half_length_ + rad ) )
 {
-  // sphere centre between two parts.
+  // check if outside extreme of compartment in r and z?
+  return not( radial_sq_pos > std::pow( this->radius()  - rad, 2 )
+              or abs_z_pos > ( this->half_length() + this->channel_half_length_ - rad ) );
+}
+
+// (else inside membrane and) Within channel cylinder inner-radius?
+if( radial_sq_pos <= std::pow( this->pore_radius_ - rad, 2 ) )
+{
+  return true;
+}
+
+// Inside channel (and outside inner cylinder radius) OR Outside maximum
+// vestibule radius means overlap
+if( abs_z_pos <= ( this->channel_half_length_ - rad )
+   or radial_sq_pos > std::pow( mouth_radius, 2 ) )
+{
   return false;
 }
-if( ( this->offset_ + this->half_length() ) > std::abs( pos.y ) )
+
+// Outside channel radius but may be in the arc zone.
+// Check (sqr) distance from vestibule arc centerpoint.
+const double r2minimum { std::pow( this->arc_radius_ + rad, 2 ) };
+const double r2actual
 {
-  // sphere beyond end.
-  return false;
-}
-if( std::pow( this->radius(), 2 ) < ( pos.x * pos.x + pos.y * pos.y ) )
-{
-  // sphere outside wall
-  return false;
-}
-return true;
+  std::pow( mouth_radius - std::sqrt( radial_sq_pos ), 2 )
+  + std::pow( abs_z_pos - ( this->channel_half_length_ - this->arc_radius_ ), 2 )
+};
+return ( r2actual >= r2minimum );
 
 !!!1106608.cpp!!!	do_new_position(inout rgnr : random_distribution, in radius : double) : coordinate
-// A random position within either cylinder part
+// A random position anywhere in cell
 particle::coordinate pos( 0.0, 0.0, 0.0 );
-const double r( rgnr.uniform( this->radius() ) );
+constexpr double pi = core::constants::pi();
+// Generate z coordinate:
+const double reduced_cell_radius { this->radius() - radius };
+const double compartment_factor { std::pow( reduced_cell_radius, 2 ) * pi * (this->half_length() - 2 * radius) };
+
+const double reduced_channel_radius { this->channel_radius() - radius };
+const double inner_channel_factor { std::pow( reduced_channel_radius, 2 ) * pi * (this->channel_half_length_ - this->arc_radius_) };
+
+const double vestibule_factor { volume_of_rotation( this->channel_radius_ + this->arc_radius_, this->arc_radius_ + radius ) };
+
+const double full_factor { compartment_factor + inner_channel_factor + vestibule_factor };
+const double zfactor = rgnr.uniform( -full_factor, full_factor );
+const double abs_zfactor{ std::abs( zfactor ) };
+
+double max_radius {};
+// calculate z pos and radius
+if ( abs_zfactor >= inner_channel_factor + vestibule_factor )
+{
+  // in cell compartment
+  pos.z = this->channel_half_length_ + radius + ((abs_zfactor - (inner_channel_factor + vestibule_factor ) ) / (std::pow( reduced_cell_radius, 2 ) * pi));
+  if (zfactor < 0)
+  {
+    pos.z = -pos.z;
+  }
+  max_radius = this->radius() - radius;
+}
+else if ( abs_zfactor <= inner_channel_factor )
+{
+  pos.z = (abs_zfactor / (std::pow( reduced_channel_radius, 2 ) * pi));
+  if (zfactor < 0)
+  {
+    pos.z = -pos.z;
+  }
+  // fully in channel
+  max_radius = this->channel_radius_ - radius;
+}
+else
+{
+  // in channel vestibule: z is non-linear in volume
+  //
+  // NOTE abs_zfactor = volume_of_rotation(0, R, r, 0, z)
+  //  where R = channel_radius + arc_radius
+  //        r = arc_radius + radius
+  //        z = unknown z coordinate
+  //
+  // derivative of volume_of_rotation is:
+  //  pi{R^2 + r^2 - z^2 - R(sqrt(r^2 - z^2) - 2*z/sqrt(r^2 - z^2) + rcos(z/r)}
+  const double R = this->channel_radius_ + this->arc_radius_;
+  const double r = this->arc_radius_ + radius;
+  auto deriv= [R,r,pi](double z)->double
+  {
+    double sqt = std::sqrt(r*r - z*z);
+    return pi * ( R*R + r*r - z*z - R( sqt - (2*z/sqt) + r * cos(z/r)));
+  };
+  double vol { abs_zfactor - inner_channel_factor };
+  UTILITY_CHECK( vol < vestibule_factor, "Error in logic, not in expected volume" );
+  // first guess is linear approx
+  double zguess = r * vol / vestibule_factor;
+  // do four Newton/Raphson steps
+  //  f(z) = volume_of_rotation(0, R, r, 0, z) - vol = 0
+  //  f'(z) = deriv(z)
+  for (std::size_t ii = 0; ii < 4; ++ii)
+  {
+    zguess -= (volume_of_rotation(0.0, R, r, 0.0, zguess) - vol)/deriv(zguess);
+  }
+  
+  pos.z = this->channel_half_length_ - this->arc_radius_ + zguess;
+  if (zfactor < 0)
+  {
+    pos.z = -pos.z;
+  }
+  //
+  // closest approach at pos.z is when 
+  //
+  //  dz = |pos.z| - (channel_half_length - arc_radius)
+  // 
+  //  ddr * ddr + dz * dz = (arc_radius + radius)**2  
+  // 
+  //  where ddr is distance from arc centrepoint. This
+  //  gives final radius as
+  //
+  //  max_radius = channel_radius + arc_radius - ddr
+  const double dz { zguess };
+  UTILITY_CHECK( (this->arc_radius_ + radius) > dz, "dz should never be larger than the arc radius." );
+  const double ddr_sq { std::pow(this->arc_radius_ + radius, 2) - std::pow(dz,2) };
+  max_radius = this->channel_radius_ + this->arc_radius_ - std::sqrt( ddr_sq );
+  
+}
+// volume distribution is linear in square of radius and phi
+const double r( std::sqrt(rgnr.uniform( std::pow(max_radius, 2 ) ) ) );
 const double phi( rgnr.uniform( 0.0, core::constants::pi() * 2 ) );
 pos.x = r * std::cos( phi );
 pos.y = r * std::sin( phi );
-pos.z = rgnr.uniform( -this->half_length(), this->half_length() );
-pos.z = ( pos.z < 0.0 ? pos.z - this->offset_ : pos.z + this->offset_ );
 return pos;
 
 
@@ -50,37 +160,97 @@ return pos;
 // radius : from param arg
 // half_length : from param arg
 // offset : from param arg
+// arc_radius : from param arg
+// tube_radius : from param arg
 double half_length {};
 double radius {};
 double offset {};
+double tube_radius {};
+double arc_radius {};
 
 const std::string half_length_label { "half-length" };
 const std::string radius_label { "radius" };
-const std::string offset_label { "offset" };
+const std::string offset_label { "channel-half-length" };
+const std::string tube_radius_label { "channel-radius" };
+const std::string arc_label { "arc" };
 
 // check for required parameters.
-UTILITY_INPUT( params.count( half_length_label ) == 1, "Split cylinder region \""+half_length_label+"\" parameter missing in input.", core::strngs::fsregn() );
-UTILITY_INPUT( params.count( radius_label ) == 1, "Split cylinder region \""+radius_label+"\" parameter missing in input.", core::strngs::fsregn() );
-UTILITY_INPUT( params.count( offset_label ) == 1, "Split cylinder region \""+offset_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT( params.count( half_length_label ) == 1, "Cell membrane region \""+half_length_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT( params.count( radius_label ) == 1, "Cell membrane region \""+radius_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT( params.count( offset_label ) == 1, "Cell membrane region \""+offset_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT( params.count( tube_radius_label ) == 1, "Cell membrane region \""+tube_radius_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT( params.count( arc_label ) == 1, "Cell membrane region \""+arc_label+"\" parameter missing in input.", core::strngs::fsregn() );
 
-core::input_base_reader::float_input( half_length_label, params.at( half_length_label ), "Split cylinder region", core::strngs::fsregn(), half_length, true, false );
+core::input_base_reader::float_input( half_length_label, params.at( half_length_label ), "Cell membrane region", core::strngs::fsregn(), half_length, true, false );
 
-core::input_base_reader::float_input( radius_label, params.at( radius_label ), "Split cylinder region", core::strngs::fsregn(), radius, true, false );
+core::input_base_reader::float_input( radius_label, params.at( radius_label ), "Cell membrane region", core::strngs::fsregn(), radius, true, false );
 
-core::input_base_reader::float_input( offset_label, params.at( offset_label ), "Split cylinder region", core::strngs::fsregn(), offset, true, false );
+core::input_base_reader::float_input( offset_label, params.at( offset_label ), "Cell membrane region", core::strngs::fsregn(), offset, true, false );
+
+core::input_base_reader::float_input( tube_radius_label, params.at( tube_radius_label ), "Cell membrane region", core::strngs::fsregn(), tube_radius, true, false );
+
+core::input_base_reader::float_input( arc_label, params.at( arc_label ), "Cell membrane region", core::strngs::fsregn(), arc_radius, true, false );
 
 // build region object.
 boost::shared_ptr< geometry::base_region > current;
-current.reset( new open_split_cylinder_region( label, radius, half_length, offset ) );
+current.reset( new open_split_cylinder_region( label, radius, half_length, offset, tube_radius, arc_radius ) );
 return current;
 
 
 
 !!!1107248.cpp!!!	add_region_definition(inout meta : region_meta) : void
 region_definition cylinder_defn;
-cylinder_defn.type_name_ = "split-cylinder";
+cylinder_defn.type_name_ = "cell-membrane";
 cylinder_defn.documentation_.insert( std::make_pair< std::string, std::string >( "radius", "[required, values > 0 in Angstrom] The radius of the cylinder in the XY plane." ) );
 cylinder_defn.documentation_.insert( std::make_pair< std::string, std::string >( "half-length", "[required, value in Angstrom] Half the length of the cylinder. The cylinder is centred on the origin so: offset <= |z| <= half-length + offset." ) );
-cylinder_defn.documentation_.insert( std::make_pair< std::string, std::string >( "offset", "[required, value in Angstrom] Half the length of the gap between the two cylinder halves. The cylinder is centred on the origin so: offset <= |z| <= half-length + offset." ) );
+cylinder_defn.documentation_.insert( std::make_pair< std::string, std::string >( "channel-length", "[required, value in Angstrom] Half the length of the channel between the two cell compartments." ) );
+cylinder_defn.documentation_.insert( std::make_pair< std::string, std::string >( "channel-radius", "[required, value in Angstrom] The radius of the channel between the two cell compartments." ) );
+cylinder_defn.documentation_.insert( std::make_pair< std::string, std::string >( "arc-radius", "[required, value in Angstrom] The radius of the arc that rounds the channel ends into the membrane." ) );
 cylinder_defn.factory_ = &open_split_cylinder_region::region_factory;
 meta.add_definition( cylinder_defn );
+!!!1114416.cpp!!!	volume_of_rotation(in axial_disp : double, in radial_disp : double, in arc_radius : double, in z_0 : double, in z_1 : double) : double
+UTILITY_REQUIRE(arc_radius < radial_disp, "The arc radius must be smaller than the radial offset.");
+UTILITY_REQUIRE(not utility::feq(z_0,z_1), "Z0 can not equal Z1.");
+UTILITY_REQUIRE(z_0 < z_1, "Z0 must be less than Z1.");
+const double z1bar_ (z_1 - axial_disp);
+const double z0bar_ (z_0 - axial_disp);
+UTILITY_REQUIRE(z0bar_ >= axial_disp - arc_radius, "Z0 must be within one arc_radius of axial_disp.");
+UTILITY_REQUIRE(z1bar_ <= axial_disp + arc_radius, "Z0 must be within one arc_radius of axial_disp.");
+
+const double arc_r2 (std::pow(arc_radius,2));
+if (utility::feq(z0bar_, 0.0))
+{
+   // Handle case where x0 = xc --> z0bar_ = 0
+   return core::constants::pi()
+          * (
+             (std::pow(radial_disp,2) + arc_r2) * (z_1 - z_0)
+             - std::pow(z1bar_,3)/3.0
+             - radial_disp * (z1bar_ * std::sqrt(arc_r2 - std::pow(z1bar_,2))
+                              + arc_r2 * asin(z1bar_/arc_radius))
+          );
+}
+else if (utility::feq(z1bar_, arc_radius))
+{
+   // handle case where x1 = xc + r --> z1bar_ = r)
+   return core::constants::pi()
+          * (
+             (std::pow(radial_disp,2) + arc_r2) * (z_1 - z_0)
+             + (std::pow(z0bar_,3) - std::pow(z1bar_,3))/3.0
+             - radial_disp * (arc_r2 * core::constants::pi() / 4.0)
+             + radial_disp * (z0bar_ * std::sqrt(arc_r2 - std::pow(z0bar_,2))
+                              + arc_r2 * std::asin(z0bar_/arc_radius))
+          );
+}
+else
+{
+   return core::constants::pi()
+          * (
+             (std::pow(radial_disp,2) + arc_r2) * (z_1 - z_0)
+             + (std::pow(z0bar_,3) - std::pow(z1bar_,3))/3.0
+             - radial_disp * (z1bar_ * std::sqrt(arc_r2 - std::pow(z1bar_,2))
+                              + arc_r2 * std::asin(z1bar_/arc_radius))
+             + radial_disp * (z0bar_ * sqrt(arc_r2 - std::pow(z0bar_,2))
+                              + arc_r2 * std::asin(z0bar_/arc_radius))
+          );
+}
+
