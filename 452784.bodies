@@ -2948,3 +2948,454 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
     BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
   }
 }
+!!!1104816.cpp!!!	input_split_cylinder_region_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_split_cylinder_region::add_region_definition( *m );
+
+    core::input_help hlpr;
+    m->add_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.print( ss );
+      BOOST_CHECK( ss.str().find( "--name" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--radius" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--offset" ) < ss.str().size() );
+      BOOST_CHECK( ss.str().find( "--half-length" ) < ss.str().size() );
+    }
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype split-cylinder\nradius 8\noffset 4\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+  BOOST_CHECK_EQUAL( mngr->region_count(), 2ul );
+  BOOST_CHECK_EQUAL( mngr->region_key( "bulk" ), 1ul );
+
+  geometry::open_split_cylinder_region const* regptr;
+  regptr = dynamic_cast< geometry::open_split_cylinder_region const* >( &( mngr->get_region( 1ul ) ) );
+  BOOST_REQUIRE( regptr != nullptr );
+  BOOST_CHECK_EQUAL( regptr->half_length(), 8.0 );
+  BOOST_CHECK_EQUAL( regptr->radius(), 8.0 );
+  BOOST_CHECK_EQUAL( regptr->offset(), 4.0 );
+  BOOST_CHECK_EQUAL( regptr->volume( 0.0 ), core::constants::pi() * 1024 );
+}
+!!!1104688.cpp!!!	input_split_cylinder_no_halflength_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_split_cylinder_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\n#half-length 8.0\ntype split-cylinder\nradius 8\noffset 4\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Split cylinder region \"half-length\" parameter missing" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1104560.cpp!!!	input_split_cylinder_halflength_no_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_split_cylinder_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length #8.0\ntype split-cylinder\nradius 8\noffset 4\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Split cylinder region \"half-length\" parameter requires a value" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1104432.cpp!!!	input_split_cylinder_halflength_bad_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_split_cylinder_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length eight#8.0\ntype split-cylinder\noffset 4\nradius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Split cylinder region \"half-length\" parameter value (eight) is not a number" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1104304.cpp!!!	input_split_cylinder_halflength_negative_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_split_cylinder_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\noffset 4\nhalf-length -8.0\ntype split-cylinder\nradius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Split cylinder region \"half-length\" parameter value (-8.0) must be greater than zero" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1104048.cpp!!!	input_split_cylinder_radius_no_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_split_cylinder_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\noffset 4.0\nname \"bulk\"\nhalf-length 8.0\ntype split-cylinder\nradius #8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Split cylinder region \"radius\" parameter requires a value" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1103920.cpp!!!	input_split_cylinder_radius_bad_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_split_cylinder_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\noffset 4\nname \"bulk\"\nhalf-length 8.0\ntype split-cylinder\nradius eight#8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Split cylinder region \"radius\" parameter value (eight) is not a number" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1104176.cpp!!!	input_split_cylinder_no_radius_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_split_cylinder_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype split-cylinder\n#radius 8\noffset 4\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Split cylinder region \"radius\" parameter missing" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1103792.cpp!!!	input_split_cylinder_radius_negative_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_split_cylinder_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\noffset 4.0\nname \"bulk\"\nhalf-length 8.0\ntype split-cylinder\nradius -8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Split cylinder region \"radius\" parameter value (-8) must be greater than zero" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1105328.cpp!!!	input_split_cylinder_no_offset_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_split_cylinder_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype split-cylinder\nradius 8\n#offset 4\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Split cylinder region \"offset\" parameter missing" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1105200.cpp!!!	input_split_cylinder_offset_no_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_split_cylinder_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype split-cylinder\nradius 8\noffset #4\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Split cylinder region \"offset\" parameter requires a value" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1105072.cpp!!!	input_split_cylinder_offset_bad_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_split_cylinder_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\nhalf-length 8.0\ntype split-cylinder\noffset eight#4\nradius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Split cylinder region \"offset\" parameter value (eight) is not a number" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
+!!!1104944.cpp!!!	input_split_cylinder_offset_negative_value_test() : void
+// Test read input (specie meta)
+{
+  boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< geometry::geometry_manager > mngr( new geometry::geometry_manager( sys_rgn ) );
+  core::input_delegater dg( 1 );
+  {
+    boost::shared_ptr< geometry::region_meta > m( new geometry::region_meta( mngr ) );
+    geometry::open_split_cylinder_region::add_region_definition( *m );
+
+    dg.add_input_delegate( m );
+  }
+
+  
+
+  std::string canon_input( "region\nname \"bulk\"\noffset -4.2\nhalf-length 8.0\ntype split-cylinder\nradius 8\nend\n\n" );
+
+  core::input_preprocess reader;
+  reader.add_buffer( "dummy", canon_input );
+  try
+  {
+    dg.read_input( reader );
+    BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    BOOST_CHECK( msg.find( "Split cylinder region \"offset\" parameter value (-4.2) must be greater than zero" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string("exception thrown by \"dg.read_input( reader )\" was not expected type: ") + err.what() );
+  }
+}
