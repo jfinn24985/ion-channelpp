@@ -24,22 +24,22 @@ const double radial_sq_pos { pos.x * pos.x + pos.y * pos.y };
 const double mouth_radius { this->channel_radius_ + this->arc_radius_ };
 
 // Outside of membrane
-if( abs_z_pos >= ( this->channel_half_length_ + rad ) )
+if( abs_z_pos >= ( this->channel_half_length_ + radius ) )
 {
   // check if outside extreme of compartment in r and z?
-  return not( radial_sq_pos > std::pow( this->radius()  - rad, 2 )
-              or abs_z_pos > ( this->half_length() + this->channel_half_length_ - rad ) );
+  return not( radial_sq_pos > std::pow( this->radius()  - radius, 2 )
+              or abs_z_pos > ( this->half_length() + this->channel_half_length_ - radius ) );
 }
 
 // (else inside membrane and) Within channel cylinder inner-radius?
-if( radial_sq_pos <= std::pow( this->pore_radius_ - rad, 2 ) )
+if( radial_sq_pos <= std::pow( this->channel_radius_ - radius, 2 ) )
 {
   return true;
 }
 
 // Inside channel (and outside inner cylinder radius) OR Outside maximum
 // vestibule radius means overlap
-if( abs_z_pos <= ( this->channel_half_length_ - rad )
+if( abs_z_pos <= ( this->channel_half_length_ - radius )
    or radial_sq_pos > std::pow( mouth_radius, 2 ) )
 {
   return false;
@@ -47,7 +47,7 @@ if( abs_z_pos <= ( this->channel_half_length_ - rad )
 
 // Outside channel radius but may be in the arc zone.
 // Check (sqr) distance from vestibule arc centerpoint.
-const double r2minimum { std::pow( this->arc_radius_ + rad, 2 ) };
+const double r2minimum { std::pow( this->arc_radius_ + radius, 2 ) };
 const double r2actual
 {
   std::pow( mouth_radius - std::sqrt( radial_sq_pos ), 2 )
@@ -110,7 +110,7 @@ else
   auto deriv= [R,r,pi](double z)->double
   {
     double sqt = std::sqrt(r*r - z*z);
-    return pi * ( R*R + r*r - z*z - R( sqt - (2*z/sqt) + r * cos(z/r)));
+    return pi * ( R*R + r*r - z*z - R * ( sqt - (2*z/sqt) + r * cos(z/r)));
   };
   double vol { abs_zfactor - inner_channel_factor };
   UTILITY_CHECK( vol < vestibule_factor, "Error in logic, not in expected volume" );
@@ -193,7 +193,7 @@ core::input_base_reader::float_input( arc_label, params.at( arc_label ), "Cell m
 
 // build region object.
 boost::shared_ptr< geometry::base_region > current;
-current.reset( new open_split_cylinder_region( label, radius, half_length, offset, tube_radius, arc_radius ) );
+current.reset( new membrane_cylinder_region( label, radius, half_length, offset, tube_radius, arc_radius ) );
 return current;
 
 
@@ -206,7 +206,7 @@ cylinder_defn.documentation_.insert( std::make_pair< std::string, std::string >(
 cylinder_defn.documentation_.insert( std::make_pair< std::string, std::string >( "channel-length", "[required, value in Angstrom] Half the length of the channel between the two cell compartments." ) );
 cylinder_defn.documentation_.insert( std::make_pair< std::string, std::string >( "channel-radius", "[required, value in Angstrom] The radius of the channel between the two cell compartments." ) );
 cylinder_defn.documentation_.insert( std::make_pair< std::string, std::string >( "arc-radius", "[required, value in Angstrom] The radius of the arc that rounds the channel ends into the membrane." ) );
-cylinder_defn.factory_ = &open_split_cylinder_region::region_factory;
+cylinder_defn.factory_ = &membrane_cylinder_region::region_factory;
 meta.add_definition( cylinder_defn );
 !!!1114416.cpp!!!	volume_of_rotation(in axial_disp : double, in radial_disp : double, in arc_radius : double, in z_0 : double, in z_1 : double) : double
 UTILITY_REQUIRE(arc_radius < radial_disp, "The arc radius must be smaller than the radial offset.");
