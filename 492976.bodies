@@ -142,6 +142,184 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
 }
 std::cout << "Distribution test complete.\n";
 
+!!!1130032.cpp!!!	cylinder_region_new_position_test(in regn : base_region, in okradius : double) : void
+// region = regn
+// radius = okradius
+BOOST_REQUIRE( regn.fits( okradius ) );
+
+class bounding_box_to_histogram
+{
+private:
+  utility::digitizer xaxis;
+  utility::digitizer yaxis;
+  utility::digitizer zaxis;
+  double spacing_;
+  std::size_t yskip_;
+  std::size_t zskip_;
+  std::size_t size_;
+public:
+  std::size_t point_to_index( particle::coordinate const& p )
+  {
+    const std::size_t xidx = xaxis.convert( p.x );
+    const std::size_t yidx = yaxis.convert( p.y );
+    const std::size_t zidx = zaxis.convert( p.z );
+    return zidx * zskip_ + yidx * yskip_ + xidx;
+  }
+  bounding_box_to_histogram( particle::coordinate small, particle::coordinate big, double spacing )
+    : xaxis( small.x, big.x, spacing )
+    , yaxis( small.y, big.y, spacing )
+    , zaxis( small.z, big.z, spacing )
+    , spacing_( spacing )
+    , yskip_( xaxis.size() )
+    , zskip_( yaxis.size() * yskip_ )
+    , size_( zaxis.size() * zskip_ )
+  {}
+  std::size_t size() const
+  {
+    return size_;
+  }
+};
+
+boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+utility::random_distribution rand( generator );
+for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
+{
+  const double radius { okradius * rad_index / 10.0 };
+
+  particle::coordinate big, small;
+  std::cerr << "Doing radius " << radius << "\n";
+  regn.extent( small, big, radius );
+  const double cyl_radius { big.x };
+  const double cyl_hlength { big.y };
+
+  // want about 1E6 elements.
+  const double spacing
+  {
+    ( 2 * ( big.x - small.x ) + ( big.z - small.z ) ) / 300.0
+  };
+
+  // generate discretizer
+  bounding_box_to_histogram digitizer( small, big, spacing );
+
+  BOOST_REQUIRE_GE( digitizer.size(), 800000 );
+  BOOST_REQUIRE_LE( digitizer.size(), 1200000 );
+
+  std::vector< std::size_t > histogram( digitizer.size() + 1, 0ul );
+
+  const std::size_t loopsize
+  {
+    digitizer.size()
+  };
+  const std::size_t histsize
+  {
+    histogram.size()
+  };
+  // Generate 100 times more positions as historgram slots
+  for( int outer = 0; outer < 100; ++outer )
+  {
+    for( std::size_t step = 0; step != loopsize; ++step )
+    {
+      particle::coordinate pos;
+      pos = regn.new_position( rand, radius );
+      ++histogram[ digitizer.point_to_index( pos ) ];
+    }
+  }
+  const double bound_volume
+  {
+    ( big.x - small.x ) * ( big.y - small.y ) * ( big.z - small.z )
+  };
+  const double approx_mean
+  {
+    bound_volume * 100.0 / regn.volume( radius )
+  };
+  utility::estimater sample;
+  {
+    // Use cylinder gridder to get points inside cylinder
+    geometry::tubular_grid cursor( 2 * cyl_hlength, cyl_radius, spacing );
+    particle::coordinate pos;
+    std::vector< std::size_t > once( histsize, 0ul );
+    while( cursor.next( pos ) )
+    {
+      const std::size_t idx
+      {
+        digitizer.point_to_index( pos )
+      };
+      ++once[ idx ];
+      if( once[ idx ] == 1 )
+      {
+        sample.append( histogram[ idx ] );
+      }
+    }
+  }
+  std::cerr << "Mean " << sample.mean() << "\n";
+  std::cerr << "Variance " << sample.variance() << "\n";
+  BOOST_CHECK_LE( sample.mean(), approx_mean + 10.0 );
+  BOOST_CHECK_GE( sample.mean(), approx_mean - 10.0 );
+  BOOST_CHECK_LE( sample.variance(), approx_mean + 10.0 );
+  BOOST_CHECK_GE( sample.variance(), approx_mean - 10.0 );
+  const double dev { std::sqrt( sample.variance() ) };
+  const double lower2 { sample.mean() - 2 * dev };
+  const double upper2 { sample.mean() + 2 * dev };
+  const double lower3 { sample.mean() - 3 * dev };
+  const double upper3 { sample.mean() + 3 * dev };
+  std::size_t twoout = 0;
+  std::size_t threeout = 0;
+  const double lower20 { sample.mean() - 20.0 };
+  const double upper20 { sample.mean() + 20.0 };
+  const double lower30 { sample.mean() - 30.0 };
+  const double upper30 { sample.mean() + 30.0 };
+  std::size_t twentyout = 0;
+  std::size_t thirtyout = 0;
+  {
+    // Use cylinder gridder to get points inside cylinder
+    geometry::tubular_grid cursor( 2 * cyl_hlength, cyl_radius, spacing );
+    particle::coordinate pos;
+    std::vector< std::size_t > once( histsize, 0ul );
+    while( cursor.next( pos ) )
+    {
+      const std::size_t idx
+      {
+        digitizer.point_to_index( pos )
+      };
+      ++once[ idx ];
+      if( once[ idx ] == 1 )
+      {
+        const double val
+        {
+          histogram[ idx ]
+        };
+        if( val > upper20 or lower20 > val )
+        {
+          ++twentyout;
+          if( val > upper30 or lower30 > val )
+          {
+            ++thirtyout;
+          }
+        }
+        if( val > upper2 or lower2 > val )
+        {
+          ++twoout;
+          if( val > upper3 or lower3 > val )
+          {
+            ++threeout;
+          }
+        }
+      }
+    }
+  }
+  std::cout << "2 dev : " << ( double( twoout )/double( histsize ) ) << "\n";
+  std::cout << "3 dev : " << ( double( threeout )/double( histsize ) ) << "\n";
+  std::cout << "20  : " << ( double( twentyout )/double( histsize ) ) << "\n";
+  std::cout << "30  : " << ( double( thirtyout )/double( histsize ) ) << "\n";
+
+  if( okradius == 0.0 )
+  {
+    break;
+  }
+}
+std::cout << "Distribution test complete.\n";
+
+
 !!!1123248.cpp!!!	periodic_cube_region_test() : void
 
 // periodic cube main ctor
@@ -163,4 +341,13 @@ BOOST_CHECK( not var1.is_open() );
 BOOST_CHECK_EQUAL( var1.origin(), origin );
 
 geom_distribution_test::cubic_region_new_position_test( var1, 4.0 );
+
+!!!1130160.cpp!!!	cylinder_region_test() : void
+// Cylinder main ctor 
+geometry::cylinder_region var1( "bulk", 5.0, 10.0 );
+BOOST_CHECK_EQUAL( var1.half_length(), 10.0 );
+BOOST_CHECK_EQUAL( var1.radius(), 5.0 );
+BOOST_CHECK_EQUAL( var1.label(), "bulk" );
+
+geom_distribution_test::cylinder_region_new_position_test( var1, 2.0 );
 
