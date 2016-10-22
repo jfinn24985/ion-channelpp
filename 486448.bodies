@@ -14,6 +14,13 @@ const double ratio { this->half_length() / this->radius() };
 this->set_radius( std::cbrt( vol / (2 * ratio * core::constants::pi() ) ) );
 
 this->set_half_length( vol / ( 2 * core::constants::pi() * std::pow( this->radius(), 2 ) ) );
+!!!1144496.cpp!!!	do_extent(out small_corner : coordinate, out big_corner : coordinate, in radius : double) : void
+big_corner.x = this->radius() - radius;
+big_corner.y = big_corner.x;
+big_corner.z = this->channel_half_length() + this->half_length() - radius;
+small_corner.x = -big_corner.x;
+small_corner.y = -big_corner.y;
+small_corner.z = -big_corner.z;
 !!!1106480.cpp!!!	do_is_inside(in pos : coordinate, in radius : double) : bool
 // Absolute Z position
 const double abs_z_pos { std::abs( pos.z ) };
@@ -37,23 +44,29 @@ if( radial_sq_pos <= std::pow( this->channel_radius_ - radius, 2 ) )
   return true;
 }
 
-// Inside channel (and outside inner cylinder radius) OR Outside maximum
-// vestibule radius means overlap
-if( abs_z_pos <= ( this->channel_half_length_ - radius )
+// Not in vestibule OR Outside maximum vestibule radius means overlap
+if( abs_z_pos <= ( this->channel_half_length_ - this->arc_radius_ )
    or radial_sq_pos > std::pow( mouth_radius, 2 ) )
 {
   return false;
 }
 
-// Outside channel radius but may be in the arc zone.
-// Check (sqr) distance from vestibule arc centerpoint.
-const double r2minimum { std::pow( this->arc_radius_ + radius, 2 ) };
-const double r2actual
+// Outside channel radius but may be in the arc zone. We can
+// calculate the maximum radius allowed for the sphere based
+// on the z-offset (dz) and adjusted arc radius (r) and ddr:
+//    ddr * ddr + dz * dz = r * r
+// where ddr is the radial distance from the arc centrepoint 
+// towards the axis of rotation. The maximum allowed radius
+// is then the radius of the arc centrepoint less ddr.
+const double ddr
 {
-  std::pow( mouth_radius - std::sqrt( radial_sq_pos ), 2 )
-  + std::pow( abs_z_pos - ( this->channel_half_length_ - this->arc_radius_ ), 2 )
+   std::sqrt( std::pow( this->arc_radius_ + radius, 2 ) - std::pow( abs_z_pos - ( this->channel_half_length_ - this->arc_radius_ ), 2 ) )
 };
-return ( r2actual >= r2minimum );
+const double r2maximum 
+{
+   std::pow( this->channel_radius_ + this->arc_radius_ - ddr, 2 )
+};
+return ( radial_sq_pos <= r2maximum );
 
 !!!1106608.cpp!!!	do_new_position(inout rgnr : random_distribution, in radius : double) : coordinate
 // A random position anywhere in cell
@@ -68,6 +81,7 @@ const double inner_channel_factor { std::pow( reduced_channel_radius, 2 ) * pi *
 
 const double vestibule_factor { volume_of_rotation( this->channel_radius_ + this->arc_radius_, this->arc_radius_ + radius ) };
 
+// full factor is volume in one half of cell
 const double full_factor { compartment_factor + inner_channel_factor + vestibule_factor };
 const double zfactor = rgnr.uniform( -full_factor, full_factor );
 const double abs_zfactor{ std::abs( zfactor ) };
@@ -76,13 +90,17 @@ double max_radius {};
 // calculate z pos and radius
 if ( abs_zfactor >= inner_channel_factor + vestibule_factor )
 {
+  // in compartment volume
+  pos.z = abs_zfactor - (inner_channel_factor + vestibule_factor);
+  // Now linear in compartment volume, reduce to length
+  pos.z /= (std::pow( reduced_cell_radius, 2 ) * pi);
   // in cell compartment
-  pos.z = this->channel_half_length_ + radius + ((abs_zfactor - (inner_channel_factor + vestibule_factor ) ) / (std::pow( reduced_cell_radius, 2 ) * pi));
+  pos.z += this->channel_half_length_ + radius;
   if (zfactor < 0)
   {
     pos.z = -pos.z;
   }
-  max_radius = this->radius() - radius;
+  max_radius = reduced_cell_radius;
 }
 else if ( abs_zfactor <= inner_channel_factor )
 {
@@ -105,25 +123,28 @@ else
   //
   // derivative of volume_of_rotation is:
   //  pi{R^2 + r^2 - z^2 - R(sqrt(r^2 - z^2) - 2*z/sqrt(r^2 - z^2) + rcos(z/r)}
-  const double R = this->channel_radius_ + this->arc_radius_;
-  const double r = this->arc_radius_ + radius;
-  auto deriv= [R,r,pi](double z)->double
+  const double RR = this->channel_radius_ + this->arc_radius_;
+  const double rr = this->arc_radius_ + radius;
+  auto deriv= [RR,rr,pi](double zz)->double
   {
-    double sqt = std::sqrt(r*r - z*z);
-    return pi * ( R*R + r*r - z*z - R * ( sqt - (2*z/sqt) + r * cos(z/r)));
+    double sqt = std::sqrt(rr*rr - zz*zz);
+    return pi * ( RR*RR + rr*rr - zz*zz - RR * ( sqt - (2*zz/sqt) + rr *std::cos(zz/rr)));
   };
   double vol { abs_zfactor - inner_channel_factor };
   UTILITY_CHECK( vol < vestibule_factor, "Error in logic, not in expected volume" );
   // first guess is linear approx
-  double zguess = r * vol / vestibule_factor;
+  double zguess = rr * vol / vestibule_factor;
   // do four Newton/Raphson steps
-  //  f(z) = volume_of_rotation(0, R, r, 0, z) - vol = 0
+  //  f(z) = volume_of_rotation(0, RR, rr, 0, z) - vol = 0
   //  f'(z) = deriv(z)
   for (std::size_t ii = 0; ii < 4; ++ii)
   {
-    zguess -= (volume_of_rotation(0.0, R, r, 0.0, zguess) - vol)/deriv(zguess);
+    zguess -= (volume_of_rotation(0.0, RR, rr, 0.0, zguess) - vol)/deriv(zguess);
   }
-  
+  UTILITY_CHECK( zguess >= 0.0, "Error in calculating z in vestibule" );
+  UTILITY_CHECK( zguess <= rr, "Error in calculating z in vestibule" );
+  // bound zguess to 0 <-> this->arc_radius_ + radius
+  zguess = zguess < 0.0 ? 0.0 : ( zguess > rr ? rr : zguess );
   pos.z = this->channel_half_length_ - this->arc_radius_ + zguess;
   if (zfactor < 0)
   {
@@ -132,18 +153,14 @@ else
   //
   // closest approach at pos.z is when 
   //
-  //  dz = |pos.z| - (channel_half_length - arc_radius)
-  // 
-  //  ddr * ddr + dz * dz = (arc_radius + radius)**2  
+  //  ddr * ddr + z * z = r * r 
   // 
   //  where ddr is distance from arc centrepoint. This
   //  gives final radius as
   //
   //  max_radius = channel_radius + arc_radius - ddr
-  const double dz { zguess };
-  UTILITY_CHECK( (this->arc_radius_ + radius) > dz, "dz should never be larger than the arc radius." );
-  const double ddr_sq { std::pow(this->arc_radius_ + radius, 2) - std::pow(dz,2) };
-  max_radius = this->channel_radius_ + this->arc_radius_ - std::sqrt( ddr_sq );
+  const double ddr_sq { std::pow(rr, 2) - std::pow(zguess,2) };
+  max_radius = RR - std::sqrt( ddr_sq );
   
 }
 // volume distribution is linear in square of radius and phi
@@ -151,6 +168,7 @@ const double r( std::sqrt(rgnr.uniform( std::pow(max_radius, 2 ) ) ) );
 const double phi( rgnr.uniform( 0.0, core::constants::pi() * 2 ) );
 pos.x = r * std::cos( phi );
 pos.y = r * std::sin( phi );
+//UTILITY_ENSURE( this->is_inside( pos, radius ), "Error in calculating new position." );
 return pos;
 
 
