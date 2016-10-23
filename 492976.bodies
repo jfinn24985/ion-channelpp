@@ -32,7 +32,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
   };
 
   // generate discretizer
-  geom_distribution_test::digitizer_3d digitizer( small, big, spacing );
+  particle::digitizer_3d digitizer( small, big, spacing );
 
   BOOST_REQUIRE_GE( digitizer.size(), 800000 );
   BOOST_REQUIRE_LE( digitizer.size(), 1200000 );
@@ -48,7 +48,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
     {
       particle::coordinate pos;
       pos = regn.new_position( rand, radius );
-      ++histogram[ digitizer.point_to_index( pos ) ];
+      ++histogram[ digitizer.convert( pos ) ];
     }
   }
   // Assume all points are evenly distributed and average is
@@ -134,7 +134,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
   };
 
   // generate discretizer
-  geom_distribution_test::digitizer_3d digitizer( small, big, spacing );
+  particle::digitizer_3d digitizer( small, big, spacing );
 
   BOOST_REQUIRE_GE( digitizer.size(), 800000 );
   BOOST_REQUIRE_LE( digitizer.size(), 1200000 );
@@ -156,7 +156,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
     {
       particle::coordinate pos;
       pos = regn.new_position( rand, radius );
-      ++histogram[ digitizer.point_to_index( pos ) ];
+      ++histogram[ digitizer.convert( pos ) ];
     }
   }
   const double bound_volume
@@ -177,7 +177,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
     {
       const std::size_t idx
       {
-        digitizer.point_to_index( pos )
+        digitizer.convert( pos )
       };
       ++once[ idx ];
       if( once[ idx ] == 1 )
@@ -214,7 +214,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
     {
       const std::size_t idx
       {
-        digitizer.point_to_index( pos )
+        digitizer.convert( pos )
       };
       ++once[ idx ];
       if( once[ idx ] == 1 )
@@ -274,7 +274,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
   };
 
   // generate discretizer
-  geom_distribution_test::digitizer_3d digitizer( small, big, spacing );
+  particle::digitizer_3d digitizer( small, big, spacing );
 
   BOOST_REQUIRE_GE( digitizer.size(),  700000 );
   BOOST_REQUIRE_LE( digitizer.size(), 1250000 );
@@ -298,7 +298,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
       particle::coordinate pos;
       pos = regn.new_position( rand, radius );
       BOOST_REQUIRE( regn.is_inside( pos, radius ) );
-      ++histogram[ digitizer.point_to_index( pos ) ];
+      ++histogram[ digitizer.convert( pos ) ];
     }
   }
   const double bound_volume
@@ -327,7 +327,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
         }
       }
       particle::coordinate pos( pts[0].x + spacing/2, pts[0].y + spacing/2, pts[0].z + spacing/2 );
-      BOOST_REQUIRE_EQUAL( idx, digitizer.point_to_index( pos ) );
+      BOOST_REQUIRE_EQUAL( idx, digitizer.convert( pos ) );
       usable[ idx ] = is_inside;
       if( is_inside )
       {
@@ -437,34 +437,6 @@ BOOST_CHECK_EQUAL( var1.radius(), 5.0 );
 BOOST_CHECK_EQUAL( var1.label(), "bulk" );
 
 geom_distribution_test::general_new_position_test( var1, 2.0 );
-
-!!!1137456.cpp!!!	digitizer_3d_test() : void
-particle::coordinate small( -4.85, -4.85, -5.0 );
-particle::coordinate big( 4.85,  4.85,  5.0 );
-const double spacing( 0.1 );
-const double delta( 0.00001 );
-
-// generate discretizer
-geom_distribution_test::digitizer_3d digitizer( small, big, spacing );
-
-// Use corners to check if cube at index is in the cell
-for( std::size_t idx = 0; idx != digitizer.size(); ++idx )
-{
-  std::array< particle::coordinate, 8 > pts;
-  digitizer.corners( idx, pts );
-  for( std::size_t jdx = 0; jdx != 8; ++jdx )
-  {
-    BOOST_CHECK_LE( pts[ jdx ].x, big.x + delta );
-    BOOST_CHECK_LE( pts[ jdx ].y, big.y + delta );
-    BOOST_CHECK_LE( pts[ jdx ].z, big.z + delta );
-    BOOST_CHECK_GE( pts[ jdx ].x, small.x - delta );
-    BOOST_CHECK_GE( pts[ jdx ].y, small.y - delta );
-    BOOST_CHECK_GE( pts[ jdx ].z, small.z - delta );
-  }
-  particle::coordinate pos( pts[0].x + spacing/2, pts[0].y + spacing/2, pts[0].z + spacing/2 );
-  BOOST_REQUIRE_EQUAL( idx, digitizer.point_to_index( pos ) );
-}
-
 
 !!!1137584.cpp!!!	membrane_cell_region_test() : void
 // Cylinder main ctor 
