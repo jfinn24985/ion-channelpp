@@ -1,0 +1,87 @@
+class jump_out
+!!!1162160.cpp!!!	jump_out(in ispec : size_t, in params : string)
+UTILITY_INPUT( params.size() == 0 or
+         ( 1 == params.size() and 1 == params.count( core::strngs::fsspec() ) ), "Jump trial requires no extra parameters", core::strngs::fstry() );
+!!!1162672.cpp!!!	generate(in particles : particle_manager, in regions : geometry_manager, inout rgnr : random_distribution) : change_set
+std::unique_ptr< particle::change_set > resultset( new particle::change_set );
+auto const& ens = particles.get_ensemble();
+particle::change_atom atom;
+atom.key = this->key().key;
+const std::size_t spc_count( ens.specie_count( atom.key ) );
+if( this->region_index_ == 0 )
+{
+  // not yet assigned
+  this->region_index_ = regions.region_key( this->region_name_ );
+  UTILITY_CHECK( this->region_index_ != 0, "System region and can not be the subregion target of a jump in/out" );
+}
+auto const& oldregion = regions.get_region( this->region_index_ );
+// Select a particle at random: This is time-consuming as we don't have a list
+// of particles in the target region.
+std::vector< std::size_t > inregion_index;
+inregion_index.reserve( spc_count );
+const double spc_radius = particles.get_specie( atom.key ).radius();
+for (std::size_t gidx = 0; gidx != ens.size(); ++gidx)
+{
+  if (ens.key( gidx ) == atom.key)
+  {
+    if (oldregion.is_inside( ens.position( gidx ), spc_radius ) )
+    {
+      inregion_index.push_back( gidx );
+    }
+  }
+}
+switch( inregion_index.size() )
+{
+case 0:
+{
+  resultset->set_fail(); // No particles of this specie
+  return resultset;
+}
+break;
+case 1:
+{
+  atom.index = inregion_index[ 0 ];
+}
+break;
+default:
+{
+  atom.index = inregion_index[ rgnr.randint( 0, inregion_index.size() - 1 ) ];
+}
+break;
+}
+// Get old position
+atom.old_position = ens.position( atom.index );
+// New random position within specific region
+if( this->region_index_ == 0 )
+{
+  // not yet assigned
+  this->region_index_ = regions.region_key( this->region_name_ );
+}
+atom.new_position = regions.system_region().new_position( rgnr, spc_radius );
+// No need to check for valid position because new
+// position should always give a valid position.
+resultset->add_atom( atom );
+return resultset;
+
+!!!1162672.python!!!	generate(in particles : particle_manager, in regions : geometry_manager, inout rgnr : random_distribution) : change_set
+self.begin_trial()
+ens = sys.get_ensemble()
+genr = sys.get_random()
+import change_set
+resultset = change_set.change_set( self )
+result = change_set.change_atom()
+resultset.add_atom( result )
+result.key = self.specie_key()
+if sys.get_specie( result.key ).count() == 0:
+  resultset.fail = True # No particles of this specie
+  return resultset
+elif sys.get_specie( result.key ).count() == 1:
+  result.index = ens.nth_specie_index( result.key, 0 )
+else:
+  result.index = ens.nth_specie_index( result.key, genr.randint( 0, sys.get_specie( result.key ).count() - 1) )
+result.old_position = ens.position ( result.index )
+sys.get_cell_region().new_position( result.new_position, result.key, genr )
+if not sys.get_cell_region().is_valid_position( result.new_position, result.key ):
+  resultset.fail = True # not a valid position
+return resultset
+

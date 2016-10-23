@@ -1,0 +1,45 @@
+class add_specie
+!!!1164336.cpp!!!	generate(in particles : particle_manager, in regions : geometry_manager, inout rgnr : random_distribution) : change_set
+std::unique_ptr< particle::change_set > resultset( new particle::change_set );
+// ADD
+// ---
+const auto& ens = particles.get_ensemble();
+if( ens.count() + 1 == ens.max_size() )
+{
+  resultset->set_fail(); // Too many particles
+  return resultset;
+}
+particle::change_atom result;
+result.key = this->key().key;
+result.do_old = false;
+const auto& spc = particles.get_specie( result.key );
+
+// give particle a random position within boundary
+result.new_position = regions.system_region().new_position( rgnr, spc.radius() );
+
+// Use ensemble size as 'invalid' particle index
+result.index = ens.size();
+
+resultset->update_exponential_factor( spc.chemical_potential() );
+resultset->update_probability_factor( regions.system_region().volume( spc.radius() ) / ( ens.specie_count( result.key ) + 1 ) );
+resultset->add_atom( result );
+return resultset;
+
+
+!!!1164336.python!!!	generate(in particles : particle_manager, in regions : geometry_manager, inout rgnr : random_distribution) : change_set
+self.begin_trial()
+ens = sys.get_ensemble()
+resultset = change_set.change_set( self )
+result = change_set.change_atom()
+resultset.changes.append( result )
+result.key = self.key_ 
+result.do_old = False
+if ens.count() + 1 == ens.max_size():
+  resultset.fail = True # Too many particles
+  return resultset
+sys.get_cell_region().new_position(result.new_position, result.key, sys.get_random())
+result.index = len(ens) # "dummy" value
+resultset.update_probability_factor( sys.get_cell_region().volume(result.key) / (sys.get_specie( self.key_ ).count() + 1) )
+resultset.update_exponential_factor( sys.get_specie( self.key_ ).chemical_potential() )
+return resultset
+

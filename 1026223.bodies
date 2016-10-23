@@ -1,49 +1,46 @@
 class move_choice
-!!!1965103.cpp!!!	generate(inout sys : simulator) : change_set
-std::unique_ptr< change_set > result (new change_set(*this));
-auto const& ens = sys.get_ensemble();
-if (sys.get_specie( this->key().key ).count() == 0)
+!!!1965103.cpp!!!	generate(in particles : particle_manager, in regions : geometry_manager, inout rgnr : random_distribution) : change_set
+std::unique_ptr< particle::change_set > result( new particle::change_set );
+auto const& ens = particles.get_ensemble();
+// Select a particle at random
+particle::change_atom atom;
+atom.key = this->key().key;
+const std::size_t spc_count = ens.specie_count( this->key().key );
+switch( spc_count )
+{
+case 0:
 {
   result->set_fail(); // No particles of this specie
   return result;
 }
-// Select a particle at random
-change_atom atom;
-atom.key = this->key().key;
-switch (sys.get_specie(atom.key).count())
-{
-case 0:
-  {
-    result->set_fail(); // No particles of this specie
-    return result;
-  }
-  break;
+break;
 case 1:
-  {
-    atom.index = ens.nth_specie_index(atom.key, 0);
-  }
-  break;
+{
+  atom.index = ens.nth_specie_index( atom.key, 0 );
+}
+break;
 default:
-  {
-    atom.index = ens.nth_specie_index(atom.key, sys.get_random().randint(0, sys.get_specie(atom.key).count() - 1));
-  }
-  break;
+{
+  atom.index = ens.nth_specie_index( atom.key, rgnr.randint( 0, spc_count - 1 ) );
+}
+break;
 }
 // Get old position
-atom.old_position = ens.position(atom.index);
-atom.eps_old = ens.eps(atom.index);
-// give particle a random displacement
-atom.new_position.x = atom.old_position.x + sys.get_random().uniform(-this->delta_, this->delta_);
-atom.new_position.y = atom.old_position.y + sys.get_random().uniform(-this->delta_, this->delta_);
-atom.new_position.z = atom.old_position.z + sys.get_random().uniform(-this->delta_, this->delta_);
-if (not sys.is_valid_position(atom.new_position, atom.key))
+atom.old_position = ens.position( atom.index );
+
+// give particle a random displacement from old position
+atom.new_position = atom.old_position;
+const bool isok = regions.system_region().new_position_offset( rgnr, atom.new_position, this->delta_, particles.get_specie( atom.key ).radius() );
+
+// new position not inside system region.
+if( not isok )
 {
-  result->set_fail ();
+  result->set_fail();
 }
-atom.eps_new = sys.permittivity_at(atom.new_position);
-result->add_atom (atom);
+result->add_atom( atom );
 return result;
-!!!1965103.python!!!	generate(inout sys : simulator) : change_set
+
+!!!1965103.python!!!	generate(in particles : particle_manager, in regions : geometry_manager, inout rgnr : random_distribution) : change_set
 self.begin_trial()
 ens = sys.get_ensemble()
 genr = sys.get_random()

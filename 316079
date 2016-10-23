@@ -1,6 +1,6 @@
 format 75
 "trial" // trial
-  revision 238
+  revision 239
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -485,6 +485,370 @@ ${docstring}${body}
       end
     end
 
+    class 393392 "choice_manager"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl ""
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Manage objects that generate new trials.
+
+ The objects that generate trials are created in two steps.
+ Reading the input file creates 'chooser' objects. These are
+ meta-choice objects that act as factories for the 'choice'
+ objects. At the beginning of the simulation run, the real
+ choice objects are created based on the meta-choice objects
+ and the simulation. For example a \"move\" chooser object
+ instantiates a \"move_choice\" object for every specie in the
+ simulation ensemble.
+
+ The 'chooser' objects contain information about a type of
+ trial, for example a \"move\" chooser might represent trials that
+ displace a single particle within a small cube. The 'choice'
+ objects make this concrete, for example a \"move_choice\" might
+ generate trials that displace in a cube a certain specie in
+ a certain sub-region of the simulation.
+
+ The 'chooser' objects maintain a probability rate indicating
+ the proportion of the number of trials that should be this
+ type of trial compared to all trials. The sum of these rates
+ need not be unity, the manager will normalize the rates to one
+ when needed. A 'choice' object's probability rate indicates
+ this specific object's chance of generating a trial. In this
+ case the sum of the choice objects' rates will be unity.
+ This is enforced by this manager object when it generates
+ the choice list.
+
+ During a simulation the list of choice objects is used to
+ select the current trial move. Before the simulation the list
+ is randomised. On a trial a number is generated between 0 and
+ 1 and the choice list is walked to find a choice object. At
+ each step the current choice's probability is subtracted from
+ the generated number and if the number is now less than 0
+ the choice object is used.
+"
+      classrelation 493488 // choosers_ (<directional composition>)
+	relation 492592 *-->
+	  stereotype "ptr_vector"
+	  a role_name "choosers_" multiplicity "*" private
+	    comment " Reading the input file creates this 'chooser' list. These are
+ meta-choice objects that act as factories for the 'choice'
+ objects. The 'chooser' objects contain information about a
+ type of trial, for example a \"move\" chooser might represent
+ trials that displace a single particle within a small cube,
+ and a probability rate indicating the proportion of the
+ number of trials that should be this type of trial compared
+ to all trials. The sum of these rates need not be unity, the
+ manager will normalize the rates to one when needed. At the
+ start of a simulation the list of choice objects is generated
+ from this list of choosers.
+
+"
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+"
+	    classrelation_ref 493488 // choosers_ (<directional composition>)
+	  b parent class_ref 170160 // base_chooser
+      end
+
+      classrelation 493616 // choices_ (<directional composition>)
+	relation 492720 *-->
+	  stereotype "ptr_vector"
+	  a role_name "choices_" multiplicity "*" private
+	    comment " The list of 'choice' objects that generate trials. A 'choice'
+ object's probability rate indicates this specific object's
+ chance of generating a trial. The sum of the choice objects'
+ rates in this list will be unity. During a simulation this
+ list of choice objects is used to select the current trial
+ move. Before the simulation the list is randomised. On a trial
+ a number is generated between 0 and 1 and the choice list
+ is walked to find a choice object. At each step the current
+ choice's probability is subtracted from the generated number
+ and if the number is now less than 0 the choice object is used.
+
+"
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+"
+	    classrelation_ref 493616 // choices_ (<directional composition>)
+	  b parent class_ref 1026095 // base_choice
+      end
+
+      class 399920 "const_iterator"
+	visibility package stereotype "typedef" base_type class_ref 1026095 // base_choice
+	cpp_decl "${comment}typedef boost::ptr_vector< ${type} >::${name} ${name};
+"
+	java_decl ""
+	php_decl ""
+	python_decl ""
+	idl_decl "${comment}typedef ${type} ${name};
+"
+	explicit_switch_type ""
+	
+	comment " Constant iterator over choice list"
+      end
+
+      extra_member 465072 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 745776 "choice_manager"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	
+	
+      end
+
+      operation 745904 "~choice_manager"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw}; = default;"
+	
+	
+	
+	
+      end
+
+      operation 746032 "choice_manager"
+	stereotype "move"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 393392 // choice_manager
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	
+	
+	comment "No move"
+      end
+
+      operation 746160 "choice_manager"
+	stereotype "copy"
+	private explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 393392 // choice_manager
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	
+	
+	comment "No copy"
+      end
+
+      operation 746288 "operator="
+	private return_type class_ref 393392 // choice_manager
+	nparams 1
+	  param in name "source" type class_ref 393392 // choice_manager
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${abstract} = delete;
+"
+	
+	
+	
+	
+	comment "No assignment"
+      end
+
+      extra_member 464944 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1159984 "serialize"
+	public explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "a_ver" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}template< class ${t0} > ${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ar & choosers_;
+  ar & choices_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "Read/write object to an archive."
+      end
+
+      extra_member 465200 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 746672 "add_chooser"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "choice" type class_ref 170160 // base_chooser
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} > ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::unique_ptr< ${t0} > ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+   this->choosers_.push_back( ${p0}.get() );
+   ${p0}.release();
+}
+"
+	
+	
+	
+	
+	comment " Transfer ownership of chooser 'choice' into our chooser list.
+
+"
+      end
+
+      operation 747440 "begin"
+	stereotype "const"
+	const public return_type class_ref 399920 // const_iterator
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->choices_.${name}();
+}
+"
+	
+	
+	
+	
+	comment " Iterator over the choice list."
+      end
+
+      operation 746544 "description"
+	const public explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Details about the current choosers to be written to the
+ log at the start of the simulation."
+      end
+
+      operation 747056 "empty"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->choosers_.empty();
+}
+"
+	
+	
+	
+	
+	comment " Do we have and _choosers_?"
+      end
+
+      operation 747568 "end"
+	stereotype "const"
+	const public return_type class_ref 399920 // const_iterator
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->choices_.${name}();
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 746800 "generate"
+	public return_type class_ref 986543 // change_set
+	nparams 3
+	  param in name "particles" type class_ref 446128 // particle_manager
+	  param in name "regions" type class_ref 452656 // geometry_manager
+	  param in name "selector" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Select a choice based on 'selector' and generate a new change set.
+"
+      end
+
+      operation 746928 "prepare"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "species" type class_ref 134577 // specie
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::vector< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::vector< ${t0} >& ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Create choice list from choosers.  Resets the choice list before
+ generating a new list."
+      end
+
+      operation 747312 "write_document"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "wr" type class_ref 163632 // input_document
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Write choosers to an input document"
+      end
+    end
+
     class 1026095 "base_choice"
       abstract visibility package 
       cpp_decl "${comment}${template}class ${name}${inherit}
@@ -512,6 +876,15 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 1154607 // <generalisation>
 	  b parent class_ref 275887 // noncopyable
+      end
+
+      classrelation 1169327 // <dependency>
+	relation 1132207 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 1169327 // <dependency>
+	  b parent class_ref 912431 // access
       end
 
       classrelation 427569 // <dependency>
@@ -547,6 +920,15 @@ ${docstring}${members}
 	idl_decl ""
 	comment " The chance this choice happens. Normalization of the probabilities
  of the choice objects is the responsibility of the user."
+      end
+
+      extra_member 465328 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
       end
 
       operation 1964207 "~base_choice"
@@ -609,11 +991,50 @@ ${body}
 	comment "Make a choice for use in deserialization"
       end
 
+      extra_member 449071 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 2036271 "serialize"
+	stereotype "template"
+	private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+    ar & key_;
+    ar & probability_;
+  }
+"
+	
+	
+	
+	
+      end
+
+      extra_member 465456 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
       operation 1964591 "generate"
 	abstract cpp_virtual public return_type class_ref 986543 // change_set
-	nparams 1
-	  param inout name "sys" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	nparams 3
+	  param in name "particles" type class_ref 446128 // particle_manager
+	  param in name "regions" type class_ref 452656 // geometry_manager
+	  param inout name "rgnr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
 "
 	
 	
@@ -694,43 +1115,6 @@ ${docstring}return self.key_
 "
 	
 	comment " This choice ID "
-      end
-
-      extra_member 449071 "friend"
-	
-	cpp "
-  friend class boost::serialization::access;" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      classrelation 1169327 // <dependency>
-	relation 1132207 -_->
-	  a package
-	    cpp default "#include in header"
-	    python "${type}"
-	    classrelation_ref 1169327 // <dependency>
-	  b parent class_ref 912431 // access
-      end
-
-      operation 2036271 "serialize"
-	stereotype "template"
-	private explicit_return_type "void"
-	nparams 2
-	  param inout name "ar" explicit_type "Archive"
-	  param in name "version" explicit_type "unsigned int"
-	cpp_decl "    ${comment}template<class Archive>
-  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
-    ar & key_;
-    ar & probability_;
-  }
-"
-	
-	
-	
-	
       end
     end
 
@@ -819,39 +1203,13 @@ choice_hash subtype is \"0\", so hash pattern is ( X, 1, 1, 0 )"
 	comment "  Default delta value if none is given in the input."
       end
 
-      operation 1965103 "generate"
-	public return_type class_ref 986543 // change_set
-	nparams 1
-	  param inout name "sys" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
+      extra_member 465968 "LIFETIME"
 	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
-      operation 1965999 "max_displacement"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->delta_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}return self.delta_
-"
-	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
       end
 
       operation 1964719 "move_choice"
@@ -945,8 +1303,1077 @@ ${body}
 	
 	
       end
+
+      extra_member 465840 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1965103 "generate"
+	public return_type class_ref 986543 // change_set
+	nparams 3
+	  param in name "particles" type class_ref 446128 // particle_manager
+	  param in name "regions" type class_ref 452656 // geometry_manager
+	  param inout name "rgnr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1965999 "max_displacement"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->delta_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}return self.delta_
+"
+	
+      end
     end
 
+    class 512688 "jump_choice"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Objects of this class define an MC move that involves a
+ jump from anywhere to anywhere within the simulation."
+      classrelation 692912 // <generalisation>
+	relation 692016 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 692912 // <generalisation>
+	  b parent class_ref 1026095 // base_choice
+      end
+
+      classrelation 692784 // <dependency>
+	relation 691888 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 692784 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      classrelation 693040 // <dependency>
+	relation 692144 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 693040 // <dependency>
+	  b parent class_ref 134959 // ensemble
+      end
+
+      extra_member 466224 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1160112 "jump_choice"
+	private explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: base_choice()
+{}
+"
+	
+	
+	
+	
+	comment " default ctor for deserialization only"
+      end
+
+      operation 1160240 "jump_choice"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} >& ${p1}${)}${volatile}${throw}
+: base_choice( trial::choice_hash( ${p0}, 1, 1, 1 ) )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 1160368 "__init__"
+	public explicit_return_type ""
+	nparams 2
+	  param inout name "self" explicit_type ""
+	  param in name "ispec" explicit_type ""
+	
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}, ${p1}${v1}${)}:
+${docstring}super(${class}, ${p0}).__init__(${p1})
+${body}
+"
+	
+      end
+
+      operation 1160496 "~jump_choice"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} 
+{}
+"
+	
+	
+	
+	
+      end
+
+      extra_member 465584 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1160880 "serialize"
+	stereotype "template"
+	private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+    ar & boost::serialization::base_object< base_choice >(*this);
+  }
+"
+	
+	
+	
+	
+      end
+
+      extra_member 466096 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1160624 "generate"
+	public return_type class_ref 986543 // change_set
+	nparams 3
+	  param in name "particles" type class_ref 446128 // particle_manager
+	  param in name "regions" type class_ref 452656 // geometry_manager
+	  param inout name "rgnr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+    end
+
+    class 512816 "jump_in"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Objects of this class define an MC move that involves a
+ jump from anywhere to a specific region within the simulation."
+      classrelation 693168 // <generalisation>
+	relation 692272 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 693168 // <generalisation>
+	  b parent class_ref 1026095 // base_choice
+      end
+
+      classrelation 693296 // <dependency>
+	relation 692400 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 693296 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      classrelation 693424 // <dependency>
+	relation 692528 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 693424 // <dependency>
+	  b parent class_ref 134959 // ensemble
+      end
+
+      attribute 557488 "region_name_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The label of the target region."
+      end
+
+      attribute 557616 "region_index_"
+	private explicit_type "size_t"
+	init_value "0"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The region index. "
+      end
+
+      extra_member 466480 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1161008 "jump_in"
+	private explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: base_choice()
+{}
+"
+	
+	
+	
+	
+	comment " default ctor for deserialization only"
+      end
+
+      operation 1161136 "jump_in"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} >& ${p1}${)}${volatile}${throw}
+: base_choice( trial::choice_hash( ${p0}, 1, 1, 1 ) )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 1161264 "__init__"
+	public explicit_return_type ""
+	nparams 2
+	  param inout name "self" explicit_type ""
+	  param in name "ispec" explicit_type ""
+	
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}, ${p1}${v1}${)}:
+${docstring}super(${class}, ${p0}).__init__(${p1})
+${body}
+"
+	
+      end
+
+      operation 1161392 "~jump_in"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} 
+{}
+"
+	
+	
+	
+	
+      end
+
+      extra_member 465712 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1161776 "serialize"
+	stereotype "template"
+	private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+    ar & boost::serialization::base_object< base_choice >(*this);
+    ar & region_name_; ar & region_index_;
+  }
+"
+	
+	
+	
+	
+      end
+
+      extra_member 466352 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1161520 "generate"
+	public return_type class_ref 986543 // change_set
+	nparams 3
+	  param in name "particles" type class_ref 446128 // particle_manager
+	  param in name "regions" type class_ref 452656 // geometry_manager
+	  param inout name "rgnr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1161904 "region_name"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->region_name_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The region name for this choice."
+      end
+    end
+
+    class 512944 "jump_out"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Objects of this class define an MC move that involves a
+ jump from anywhere to a specific region within the simulation."
+      classrelation 693552 // <generalisation>
+	relation 692656 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 693552 // <generalisation>
+	  b parent class_ref 1026095 // base_choice
+      end
+
+      classrelation 693680 // <dependency>
+	relation 692784 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 693680 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      classrelation 693808 // <dependency>
+	relation 692912 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 693808 // <dependency>
+	  b parent class_ref 134959 // ensemble
+      end
+
+      attribute 557872 "region_name_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The label of the target region."
+      end
+
+      attribute 558000 "region_index_"
+	private explicit_type "size_t"
+	init_value "0"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The region index. "
+      end
+
+      extra_member 466608 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1162032 "jump_out"
+	private explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: base_choice()
+{}
+"
+	
+	
+	
+	
+	comment " default ctor for deserialization only"
+      end
+
+      operation 1162160 "jump_out"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} >& ${p1}${)}${volatile}${throw}
+: base_choice( trial::choice_hash( ${p0}, 1, 1, 1) )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 1162288 "__init__"
+	public explicit_return_type ""
+	nparams 2
+	  param inout name "self" explicit_type ""
+	  param in name "ispec" explicit_type ""
+	
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}, ${p1}${v1}${)}:
+${docstring}super(${class}, ${p0}).__init__(${p1})
+${body}
+"
+	
+      end
+
+      operation 1162416 "~jump_out"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} 
+{}
+"
+	
+	
+	
+	
+      end
+
+      extra_member 466736 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1162544 "serialize"
+	stereotype "template"
+	private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+    ar & boost::serialization::base_object< base_choice >(*this);
+    ar & region_name_; ar & region_index_;
+  }
+"
+	
+	
+	
+	
+      end
+
+      extra_member 466864 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1162672 "generate"
+	public return_type class_ref 986543 // change_set
+	nparams 3
+	  param in name "particles" type class_ref 446128 // particle_manager
+	  param in name "regions" type class_ref 452656 // geometry_manager
+	  param inout name "rgnr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1162928 "region_name"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->region_name_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The region name for this choice."
+      end
+    end
+
+    class 513200 "add_specie"
+      visibility protected 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Add particle move generator for a single specie
+
+ (instantiated from input file via gc_choice objects)
+
+ Choice hash pattern is { X, 0, 1, 0 }"
+      classrelation 694064 // <generalisation>
+	relation 693168 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 694064 // <generalisation>
+	  b parent class_ref 1026095 // base_choice
+      end
+
+      extra_member 467376 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1163952 "add_specie"
+	public explicit_return_type "char"
+	nparams 1
+	  param in name "ispec" explicit_type "size_t"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
+: base_choice ( trial::choice_hash( ${p0}, 0, 1, 0 ) )
+{}
+"
+	
+	
+	
+	
+	comment " Add/remove given specie within a cube
+
+ Choice hash püattern is { X, 0, 1, 0 }
+"
+      end
+
+      operation 1164080 "add_specie"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;"
+	
+	
+	
+	
+	comment " Default add/remove given specie (only for serialization)
+
+"
+      end
+
+      operation 1164208 "~add_specie"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      extra_member 467120 "friend"
+	
+	cpp "
+
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1164720 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+        ar & boost::serialization::base_object< base_choice >(*this);
+      };
+"
+	
+	
+	
+	
+      end
+
+      operation 1164848 "__init__"
+	public explicit_return_type ""
+	nparams 3
+	  param in name "self" explicit_type ""
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "parent" type class_ref 1026095 // base_choice
+	
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(} ${p0}${v0}, ${p1}${v1}, ${p2}${v2} ${)}:
+${docstring}super( ${class}, ${p0} ).__init__( ${p1}, ${p2} )
+${body}
+"
+	
+	comment " Add/remove given specie
+
+"
+      end
+
+      extra_member 467248 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1164336 "generate"
+	preserve_cpp_body_indent cpp_virtual public return_type class_ref 986543 // change_set
+	nparams 3
+	  param in name "particles" type class_ref 446128 // particle_manager
+	  param in name "regions" type class_ref 452656 // geometry_manager
+	  param inout name "rgnr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create a particle addition/remove trial
+
+ (C++ forwards to two argument method)"
+      end
+
+    end
+
+    class 513072 "remove_specie"
+      visibility protected 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Add particle move generator for a single specie
+
+ (instantiated from input file via gc_choice objects)
+
+ Choice hash pattern is { X, 1, 0, 0 }"
+      classrelation 693936 // <generalisation>
+	relation 693040 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 693936 // <generalisation>
+	  b parent class_ref 1026095 // base_choice
+      end
+
+      extra_member 467632 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1163312 "remove_specie"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "ispec" explicit_type "size_t"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
+: base_choice ( trial::choice_hash( ${p0}, 1, 0, 0 ) )
+{}
+"
+	
+	
+	
+	
+	comment " Add/remove given specie
+
+"
+      end
+
+      operation 1163440 "__init__"
+	public explicit_return_type ""
+	nparams 3
+	  param in name "self" explicit_type ""
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "parent" type class_ref 1026095 // base_choice
+	
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}, ${p1}${v1}, ${p2}${v2}${)}:
+${docstring}super( ${class}, ${p0} ).__init__( ${p1}, ${p2} )
+${body}
+"
+	
+	comment " Add/remove given specie
+
+"
+      end
+
+      operation 1163568 "remove_specie"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: base_choice ()
+{}
+"
+	
+	
+	
+	
+	comment " Default add/remove given specie (only for serialization)
+
+"
+      end
+
+      operation 1163696 "~remove_specie"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} 
+{
+}
+"
+	
+	
+	
+	
+      end
+
+      extra_member 466992 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1163824 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+    ar & boost::serialization::base_object< base_choice >(*this);
+  }
+"
+	
+	
+	
+	
+      end
+
+      extra_member 467504 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1163056 "generate"
+	cpp_virtual public return_type class_ref 986543 // change_set
+	nparams 3
+	  param in name "particles" type class_ref 446128 // particle_manager
+	  param in name "regions" type class_ref 452656 // geometry_manager
+	  param inout name "rgnr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create a particle remove trial"
+      end
+
+    end
+
+    class 386864 "adjust_move_displacement_sampler"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment "Adjust max displacement of move choice based on trial success rate."
+      operation 1965615 "sample"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "sys" type class_ref 1129135 // simulator
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment "Adjusts maximum displacement such that about 50% of the moves will be accepted
+"
+      end
+
+      operation 204848 "make_chooser"
+	class_operation public explicit_return_type "void"
+	nparams 4
+	  param in name "params" explicit_type "string"
+	  param in name "rate" explicit_type "double"
+	  param in name "type" explicit_type "string"
+	  param inout name "sim" type class_ref 1129135 // simulator
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} & ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::map< ${t0}, ${t0} >& ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} & ${p3}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "  Function to add move choice objects to the simulation."
+      end
+    end
+
+  end
+
+  classview 193968 "choosers"
+    //class diagram settings
+    draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
+    //collaboration diagram settings
+    show_full_operations_definition default show_hierarchical_rank default write_horizontally default drawing_language default package_name_in_tab default show_context default show_msg_context default draw_all_relations default shadow default show_stereotype_properties default
+    //object diagram settings
+     write_horizontally default package_name_in_tab default show_context default auto_label_position default draw_all_relations default shadow default show_stereotype_properties default
+    //sequence diagram settings
+    show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
+    //state diagram settings
+    package_name_in_tab default show_context default auto_label_position default write_trans_label_horizontally default show_trans_definition default draw_all_relations default shadow default
+    show_activities default region_horizontally default drawing_language default show_stereotype_properties default
+    //class settings
+    //activity diagram settings
+    package_name_in_tab default show_context default show_opaque_action_definition default auto_label_position default write_flow_label_horizontally default draw_all_relations default shadow default
+    show_infonote default drawing_language default show_stereotype_properties default
+    associated_deployment_view deploymentview_ref 358959 // trial class deployment
     class 170160 "base_chooser"
       abstract visibility protected 
       cpp_decl "${comment}${template}class ${name}${inherit}
@@ -1221,321 +2648,6 @@ ${docstring}${body}
  <call do_write_document>
  end
 "
-      end
-    end
-
-    class 393392 "choice_manager"
-      visibility package 
-      cpp_decl "${comment}${template}class ${name}${inherit}
- {
-${members}
-};
-${inlines}
-"
-      java_decl ""
-      php_decl ""
-      python_decl ""
-      idl_decl ""
-      explicit_switch_type ""
-      
-      comment " Manage objects that generate new trials.
-
- The objects that generate trials are created in two steps.
- Reading the input file creates 'chooser' objects. These are
- meta-choice objects that act as factories for the 'choice'
- objects. At the beginning of the simulation run, the real
- choice objects are created based on the meta-choice objects
- and the simulation. For example a \"move\" chooser object
- instantiates a \"move_choice\" object for every specie in the
- simulation ensemble.
-
- The 'chooser' objects contain information about a type of
- trial, for example a \"move\" chooser might represent trials that
- displace a single particle within a small cube. The 'choice'
- objects make this concrete, for example a \"move_choice\" might
- generate trials that displace in a cube a certain specie in
- a certain sub-region of the simulation.
-
- The 'chooser' objects maintain a probability rate indicating
- the proportion of the number of trials that should be this
- type of trial compared to all trials. The sum of these rates
- need not be unity, the manager will normalize the rates to one
- when needed. A 'choice' object's probability rate indicates
- this specific object's chance of generating a trial. In this
- case the sum of the choice objects' rates will be unity.
- This is enforced by this manager object when it generates
- the choice list.
-
- During a simulation the list of choice objects is used to
- select the current trial move. Before the simulation the list
- is randomised. On a trial a number is generated between 0 and
- 1 and the choice list is walked to find a choice object. At
- each step the current choice's probability is subtracted from
- the generated number and if the number is now less than 0
- the choice object is used.
-"
-      classrelation 493488 // choosers_ (<directional composition>)
-	relation 492592 *-->
-	  stereotype "ptr_vector"
-	  a role_name "choosers_" multiplicity "*" private
-	    comment " Reading the input file creates this 'chooser' list. These are
- meta-choice objects that act as factories for the 'choice'
- objects. The 'chooser' objects contain information about a
- type of trial, for example a \"move\" chooser might represent
- trials that displace a single particle within a small cube,
- and a probability rate indicating the proportion of the
- number of trials that should be this type of trial compared
- to all trials. The sum of these rates need not be unity, the
- manager will normalize the rates to one when needed. At the
- start of a simulation the list of choice objects is generated
- from this list of choosers.
-
-"
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
-"
-	    classrelation_ref 493488 // choosers_ (<directional composition>)
-	  b parent class_ref 170160 // base_chooser
-      end
-
-      classrelation 493616 // choices_ (<directional composition>)
-	relation 492720 *-->
-	  stereotype "ptr_vector"
-	  a role_name "choices_" multiplicity "*" private
-	    comment " The list of 'choice' objects that generate trials. A 'choice'
- object's probability rate indicates this specific object's
- chance of generating a trial. The sum of the choice objects'
- rates in this list will be unity. During a simulation this
- list of choice objects is used to select the current trial
- move. Before the simulation the list is randomised. On a trial
- a number is generated between 0 and 1 and the choice list
- is walked to find a choice object. At each step the current
- choice's probability is subtracted from the generated number
- and if the number is now less than 0 the choice object is used.
-
-"
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
-"
-	    classrelation_ref 493616 // choices_ (<directional composition>)
-	  b parent class_ref 1026095 // base_choice
-      end
-
-      class 399920 "const_iterator"
-	visibility package stereotype "typedef" base_type class_ref 1026095 // base_choice
-	cpp_decl "${comment}typedef boost::ptr_vector< ${type} >::${name} ${name};
-"
-	java_decl ""
-	php_decl ""
-	python_decl ""
-	idl_decl "${comment}typedef ${type} ${name};
-"
-	explicit_switch_type ""
-	
-	comment " Constant iterator over choice list"
-      end
-
-      operation 745776 "choice_manager"
-	public explicit_return_type ""
-	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
-"
-	
-	
-	
-	
-      end
-
-      operation 745904 "~choice_manager"
-	public explicit_return_type ""
-	nparams 0
-	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw}; = default;"
-	
-	
-	
-	
-      end
-
-      operation 746032 "choice_manager"
-	stereotype "move"
-	private explicit_return_type ""
-	nparams 1
-	  param inout name "source" type class_ref 393392 // choice_manager
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw} = delete;
-"
-	
-	
-	
-	
-	comment "No move"
-      end
-
-      operation 746160 "choice_manager"
-	stereotype "copy"
-	private explicit_return_type ""
-	nparams 1
-	  param in name "source" type class_ref 393392 // choice_manager
-	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw} = delete;
-"
-	
-	
-	
-	
-	comment "No copy"
-      end
-
-      operation 746288 "operator="
-	private return_type class_ref 393392 // choice_manager
-	nparams 1
-	  param in name "source" type class_ref 393392 // choice_manager
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${abstract} = delete;
-"
-	
-	
-	
-	
-	comment "No assignment"
-      end
-
-      operation 746672 "add_chooser"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "choice" type class_ref 170160 // base_chooser
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} > ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::unique_ptr< ${t0} > ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-   this->choosers_.push_back( ${p0}.get() );
-   ${p0}.release();
-}
-"
-	
-	
-	
-	
-	comment " Transfer ownership of chooser 'choice' into our chooser list.
-
-"
-      end
-
-      operation 747440 "begin"
-	stereotype "const"
-	const public return_type class_ref 399920 // const_iterator
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->choices_.${name}();
-}
-"
-	
-	
-	
-	
-	comment " Iterator over the choice list."
-      end
-
-      operation 746544 "description"
-	const public explicit_return_type "void"
-	nparams 1
-	  param inout name "os" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	
-	
-	comment " Details about the current choosers to be written to the
- log at the start of the simulation."
-      end
-
-      operation 747056 "empty"
-	const public explicit_return_type "bool"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->choosers_.empty();
-}
-"
-	
-	
-	
-	
-	comment " Do we have and _choosers_?"
-      end
-
-      operation 747568 "end"
-	stereotype "const"
-	const public return_type class_ref 399920 // const_iterator
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->choices_.${name}();
-}
-"
-	
-	
-	
-	
-      end
-
-      operation 746800 "generate"
-	public return_type class_ref 986543 // change_set
-	nparams 2
-	  param inout name "sys" type class_ref 1129135 // simulator
-	  param in name "selector" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	
-	
-	comment " Select a choice based on 'selector' and generate a new change set.
-"
-      end
-
-      operation 746928 "prepare"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "species" type class_ref 134577 // specie
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::vector< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::vector< ${t0} >& ${p0}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	
-	
-	comment " Create choice list from choosers.  Resets the choice list before
- generating a new list."
-      end
-
-      operation 747312 "write_document"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "wr" type class_ref 163632 // input_document
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	
-	
-	comment " Write choosers to an input document"
       end
     end
 
@@ -2093,168 +3205,6 @@ ${docstring}${body}
 "
 	
 	comment "Read/write object to an archive."
-      end
-    end
-
-    class 386864 "adjust_move_displacement_sampler"
-      visibility package 
-      cpp_decl "${comment}${template}class ${name}${inherit}
- {
-${members}
-};
-${inlines}
-"
-      java_decl ""
-      php_decl ""
-      python_decl "class ${name}${inherit}:
-${docstring}${members}
-"
-      idl_decl ""
-      explicit_switch_type ""
-      
-      comment "Adjust max displacement of move choice based on trial success rate."
-      operation 1965615 "sample"
-	public explicit_return_type "void"
-	nparams 2
-	  param in name "sys" type class_ref 1129135 // simulator
-	  param inout name "os" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	
-	
-	comment "Adjusts maximum displacement such that about 50% of the moves will be accepted
-"
-      end
-
-      operation 204848 "make_chooser"
-	class_operation public explicit_return_type "void"
-	nparams 4
-	  param in name "params" explicit_type "string"
-	  param in name "rate" explicit_type "double"
-	  param in name "type" explicit_type "string"
-	  param inout name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} & ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::map< ${t0}, ${t0} >& ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} & ${p3}${)}${const}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment "  Function to add move choice objects to the simulation."
-      end
-    end
-
-    class 426288 "region"
-      visibility package stereotype "pattern"
-      cpp_decl "${comment}${template}class ${name}${inherit}
- {
-${members}
-};
-${inlines}
-"
-      java_decl ""
-      php_decl ""
-      python_decl "class ${name}${inherit}:
-${docstring}${members}
-"
-      idl_decl ""
-      explicit_switch_type ""
-      
-      comment " Pattern for template region type to be used by choice classes."
-      operation 805168 "volume"
-	public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Get the volume of the region"
-      end
-
-      operation 805296 "accessible_volume"
-	public explicit_return_type "double"
-	nparams 1
-	  param in name "radius" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Get the volume of the region accessible to a 
- sphere of the given radius."
-      end
-
-      operation 805424 "generate_coordinate"
-	public return_type class_ref 986799 // coordinate
-	nparams 1
-	  param in name "rnd" type class_ref 463407 // random_distribution
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Create a random position inside the region."
-      end
-
-      operation 805552 "contains"
-	public explicit_return_type "bool"
-	nparams 1
-	  param inout name "a_point" type class_ref 986799 // coordinate
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Check if point is in a region. For regions with
- periodicity it is permissible to adjust 'a_point' to be
- inside the primary period region.
-"
       end
     end
   end
@@ -3111,7 +4061,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
-    artifact 128816 "move_choice"
+    artifact 128816 "std_choices"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
 #define @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -3138,7 +4088,7 @@ ${includes}
 // Manual includes
 #include \"core/strngs.hpp\"
 #include \"particle/ensemble.hpp\"
-#include \"trial/chooser.hpp\"
+//#include \"trial/chooser.hpp\"
 // -
 ${namespace_start}
 ${members}
@@ -3150,6 +4100,11 @@ ${import}
 ${definition}"
       associated_classes
 	class_ref 1026223 // move_choice
+	class_ref 512688 // jump_choice
+	class_ref 512816 // jump_in
+	class_ref 512944 // jump_out
+	class_ref 513200 // add_specie
+	class_ref 513072 // remove_specie
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
@@ -3171,7 +4126,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     artifact 694959 "libionch_trial"
       stereotype "library"
       associated_artifacts
-	artifact_ref 128816 // move_choice
+	artifact_ref 128816 // std_choices
 	artifact_ref 162352 // base_chooser
 	artifact_ref 681391 // choice
 	artifact_ref 789679 // choice_meta
