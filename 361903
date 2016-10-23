@@ -1,6 +1,6 @@
 format 75
 "particle" // particle
-  revision 192
+  revision 193
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -2839,6 +2839,516 @@ ${docstring}${body}
 "
 	
 	comment " Get an z coordinate"
+      end
+    end
+
+    class 506032 "digitizer_3d"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Convert a coordinate inside a bounding box into a linear
+ index suitable for making a histogram. Convert a linear
+ index into a subcube of the bounding box (\"corners\").
+
+ Bounding box is
+ ( x_axis.mininum, y_axis.minimum, z_axis.minimum ) to 
+  ( x_axis.maxinum, y_axis.maximum, z_axis.maximum )"
+      classrelation 686000 // <dependency>
+	relation 685104 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 686000 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      class 506160 "index_3d_type"
+	visibility package stereotype "typedef" explicit_base_type "size_t"
+	cpp_decl "${comment}typedef std::array< ${type}, 3 > ${name};
+"
+	java_decl ""
+	php_decl ""
+	python_decl ""
+	idl_decl "${comment}typedef ${type} ${name};
+"
+	explicit_switch_type ""
+	
+      end
+
+      attribute 550192 "xaxis_"
+	private type class_ref 175409 // digitizer
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " X-axis digitizer"
+      end
+
+      attribute 550320 "yaxis_"
+	private type class_ref 175409 // digitizer
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Y-axis digitizer"
+      end
+
+      attribute 550448 "zaxis_"
+	private type class_ref 175409 // digitizer
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Z-axis digitiser"
+      end
+
+      attribute 550576 "spacing_"
+	private explicit_type "double"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Sampling cube/digitiser width"
+      end
+
+      attribute 550704 "yskip_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Number of bins in X direction."
+      end
+
+      attribute 550832 "zskip_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Number of bins in XY plane"
+      end
+
+      attribute 550960 "size_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Total number of bins"
+      end
+
+      extra_member 458288 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1151024 "digitizer_3d"
+	public explicit_return_type ""
+	nparams 3
+	  param in name "small" type class_ref 986799 // coordinate
+	  param in name "big" type class_ref 986799 // coordinate
+	  param in name "spacing" explicit_type "double"
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} ${p2}${)}${throw}
+: xaxis_( std::min( small.x, big.x ), std::max( small.x, big.x ), spacing )
+, yaxis_( std::min( small.y, big.y ), std::max( small.y, big.y ), spacing )
+, zaxis_( std::min( small.z, big.z ), std::max( small.z, big.z ), spacing )
+, spacing_( spacing )
+, yskip_( xaxis_.size() )
+, zskip_( yaxis_.size() * yskip_ )
+, size_( zaxis_.size() * zskip_ )
+{
+  UTILITY_REQUIRE( spacing > 0.0, \"Cannot define digitizer with zero or negative spacing.\" );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create digitizer.
+
+ NOTE: spacing <= 0.0 is undefined."
+      end
+
+      operation 1151920 "digitizer_3d"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " For serialization."
+      end
+
+      operation 1152048 "~digitizer_3d"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1152176 "digitizer_3d"
+	stereotype "move"
+	public explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 506032 // digitizer_3d
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
+: xaxis_( std::move( ${p0}.xaxis_ ) )
+, yaxis_( std::move( ${p0}.yaxis_ ) )
+, zaxis_( std::move( ${p0}.zaxis_ ) )
+, spacing_( std::move( ${p0}.spacing_ ) )
+, yskip_( std::move( ${p0}.yskip_ ) )
+, zskip_( std::move( ${p0}.zskip_ ) )
+, size_( std::move( ${p0}.size_ ) )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1152304 "digitizer_3d"
+	stereotype "copy"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 506032 // digitizer_3d
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
+: xaxis_( ${p0}.xaxis_ )
+, yaxis_( ${p0}.yaxis_ )
+, zaxis_( ${p0}.zaxis_ )
+, spacing_( ${p0}.spacing_ )
+, yskip_( ${p0}.yskip_ )
+, zskip_( ${p0}.zskip_ )
+, size_( ${p0}.size_ )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1152560 "swap"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "source" type class_ref 506032 // digitizer_3d
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  std::swap( xaxis_, ${p0}.xaxis_ );
+  std::swap( yaxis_, ${p0}.yaxis_ );
+  std::swap( zaxis_, ${p0}.zaxis_ );
+  std::swap( spacing_, ${p0}.spacing_ );
+  std::swap( yskip_, ${p0}.yskip_ );
+  std::swap( zskip_, ${p0}.zskip_ );
+  std::swap( size_, ${p0}.size_ );
+}
+
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1152432 "operator="
+	public return_type class_ref 506032 // digitizer_3d
+	nparams 1
+	  param in name "source" type class_ref 506032 // digitizer_3d
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->swap( ${p0} );
+  return *this;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 458160 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1152688 "serialize"
+	public explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "a_ver" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}template< class ${t0} > ${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ar & xaxis_; ar & yaxis_; ar & zaxis_; ar & spacing_; ar & yskip_; ar & zskip_; ar & size_;
+}
+"
+	
+	
+	
+	
+	comment "Read/write object to an archive."
+      end
+
+      extra_member 458416 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1151152 "convert"
+	const public explicit_return_type "size_t"
+	nparams 1
+	  param in name "pos" type class_ref 986799 // coordinate
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  const std::size_t xidx = xaxis_.convert( pos.x );
+  const std::size_t yidx = yaxis_.convert( pos.y );
+  const std::size_t zidx = zaxis_.convert( pos.z );
+  return zidx * zskip_ + yidx * yskip_ + xidx;
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Convert a coordinate inside the bounding box into a
+ linear index.
+
+ \\pre xaxis.in_range(pos.x) and yaxis.in_range(pos.y) and zaxis.in_range(pos.z)
+ \\post result < size"
+      end
+
+      operation 1152816 "convert"
+	const public explicit_return_type "void"
+	nparams 2
+	  param in name "pos" type class_ref 986799 // coordinate
+	  param inout name "idx" type class_ref 506160 // index_3d_type
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
+{
+  idx[0] = xaxis_.convert( pos.x );
+  idx[1] = yaxis_.convert( pos.y );
+  idx[2] = zaxis_.convert( pos.z );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Convert a coordinate inside the bounding box into a
+ 3D index.
+
+ \\pre xaxis.in_range(pos.x) and yaxis.in_range(pos.y) and zaxis.in_range(pos.z)
+ \\post result[0] < xaxis.size, result[1] < yaxis.size, result[2] < zaxis.size"
+      end
+
+      operation 1152944 "convert"
+	const public explicit_return_type "size_t"
+	nparams 1
+	  param in name "idx" type class_ref 506160 // index_3d_type
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return idx[2] * zskip_ + idx[1] * yskip_ + idx[0];
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Convert a 3D index into a linear index.
+
+ \\pre xaxis.in_range(pos.x) and yaxis.in_range(pos.y) and zaxis.in_range(pos.z)
+ \\post result[0] < xaxis.size, result[1] < yaxis.size, result[2] < zaxis.size"
+      end
+
+      operation 1151280 "corners"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "idx" explicit_type "size_t"
+	  param inout name "points" type class_ref 986799 // coordinate
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, std::array< ${t1}, 8 > & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, std::array< ${t1}, 8 > & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate corners of the sampling cube at given index.
+
+ \\pre idx < size
+ \\post all points inside bounding box defined by ( x_axis.mininum, y_axis.minimum, z_axis.minimum ) to 
+  ( x_axis.maxinum, y_axis.maximum, z_axis.maximum )"
+      end
+
+      operation 1153072 "corners"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "idx" type class_ref 506160 // index_3d_type
+	  param inout name "points" type class_ref 986799 // coordinate
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, std::array< ${t1}, 8 > & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, std::array< ${t1}, 8 > & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate corners of the sampling cube at given index.
+
+ \\pre idx[0] < xaxis.size and idx[1] < yaxis.size and idx[2] < zaxis.size
+ \\post all points inside bounding box defined by ( x_axis.mininum, y_axis.minimum, z_axis.minimum ) to 
+  ( x_axis.maxinum, y_axis.maximum, z_axis.maximum )"
+      end
+
+      operation 1151408 "size"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return size_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The number of bins"
+      end
+
+      operation 1151536 "x_axis"
+	const public return_type class_ref 175409 // digitizer
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return xaxis_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1151664 "y_axis"
+	const public return_type class_ref 175409 // digitizer
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return yaxis_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1151792 "z_axis"
+	const public return_type class_ref 175409 // digitizer
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return zaxis_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
       end
     end
 
@@ -6319,6 +6829,52 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
+    artifact 504112 "digitizer_3d"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 506032 // digitizer_3d
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
     artifact 651183 "ensemble"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -6588,6 +7144,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
       stereotype "library"
       associated_artifacts
 	artifact_ref 436784 // particle_manager
+	artifact_ref 504112 // digitizer_3d
 	artifact_ref 579631 // specie
 	artifact_ref 630447 // specie_meta
 	artifact_ref 651183 // ensemble
