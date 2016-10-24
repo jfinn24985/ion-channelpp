@@ -1,6 +1,6 @@
 format 75
 "trial" // trial
-  revision 239
+  revision 240
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -535,6 +535,15 @@ ${inlines}
  the generated number and if the number is now less than 0
  the choice object is used.
 "
+      classrelation 700976 // <dependency>
+	relation 700080 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 700976 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
       classrelation 493488 // choosers_ (<directional composition>)
 	relation 492592 *-->
 	  stereotype "ptr_vector"
@@ -1043,27 +1052,53 @@ ${body}
 	comment "Generate a new change set based on this choice type."
       end
 
-      operation 545584 "permitted"
-	const cpp_virtual public explicit_return_type "bool"
-	nparams 1
-	  param in name "spec" type class_ref 134577 // specie
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
-{
-  return true;
-}
-"
+      operation 1171504 "make_choice"
+	stereotype "DERIVED ONLY"
+	class_operation const public return_type class_ref 1026095 // base_choice
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	
 	
 	
 	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
 ${docstring}${body}
 "
 	
-	comment "Is the combination of this choice subtype and the given specie
-a valid choice?
+	comment " Create a choice object with the given parameters and specie
+ index. The validity of the parameter names was verified but
+ this method needs to check for missing parameters and that
+ the parameter values are valid.
 
-(default is true)"
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature:
+   static unique_ptr< base_choice > make_choice( size_t, map< string, string > const& )
+ 
+"
+      end
+
+      operation 545584 "permitted"
+	stereotype "DERIVED ONLY"
+	class_operation const public explicit_return_type "bool"
+	nparams 1
+	  param in name "spec" type class_ref 134577 // specie
+	
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Is the combination of this choice subtype and the given specie
+ a valid choice?
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature
+   static bool make_choice( specie const& )"
       end
 
       operation 619953 "probability"
@@ -1349,6 +1384,27 @@ ${docstring}return self.delta_
 "
 	
       end
+
+      operation 1171632 "add_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 1143471 // choice_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add a definition object for this choice class to the
+ meta object."
+      end
     end
 
     class 512688 "jump_choice"
@@ -1523,7 +1579,6 @@ ${docstring}${body}
 "
 	
       end
-
     end
 
     class 512816 "jump_in"
@@ -2125,7 +2180,6 @@ ${docstring}${body}
 
  (C++ forwards to two argument method)"
       end
-
     end
 
     class 513072 "remove_specie"
@@ -2291,7 +2345,6 @@ ${docstring}${body}
 	
 	comment " Create a particle remove trial"
       end
-
     end
 
     class 386864 "adjust_move_displacement_sampler"
@@ -2354,7 +2407,6 @@ ${docstring}${body}
 	comment "  Function to add move choice objects to the simulation."
       end
     end
-
   end
 
   classview 193968 "choosers"
@@ -2403,6 +2455,15 @@ ${docstring}${members}
 
  The input key word is given by core::strngs::fstry()
  { default = \"trial\" }"
+      classrelation 700720 // <generalisation>
+	relation 699824 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 700720 // <generalisation>
+	  b parent class_ref 275887 // noncopyable
+      end
+
       classrelation 182320 // <dependency>
 	relation 182064 -_->
 	  a default
@@ -2447,6 +2508,18 @@ ${docstring}${members}
   This matches the (normalized) \"rate\" value used in the input file."
       end
 
+      attribute 564912 "specie_list_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Optional list of allowed and/or disallowed species."
+      end
+
       attribute 448176 "type_"
 	private explicit_type "string"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -2461,8 +2534,17 @@ ${docstring}${members}
   This matches the (normalized) \"type\" label used in the input file."
       end
 
+      extra_member 474288 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
       operation 819888 "base_chooser"
-	public explicit_return_type ""
+	protected explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
 "
@@ -2477,15 +2559,18 @@ ${docstring}${body}
 
       operation 819760 "base_chooser"
 	public explicit_return_type ""
-	nparams 3
+	nparams 4
 	  param in name "params" explicit_type "string"
 	  param in name "type" explicit_type "string"
+	  param in name "specie_list" explicit_type "string"
 	  param in name "rate" explicit_type "double"
-	cpp_decl "    ${comment}${inline}${name}${(}std::map< ${t0}, ${t0} > const& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
+	cpp_decl "    ${comment}${inline}${name}${(}std::map< ${t0}, ${t0} > const& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${volatile}${throw}
 : parameter_set_( ${p0} )
-, rate_( ${p2} )
+, rate_( ${p3} )
+, specie_list_( ${p2} )
 , type_( ${p1} )
-{}"
+{}
+"
 	
 	
 	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
@@ -2553,6 +2638,47 @@ ${docstring}${body}
 	
       end
 
+      extra_member 470319 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 2086831 "serialize"
+	public explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "a_ver" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}template< class ${t0} > ${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ar & parameter_set_;
+  ar & rate_;
+  ar & specie_list_;
+  ar & type_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "Read/write object to an archive."
+      end
+
+      extra_member 474160 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
       operation 818864 "description"
 	stereotype "OBSOLETE"
 	const cpp_virtual public explicit_return_type "void"
@@ -2588,37 +2714,6 @@ ${docstring}${body}
 "
 	
 	comment "  Generate and add choices to simulator."
-      end
-
-      extra_member 470319 "friend"
-	
-	cpp "
-  friend class boost::serialization::access;" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      operation 2086831 "serialize"
-	public explicit_return_type "void"
-	nparams 2
-	  param inout name "ar" explicit_type "Archive"
-	  param in name "a_ver" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}template< class ${t0} > ${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
-{
-  ar & parameter_set_;
-  ar & type_;
-  ar & rate_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment "Read/write object to an archive."
       end
 
       operation 240176 "write_document"
@@ -2693,32 +2788,17 @@ ${docstring}${members}
 	comment " The \"choice\" class template type."
       end
 
-      operation 232240 "generate_choices"
-	const cpp_virtual public explicit_return_type "void"
-	nparams 2
-	  param in name "species" type class_ref 134577 // specie
-	  param inout name "choices" type class_ref 1026095 // base_choice
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::vector< ${t0} >& ${p0}${v0}, boost::ptr_vector< ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::vector< ${t0} >& ${p0}, boost::ptr_vector< ${t1} >& ${p1}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
+      extra_member 474544 "LIFETIME"
 	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Generate and add choices to list.
-
- The sum of probability for the added choices
- must equal the rate attribute of the chooser. "
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
       end
 
       operation 231216 "chooser"
-	public explicit_return_type ""
+	protected explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
 "
@@ -2732,13 +2812,15 @@ ${docstring}${body}
 
       operation 231984 "chooser"
 	public explicit_return_type ""
-	nparams 3
+	nparams 4
 	  param in name "params" explicit_type "string"
 	  param in name "type" explicit_type "string"
+	  param in name "specie_list" explicit_type "string"
 	  param in name "rate" explicit_type "double"
-	cpp_decl "    ${comment}${inline}${name}${(}std::map< ${t0}, ${t0} > const& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
-: base_chooser( ${p0}, ${p1}, ${p2} )
-{}"
+	cpp_decl "    ${comment}${inline}${name}${(}std::map< ${t0}, ${t0} > const& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${volatile}${throw}
+: base_chooser( ${p0}, ${p1}, ${p2}, ${p3} )
+{}
+"
 	
 	
 	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
@@ -2764,12 +2846,10 @@ ${docstring}${body}
 
       operation 231472 "chooser"
 	stereotype "copy"
-	public explicit_return_type ""
+	private explicit_return_type ""
 	nparams 1
 	  param in name "source" type class_ref 170288 // chooser
-	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
-: base_chooser( ${p0} )
-{}"
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw} = delete;"
 	
 	
 	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
@@ -2780,12 +2860,10 @@ ${docstring}${body}
 
       operation 231728 "chooser"
 	stereotype "move"
-	public explicit_return_type ""
+	private explicit_return_type ""
 	nparams 1
 	  param in name "source" type class_ref 170288 // chooser
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
-: base_chooser( std::move( ${p0}) )
-{}"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw} = delete;"
 	
 	
 	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
@@ -2798,11 +2876,7 @@ ${docstring}${body}
 	public return_type class_ref 170288 // chooser
 	nparams 1
 	  param in name "source" type class_ref 170288 // chooser
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
-{
-  this->swap( ${p0} );
-  return *this;
-}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract} = delete;
 "
 	
 	
@@ -2810,44 +2884,6 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-      end
-
-      operation 231856 "swap"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "source" type class_ref 170288 // chooser
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-   this->base_chooser::swap( ${p0} );
-}"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
-      operation 232112 "make_chooser"
-	class_operation public return_type class_ref 170160 // base_chooser
-	nparams 3
-	  param in name "params" explicit_type "string"
-	  param in name "type" explicit_type "string"
-	  param in name "rate" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}const std::map< ${t0}, ${t0} >& ${p0}, ${t1} ${p1}, ${t2} ${p2}${)}${const}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment "  Function to be used to instantiate chooser objects from input file."
       end
 
       classrelation 182448 // <dependency>
@@ -2886,6 +2922,62 @@ ${docstring}${body}
 "
 	
 	comment "Read/write object to an archive."
+      end
+
+      extra_member 474416 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 232240 "generate_choices"
+	const cpp_virtual public explicit_return_type "void"
+	nparams 2
+	  param in name "species" type class_ref 134577 // specie
+	  param inout name "choices" type class_ref 1026095 // base_choice
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::vector< ${t0} >& ${p0}${v0}, boost::ptr_vector< ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::vector< ${t0} >& ${p0}, boost::ptr_vector< ${t1} >& ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Generate and add choices to list.
+
+ The sum of probability for the added choices
+ must equal the rate attribute of the chooser. "
+      end
+
+      operation 232112 "make_chooser"
+	class_operation public return_type class_ref 170160 // base_chooser
+	nparams 4
+	  param in name "params" explicit_type "string"
+	  param in name "type" explicit_type "string"
+	  param in name "specie_list" explicit_type "string"
+	  param in name "rate" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}const std::map< ${t0}, ${t0} >& ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "  Function to be used to instantiate chooser objects from input file."
       end
     end
 
@@ -3231,6 +3323,93 @@ ${docstring}${body}
       size A4
     end
 
+    class 519728 "choice_definition"
+      visibility package stereotype "struct"
+      cpp_decl "${comment}${template}struct ${name}${inherit} 
+{
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Provide information useful for interpreting the input file. This includes
+ a chooser generator function, a choice type name and the optional
+ parameters (with help descriptions)."
+      class 1143855 "choice_generator_fn"
+	visibility package stereotype "typedef" base_type class_ref 156336 // function3
+	nactuals 4
+	actual class class_ref 156336 // function3
+	  rank 0 explicit_value "std::unique_ptr< base_chooser >"
+	actual class class_ref 156336 // function3
+	  rank 1 explicit_value "std::map< std::string, std::string >"
+	actual class class_ref 156336 // function3
+	  rank 2 explicit_value "std::string"
+	actual class class_ref 156336 // function3
+	  rank 3 explicit_value "double"
+	cpp_decl "${comment}typedef ${type} ${name};
+"
+	java_decl ""
+	php_decl ""
+	python_decl ""
+	idl_decl "${comment}typedef ${type} ${name};
+"
+	explicit_switch_type ""
+	
+	classrelation 520496 // <realization>
+	  relation 519600 -_-|>
+	    a public
+	      cpp default "${type}"
+	      python "${type}"
+	      classrelation_ref 520496 // <realization>
+	    b parent class_ref 156336 // function3
+	end
+      end
+
+      attribute 564656 "parameter_definition_"
+	public explicit_type "string"
+	multiplicity "*"
+	stereotype "map"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type}, ${type} > ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${stereotype}()
+"
+	idl_decl ""
+	comment " Map of parameter names and their definition"
+      end
+
+      attribute 564528 "type_name_"
+	public explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The text label of this type as it appears in an input file."
+      end
+
+      classrelation 700592 // factory_ (<directional composition>)
+	relation 699696 *-->
+	  a role_name "factory_" multiplicity "1" public
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	    python "${comment}${self}${name} = ${type}()
+"
+	    classrelation_ref 700592 // factory_ (<directional composition>)
+	  b parent class_ref 1143855 // choice_generator_fn
+      end
+    end
+
     class 1143471 "choice_meta"
       visibility package 
       cpp_decl "${comment}${template}class ${name}${inherit}
@@ -3262,36 +3441,6 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 1313071 // <generalisation>
 	  b parent class_ref 1082671 // input_base_meta
-      end
-
-      class 1143855 "choice_generator_fn"
-	visibility package stereotype "typedef" base_type class_ref 156336 // function3
-	nactuals 4
-	actual class class_ref 156336 // function3
-	  rank 0 explicit_value "std::unique_ptr< base_chooser >"
-	actual class class_ref 156336 // function3
-	  rank 1 explicit_value "std::map< std::string, std::string >"
-	actual class class_ref 156336 // function3
-	  rank 2 explicit_value "std::string"
-	actual class class_ref 156336 // function3
-	  rank 3 explicit_value "double"
-	cpp_decl "${comment}typedef ${type} ${name};
-"
-	java_decl ""
-	php_decl ""
-	python_decl ""
-	idl_decl "${comment}typedef ${type} ${name};
-"
-	explicit_switch_type ""
-	
-	classrelation 520496 // <realization>
-	  relation 519600 -_-|>
-	    a public
-	      cpp default "${type}"
-	      python "${type}"
-	      classrelation_ref 520496 // <realization>
-	    b parent class_ref 156336 // function3
-	end
       end
 
       class 156208 "anon_choice_options"
@@ -3352,129 +3501,6 @@ ${items}};
 	end
       end
 
-      class 446000 "choice_definition"
-	abstract visibility package stereotype "IDEA"
-	cpp_decl ""
-	java_decl ""
-	php_decl ""
-	python_decl "class ${name}${inherit}:
-${docstring}${members}
-"
-	idl_decl ""
-	explicit_switch_type ""
-	
-	comment " IDEA"
-	attribute 468272 "label"
-	  public explicit_type "string"
-	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	  java_decl ""
-	  php_decl ""
-	  python_decl "${comment}${self}${name} = ${value}
-"
-	  idl_decl ""
-	  comment " Chooser sub-type label"
-	end
-
-	attribute 468144 "choice_gen_fn_"
-	  public type class_ref 1143855 // choice_generator_fn
-	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	  java_decl ""
-	  php_decl ""
-	  python_decl "${comment}${self}${name} = ${value}
-"
-	  idl_decl ""
-	  comment " Generate a new chooser object."
-	end
-
-	attribute 468400 "suboptions_"
-	  public explicit_type "string"
-	  multiplicity "*"
-	  stereotype "map"
-	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}, ${type}> ${name}${value};
-"
-	  java_decl ""
-	  php_decl ""
-	  python_decl "${comment}${self}${name} = ${stereotype}()
-"
-	  idl_decl ""
-	  comment " Suboption labels and help strings"
-	end
-
-	operation 906672 "add_documentation"
-	  abstract const cpp_virtual public explicit_return_type "void"
-	  nparams 1
-	    param inout name "helper" type class_ref 1004335 // input_help
-	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
-"
-	  
-	  
-	  python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	  
-	  comment " "
-	end
-
-	operation 906800 "operator<"
-	  friend public explicit_return_type "bool"
-	  nparams 2
-	    param in name "lhs" type class_ref 446000 // choice_definition
-	    param in name "rhs" type class_ref 446000 // choice_definition
-	  cpp_decl "    ${comment}${friend}${static}inline ${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
-{
-  return lhs.label < rhs.label;
-}
-"
-	  
-	  
-	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	  
-	  comment " Ordering operation."
-	end
-
-	operation 907056 "operator<"
-	  friend public explicit_return_type "bool"
-	  nparams 2
-	    param in name "lhs" type class_ref 446000 // choice_definition
-	    param in name "label" explicit_type "string"
-	  cpp_decl "    ${comment}${friend}${static}inline ${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
-{
-  return lhs.label < label;
-}
-"
-	  
-	  
-	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	  
-	  comment " Label-based ordering operation."
-	end
-
-	operation 906928 "operator=="
-	  friend public explicit_return_type "bool"
-	  nparams 2
-	    param in name "lhs" type class_ref 446000 // choice_definition
-	    param in name "label" explicit_type "string"
-	  cpp_decl "    ${comment}${friend}${static}inline ${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
-{
-  return lhs.label == label;
-}
-"
-	  
-	  
-	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	  
-	  comment " Label comparison operation."
-	end
-      end
-
       classrelation 520368 // manager_ (<directional composition>)
 	relation 519472 *-->
 	  stereotype "shared_ptr"
@@ -3529,29 +3555,28 @@ ${docstring}${body}
 	comment "The trial \"rate\" of the currently processing trial section."
       end
 
-      classrelation 567600 // type_to_object_2 (<directional composition>)
-	relation 566704 *-->
-	  stereotype "IDEA"
-	  a role_name "type_to_object_2" multiplicity "*" private
-	    comment " subtype generation table."
-	    python "${comment}${self}${name} = ${stereotype}()
+      attribute 564784 "specie_list_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
-	    classrelation_ref 567600 // type_to_object_2 (<directional composition>)
-	  b parent class_ref 446000 // choice_definition
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " (optional) List of allowed or disallowed species."
       end
 
-      classrelation 1313583 // type_to_object_ (<directional composition>)
-	relation 1275055 *-->
-	  stereotype "map"
+      classrelation 700848 // type_to_object_ (<directional composition>)
+	relation 699952 *-->
+	  stereotype "vector"
 	  a role_name "type_to_object_" multiplicity "*" private
-	    comment " Map of \"type\" parameters to chooser classes."
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${association}, ${type} > ${name}${value};
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
 "
 	    python "${comment}${self}${name} = ${stereotype}()
 "
-	    classrelation_ref 1313583 // type_to_object_ (<directional composition>)
-	  b parent class_ref 1143855 // choice_generator_fn
-	  association_explicit_type "string"
+	    classrelation_ref 700848 // type_to_object_ (<directional composition>)
+	  b parent class_ref 519728 // choice_definition
       end
 
       attribute 1444527 "type_"
@@ -3566,28 +3591,13 @@ ${docstring}${body}
 	comment "The trial \"type\" parameter value of the currently processing section."
       end
 
-      operation 826416 "add_trial_type"
-	public explicit_return_type "void"
-	nparams 2
-	  param in name "trial_label" explicit_type "string"
-	  param in name "ctor" type class_ref 1143855 // choice_generator_fn
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
+      extra_member 474800 "LIFETIME"
 	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Add ctor for input \"trial\" section with \"type = [trial_label]\" 
-
- \\pre not has_trial_type( trial_label )
- \\post has_trial_type( trial_label )"
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
       end
 
       operation 2164655 "choice_meta"
@@ -3631,6 +3641,38 @@ ${docstring}${body}
 	
       end
 
+      extra_member 474672 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 826416 "add_trial_type"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "ctor" explicit_type "choice_definition"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add ctor for input \"trial\" section
+
+ \\pre not has_trial_type( ctor.type_name_ )
+ \\post has_trial_type( ctor.type_name_ )"
+      end
+
       operation 833200 "add_documentation"
 	const public explicit_return_type "void"
 	nparams 1
@@ -3649,51 +3691,6 @@ ${docstring}${body}
 "
 	
 	comment " "
-      end
-
-      operation 204592 "do_read_entry"
-	cpp_virtual protected explicit_return_type "bool"
-	nparams 1
-	  param inout name "reader" type class_ref 313392 // input_base_reader
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment " Read an entry in the input file. Return true if the entry was processed.
-
- Throws an error if input file is incorrect (using UTILITY_INPUT macro)"
-      end
-
-      operation 204720 "do_read_end"
-	cpp_virtual protected explicit_return_type "void"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Perform checks at the end of reading a section. Then create a chooser
- object and add it to the choice manager. Resets the
- meta object state ready for the next 'trial' input section.
-
- Throws an error if input file is incorrect (using UTILITY_INPUT macro)"
       end
 
       operation 826544 "has_trial_type"
@@ -3715,6 +3712,72 @@ ${docstring}${body}
 	
 	comment " Is there a ctor to match input \"trial\" section with
  \"type = [trial_label]\""
+      end
+
+      operation 204592 "do_read_entry"
+	cpp_virtual private explicit_return_type "bool"
+	nparams 1
+	  param inout name "reader" type class_ref 313392 // input_base_reader
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Read an entry in the input file. Return true if the entry was processed.
+
+ Throws an error if input file is incorrect (using UTILITY_INPUT macro)"
+      end
+
+      operation 204720 "do_read_end"
+	cpp_virtual private explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Perform checks at the end of reading a section. Then create a chooser
+ object and add it to the choice manager. Resets the
+ meta object state ready for the next 'trial' input section.
+
+ Throws an error if input file is incorrect (using UTILITY_INPUT macro)"
+      end
+
+      operation 1171376 "do_reset"
+	cpp_virtual private explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Reset the object state on entry into read_seaction. This
+ provides a stronger exception safety if the delegate is
+ reused after raising an exception in read_section."
       end
     end
   end
@@ -3954,6 +4017,7 @@ ${namespace_start}
 ${members}
 ${namespace_end}"
       associated_classes
+	class_ref 519728 // choice_definition
 	class_ref 1143471 // choice_meta
       end
       comment "----------------------------------------------------------------------

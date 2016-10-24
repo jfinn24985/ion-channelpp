@@ -1,7 +1,7 @@
 class choice_meta
-!!!826416.cpp!!!	add_trial_type(in trial_label : string, in ctor : choice_meta::choice_generator_fn) : void
-UTILITY_REQUIRE( 0 == this->type_to_object_.count( trial_label ), ("Attempt to add more than one chooser factory for type \""+trial_label+"\"."), this->section_label() );
-this->type_to_object_.insert( std::make_pair( trial_label, ctor ) );
+!!!826416.cpp!!!	add_trial_type(in ctor : choice_definition) : void
+UTILITY_REQUIRE( not this->has_trial_type( ctor.type_name_ ), ("Attempt to add more than one chooser factory for type \"" + ctor.type_name_ + "\"."), this->section_label() );
+this->type_to_object_.push_back( ctor );
 
 
 !!!833200.cpp!!!	add_documentation(inout helper : input_help) : void
@@ -31,7 +31,7 @@ helper.add_section( seclabel,
 }
 //  specie : [optional] include/exclude list
 {
-  const std::string description("[optional, list] Space separated list of specie labels to include or exclude. Exclude species by preceding the label with '-' (e.g. -Aa). All species are included by default, but you may also include species by putting their label in the list (optionally preceded by '+').");
+  const std::string description("[optional, list] Space separated list of specie labels to include or exclude. Exclude species by preceding the label with '-' (e.g. -Aa). All species are included by default, but you may also include only selected species by putting their label in the list without '-' (optionally preceded by '+'). NOTE: This should only be used in special cases, most standard exceptions are handled automatically. For example \"mobile\" type species are automatically excluded from \"jump\" or Grand Canonical trials.");
   helper.add_option( seclabel, core::strngs::fsspec(), description );
 }
 //  simulator : [optional] simulator subtype
@@ -40,53 +40,95 @@ helper.add_section( seclabel,
   helper.add_option( seclabel, core::strngs::simulator_label(), description );
 }
 
-!!!204592.cpp!!!	do_read_entry(inout reader : input_base_reader) : bool
-if (reader.name().find(core::strngs::rate_label ()) == 0)
+// Subtype parameter documentation.
+for( auto iter = this->type_to_object_.begin(); iter != this->type_to_object_.end(); ++iter )
 {
-   // --------------------
-   // Specie label
-   UTILITY_INPUT(not reader.value().empty(), "Trial rate must have a value.", this->section_label());
-   try
-   {
-      this->rate_ = boost::lexical_cast< double >(reader.value());
-      UTILITY_INPUT(this->rate_ > 0.0, "Trial rate must be greater than zero.", this->section_label());
-      missing_required_tags_.reset(CHOICE_RATE);
-   }
-   catch (boost::bad_lexical_cast const& err)
-   {
-      bool valid_value(false);
-      UTILITY_INPUT(valid_value, "Trial "+core::strngs::rate_label ()+" could not be converted to a number :"+err.what(), this->section_label());
-   }
+  for( auto jter = iter->documentation_.begin(); jter != iter->documentation_.end(); ++jter )
+  {
+    std::string desc = "(for region subtype "+ iter->type_name_ + ")" + jter->second;
+    helper.add_option( rgnlabel, jter->first, desc );
+  }
 }
-else if (reader.name().find(core::strngs::fstype()) == 0)
+
+!!!826544.cpp!!!	has_trial_type(in trial_label : string) : bool
+for( auto const& defn : this->type_to_object_ )
 {
-   // --------------------
-   // Specie type
-   UTILITY_INPUT(not reader.value().empty(), "Trial type must have a value.", this->section_label());
-   std::string val ( reader.dequote( reader.value() ) );
-   UTILITY_INPUT(type_to_object_.count(val) != 0, "Trial type must be one of allowed values (see documentation).", this->section_label());
-   this->type_ = val;
-   missing_required_tags_.reset(CHOICE_TYPE);
+  if( defn.type_name_ == trial_label )
+  {
+    return true;
+  }
+}
+return false;
+
+!!!204592.cpp!!!	do_read_entry(inout reader : input_base_reader) : bool
+if( reader.name().find( core::strngs::rate_label() ) == 0 )
+{
+  // --------------------
+  // Choice rate
+  UTILITY_INPUT( this->rate_ != 0.0, "Parameter \"" + core::strngs::rate_label() + "\" appears more than once in a single " + this->section_label() + " section.", this->section_label() );
+
+  core::input_base_reader::float_input( core::strngs::rate_label(), reader.value(), "Trial", core::strngs::rate_label(), rate, true, false );
+  this->rate_ = rate;
+  this->missing_required_tags_.reset( CHOICE_RATE );
+}
+else if( reader.name().find( core::strngs::fstype() ) == 0 )
+{
+  // --------------------
+  // Region type
+  UTILITY_INPUT( this->type_.empty(), "Parameter \"" + core::strngs::fstype() + "\" appears more than once in a single " + this->section_label() + " section.", this->section_label() );
+  UTILITY_INPUT( not reader.value().empty(), "Trial \"" + core::strngs::fstype() + "\" parameter must have a value.", this->section_label() );
+  std::string val( reader.dequote( reader.value() ) );
+  UTILITY_INPUT( this->has_trial_type( val ), "Region \"" + core::strngs::fstype() + "\" parameter value (" + val + ") is not a valid " + this->section_label() + " type for this application (see documentation).", this->section_label() );
+  this->type_ = val;
+  this->missing_required_tags_.reset( CHOICE_TYPE );
+}
+else if( reader.name().find( core::strngs::fsspec() ) == 0 )
+{
+  // --------------------
+  // Region type
+  UTILITY_INPUT( this->specie_list_.empty(), "Parameter \"" + core::strngs::fsspec() + "\" appears more than once in a single " + this->section_label() + " section.", this->section_label() );
+  UTILITY_INPUT( not reader.value().empty(), "Trial \"" + core::strngs::fsspec() + "\" parameter must have a value.", this->section_label() );
+  this->specie_list_ = reader.dequote( reader.value() );
 }
 else
 {
-   // --------------------
-   // Assume choice specific parameters
-   UTILITY_INPUT (0 == this->parameter_set_.count (reader.name()), ("keyword \""+reader.name()+"\" appears more than once in a single \""+core::strngs::fstry()+"\" section"), this->section_label());
-   this->parameter_set_.insert (std::make_pair(reader.name(), reader.value()));
+  // --------------------
+  // Assume choice specific parameters
+  UTILITY_INPUT( 0 == this->parameter_set_.count( reader.name() ), ( "keyword \""+reader.name()+"\" appears more than once in a single \""+this->section_label()+"\" section" ), this->section_label() );
+  this->parameter_set_.insert( std::make_pair( reader.name(), reader.value() ) );
 }
 return true;
+
 !!!204720.cpp!!!	do_read_end() : void
-UTILITY_INPUT (not this->missing_required_tags_.any(), "Not all required tags were present.", this->section_label());
+UTILITY_INPUT( not this->missing_required_tags_.any(), "Not all required tags were present.", this->section_label() );
 
-// Use generator to create the set of choice objects (ie
-// one for each specie) corresponding to input data.
-this->manager_.add_chooser( this->type_to_object_[ this->type_ ]( this->parameter_set_, this->type_, this->rate_ ) );
+// find definition
+std::size_t idx = 0;
+for( idx = 0; idx != this->type_to_object_.size(); ++idx )
+{
+  if( this->type_to_object_[ idx ].type_name_ == this->type_ )
+  {
+    break;
+  }
+}
+UTILITY_CHECK( idx != this->type_to_object_.size(), "Check in do_read_entry should mean this is never true." );
+auto const& defn = this->type_to_object_[ idx ];
+// use definiton to check parameter names
+if( not this->parameter_set_.empty() )
+{
+  for( auto const& entry : this->parameter_set_ )
+  {
+    UTILITY_INPUT( defn.parameter_definition_.count( entry.first ) != 0, "Parameter named \"" + entry.first + "\" with value (" + entry.second + ") is not understood by " + this->type_ + " " + this->section_label() + ".", this->section_label() )
+  }
+}
 
-this->parameter_set_.clear();
+// Use generator to create the chooser object.
+this->manager_.add_chooser( ( *defn.factory_ )( this->parameter_set_, this->type_, this->rate_ ) );
+
+!!!1171376.cpp!!!	do_reset() : void
 this->missing_required_tags_ = std::bitset< CHOICE_TAG_COUNT >( true );
+this->parameter_set_.clear();
+this->rate_ = 0.0;
+this->specie_list_.clear();
 this->type_.clear();
-this->rate_ = 0;
 
-!!!826544.cpp!!!	has_trial_type(in trial_label : string) : bool
-return 0 != this->type_to_object_.count( trial_label );

@@ -1,4 +1,18 @@
 class move_choice
+!!!1964719.cpp!!!	move_choice(in ispec : size_t, in params : string)
+if (params.find("delta") != params.end())
+{
+   try
+   {
+      this->delta_ = boost::lexical_cast< double >(params.at( "delta" ) );
+      UTILITY_INPUT( this->delta_ > 0, "Input value for \"delta\" must be greater than zero", core::strngs::fstry() );
+   }
+   catch( boost::bad_lexical_cast const& err )
+   {
+      const bool invalid_conversion( false );
+      UTILITY_INPUT( invalid_conversion, "Input value for \"delta\" is not a number", core::strngs::fstry() );
+   }
+}
 !!!1965103.cpp!!!	generate(in particles : particle_manager, in regions : geometry_manager, inout rgnr : random_distribution) : change_set
 std::unique_ptr< particle::change_set > result( new particle::change_set );
 auto const& ens = particles.get_ensemble();
@@ -61,17 +75,15 @@ if not sys.get_cell_region().is_valid_position( atom.new_position, atom.key ):
   return result
 result.add_atom( atom )
 return result
-!!!1964719.cpp!!!	move_choice(in ispec : size_t, in params : string)
-if (params.find("delta") != params.end())
+!!!1171632.cpp!!!	add_definition(inout meta : choice_meta) : void
+trial::choice_definition defn;
+
+defn.type_name_ = "move";
+defn.factory_ = &trial::chooser< move_choice >;
 {
-   try
-   {
-      this->delta_ = boost::lexical_cast< double >(params.at( "delta" ) );
-      UTILITY_INPUT( this->delta_ > 0, "Input value for \"delta\" must be greater than zero", core::strngs::fstry() );
-   }
-   catch( boost::bad_lexical_cast const& err )
-   {
-      const bool invalid_conversion( false );
-      UTILITY_INPUT( invalid_conversion, "Input value for \"delta\" is not a number", core::strngs::fstry() );
-   }
+  std::string name = "delta";
+  std::string help = "[number, optional] The maximum magnitude of the displacement from the original position made by this trial. Default value is " + std::to_string( move_choice::default_delta ) + ".";
+  defn.parameter_definition_.insert( std::make_pair( name, help ) );
 }
+UTILITY_CHECK( not meta.has_trial_type( defn.type_name_ ), "This type has already been added to this meta object." );
+meta.add_trial_type( defn );
