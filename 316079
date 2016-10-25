@@ -1,6 +1,6 @@
 format 75
 "trial" // trial
-  revision 240
+  revision 241
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -626,7 +626,7 @@ ${inlines}
       operation 745904 "~choice_manager"
 	public explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw}; = default;"
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} = default;"
 	
 	
 	
@@ -1249,17 +1249,14 @@ choice_hash subtype is \"0\", so hash pattern is ( X, 1, 1, 0 )"
 
       operation 1964719 "move_choice"
 	public explicit_return_type ""
-	nparams 2
+	nparams 1
 	  param in name "ispec" explicit_type "size_t"
-	  param in name "params" explicit_type "string"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, std::map< ${t1}, ${t1} > const& ${p1}${v1}${)}${volatile}${throw};
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw};
 "
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, std::map< ${t1}, ${t1} > const& ${p1}${)}${throw}
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}${)}${throw}
 : base_choice( trial::choice_hash( ${p0}, 1, 1, 0 ) )
 , delta_( default_delta )
-{
-  ${body}
-}
+{}
 "
 	
 	
@@ -1383,6 +1380,77 @@ ${docstring}${body}
 ${docstring}return self.delta_
 "
 	
+      end
+
+      operation 1178928 "set_max_displacement"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "val" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->delta_ = ${p0};
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Change the maximum displacement step size."
+      end
+
+      operation 1178800 "make_choice"
+	class_operation public return_type class_ref 1026223 // move_choice
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} >& ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get delta from params and then create a new object.
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature:
+   static unique_ptr< base_choice > make_choice( size_t, map< string, string > const& )
+ 
+"
+      end
+
+      operation 1178672 "permitted"
+	class_operation public explicit_return_type "bool"
+	nparams 1
+	  param in name "spec" type class_ref 134577 // specie
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return true;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " All mobile specie types can have this choice?
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature
+   static bool make_choice( specie const& )"
       end
 
       operation 1171632 "add_definition"
@@ -2701,11 +2769,16 @@ ${docstring}${body}
       end
 
       operation 230832 "generate_choices"
-	abstract const cpp_virtual public explicit_return_type "void"
+	const public explicit_return_type "void"
 	nparams 2
 	  param in name "species" type class_ref 134577 // specie
 	  param inout name "choices" type class_ref 1026095 // base_choice
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::vector< ${t0} >& ${p0}${v0}, boost::ptr_vector< ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::vector< ${t0} >& ${p0}, boost::ptr_vector< ${t1} >& ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
 "
 	
 	
@@ -2714,6 +2787,37 @@ ${docstring}${body}
 "
 	
 	comment "  Generate and add choices to simulator."
+      end
+
+      operation 1178160 "is_permitted"
+	abstract const cpp_virtual private explicit_return_type "bool"
+	nparams 1
+	  param in name "spec" type class_ref 134577 // specie
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Can this specie be used to create a trial of the current type?"
+      end
+
+      operation 1178288 "make_choice"
+	abstract const cpp_virtual private return_type class_ref 1026095 // base_choice
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Generate a choice object."
       end
 
       operation 240176 "write_document"
@@ -2776,7 +2880,7 @@ ${docstring}${members}
 
       class 432816 "chooser_type"
 	visibility package stereotype "typedef" explicit_base_type "Choice"
-	cpp_decl "${comment}typedef typename ${type} ${name};
+	cpp_decl "${comment}typedef ${type} ${name};
 "
 	java_decl ""
 	php_decl ""
@@ -2933,16 +3037,13 @@ ${docstring}${body}
 	idl ""
       end
 
-      operation 232240 "generate_choices"
-	const cpp_virtual public explicit_return_type "void"
-	nparams 2
-	  param in name "species" type class_ref 134577 // specie
-	  param inout name "choices" type class_ref 1026095 // base_choice
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::vector< ${t0} >& ${p0}${v0}, boost::ptr_vector< ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::vector< ${t0} >& ${p0}, boost::ptr_vector< ${t1} >& ${p1}${)}${const}${volatile}${throw}
+      operation 1178544 "is_permitted"
+	const cpp_virtual private explicit_return_type "bool"
+	nparams 1
+	  param in name "spec" type class_ref 134577 // specie
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override
 {
-  ${body}
+  return Choice::permitted( ${p0} );
 }
 "
 	
@@ -2951,10 +3052,26 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Generate and add choices to list.
+	comment " Can this specie be used to create a trial of the current type?"
+      end
 
- The sum of probability for the added choices
- must equal the rate attribute of the chooser. "
+      operation 1178416 "make_choice"
+	const cpp_virtual private return_type class_ref 1026095 // base_choice
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override
+{
+  return Choice::${name}( ${p0}, ${p1} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Generate a choice object."
       end
 
       operation 232112 "make_chooser"
@@ -2964,11 +3081,9 @@ ${docstring}${body}
 	  param in name "type" explicit_type "string"
 	  param in name "specie_list" explicit_type "string"
 	  param in name "rate" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}const std::map< ${t0}, ${t0} >& ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}${)}${const}${throw}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract}
 {
-  ${body}
+  return std::unique_ptr< ${type} >( new chooser< Choice >( params, type, specie_list, rate ) );
 }
 "
 	
@@ -3343,16 +3458,18 @@ ${docstring}${members}
  a chooser generator function, a choice type name and the optional
  parameters (with help descriptions)."
       class 1143855 "choice_generator_fn"
-	visibility package stereotype "typedef" base_type class_ref 156336 // function3
-	nactuals 4
-	actual class class_ref 156336 // function3
+	visibility package stereotype "typedef" base_type class_ref 170416 // function4
+	nactuals 5
+	actual class class_ref 170416 // function4
 	  rank 0 explicit_value "std::unique_ptr< base_chooser >"
-	actual class class_ref 156336 // function3
-	  rank 1 explicit_value "std::map< std::string, std::string >"
-	actual class class_ref 156336 // function3
+	actual class class_ref 170416 // function4
+	  rank 1 explicit_value "const std::map< std::string, std::string > &"
+	actual class class_ref 170416 // function4
 	  rank 2 explicit_value "std::string"
-	actual class class_ref 156336 // function3
-	  rank 3 explicit_value "double"
+	actual class class_ref 170416 // function4
+	  rank 3 explicit_value "std::string"
+	actual class class_ref 170416 // function4
+	  rank 4 explicit_value "double"
 	cpp_decl "${comment}typedef ${type} ${name};
 "
 	java_decl ""
@@ -3362,13 +3479,13 @@ ${docstring}${members}
 "
 	explicit_switch_type ""
 	
-	classrelation 520496 // <realization>
-	  relation 519600 -_-|>
+	classrelation 707504 // <realization>
+	  relation 706608 -_-|>
 	    a public
 	      cpp default "${type}"
 	      python "${type}"
-	      classrelation_ref 520496 // <realization>
-	    b parent class_ref 156336 // function3
+	      classrelation_ref 707504 // <realization>
+	    b parent class_ref 170416 // function4
 	end
       end
 
@@ -3808,6 +3925,11 @@ ${namespace_end}
 ${includes}
 // Manual include
 #include \"core/strngs.hpp\"
+#include \"utility/fuzzy_equals.hpp\"
+//-
+#include <boost/format.hpp>
+#include <boost/tokenizer.hpp>
+// -
 // -
 ${namespace_start}
 ${members}
@@ -4044,12 +4166,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ${comment}
 ${includes}
-// Manual includes
-#include \"core/strngs.hpp\"
-#include \"utility/fuzzy_equals.hpp\"
-
-#include <boost/tokenizer.hpp>
-// -
 ${declarations}
 ${namespace_start}
 ${definition}
@@ -4151,8 +4267,9 @@ BOOST_CLASS_EXPORT_KEY(trial::move_choice);
 ${includes}
 // Manual includes
 #include \"core/strngs.hpp\"
+#include \"core/input_base_reader.hpp\"
 #include \"particle/ensemble.hpp\"
-//#include \"trial/chooser.hpp\"
+#include \"trial/chooser.hpp\"
 // -
 ${namespace_start}
 ${members}

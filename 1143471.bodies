@@ -1,6 +1,6 @@
 class choice_meta
 !!!826416.cpp!!!	add_trial_type(in ctor : choice_definition) : void
-UTILITY_REQUIRE( not this->has_trial_type( ctor.type_name_ ), ("Attempt to add more than one chooser factory for type \"" + ctor.type_name_ + "\"."), this->section_label() );
+UTILITY_REQUIRE( not this->has_trial_type( ctor.type_name_ ), ("Attempt to add more than one chooser factory for type \"" + ctor.type_name_ + "\".") );
 this->type_to_object_.push_back( ctor );
 
 
@@ -43,10 +43,10 @@ helper.add_section( seclabel,
 // Subtype parameter documentation.
 for( auto iter = this->type_to_object_.begin(); iter != this->type_to_object_.end(); ++iter )
 {
-  for( auto jter = iter->documentation_.begin(); jter != iter->documentation_.end(); ++jter )
+  for( auto jter = iter->parameter_definition_.begin(); jter != iter->parameter_definition_.end(); ++jter )
   {
     std::string desc = "(for region subtype "+ iter->type_name_ + ")" + jter->second;
-    helper.add_option( rgnlabel, jter->first, desc );
+    helper.add_option( seclabel, jter->first, desc );
   }
 }
 
@@ -65,6 +65,7 @@ if( reader.name().find( core::strngs::rate_label() ) == 0 )
 {
   // --------------------
   // Choice rate
+  double rate = 0.0;
   UTILITY_INPUT( this->rate_ != 0.0, "Parameter \"" + core::strngs::rate_label() + "\" appears more than once in a single " + this->section_label() + " section.", this->section_label() );
 
   core::input_base_reader::float_input( core::strngs::rate_label(), reader.value(), "Trial", core::strngs::rate_label(), rate, true, false );
@@ -118,12 +119,12 @@ if( not this->parameter_set_.empty() )
 {
   for( auto const& entry : this->parameter_set_ )
   {
-    UTILITY_INPUT( defn.parameter_definition_.count( entry.first ) != 0, "Parameter named \"" + entry.first + "\" with value (" + entry.second + ") is not understood by " + this->type_ + " " + this->section_label() + ".", this->section_label() )
+    UTILITY_INPUT( defn.parameter_definition_.count( entry.first ) != 0, "Parameter named \"" + entry.first + "\" with value (" + entry.second + ") is not understood by " + this->type_ + " " + this->section_label() + ".", this->section_label() );
   }
 }
 
 // Use generator to create the chooser object.
-this->manager_.add_chooser( ( *defn.factory_ )( this->parameter_set_, this->type_, this->rate_ ) );
+this->manager_->add_chooser( defn.factory_( this->parameter_set_, this->type_, this->specie_list_, this->rate_ ) );
 
 !!!1171376.cpp!!!	do_reset() : void
 this->missing_required_tags_ = std::bitset< CHOICE_TAG_COUNT >( true );

@@ -1,18 +1,4 @@
 class move_choice
-!!!1964719.cpp!!!	move_choice(in ispec : size_t, in params : string)
-if (params.find("delta") != params.end())
-{
-   try
-   {
-      this->delta_ = boost::lexical_cast< double >(params.at( "delta" ) );
-      UTILITY_INPUT( this->delta_ > 0, "Input value for \"delta\" must be greater than zero", core::strngs::fstry() );
-   }
-   catch( boost::bad_lexical_cast const& err )
-   {
-      const bool invalid_conversion( false );
-      UTILITY_INPUT( invalid_conversion, "Input value for \"delta\" is not a number", core::strngs::fstry() );
-   }
-}
 !!!1965103.cpp!!!	generate(in particles : particle_manager, in regions : geometry_manager, inout rgnr : random_distribution) : change_set
 std::unique_ptr< particle::change_set > result( new particle::change_set );
 auto const& ens = particles.get_ensemble();
@@ -75,11 +61,37 @@ if not sys.get_cell_region().is_valid_position( atom.new_position, atom.key ):
   return result
 result.add_atom( atom )
 return result
+!!!1178800.cpp!!!	make_choice(in ispec : size_t, in params : string) : move_choice
+// needed information
+// ispec : from ispec arg
+// delta : from param arg
+double delta {};
+const std::string delta_label { "delta" }; 
+
+// check for required parameters.
+if( params.count( delta_label ) == 1 )
+{
+  // will use non-default delta. Get and validate value.
+  core::input_base_reader::float_input( delta_label, params.at( delta_label ), "Move trial", core::strngs::fstry(), delta, true, false );
+}
+
+// build region object.
+std::unique_ptr< move_choice > current;
+current.reset( new move_choice( ispec ) );
+if( params.count( delta_label ) == 1 )
+{
+  current->set_max_displacement( delta );
+}
+return current;
+
+
+
+
 !!!1171632.cpp!!!	add_definition(inout meta : choice_meta) : void
 trial::choice_definition defn;
 
 defn.type_name_ = "move";
-defn.factory_ = &trial::chooser< move_choice >;
+defn.factory_ = &trial::chooser< move_choice >::make_chooser;
 {
   std::string name = "delta";
   std::string help = "[number, optional] The maximum magnitude of the displacement from the original position made by this trial. Default value is " + std::to_string( move_choice::default_delta ) + ".";
