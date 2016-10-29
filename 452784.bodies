@@ -7,14 +7,48 @@ BOOST_REQUIRE_NO_THROW( full = reg.volume( 0.0 ) );
 BOOST_REQUIRE_NO_THROW( access = reg.volume( radius ) );
 BOOST_CHECK_EQUAL( full, full_volume );
 BOOST_CHECK_EQUAL( access, reduced_volume );
-!!!1022512.cpp!!!	region_new_position_test(in regn : base_region, in inside : coordinate, in outside : coordinate, in okradius : double, in bigradius : double) : void
+!!!1022512.cpp!!!	region_serialization_test(in regn : base_region) : void
+std::stringstream ss;
+std::string label;
+double volume;
+double radius = 0.01;
+bool use_radius = true;
+particle::coordinate big, small;
+{
+  // Cubic grid main ctor
+  BOOST_CHECK_NO_THROW( label = regn->label() );
+  BOOST_CHECK_NO_THROW( use_radius = regn->fits( radius ) );
+  BOOST_REQUIRE( use_radius or regn->fits( 0.0 ) ); // something must fit!
+  BOOST_CHECK_NO_THROW( volume = regn->volume( (use_radius ? radius : 0.0 ) ) );
+  BOOST_CHECK_NO_THROW( regn->extent( small, big, (use_radius ? radius : 0.0 ) ) );
+
+  boost::archive::text_oarchive oa( ss );
+  // write class instance to archive
+  BOOST_REQUIRE_NO_THROW( oa << regn );
+}
+{
+  boost::shared_ptr< geometry::base_region > var2;
+  boost::archive::text_iarchive ia( ss );
+  // read class instance from archive
+  BOOST_REQUIRE_NO_THROW( ia >> var2 );
+  BOOST_CHECK_EQUAL( var2->label(), label );
+  BOOST_CHECK_EQUAL( var2->fits( radius ), use_radius );
+  double newvol;
+  BOOST_CHECK_NO_THROW( newvol = var2->volume( (use_radius ? radius : 0.0 ) ) );
+  BOOST_CHECK_EQUAL( newvol, volume );
+  particle::coordinate newbig, newsmall;
+  BOOST_CHECK_NO_THROW( var2->extent( newsmall, newbig, (use_radius ? radius : 0.0 ) ) );
+  BOOST_CHECK_EQUAL( newsmall, small );
+  BOOST_CHECK_EQUAL( newbig, big );
+}
+!!!1193264.cpp!!!	region_new_position_test(in regn : base_region, in inside : coordinate, in outside : coordinate, in okradius : double, in bigradius : double) : void
 boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
 utility::random_distribution rand( generator );
 const double offset( 1.0 );
 // region = regn
 BOOST_REQUIRE( regn.fits( okradius ) );
-BOOST_REQUIRE( ((bigradius < 0.0) or (not regn.fits( bigradius ))) );
-BOOST_REQUIRE( regn.is_inside( inside, okradius  ) );
+BOOST_REQUIRE( ( ( bigradius < 0.0 ) or ( not regn.fits( bigradius ) ) ) );
+BOOST_REQUIRE( regn.is_inside( inside, okradius ) );
 BOOST_REQUIRE( not regn.is_inside( outside, okradius ) );
 
 // Test methods that should throw first
@@ -881,6 +915,7 @@ BOOST_CHECK_EQUAL( var1->length(), 10.0 );
   double bigradius( 10.1 );
   // tests fits, is_inside, new_position and new_position_offset
   geometry_test::region_new_position_test( *var1, inside, outside, okradius, bigradius );
+  geometry_test::region_serialization_test( var1 );
 }
 // Test volume (should be the same regardless of size)
 {
@@ -994,6 +1029,8 @@ particle::coordinate origin( 1.0, -2.0, 3.0 );
   BOOST_CHECK( var1->is_open() );
   BOOST_CHECK_EQUAL( var1->origin(), origin );
 
+  geometry_test::region_serialization_test( var1 );
+
   boost::archive::text_oarchive oa( ss );
   // write class instance to archive
   BOOST_REQUIRE_NO_THROW( oa << var1 );
@@ -1024,6 +1061,7 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
     double bigradius( -1.0 ); // negative number -> any radius fits
     // tests fits, is_inside, new_position and new_position_offset
     geometry_test::region_new_position_test( *var1, inside, outside, okradius, bigradius );
+    geometry_test::region_serialization_test( var1 );
   }
   // Test volume (cube is open so should be the same regardless of size)
   {
