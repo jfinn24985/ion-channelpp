@@ -1,7 +1,4 @@
 class jump_choice
-!!!1160240.cpp!!!	jump_choice(in ispec : size_t, in params : string)
-UTILITY_INPUT( params.size() == 0 or
-         ( 1 == params.size() and 1 == params.count( core::strngs::fsspec() ) ), "Jump trial requires no extra parameters", core::strngs::fstry() );
 !!!1160624.cpp!!!	generate(in particles : particle_manager, in regions : geometry_manager, inout rgnr : random_distribution) : change_set
 std::unique_ptr< particle::change_set > resultset( new particle::change_set );
 auto const& ens = particles.get_ensemble();
@@ -58,3 +55,19 @@ if not sys.get_cell_region().is_valid_position( result.new_position, result.key 
   resultset.fail = True # not a valid position
 return resultset
 
+!!!1207728.cpp!!!	add_definition(inout meta : choice_meta) : void
+trial::choice_definition defn;
+
+defn.type_name_ = "jump";
+// NO extra parameters
+defn.factory_ = &trial::chooser< jump_choice >::make_chooser;
+
+UTILITY_CHECK( not meta.has_trial_type( defn.type_name_ ), "This type has already been added to this meta object." );
+meta.add_trial_type( defn );
+!!!1207472.cpp!!!	make_choice(in ispec : size_t, in params : string) : jump_choice
+UTILITY_CHECK( params.size() == 0, "Jump trial requires no extra parameters" );
+// needed information
+// ispec : from ispec arg
+std::unique_ptr< jump_choice > current;
+current.reset( new jump_choice( ispec ) );
+return current;

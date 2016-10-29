@@ -1,6 +1,6 @@
 format 75
 "trial" // trial
-  revision 243
+  revision 244
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -918,15 +918,6 @@ ${docstring}${members}
 	  b parent class_ref 912431 // access
       end
 
-      classrelation 427569 // <dependency>
-	relation 427057 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 427569 // <dependency>
-	  b parent class_ref 134959 // ensemble
-      end
-
       attribute 352561 "key_"
 	private type class_ref 400048 // choice_hash
 	init_value "ispec"
@@ -1540,7 +1531,9 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " Objects of this class define an MC move that involves a
- jump from anywhere to anywhere within the simulation."
+ jump from anywhere to anywhere within the simulation.
+
+choice_hash subtype is \"1\", so hash pattern is ( X, 1, 1, 1 )"
       classrelation 692912 // <generalisation>
 	relation 692016 ---|>
 	  a public
@@ -1557,15 +1550,6 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 692784 // <dependency>
 	  b parent class_ref 912431 // access
-      end
-
-      classrelation 693040 // <dependency>
-	relation 692144 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 693040 // <dependency>
-	  b parent class_ref 134959 // ensemble
       end
 
       extra_member 466224 "LIFETIME"
@@ -1593,16 +1577,11 @@ ${docstring}${members}
 
       operation 1160240 "jump_choice"
 	public explicit_return_type ""
-	nparams 2
+	nparams 1
 	  param in name "ispec" explicit_type "size_t"
-	  param in name "params" explicit_type "string"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} >& ${p1}${)}${volatile}${throw}
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
 : base_choice( trial::choice_hash( ${p0}, 1, 1, 1 ) )
-{
-  ${body}
-}
+{}
 "
 	
 	
@@ -1695,6 +1674,91 @@ ${docstring}${body}
 "
 	
       end
+
+      extra_member 487856 "STATIC METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1207728 "add_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 1143471 // choice_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add a definition object for this choice class to the
+ meta object."
+      end
+
+      operation 1207472 "make_choice"
+	class_operation public return_type class_ref 512688 // jump_choice
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} >& ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get delta from params and then create a new object.
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature:
+   static unique_ptr< base_choice > make_choice( size_t, map< string, string > const& )
+ 
+"
+      end
+
+      operation 1207344 "permitted"
+	class_operation public explicit_return_type "bool"
+	nparams 1
+	  param in name "spec" type class_ref 134577 // specie
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  return spec.is_solute();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Only solute species can have this trial type?
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature
+   static bool make_choice( specie const& )"
+      end
     end
 
     class 512816 "jump_in"
@@ -1714,7 +1778,9 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " Objects of this class define an MC move that involves a
- jump from anywhere to a specific region within the simulation."
+ jump from anywhere to a specific region within the simulation.
+
+choice_hash subtype is \"2\", so hash pattern is ( X, 1, 1, 2 )"
       classrelation 693168 // <generalisation>
 	relation 692272 ---|>
 	  a public
@@ -1731,15 +1797,6 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 693296 // <dependency>
 	  b parent class_ref 912431 // access
-      end
-
-      classrelation 693424 // <dependency>
-	relation 692528 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 693424 // <dependency>
-	  b parent class_ref 134959 // ensemble
       end
 
       attribute 557488 "region_name_"
@@ -1794,14 +1851,13 @@ ${docstring}${members}
 	public explicit_return_type ""
 	nparams 2
 	  param in name "ispec" explicit_type "size_t"
-	  param in name "params" explicit_type "string"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} >& ${p1}${)}${volatile}${throw}
-: base_choice( trial::choice_hash( ${p0}, 1, 1, 1 ) )
-{
-  ${body}
-}
+	  param in name "label" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
+: base_choice( trial::choice_hash( ${p0}, 1, 1, 2 ) )
+, region_name_( ${p1} )
+, region_index_( 0ul )
+{}
+
 "
 	
 	
@@ -1912,6 +1968,91 @@ ${docstring}${body}
 	
 	comment " The region name for this choice."
       end
+
+      extra_member 487984 "STATIC METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1208112 "add_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 1143471 // choice_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add a definition object for this choice class to the
+ meta object."
+      end
+
+      operation 1207984 "make_choice"
+	class_operation public return_type class_ref 512816 // jump_in
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} >& ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get delta from params and then create a new object.
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature:
+   static unique_ptr< base_choice > make_choice( size_t, map< string, string > const& )
+ 
+"
+      end
+
+      operation 1207856 "permitted"
+	class_operation public explicit_return_type "bool"
+	nparams 1
+	  param in name "spec" type class_ref 134577 // specie
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  return spec.is_solute();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Only solute species can have this trial type?
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature
+   static bool make_choice( specie const& )"
+      end
     end
 
     class 512944 "jump_out"
@@ -1931,7 +2072,9 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " Objects of this class define an MC move that involves a
- jump from anywhere to a specific region within the simulation."
+ jump from anywhere to a specific region within the simulation.
+
+ choice_hash subtype is \"3\", so hash pattern is ( X, 1, 1, 3 )"
       classrelation 693552 // <generalisation>
 	relation 692656 ---|>
 	  a public
@@ -1948,15 +2091,6 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 693680 // <dependency>
 	  b parent class_ref 912431 // access
-      end
-
-      classrelation 693808 // <dependency>
-	relation 692912 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 693808 // <dependency>
-	  b parent class_ref 134959 // ensemble
       end
 
       attribute 557872 "region_name_"
@@ -2011,14 +2145,12 @@ ${docstring}${members}
 	public explicit_return_type ""
 	nparams 2
 	  param in name "ispec" explicit_type "size_t"
-	  param in name "params" explicit_type "string"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} >& ${p1}${)}${volatile}${throw}
-: base_choice( trial::choice_hash( ${p0}, 1, 1, 1) )
-{
-  ${body}
-}
+	  param in name "label" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
+: base_choice( trial::choice_hash( ${p0}, 1, 1, 3 ) )
+, region_name_( ${p1} )
+, region_index_( 0ul )
+{}
 "
 	
 	
@@ -2129,6 +2261,387 @@ ${docstring}${body}
 	
 	comment " The region name for this choice."
       end
+
+      extra_member 488112 "STATIC METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1208752 "add_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 1143471 // choice_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add a definition object for this choice class to the
+ meta object."
+      end
+
+      operation 1208624 "make_choice"
+	class_operation public return_type class_ref 512944 // jump_out
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} >& ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get delta from params and then create a new object.
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature:
+   static unique_ptr< base_choice > make_choice( size_t, map< string, string > const& )
+ 
+"
+      end
+
+      operation 1208496 "permitted"
+	class_operation public explicit_return_type "bool"
+	nparams 1
+	  param in name "spec" type class_ref 134577 // specie
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  return spec.is_solute();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Only solute species can have this trial type?
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature
+   static bool make_choice( specie const& )"
+      end
+    end
+
+    class 526384 "jump_around"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Objects of this class define an MC move that involves a
+ jump from anywhere to anywhere in a specific region. It
+ is an exception if any particles of the given species are 
+ not in the stated region. This trial is for channel-only
+ species.
+
+choice_hash subtype is \"4\", so hash pattern is ( X, 1, 1, 4 )"
+      classrelation 714288 // <generalisation>
+	relation 713392 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 714288 // <generalisation>
+	  b parent class_ref 1026095 // base_choice
+      end
+
+      classrelation 714416 // <dependency>
+	relation 713520 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 714416 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      attribute 571440 "region_name_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The label of the target region."
+      end
+
+      attribute 571568 "region_index_"
+	private explicit_type "size_t"
+	init_value "0"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The region index. "
+      end
+
+      extra_member 488752 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1210032 "jump_around"
+	private explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: base_choice()
+{}
+"
+	
+	
+	
+	
+	comment " default ctor for deserialization only"
+      end
+
+      operation 1210160 "jump_around"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "label" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
+: base_choice( trial::choice_hash( ${p0}, 1, 1, 4 ) )
+, region_name_( ${p1} )
+, region_index_( 0ul )
+{}
+"
+	
+	
+	
+	
+      end
+
+      operation 1210288 "__init__"
+	public explicit_return_type ""
+	nparams 2
+	  param inout name "self" explicit_type ""
+	  param in name "ispec" explicit_type ""
+	
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}, ${p1}${v1}${)}:
+${docstring}super(${class}, ${p0}).__init__(${p1})
+${body}
+"
+	
+      end
+
+      operation 1210416 "~jump_around"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} 
+{}
+"
+	
+	
+	
+	
+      end
+
+      extra_member 488880 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1210544 "serialize"
+	stereotype "template"
+	private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+    ar & boost::serialization::base_object< base_choice >(*this);
+    ar & region_name_; ar & region_index_;
+  }
+"
+	
+	
+	
+	
+      end
+
+      extra_member 489008 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1210672 "generate"
+	public return_type class_ref 986543 // change_set
+	nparams 3
+	  param in name "particles" type class_ref 446128 // particle_manager
+	  param in name "regions" type class_ref 452656 // geometry_manager
+	  param inout name "rgnr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1210800 "region_name"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->region_name_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The region name for this choice."
+      end
+
+      extra_member 489136 "STATIC METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1211056 "add_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 1143471 // choice_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add a definition object for this choice class to the
+ meta object."
+      end
+
+      operation 1211184 "make_choice"
+	class_operation public return_type class_ref 526384 // jump_around
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} >& ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get delta from params and then create a new object.
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature:
+   static unique_ptr< base_choice > make_choice( size_t, map< string, string > const& )
+ 
+"
+      end
+
+      operation 1211312 "permitted"
+	class_operation public explicit_return_type "bool"
+	nparams 1
+	  param in name "spec" type class_ref 134577 // specie
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  return spec.is_channel_only();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Only solute species can have this trial type?
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature
+   static bool make_choice( specie const& )"
+      end
     end
 
     class 513200 "add_specie"
@@ -2189,7 +2702,7 @@ ${docstring}${members}
       end
 
       operation 1164080 "add_specie"
-	public explicit_return_type ""
+	protected explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;"
 	
@@ -2296,6 +2809,103 @@ ${docstring}${body}
 
  (C++ forwards to two argument method)"
       end
+
+      extra_member 489648 "STATIC METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1213104 "add_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 1143471 // choice_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add a definition object for this choice class to the
+ meta object.
+
+ NOTE: For add/remove paired type add_definition is
+ only defined in add half of pair."
+      end
+
+      operation 1212976 "make_choice"
+	class_operation public return_type class_ref 513200 // add_specie
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} >& ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get delta from params and then create a new object.
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature:
+   static unique_ptr< base_choice > make_choice( size_t, map< string, string > const& )
+ 
+"
+      end
+
+      operation 1212848 "permitted"
+	class_operation public explicit_return_type "bool"
+	nparams 1
+	  param in name "spec" type class_ref 134577 // specie
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  return spec.is_solute();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Only solute species can have this trial type?
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature
+   static bool make_choice( specie const& )"
+      end
+
+      classrelation 714928 // <dependency>
+	relation 714032 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 714928 // <dependency>
+	  b parent class_ref 912431 // access
+      end
     end
 
     class 513072 "remove_specie"
@@ -2374,7 +2984,7 @@ ${body}
       end
 
       operation 1163568 "remove_specie"
-	public explicit_return_type ""
+	protected explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
 : base_choice ()
@@ -2460,6 +3070,79 @@ ${docstring}${body}
 "
 	
 	comment " Create a particle remove trial"
+      end
+
+      extra_member 489776 "STATIC METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1213360 "make_choice"
+	class_operation public return_type class_ref 513072 // remove_specie
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}${t0} ${p0}, const std::map< ${t1}, ${t1} >& ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get delta from params and then create a new object.
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature:
+   static unique_ptr< base_choice > make_choice( size_t, map< string, string > const& )
+ 
+"
+      end
+
+      operation 1213232 "permitted"
+	class_operation public explicit_return_type "bool"
+	nparams 1
+	  param in name "spec" type class_ref 134577 // specie
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  return spec.is_solute();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Only solute species can have this trial type?
+
+ Needs to be defined as static method in derived classes that
+ use chooser<>.
+
+ signature
+   static bool make_choice( specie const& )"
+      end
+
+      classrelation 715056 // <dependency>
+	relation 714160 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 715056 // <dependency>
+	  b parent class_ref 912431 // access
       end
     end
 
@@ -2852,12 +3535,13 @@ ${docstring}${body}
 	comment " Can this specie be used to create a trial of the current type?"
       end
 
-      operation 1178288 "make_choice"
-	abstract const cpp_virtual private return_type class_ref 1026095 // base_choice
-	nparams 2
+      operation 1178288 "add_choice"
+	abstract const cpp_virtual private explicit_return_type "void"
+	nparams 3
 	  param in name "ispec" explicit_type "size_t"
 	  param in name "params" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	  param inout name "choice_list" type class_ref 1026095 // base_choice
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}, boost::ptr_vector< ${t2} >& ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
 "
 	
 	
@@ -2865,7 +3549,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Generate a choice object."
+	comment " Generate a choice object and add to list."
       end
 
       operation 240176 "write_document"
@@ -2917,6 +3601,7 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
+      comment " Chooser object for a single type of trial."
       classrelation 174768 // <generalisation>
 	relation 174512 ---|>
 	  a public
@@ -2924,20 +3609,6 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 174768 // <generalisation>
 	  b parent class_ref 170160 // base_chooser
-      end
-
-      class 432816 "chooser_type"
-	visibility package stereotype "typedef" explicit_base_type "Choice"
-	cpp_decl "${comment}typedef ${type} ${name};
-"
-	java_decl ""
-	php_decl ""
-	python_decl ""
-	idl_decl "${comment}typedef ${type} ${name};
-"
-	explicit_switch_type ""
-	
-	comment " The \"choice\" class template type."
       end
 
       extra_member 474544 "LIFETIME"
@@ -3103,14 +3774,15 @@ ${docstring}${body}
 	comment " Can this specie be used to create a trial of the current type?"
       end
 
-      operation 1178416 "make_choice"
-	const cpp_virtual private return_type class_ref 1026095 // base_choice
-	nparams 2
+      operation 1178416 "add_choice"
+	const cpp_virtual private explicit_return_type "void"
+	nparams 3
 	  param in name "ispec" explicit_type "size_t"
 	  param in name "params" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override
+	  param inout name "choice_list" type class_ref 1026095 // base_choice
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}, boost::ptr_vector< ${t2} >& ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override
 {
-  return Choice::${name}( ${p0}, ${p1} );
+  ${p2}.push_back( Choice::make_choice( ${p0}, ${p1} ).release() );
 }
 "
 	
@@ -3132,6 +3804,246 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract}
 {
   return std::unique_ptr< ${type} >( new chooser< Choice >( params, type, specie_list, rate ) );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "  Function to be used to instantiate chooser objects from input file."
+      end
+    end
+
+    class 526512 "chooser_pair"
+      visibility package 
+      nformals 2
+      formal name "Choice1" type "class" explicit_default_value ""
+        explicit_extends ""
+      formal name "Choice2" type "class" explicit_default_value ""
+        explicit_extends ""
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Chooser object for paired types of trial.  Paired trials
+ will be generated with equal probabilities.  Examples of
+ such paired trials are the add/remove trial of Grand 
+ Canonical simulations."
+      classrelation 714544 // <generalisation>
+	relation 713648 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 714544 // <generalisation>
+	  b parent class_ref 170160 // base_chooser
+      end
+
+      extra_member 489264 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1211440 "chooser_pair"
+	protected explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1211568 "chooser_pair"
+	public explicit_return_type ""
+	nparams 4
+	  param in name "params" explicit_type "string"
+	  param in name "type" explicit_type "string"
+	  param in name "specie_list" explicit_type "string"
+	  param in name "rate" explicit_type "double"
+	cpp_decl "    ${comment}${inline}${name}${(}std::map< ${t0}, ${t0} > const& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${volatile}${throw}
+: base_chooser( ${p0}, ${p1}, ${p2}, ${p3} )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1211696 "~chooser_pair"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1211824 "chooser_pair"
+	stereotype "copy"
+	private explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 526512 // chooser_pair
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw} = delete;"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1211952 "chooser_pair"
+	stereotype "move"
+	private explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 526512 // chooser_pair
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw} = delete;"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1212080 "operator="
+	public return_type class_ref 526512 // chooser_pair
+	nparams 1
+	  param in name "source" type class_ref 526512 // chooser_pair
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      classrelation 714672 // <dependency>
+	relation 713776 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 714672 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      extra_member 489392 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1212208 "serialize"
+	public explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "a_ver" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}template< class ${t0} > ${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ar & boost::serialization::base_object< trial::base_chooser >(*this);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "Read/write object to an archive."
+      end
+
+      extra_member 489520 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1212336 "is_permitted"
+	const cpp_virtual private explicit_return_type "bool"
+	nparams 1
+	  param in name "spec" type class_ref 134577 // specie
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override
+{
+  return Choice1::permitted( ${p0} ) and Choice2::permitted( ${p0} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Can this specie be used to create a trial of the current type?"
+      end
+
+      operation 1212720 "add_choice"
+	const cpp_virtual private explicit_return_type "void"
+	nparams 3
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	  param inout name "choice_list" type class_ref 1026095 // base_choice
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}, boost::ptr_vector< ${t2} >& ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override
+{
+  ${p2}.push_back( Choice1::make_choice( ${p0}, ${p1} ).release() );
+  ${p2}.push_back( Choice2::make_choice( ${p0}, ${p1} ).release() );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Generate a choice object."
+      end
+
+      operation 1212592 "make_chooser"
+	class_operation public return_type class_ref 170160 // base_chooser
+	nparams 4
+	  param in name "params" explicit_type "string"
+	  param in name "type" explicit_type "string"
+	  param in name "specie_list" explicit_type "string"
+	  param in name "rate" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract}
+{
+  return std::unique_ptr< ${type} >( new chooser_pair< Choice1, Choice2 >( params, type, specie_list, rate ) );
 }
 "
 	
@@ -4243,7 +5155,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
-    artifact 169136 "chooser_by_simulator"
+    artifact 510640 "chooser_pair"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
 #define @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -4266,6 +5178,42 @@ ${includes}
 ${namespace_start}
 ${members}
 ${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 526512 // chooser_pair
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 169136 "chooser_by_simulator"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
       python_src "${comment}
 ${import}
 ${definition}"
@@ -4304,6 +5252,12 @@ ${namespace_end}
 #include <boost/serialization/export.hpp>
 
 BOOST_CLASS_EXPORT_KEY(trial::move_choice);
+BOOST_CLASS_EXPORT_KEY(trial::jump_choice);
+BOOST_CLASS_EXPORT_KEY(trial::jump_in);
+BOOST_CLASS_EXPORT_KEY(trial::jump_out);
+BOOST_CLASS_EXPORT_KEY(trial::jump_around);
+BOOST_CLASS_EXPORT_KEY(trial::add_specie);
+BOOST_CLASS_EXPORT_KEY(trial::remove_specie);
 #endif
 "
       cpp_src "${comment}
@@ -4318,12 +5272,22 @@ ${includes}
 #include \"core/input_base_reader.hpp\"
 #include \"particle/ensemble.hpp\"
 #include \"trial/chooser.hpp\"
+#include \"trial/chooser_pair.hpp\"
+// -
+#include <boost/algorithm/string.hpp>
 // -
 ${namespace_start}
 ${members}
 ${namespace_end}
 
-BOOST_CLASS_EXPORT_IMPLEMENT(trial::move_choice);"
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::move_choice);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::jump_choice);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::jump_in);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::jump_out);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::jump_around);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::add_specie);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::remove_specie);
+"
       python_src "${comment}
 ${import}
 ${definition}"
@@ -4332,8 +5296,9 @@ ${definition}"
 	class_ref 512688 // jump_choice
 	class_ref 512816 // jump_in
 	class_ref 512944 // jump_out
-	class_ref 513200 // add_specie
+	class_ref 526384 // jump_around
 	class_ref 513072 // remove_specie
+	class_ref 513200 // add_specie
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify

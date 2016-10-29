@@ -49,11 +49,15 @@ for( std::size_t ispec = 0; ispec != species.size(); ++ispec )
     {
       if( this->is_permitted( spec ) )
       {
-        std::unique_ptr< base_choice > choice_ptr( this->make_choice( ispec, this->parameter_set_ ) );
-        rate_sum += spec.rate();
-        choice_ptr->set_probability( spec.rate() );
-        new_choices.push_back( choice_ptr.get() );
-        choice_ptr.release();
+        // chooser may add more than one choice
+        std::size_t next = new_choices.size();
+        this->add_choice( ispec, this->parameter_set_, new_choices );
+        // Update all added
+        for( std::size_t idx = next; idx != new_choices.size(); ++idx )
+        {
+          rate_sum += spec.rate();
+          new_choices.back().set_probability( spec.rate() );
+        }
       }
     }
   }

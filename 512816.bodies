@@ -1,7 +1,4 @@
 class jump_in
-!!!1161136.cpp!!!	jump_in(in ispec : size_t, in params : string)
-UTILITY_INPUT( params.size() == 0 or
-         ( 1 == params.size() and 1 == params.count( core::strngs::fsspec() ) ), "Jump trial requires no extra parameters", core::strngs::fstry() );
 !!!1161520.cpp!!!	generate(in particles : particle_manager, in regions : geometry_manager, inout rgnr : random_distribution) : change_set
 std::unique_ptr< particle::change_set > resultset( new particle::change_set );
 auto const& ens = particles.get_ensemble();
@@ -65,4 +62,38 @@ sys.get_cell_region().new_position( result.new_position, result.key, genr )
 if not sys.get_cell_region().is_valid_position( result.new_position, result.key ):
   resultset.fail = True # not a valid position
 return resultset
+
+!!!1208112.cpp!!!	add_definition(inout meta : choice_meta) : void
+trial::choice_definition defn;
+
+defn.type_name_ = "jump-in";
+defn.factory_ = &trial::chooser< jump_in >::make_chooser;
+{
+  std::string name = core::strngs::fsregn();
+  std::string help = "[name, required] The name of one of the sub-regions defined in the simulation. It is an error to use the name of the whole simulation region.";
+  defn.parameter_definition_.insert( std::make_pair( name, help ) );
+}
+UTILITY_CHECK( not meta.has_trial_type( defn.type_name_ ), "This type has already been added to this meta object." );
+meta.add_trial_type( defn );
+!!!1207984.cpp!!!	make_choice(in ispec : size_t, in params : string) : jump_in
+// needed information
+// ispec : from ispec arg
+// region_name : from param arg
+std::string region_name {};
+const std::string region_name_label { core::strngs::fsregn() }; 
+
+// --------------------
+// region label (required)
+// check for required parameters.
+UTILITY_INPUT( params.count( region_name_label ) == 1, "Trial type \"jump-in\" requires parameter \"" + region_name_label + "\".", core::strngs::fstry() );
+UTILITY_INPUT( not params.at( region_name_label ).empty(), "Trial type \"jump-in\" parameter \"" + region_name_label + "\" must have a value.", core::strngs::fstry() );
+region_name = core::input_base_reader::dequote( params.at( region_name_label ) );
+boost::algorithm::trim( region_name );
+
+// build region object.
+std::unique_ptr< jump_in > current( new jump_in( ispec, region_name ) );
+return current;
+
+
+
 
