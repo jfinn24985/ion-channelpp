@@ -1,6 +1,6 @@
 format 75
 "trial" // trial
-  revision 241
+  revision 243
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -483,6 +483,26 @@ ${docstring}${body}
 	python ""
 	idl ""
       end
+
+      operation 1193136 "operator<<"
+	stereotype "friend"
+	friend public explicit_return_type "ostream"
+	nparams 2
+	  param in name "os" explicit_type "ostream"
+	  param in name "rhs" type class_ref 400048 // choice_hash
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type}& ${name}${(}${t0}& ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  os << \"(\" << rhs.key << \", \" << rhs.start << \", \" << rhs.finish << \", \" << rhs.subtype << \")\";
+  return os;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
     end
 
     class 393392 "choice_manager"
@@ -801,13 +821,14 @@ ${docstring}${body}
 
       operation 746800 "generate"
 	public return_type class_ref 986543 // change_set
-	nparams 3
+	nparams 4
 	  param in name "particles" type class_ref 446128 // particle_manager
 	  param in name "regions" type class_ref 452656 // geometry_manager
+	  param inout name "rgnr" type class_ref 463407 // random_distribution
 	  param in name "selector" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} ${p2}${)}${const}${throw}
+	cpp_def "${comment}${inline}std::unique_ptr< ${type} > ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} & ${p2}, ${t3} ${p3}${)}${const}${throw}
 {
   ${body}
 }
@@ -822,11 +843,12 @@ ${docstring}${body}
 
       operation 746928 "prepare"
 	public explicit_return_type "void"
-	nparams 1
+	nparams 2
 	  param in name "species" type class_ref 134577 // specie
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::vector< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	  param inout name "rgnr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::vector< ${t0} >& ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::vector< ${t0} >& ${p0}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::vector< ${t0} >& ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -1400,6 +1422,53 @@ ${docstring}${body}
 	comment " Change the maximum displacement step size."
       end
 
+      extra_member 481328 "STATIC METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1171632 "add_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 1143471 // choice_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add a definition object for this choice class to the
+ meta object."
+      end
+
+      operation 1193008 "default_displacement"
+	class_operation public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return ${class}::default_delta;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The default displacement value."
+      end
+
       operation 1178800 "make_choice"
 	class_operation public return_type class_ref 1026223 // move_choice
 	nparams 2
@@ -1451,27 +1520,6 @@ ${docstring}${body}
 
  signature
    static bool make_choice( specie const& )"
-      end
-
-      operation 1171632 "add_definition"
-	class_operation public explicit_return_type "void"
-	nparams 1
-	  param inout name "meta" type class_ref 1143471 // choice_meta
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Add a definition object for this choice class to the
- meta object."
       end
     end
 
@@ -4309,6 +4357,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
       associated_artifacts
 	artifact_ref 128816 // std_choices
 	artifact_ref 162352 // base_chooser
+	artifact_ref 397488 // choice_manager
 	artifact_ref 681391 // choice
 	artifact_ref 789679 // choice_meta
       end

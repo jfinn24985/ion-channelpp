@@ -1,5 +1,40 @@
 class trial_test
+!!!1185584.cpp!!!	test_base_choice_methods(inout choice : base_choice) : void
+std::stringstream ss;
+double prob;
+trial::choice_hash key;
+// serialization test
+{
+  prob = choice->probability();
+  key = choice->key();
+  boost::archive::text_oarchive oa( ss );
+  // write class instance to archive
+  oa << choice;
+}
+{
+  boost::shared_ptr< trial::base_choice > copy;
+  boost::archive::text_iarchive ia( ss );
+  // read class instance from archive
+  ia >> copy;
+  BOOST_REQUIRE( utility::feq( copy->probability(), prob ) );
+  BOOST_REQUIRE( copy->key() == key );
+
+  // Try setting probability on copy
+  prob += 1.0;
+  BOOST_CHECK_NO_THROW( copy->set_probability( prob ) );
+  BOOST_REQUIRE( utility::feq( copy->probability(), prob ) );
+  BOOST_REQUIRE( not utility::feq( copy->probability(), choice->probability() ) );
+}
+
 !!!783408.cpp!!!	choice_hash_test() : void
+{
+  // Test for canonical pattern
+  BOOST_CHECK( std::is_default_constructible< trial::choice_hash >::type {} );
+  BOOST_CHECK( std::is_copy_constructible< trial::choice_hash >::type {} );
+  BOOST_CHECK( std::is_move_constructible< trial::choice_hash >::type {} );
+  BOOST_CHECK( ( std::is_assignable< trial::choice_hash, trial::choice_hash >::type {} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< trial::choice_hash >::type {} );
+}
 std::stringstream store;
 {
   // Default ctor
@@ -112,141 +147,196 @@ std::stringstream store;
   BOOST_CHECK( var1.match( var2 ) );
 
 }
-!!!791600.cpp!!!	test_chooser_test() : void
-std::stringstream store;
+!!!1185712.cpp!!!	base_choice_test() : void
 {
-  // Test chooser key.
-  trial::choice_hash var3( 1, 2, 3, 4 );
-
-  trial::choice_hash var1;
-  BOOST_CHECK_EQUAL( var1.key, 0 );
-  BOOST_CHECK_EQUAL( var1.start, 0 );
-  BOOST_CHECK_EQUAL( var1.finish, 0 );
-  BOOST_CHECK_EQUAL( var1.subtype, 0 );
-
-  trial::choice_hash var2;
-  BOOST_CHECK( var1.equivalent( var2 ) );
-  BOOST_CHECK( var1 == var2 );
-  BOOST_CHECK( var1 >= var2 );
-  BOOST_CHECK( var1 <= var2 );
-  BOOST_CHECK( not (var1 != var2) );
-  BOOST_CHECK( not (var1.less_than( var2 ) ) );
-  BOOST_CHECK( not (var1 < var2) );
-
-  var1.key = 1;
-  var1.start = 2;
-  var1.finish = 3;
-  var1.subtype = 4;
-
-  BOOST_CHECK( not var1.equivalent( var2 ) );
-
-  BOOST_CHECK( var1.key == var3.key );
-  BOOST_CHECK( var1.start == var3.start );
-  BOOST_CHECK( var1.finish == var3.finish );
-  BOOST_CHECK( var1.subtype == var3.subtype );
-
-  // copy ctor
-  trial::choice_hash var4( var1 );
-  BOOST_CHECK( var1 == var4 );
-
-  // move ctor
-  trial::choice_hash var5( std::move( var4 ) );
-  BOOST_CHECK( var1 == var5 );
-
-  var5.subtype = 5;
-  BOOST_CHECK( var1 != var5 );
-  // op=
-  var5 = var3;
-  BOOST_CHECK( var1 == var5 );
-
-  boost::archive::text_oarchive oa(store);
-  // write class instance to archive
-  oa << var1;
+  // Test for virtual noncopy pattern
+  BOOST_CHECK( not std::is_default_constructible< test_choice >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< test_choice >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< test_choice >::type {} );
+  BOOST_CHECK( not( std::is_assignable< test_choice, test_choice >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< test_choice >::type {} );
 }
+
 {
-  trial::choice_hash var1;
-  trial::choice_hash var2;
+// Public ctor 1
+  const double prob = 0.1;
+  trial::choice_hash key1( 1, 2, 3, 4 );
+  boost::shared_ptr< trial::base_choice > var1( new test_choice( key1 ) );
+  BOOST_CHECK_EQUAL( var1->key(), key1 );
+  BOOST_CHECK_EQUAL( var1->probability(), 0 );
 
-  BOOST_CHECK( var1 == var2 );
+  BOOST_CHECK_NO_THROW( var1->set_probability( prob ) );
+  BOOST_CHECK_EQUAL( var1->probability(), prob );
 
-  boost::archive::text_iarchive ia(store);
-  // get class instance from archive
-  ia >> var1;
-
-  BOOST_CHECK( var1 != var2 );
-  BOOST_CHECK_EQUAL( var1.key, 1 );
-  BOOST_CHECK_EQUAL( var1.start, 2 );
-  BOOST_CHECK_EQUAL( var1.finish, 3 );
-  BOOST_CHECK_EQUAL( var1.subtype, 4 );
+  trial_test::test_base_choice_methods( var1 );
 }
+
 {
-  // Check comparison
-  trial::choice_hash var1( 1, 2, 3, 4 );
-  trial::choice_hash var2( 1, 2, 3, 5 );
-  BOOST_CHECK( var1.key == var2.key );
-  BOOST_CHECK( var1.start == var2.start );
-  BOOST_CHECK( var1.finish == var2.finish );
-  BOOST_CHECK( var1.subtype < var2.subtype );
-
-  BOOST_CHECK( var1 != var2 );
-  BOOST_CHECK( var1 < var2 );
-  BOOST_CHECK( var1 <= var2 );
-  BOOST_CHECK( var2 > var1 );
-  BOOST_CHECK( var2 >= var1 );
-  BOOST_CHECK( not var1.match( var2 ) );
-
-  var2 = var1;
-  ++var2.finish;
-
-  BOOST_CHECK( var1 != var2 );
-  BOOST_CHECK( var1 < var2 );
-  BOOST_CHECK( var1 <= var2 );
-  BOOST_CHECK( var2 > var1 );
-  BOOST_CHECK( var2 >= var1 );
-  BOOST_CHECK( not var1.match( var2 ) );
-
-  var2 = var1;
-  ++var2.start;
-
-  BOOST_CHECK( var1 != var2 );
-  BOOST_CHECK( var1 < var2 );
-  BOOST_CHECK( var1 <= var2 );
-  BOOST_CHECK( var2 > var1 );
-  BOOST_CHECK( var2 >= var1 );
-  BOOST_CHECK( not var1.match( var2 ) );
-
-  var2 = var1;
-  ++var2.key;
-
-  BOOST_CHECK( var1 != var2 );
-  BOOST_CHECK( var1 < var2 );
-  BOOST_CHECK( var1 <= var2 );
-  BOOST_CHECK( var2 > var1 );
-  BOOST_CHECK( var2 >= var1 );
-  BOOST_CHECK( var1.match( var2 ) );
+// Public ctor 2
+  trial::choice_hash key2( 1, 0, 0, 0 );
+  boost::shared_ptr< trial::base_choice > var2( new test_choice( 1ul ) );
+  BOOST_CHECK_EQUAL( var2->key(), key2 );
+  BOOST_CHECK_EQUAL( var2->probability(), 0 );
 
 }
+
+
 !!!441776.cpp!!!	move_choice_test() : void
-std::map< std::string, std::string > params;
-trial_fixture::test_base_choice< trial::move_choice >( params );
+const double prob = 0.1;
+const double delta = 10.0;
+trial::choice_hash key1( 0, 1, 1, 0 );
+boost::shared_ptr< trial::move_choice > var1( new trial::move_choice( 0ul ) );
+BOOST_CHECK_EQUAL( var1->key(), key1 );
+BOOST_CHECK_EQUAL( var1->probability(), 0 );
+
+BOOST_CHECK_NO_THROW( var1->set_probability( prob ) );
+BOOST_CHECK_EQUAL( var1->probability(), prob );
+
+BOOST_CHECK_EQUAL( var1->max_displacement(), trial::move_choice::default_displacement() );
+BOOST_CHECK_NO_THROW( var1->set_max_displacement( delta ) );
+BOOST_CHECK_EQUAL( var1->max_displacement(), delta );
+
+trial_test::test_base_choice_methods( var1 );
+
+!!!791600.cpp!!!	test_chooser_test() : void
+//XXstd::stringstream store;
+//XX{
+//XX  // Test chooser key.
+//XX  trial::choice_hash var3( 1, 2, 3, 4 );
+//XX
+//XX  trial::choice_hash var1;
+//XX  BOOST_CHECK_EQUAL( var1.key, 0 );
+//XX  BOOST_CHECK_EQUAL( var1.start, 0 );
+//XX  BOOST_CHECK_EQUAL( var1.finish, 0 );
+//XX  BOOST_CHECK_EQUAL( var1.subtype, 0 );
+//XX
+//XX  trial::choice_hash var2;
+//XX  BOOST_CHECK( var1.equivalent( var2 ) );
+//XX  BOOST_CHECK( var1 == var2 );
+//XX  BOOST_CHECK( var1 >= var2 );
+//XX  BOOST_CHECK( var1 <= var2 );
+//XX  BOOST_CHECK( not (var1 != var2) );
+//XX  BOOST_CHECK( not (var1.less_than( var2 ) ) );
+//XX  BOOST_CHECK( not (var1 < var2) );
+//XX
+//XX  var1.key = 1;
+//XX  var1.start = 2;
+//XX  var1.finish = 3;
+//XX  var1.subtype = 4;
+//XX
+//XX  BOOST_CHECK( not var1.equivalent( var2 ) );
+//XX
+//XX  BOOST_CHECK( var1.key == var3.key );
+//XX  BOOST_CHECK( var1.start == var3.start );
+//XX  BOOST_CHECK( var1.finish == var3.finish );
+//XX  BOOST_CHECK( var1.subtype == var3.subtype );
+//XX
+//XX  // copy ctor
+//XX  trial::choice_hash var4( var1 );
+//XX  BOOST_CHECK( var1 == var4 );
+//XX
+//XX  // move ctor
+//XX  trial::choice_hash var5( std::move( var4 ) );
+//XX  BOOST_CHECK( var1 == var5 );
+//XX
+//XX  var5.subtype = 5;
+//XX  BOOST_CHECK( var1 != var5 );
+//XX  // op=
+//XX  var5 = var3;
+//XX  BOOST_CHECK( var1 == var5 );
+//XX
+//XX  boost::archive::text_oarchive oa(store);
+//XX  // write class instance to archive
+//XX  oa << var1;
+//XX}
+//XX{
+//XX  trial::choice_hash var1;
+//XX  trial::choice_hash var2;
+//XX
+//XX  BOOST_CHECK( var1 == var2 );
+//XX
+//XX  boost::archive::text_iarchive ia(store);
+//XX  // get class instance from archive
+//XX  ia >> var1;
+//XX
+//XX  BOOST_CHECK( var1 != var2 );
+//XX  BOOST_CHECK_EQUAL( var1.key, 1 );
+//XX  BOOST_CHECK_EQUAL( var1.start, 2 );
+//XX  BOOST_CHECK_EQUAL( var1.finish, 3 );
+//XX  BOOST_CHECK_EQUAL( var1.subtype, 4 );
+//XX}
+//XX{
+//XX  // Check comparison
+//XX  trial::choice_hash var1( 1, 2, 3, 4 );
+//XX  trial::choice_hash var2( 1, 2, 3, 5 );
+//XX  BOOST_CHECK( var1.key == var2.key );
+//XX  BOOST_CHECK( var1.start == var2.start );
+//XX  BOOST_CHECK( var1.finish == var2.finish );
+//XX  BOOST_CHECK( var1.subtype < var2.subtype );
+//XX
+//XX  BOOST_CHECK( var1 != var2 );
+//XX  BOOST_CHECK( var1 < var2 );
+//XX  BOOST_CHECK( var1 <= var2 );
+//XX  BOOST_CHECK( var2 > var1 );
+//XX  BOOST_CHECK( var2 >= var1 );
+//XX  BOOST_CHECK( not var1.match( var2 ) );
+//XX
+//XX  var2 = var1;
+//XX  ++var2.finish;
+//XX
+//XX  BOOST_CHECK( var1 != var2 );
+//XX  BOOST_CHECK( var1 < var2 );
+//XX  BOOST_CHECK( var1 <= var2 );
+//XX  BOOST_CHECK( var2 > var1 );
+//XX  BOOST_CHECK( var2 >= var1 );
+//XX  BOOST_CHECK( not var1.match( var2 ) );
+//XX
+//XX  var2 = var1;
+//XX  ++var2.start;
+//XX
+//XX  BOOST_CHECK( var1 != var2 );
+//XX  BOOST_CHECK( var1 < var2 );
+//XX  BOOST_CHECK( var1 <= var2 );
+//XX  BOOST_CHECK( var2 > var1 );
+//XX  BOOST_CHECK( var2 >= var1 );
+//XX  BOOST_CHECK( not var1.match( var2 ) );
+//XX
+//XX  var2 = var1;
+//XX  ++var2.key;
+//XX
+//XX  BOOST_CHECK( var1 != var2 );
+//XX  BOOST_CHECK( var1 < var2 );
+//XX  BOOST_CHECK( var1 <= var2 );
+//XX  BOOST_CHECK( var2 > var1 );
+//XX  BOOST_CHECK( var2 >= var1 );
+//XX  BOOST_CHECK( var1.match( var2 ) );
+//XX
+//XX}
 !!!798384.cpp!!!	test_chooser_operation(in chsr : base_chooser, in expected_size : size_t) : void
-// The chooser interface provides a single unique 
-// function, generate_choices. This method takes a
-// simulation object and adds choice objects to a
-// a list. The hash 'key' of the generated choice
-// objects must 'match' the key of the chooser
-// object that generated them.
-
-// call signature
-// void generate_choices(const simulator & sim, boost::ptr_vector< base_choice >& choices) const
-
-boost::ptr_vector< trial::base_choice > choices;
-
-// dummy simulator
-platform::simulator_fixture simfix;
-simfix.add_solute_species();
-simfix.add_localized_species();
- 
-chsr.generate_choices( simfix.sim->get_species(), choices );
-
-BOOST_CHECK( choices.size() == expected_size );
+//XX// The chooser interface provides a single unique 
+//XX// function, generate_choices. This method takes a
+//XX// simulation object and adds choice objects to a
+//XX// a list. The hash 'key' of the generated choice
+//XX// objects must 'match' the key of the chooser
+//XX// object that generated them.
+//XX
+//XX// call signature
+//XX// void generate_choices(const simulator & sim, boost::ptr_vector< base_choice >& choices) const
+//XX
+//XX
+//XX// generated_choices
+//XX// is_permitted
+//XX// make_choice
+//XX// write_document
+//XX// serialize
+//XX
+//XXboost::ptr_vector< trial::base_choice > choices;
+//XX
+//XX// dummy simulator
+//XXplatform::simulator_fixture simfix;
+//XXsimfix.add_solute_species();
+//XXsimfix.add_localized_species();
+//XX 
+//XXchsr.generate_choices( simfix.sim->get_species(), choices );
+//XX
+//XXBOOST_CHECK( choices.size() == expected_size );

@@ -1,6 +1,6 @@
 format 75
 "trial_test" // trial::trial_test
-  revision 132
+  revision 134
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -68,7 +68,9 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
-      comment "Concrete class for testing abstract base class base_choice"
+      comment " Provides no-op implementation of \"generate\" to give a concrete 
+ class for testing abstract base class base_choice.
+ "
       classrelation 356017 // <generalisation>
 	relation 355761 ---|>
 	  a public
@@ -78,41 +80,12 @@ ${docstring}${members}
 	  b parent class_ref 1026095 // base_choice
       end
 
-      classrelation 369841 // <dependency>
-	relation 369585 -_->
-	  a package
-	    cpp default "#include in header"
-	    python "${type}"
-	    classrelation_ref 369841 // <dependency>
-	  b parent class_ref 986543 // change_set
-      end
-
-      operation 427569 "generate"
-	public return_type class_ref 986543 // change_set
+      operation 1192496 "test_choice"
+	public explicit_return_type ""
 	nparams 1
-	  param inout name "sys" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  return std::unique_ptr< ${type} > (new ${type}(*this));
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment "Return nul change_set"
-      end
-
-      operation 427697 "report"
-	stereotype "const"
-	const public explicit_return_type "void"
-	nparams 3
-	  param in name "sim" type class_ref 1129135 // simulator
-	  param inout name "log" explicit_type "ostream"
-	  param in name "att" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract}
+	  param in name "ispec" explicit_type "size_t"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
+: trial::base_choice( trial::choice_hash( ${p0}, 0, 0, 0 ) )
 {}
 "
 	
@@ -121,7 +94,77 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment "Do nothing."
+      end
+
+      operation 1192880 "test_choice"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "key" type class_ref 400048 // choice_hash
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
+: trial::base_choice( ${p0} )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1185456 "generate"
+	cpp_virtual public return_type class_ref 986543 // change_set
+	nparams 3
+	  param in name "particles" type class_ref 446128 // particle_manager
+	  param in name "regions" type class_ref 452656 // geometry_manager
+	  param inout name "rgnr" type class_ref 463407 // random_distribution
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override 
+{
+  return std::unique_ptr< ${type} >{};
+}
+"
+	
+	
+	
+	
+	comment "Generate a new change set based on this choice type."
+      end
+
+      operation 1192368 "permitted"
+	class_operation public explicit_return_type "bool"
+	nparams 1
+	  param in name "spec" type class_ref 134577 // specie
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return true;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Can this specie be used to create a trial of the current type?"
+      end
+
+      operation 1192240 "make_choice"
+	class_operation public return_type class_ref 1026095 // base_choice
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}${t0} ${p0}${v0}, const std::map< ${t1}, ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  return std::unique_ptr< ${type} >( new ${class}( ${p0} ) );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Generate a choice object."
       end
     end
 
@@ -242,73 +285,6 @@ ${docstring}${body}
       end
     end
 
-    class 264752 "trial_fixture"
-      visibility package 
-      cpp_decl "${comment}${template}class ${name}${inherit}
- {
-${members}
-};
-${inlines}
-"
-      java_decl ""
-      php_decl ""
-      python_decl "class ${name}${inherit}:
-${docstring}${members}
-"
-      idl_decl ""
-      explicit_switch_type ""
-      
-      comment " Class for common testing framework for choice classes"
-      classrelation 289584 // <dependency>
-	relation 289328 -_->
-	  a package
-	    cpp default "#include in header"
-	    python "${type}"
-	    classrelation_ref 289584 // <dependency>
-	  b parent class_ref 134959 // ensemble
-      end
-
-      classrelation 289200 // <dependency>
-	relation 288944 -_->
-	  a package
-	    cpp default "#include in header"
-	    python "${type}"
-	    classrelation_ref 289200 // <dependency>
-	  b parent class_ref 217264 // simulator_fixture
-      end
-
-      classrelation 289456 // <dependency>
-	relation 289200 -_->
-	  a package
-	    cpp default "#include in header"
-	    python "${type}"
-	    classrelation_ref 289456 // <dependency>
-	  b parent class_ref 191024 // simulator_test_dummy
-      end
-
-      operation 441648 "test_base_choice"
-	stereotype "template"
-	class_operation cpp_inline public explicit_return_type "void"
-	nparams 1
-	  param in name "params" explicit_type "string"
-	cpp_decl "    ${comment}${friend}template< class T >
-${static}${inline}${virtual}${type} ${name}${(}std::map< ${t0}, ${t0} > const & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}template< class T > ${inline}${type} ${class}::${name}${(}std::map< ${t0}, ${t0} > const & ${p0}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Test of characteristics of all choice types."
-      end
-    end
-
     class 230321 "trial_test"
       visibility package 
       cpp_decl "${comment}${template}class ${name}${inherit}
@@ -370,22 +346,23 @@ ${docstring}${members}
 	  b parent class_ref 236849 // test_choice
       end
 
-      classrelation 513840 // <dependency>
-	relation 512944 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 513840 // <dependency>
-	  b parent class_ref 413232 // test_chooser
-      end
-
-      classrelation 289712 // <dependency>
-	relation 289456 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 289712 // <dependency>
-	  b parent class_ref 264752 // trial_fixture
+      operation 1185584 "test_base_choice_methods"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "choice" type class_ref 1026095 // base_choice
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}boost::shared_ptr< ${t0} > ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
       end
 
       operation 783408 "choice_hash_test"
@@ -403,7 +380,7 @@ ${docstring}${members}
 	
       end
 
-      operation 791600 "test_chooser_test"
+      operation 1185712 "base_choice_test"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -416,6 +393,7 @@ ${docstring}${members}
 	
 	
 	
+	comment " Use test_choice class to test base_choice operations."
       end
 
       operation 441776 "move_choice_test"
@@ -432,6 +410,21 @@ ${docstring}${members}
 	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
 ${docstring}${body}
 "
+	
+      end
+
+      operation 791600 "test_chooser_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
 	
       end
 
@@ -572,11 +565,10 @@ ${namespace_end}
 
 ${includes}
 // Manuals
-#include \"particle/ensemble.hpp\"
-#include \"trial/move_choice.hpp\"
+//#include \"particle/ensemble.hpp\"
 //#include <boost/archive/text_oarchive.hpp>
 //#include <boost/archive/text_iarchive.hpp>
-//#include \"utility/multi_array.hpp\"
+#include \"utility/fuzzy_equals.hpp\"
 //#include \"utility/random.hpp\"
 //#include \"utility/machine.hpp\"
 //#include \"utility/mathutil.hpp\"
@@ -606,62 +598,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
-    artifact 255664 "trial_fixture"
-      stereotype "source"
-      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
-#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
-
-${comment}
-${includes}
-${declarations}
-${namespace_start}
-${definition}
-${namespace_end}
-#endif
-"
-      python_src "${comment}
-${import}
-${definition}"
-      associated_classes
-	class_ref 264752 // trial_fixture
-      end
-      comment "----------------------------------------------------------------------
-This source file is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-----------------------------------------------------------------------
-"
-    end
-
     artifact 240433 "trial_exec"
       stereotype "executable"
       associated_artifacts
 	artifact_ref 185007 // serialization
 	artifact_ref 194353 // unit_test_framework
 	artifact_ref 207919 // libionch_utility
-	artifact_ref 209200 // libtest_platform
 	artifact_ref 215855 // filesystem
 	artifact_ref 215983 // program_options
 	artifact_ref 216239 // date_time
 	artifact_ref 240305 // trial_test
 	artifact_ref 281519 // system
 	artifact_ref 334257 // uuid
+	artifact_ref 449840 // libionch_geometry
 	artifact_ref 609327 // libionch_core
 	artifact_ref 617391 // libionch_particle
 	artifact_ref 651439 // random
 	artifact_ref 694959 // libionch_trial
-	artifact_ref 716335 // libionch_evaluator
-	artifact_ref 769327 // libionch_platform
-	artifact_ref 769583 // libionch_observer
       end
       ncouples 2
       key "butter flags" value "-DBOOST_TEST_DYN_LINK"
