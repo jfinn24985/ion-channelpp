@@ -1,6 +1,6 @@
 format 75
 "trial" // trial
-  revision 245
+  revision 246
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -770,6 +770,23 @@ ${docstring}${body}
 	comment " Iterator over the choice list."
       end
 
+      operation 1240496 "begin_chooser"
+	stereotype "const"
+	const public return_type class_ref 170160 // base_chooser
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::ptr_vector< ${type} >::const_iterator ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->choosers_.begin();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
       operation 746544 "description"
 	const public explicit_return_type "void"
 	nparams 1
@@ -789,7 +806,7 @@ ${docstring}${body}
  log at the start of the simulation."
       end
 
-      operation 747056 "empty"
+      operation 747056 "chooser_empty"
 	const public explicit_return_type "bool"
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
@@ -819,6 +836,23 @@ ${docstring}${body}
 	
       end
 
+      operation 1240624 "end_chooser"
+	stereotype "const"
+	const public return_type class_ref 170160 // base_chooser
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::ptr_vector< ${type} >::const_iterator ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->choosers_.end();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
       operation 746800 "generate"
 	public return_type class_ref 986543 // change_set
 	nparams 4
@@ -839,6 +873,26 @@ ${docstring}${body}
 	
 	comment " Select a choice based on 'selector' and generate a new change set.
 "
+      end
+
+      operation 1240368 "has_chooser"
+	const public explicit_return_type "bool"
+	nparams 1
+	  param in name "label" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Does this manager have a chooser with the given name?"
       end
 
       operation 746928 "prepare"
@@ -5306,6 +5360,57 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
+    artifact 517168 "chooser_instantiation"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+#include <boost/serialization/export.hpp>
+#include \"trial/chooser.hpp\"
+#include \"trial/chooser_pair.hpp\"
+#include \"trial/std_choices.hpp\"
+
+BOOST_CLASS_EXPORT_KEY(trial::chooser< trial::move_choice >);
+BOOST_CLASS_EXPORT_KEY(trial::chooser< trial::jump_choice >);
+BOOST_CLASS_EXPORT_KEY(trial::chooser< trial::jump_in >);
+BOOST_CLASS_EXPORT_KEY(trial::chooser< trial::jump_out >);
+BOOST_CLASS_EXPORT_KEY(trial::chooser< trial::jump_around >);
+BOOST_CLASS_EXPORT_KEY2(trial::chooser_pair< trial::add_specie BOOST_PP_COMMA() trial::remove_specie >, \"trial::chooser_pair< trial::add_specie, trial::remove_specie >\");
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::chooser< trial::move_choice >);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::chooser< trial::jump_choice >);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::chooser< trial::jump_in >);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::chooser< trial::jump_out >);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::chooser< trial::jump_around >);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::chooser_pair< trial::add_specie BOOST_PP_COMMA() trial::remove_specie >);"
+      associated_classes
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
     artifact 128816 "std_choices"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -5319,16 +5424,23 @@ ${definition}
 ${namespace_end}
 
 #include <boost/serialization/export.hpp>
-#include \"trial/chooser.hpp\"
 
 BOOST_CLASS_EXPORT_KEY(trial::move_choice);
 BOOST_CLASS_EXPORT_KEY(trial::jump_choice);
-BOOST_CLASS_EXPORT_KEY(trial::chooser< trial::jump_choice >);
 BOOST_CLASS_EXPORT_KEY(trial::jump_in);
 BOOST_CLASS_EXPORT_KEY(trial::jump_out);
 BOOST_CLASS_EXPORT_KEY(trial::jump_around);
 BOOST_CLASS_EXPORT_KEY(trial::add_specie);
 BOOST_CLASS_EXPORT_KEY(trial::remove_specie);
+
+#include \"trial/chooser_pair.hpp\"
+#include \"trial/chooser.hpp\"
+BOOST_CLASS_EXPORT_KEY(trial::chooser< trial::move_choice >);
+BOOST_CLASS_EXPORT_KEY(trial::chooser< trial::jump_choice >);
+BOOST_CLASS_EXPORT_KEY(trial::chooser< trial::jump_in >);
+BOOST_CLASS_EXPORT_KEY(trial::chooser< trial::jump_out >);
+BOOST_CLASS_EXPORT_KEY(trial::chooser< trial::jump_around >);
+BOOST_CLASS_EXPORT_KEY2(trial::chooser_pair< trial::add_specie BOOST_PP_COMMA() trial::remove_specie >, \"trial::chooser_pair< trial::add_specie, trial::remove_specie >\");
 #endif
 "
       cpp_src "${comment}
@@ -5353,12 +5465,19 @@ ${namespace_end}
 
 BOOST_CLASS_EXPORT_IMPLEMENT(trial::move_choice);
 BOOST_CLASS_EXPORT_IMPLEMENT(trial::jump_choice);
-BOOST_CLASS_EXPORT_IMPLEMENT(trial::chooser< trial::jump_choice >);
 BOOST_CLASS_EXPORT_IMPLEMENT(trial::jump_in);
 BOOST_CLASS_EXPORT_IMPLEMENT(trial::jump_out);
 BOOST_CLASS_EXPORT_IMPLEMENT(trial::jump_around);
 BOOST_CLASS_EXPORT_IMPLEMENT(trial::add_specie);
 BOOST_CLASS_EXPORT_IMPLEMENT(trial::remove_specie);
+
+
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::chooser< trial::move_choice >);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::chooser< trial::jump_choice >);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::chooser< trial::jump_in >);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::chooser< trial::jump_out >);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::chooser< trial::jump_around >);
+BOOST_CLASS_EXPORT_IMPLEMENT(trial::chooser_pair< trial::add_specie BOOST_PP_COMMA() trial::remove_specie >);
 "
       python_src "${comment}
 ${import}

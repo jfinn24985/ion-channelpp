@@ -235,6 +235,34 @@ std::stringstream ss;
   }
 }
 
+!!!798384.cpp!!!	test_chooser_operation(in chsr : base_chooser, in expected_size : size_t) : void
+//XX// The chooser interface provides a single unique 
+//XX// function, generate_choices. This method takes a
+//XX// simulation object and adds choice objects to a
+//XX// a list. The hash 'key' of the generated choice
+//XX// objects must 'match' the key of the chooser
+//XX// object that generated them.
+//XX
+//XX// call signature
+//XX// void generate_choices(const simulator & sim, boost::ptr_vector< base_choice >& choices) const
+//XX
+//XX
+//XX// generated_choices
+//XX// is_permitted
+//XX// make_choice
+//XX// write_document
+//XX// serialize
+//XX
+//XXboost::ptr_vector< trial::base_choice > choices;
+//XX
+//XX// dummy simulator
+//XXplatform::simulator_fixture simfix;
+//XXsimfix.add_solute_species();
+//XXsimfix.add_localized_species();
+//XX 
+//XXchsr.generate_choices( simfix.sim->get_species(), choices );
+//XX
+//XXBOOST_CHECK( choices.size() == expected_size );
 !!!783408.cpp!!!	choice_hash_test() : void
 {
   // Test for canonical pattern
@@ -413,7 +441,10 @@ trial_test::test_base_choice_methods( var1 );
 {
   std::map< std::string, std::string > params;
   trial_test::test_choice_generate< trial::add_specie >( params );
+
+  trial_test::test_make_chooser_methods< trial::chooser_pair< trial::add_specie,trial::remove_specie  > >( params, "individual", "", 0.5, 4, 0.125 );
 }
+
 !!!1206704.cpp!!!	jump_choice_test() : void
 const double prob = 0.1;
 {
@@ -438,7 +469,7 @@ std::map< std::string, std::string > params;
 
 trial_test::test_choice_generate< trial::jump_choice >( params );
 
-trial_test::test_make_chooser_methods< trial::chooser< trial::jump_choice > >( params, "jump", "", 0.5, 2, 0.1 );
+trial_test::test_make_chooser_methods< trial::chooser< trial::jump_choice > >( params, "jump", "", 0.5, 2, 0.25 );
 !!!1206832.cpp!!!	jump_in_choice_test() : void
 const double prob = 0.1;
 {
@@ -464,6 +495,8 @@ trial_test::test_base_choice_methods( var1 );
   std::map< std::string, std::string > params;
   params[ core::strngs::fsregn() ] = "bulk";
   trial_test::test_choice_generate< trial::jump_in >( params );
+
+  trial_test::test_make_chooser_methods< trial::chooser< trial::jump_in > >( params, "jump-in", "", 0.5, 2, 0.25 );
 }
 !!!1206960.cpp!!!	jump_out_choice_test() : void
 const double prob = 0.1;
@@ -490,6 +523,8 @@ trial_test::test_base_choice_methods( var1 );
   std::map< std::string, std::string > params;
   params[ core::strngs::fsregn() ] = "bulk";
   trial_test::test_choice_generate< trial::jump_out >( params );
+
+  trial_test::test_make_chooser_methods< trial::chooser< trial::jump_out > >( params, "jump-out", "", 0.5, 2, 0.25 );
 }
 !!!1213744.cpp!!!	jump_around_choice_test() : void
 const double prob = 0.1;
@@ -516,6 +551,8 @@ trial_test::test_base_choice_methods( var1 );
   std::map< std::string, std::string > params;
   params[ core::strngs::fsregn() ] = "bulk";
   trial_test::test_choice_generate< trial::jump_around >( params );
+
+  trial_test::test_make_chooser_methods< trial::chooser< trial::jump_around > >( params, "jump", "", 0.5, 1, 0.5 );
 }
 !!!441776.cpp!!!	move_choice_test() : void
 {
@@ -547,6 +584,8 @@ trial_test::test_base_choice_methods( var1 );
   std::map< std::string, std::string > params;
   params[ "delta" ] = "0.5";
   trial_test::test_choice_generate< trial::move_choice >( params );
+
+  trial_test::test_make_chooser_methods< trial::chooser< trial::move_choice > >( params, "move", "", 0.5, 5, 0.1 );
 }
 !!!1207216.cpp!!!	remove_specie_choice_test() : void
 const double prob = 0.1;
@@ -572,145 +611,173 @@ trial_test::test_base_choice_methods( var1 );
   std::map< std::string, std::string > params;
   trial_test::test_choice_generate< trial::remove_specie >( params );
 }
-!!!791600.cpp!!!	test_chooser_test() : void
-//XXstd::stringstream store;
-//XX{
-//XX  // Test chooser key.
-//XX  trial::choice_hash var3( 1, 2, 3, 4 );
-//XX
-//XX  trial::choice_hash var1;
-//XX  BOOST_CHECK_EQUAL( var1.key, 0 );
-//XX  BOOST_CHECK_EQUAL( var1.start, 0 );
-//XX  BOOST_CHECK_EQUAL( var1.finish, 0 );
-//XX  BOOST_CHECK_EQUAL( var1.subtype, 0 );
-//XX
-//XX  trial::choice_hash var2;
-//XX  BOOST_CHECK( var1.equivalent( var2 ) );
-//XX  BOOST_CHECK( var1 == var2 );
-//XX  BOOST_CHECK( var1 >= var2 );
-//XX  BOOST_CHECK( var1 <= var2 );
-//XX  BOOST_CHECK( not (var1 != var2) );
-//XX  BOOST_CHECK( not (var1.less_than( var2 ) ) );
-//XX  BOOST_CHECK( not (var1 < var2) );
-//XX
-//XX  var1.key = 1;
-//XX  var1.start = 2;
-//XX  var1.finish = 3;
-//XX  var1.subtype = 4;
-//XX
-//XX  BOOST_CHECK( not var1.equivalent( var2 ) );
-//XX
-//XX  BOOST_CHECK( var1.key == var3.key );
-//XX  BOOST_CHECK( var1.start == var3.start );
-//XX  BOOST_CHECK( var1.finish == var3.finish );
-//XX  BOOST_CHECK( var1.subtype == var3.subtype );
-//XX
-//XX  // copy ctor
-//XX  trial::choice_hash var4( var1 );
-//XX  BOOST_CHECK( var1 == var4 );
-//XX
-//XX  // move ctor
-//XX  trial::choice_hash var5( std::move( var4 ) );
-//XX  BOOST_CHECK( var1 == var5 );
-//XX
-//XX  var5.subtype = 5;
-//XX  BOOST_CHECK( var1 != var5 );
-//XX  // op=
-//XX  var5 = var3;
-//XX  BOOST_CHECK( var1 == var5 );
-//XX
-//XX  boost::archive::text_oarchive oa(store);
-//XX  // write class instance to archive
-//XX  oa << var1;
-//XX}
-//XX{
-//XX  trial::choice_hash var1;
-//XX  trial::choice_hash var2;
-//XX
-//XX  BOOST_CHECK( var1 == var2 );
-//XX
-//XX  boost::archive::text_iarchive ia(store);
-//XX  // get class instance from archive
-//XX  ia >> var1;
-//XX
-//XX  BOOST_CHECK( var1 != var2 );
-//XX  BOOST_CHECK_EQUAL( var1.key, 1 );
-//XX  BOOST_CHECK_EQUAL( var1.start, 2 );
-//XX  BOOST_CHECK_EQUAL( var1.finish, 3 );
-//XX  BOOST_CHECK_EQUAL( var1.subtype, 4 );
-//XX}
-//XX{
-//XX  // Check comparison
-//XX  trial::choice_hash var1( 1, 2, 3, 4 );
-//XX  trial::choice_hash var2( 1, 2, 3, 5 );
-//XX  BOOST_CHECK( var1.key == var2.key );
-//XX  BOOST_CHECK( var1.start == var2.start );
-//XX  BOOST_CHECK( var1.finish == var2.finish );
-//XX  BOOST_CHECK( var1.subtype < var2.subtype );
-//XX
-//XX  BOOST_CHECK( var1 != var2 );
-//XX  BOOST_CHECK( var1 < var2 );
-//XX  BOOST_CHECK( var1 <= var2 );
-//XX  BOOST_CHECK( var2 > var1 );
-//XX  BOOST_CHECK( var2 >= var1 );
-//XX  BOOST_CHECK( not var1.match( var2 ) );
-//XX
-//XX  var2 = var1;
-//XX  ++var2.finish;
-//XX
-//XX  BOOST_CHECK( var1 != var2 );
-//XX  BOOST_CHECK( var1 < var2 );
-//XX  BOOST_CHECK( var1 <= var2 );
-//XX  BOOST_CHECK( var2 > var1 );
-//XX  BOOST_CHECK( var2 >= var1 );
-//XX  BOOST_CHECK( not var1.match( var2 ) );
-//XX
-//XX  var2 = var1;
-//XX  ++var2.start;
-//XX
-//XX  BOOST_CHECK( var1 != var2 );
-//XX  BOOST_CHECK( var1 < var2 );
-//XX  BOOST_CHECK( var1 <= var2 );
-//XX  BOOST_CHECK( var2 > var1 );
-//XX  BOOST_CHECK( var2 >= var1 );
-//XX  BOOST_CHECK( not var1.match( var2 ) );
-//XX
-//XX  var2 = var1;
-//XX  ++var2.key;
-//XX
-//XX  BOOST_CHECK( var1 != var2 );
-//XX  BOOST_CHECK( var1 < var2 );
-//XX  BOOST_CHECK( var1 <= var2 );
-//XX  BOOST_CHECK( var2 > var1 );
-//XX  BOOST_CHECK( var2 >= var1 );
-//XX  BOOST_CHECK( var1.match( var2 ) );
-//XX
-//XX}
-!!!798384.cpp!!!	test_chooser_operation(in chsr : base_chooser, in expected_size : size_t) : void
-//XX// The chooser interface provides a single unique 
-//XX// function, generate_choices. This method takes a
-//XX// simulation object and adds choice objects to a
-//XX// a list. The hash 'key' of the generated choice
-//XX// objects must 'match' the key of the chooser
-//XX// object that generated them.
-//XX
-//XX// call signature
-//XX// void generate_choices(const simulator & sim, boost::ptr_vector< base_choice >& choices) const
-//XX
-//XX
-//XX// generated_choices
-//XX// is_permitted
-//XX// make_choice
-//XX// write_document
-//XX// serialize
-//XX
-//XXboost::ptr_vector< trial::base_choice > choices;
-//XX
-//XX// dummy simulator
-//XXplatform::simulator_fixture simfix;
-//XXsimfix.add_solute_species();
-//XXsimfix.add_localized_species();
-//XX 
-//XXchsr.generate_choices( simfix.sim->get_species(), choices );
-//XX
-//XXBOOST_CHECK( choices.size() == expected_size );
+!!!1240752.cpp!!!	choice_meta_lifetime_test() : void
+{
+  // Test for virtual object pattern
+  BOOST_CHECK( not std::is_default_constructible< trial::choice_meta >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< trial::choice_meta >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< trial::choice_meta >::type {} );
+  BOOST_CHECK( not ( std::is_assignable< trial::choice_meta, trial::choice_meta >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< trial::choice_meta >::type {} );
+}
+!!!791600.cpp!!!	choice_meta_move_choice_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::move_choice::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "move" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Valid input
+/////////////////////////////
+std::string canon_input( "trial\ntype \"move\"\nrate 0.5\nspecie-list Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+BOOST_REQUIRE( not cman->chooser_empty() );
+BOOST_CHECK( cman->has_chooser( "move" ) );
+!!!1240880.cpp!!!	choice_meta_jump_choice_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_choice::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Valid input
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump\"\nrate 0.5\nspecie-list Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+BOOST_REQUIRE( not cman->chooser_empty() );
+BOOST_CHECK( cman->has_chooser( "jump" ) );
+!!!1241008.cpp!!!	choice_meta_jump_around_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_around::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-around" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Valid input
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-around\"\nregion \"channel\"\nrate 0.5\nspecie-list Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+BOOST_REQUIRE( not cman->chooser_empty() );
+BOOST_CHECK( cman->has_chooser( "jump-around" ) );
+!!!1241136.cpp!!!	choice_meta_jump_in_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_in::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-in" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Valid input
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-in\"\nregion \"channel\"\nrate 0.5\nspecie-list Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+BOOST_REQUIRE( not cman->chooser_empty() );
+BOOST_CHECK( cman->has_chooser( "jump-in" ) );
+!!!1241264.cpp!!!	choice_meta_jump_out_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_out::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-out" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Valid input
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-out\"\nregion \"channel\"\nrate 0.5\nspecie-list Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+BOOST_REQUIRE( not cman->chooser_empty() );
+BOOST_CHECK( cman->has_chooser( "jump-out" ) );
+!!!1241392.cpp!!!	choice_meta_add_remove_choice_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::add_specie::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "individual" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Valid input
+/////////////////////////////
+std::string canon_input( "trial\ntype \"individual\"\nrate 0.5\nspecie-list Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+BOOST_REQUIRE( not cman->chooser_empty() );
+BOOST_CHECK( cman->has_chooser( "individual" ) );
+!!!1241520.cpp!!!	input_meta_no_type_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::move_choice::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "move" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\n#type \"move\"\nrate 0.5\nspecie-list Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Trial requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
