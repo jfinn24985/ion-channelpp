@@ -30,7 +30,7 @@ trial::choice_hash key;
 particle::particle_manager pman;
 {
   particle::specie spc1;
- spc1.set_label( "CA" );
+  spc1.set_label( "CA" );
   spc1.set_concentration( 1.0 );
   spc1.set_radius( 0.11 );
   spc1.set_rate( 0.1 );
@@ -39,7 +39,9 @@ particle::particle_manager pman;
   spc1.set_type( particle::specie::MOBILE );
   spc1.append_position( particle::coordinate( 2.0, 2.0, 0.0 ), particle::centroid( 3.0, 2.0, 2.0, 0.0 ) );
   pman.add_specie( spc1 );
- 
+}
+{
+  particle::specie spc1;
   spc1.set_label( "CO" );
   spc1.set_concentration( 1.0 );
   spc1.set_radius( 0.12 );
@@ -49,7 +51,9 @@ particle::particle_manager pman;
   spc1.set_type( particle::specie::FLEXIBLE );
   spc1.append_position( particle::coordinate( 0.0, 0.0, 2.0 ), particle::centroid( 3.0, 0.0, 0.0, 2.0 ) );
   pman.add_specie( spc1 );
- 
+}
+{
+  particle::specie spc1;
   spc1.set_label( "OX" );
   spc1.set_concentration( 1.0 );
   spc1.set_radius( 0.12 );
@@ -59,7 +63,9 @@ particle::particle_manager pman;
   spc1.set_type( particle::specie::CHANNEL_ONLY );
   spc1.append_position( particle::coordinate( 2.0, 0.0, 2.0 ) );
   pman.add_specie( spc1 );
-
+}
+{
+  particle::specie spc1;
   spc1.set_label( "Na" );
   spc1.set_concentration( 1.0 );
   spc1.set_radius( 0.12 );
@@ -70,7 +76,9 @@ particle::particle_manager pman;
   spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
   spc1.append_position( particle::coordinate( 2.0, 0.0, 0.0 ) );
   pman.add_specie( spc1 );
- 
+}
+{
+  particle::specie spc1;
   spc1.set_label( "Cl" );
   spc1.set_concentration( 1.0 );
   spc1.set_radius( 0.2 );
@@ -80,15 +88,14 @@ particle::particle_manager pman;
   spc1.set_type( particle::specie::SOLUTE );
   spc1.append_position( particle::coordinate( 0.0, 2.0, 0.0 ) );
   pman.add_specie( spc1 );
- 
- }
+}
 pman.add_predefined_particles();
 BOOST_REQUIRE_EQUAL( pman.specie_count(), 5 );
 BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 6 );
-boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 5.0 ) ); 
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 5.0 ) );
 geometry::geometry_manager gman( regn );
 {
-  boost::shared_ptr< geometry::base_region > bulk( new geometry::cube_region( "bulk", 4.0, particle::coordinate( 0.0, 0.0, 0.0 ), true ) ); 
+  boost::shared_ptr< geometry::base_region > bulk( new geometry::cube_region( "bulk", 4.0, particle::coordinate( 0.0, 0.0, 0.0 ), true ) );
   gman.add_region( bulk );
 }
 {
@@ -106,17 +113,128 @@ boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
 utility::random_distribution rgnr( generator );
 
 bool usable = false;
-for(std::size_t idx = 0; idx != pman.specie_count(); ++idx )
+for( std::size_t idx = 0; idx != pman.specie_count(); ++idx )
 {
   if( Choice::permitted( pman.get_specie( idx ) ) )
   {
     usable = true;
     std::unique_ptr< trial::base_choice > chc( Choice::make_choice( idx, params ) );
-    std::unique_ptr< particle::change_set > tryit( chc->generate( pman, gman, rgnr ) );
-    BOOST_REQUIRE( tryit->fail() or ( tryit->size() > 0 ) );
+    const double spc_radius = pman.get_specie( idx ).radius();
+    std::size_t nonfails = 0;
+    for( std::size_t attempts = 0; attempts != 1024; ++attempts )
+    {
+      std::unique_ptr< particle::change_set > tryit( chc->generate( pman, gman, rgnr ) );
+      BOOST_REQUIRE( tryit->fail() or ( tryit->size() > 0 ) );
+      if( not tryit->fail() )
+      {
+        ++nonfails;
+        // new position should be in system or fail should be set.
+        const auto& atom = (*tryit)[ 0 ];
+        BOOST_REQUIRE( gman.system_region().is_inside( atom.new_position, spc_radius ) );
+      }
+    }
+    BOOST_WARN_GE( nonfails, 0 );
   }
 }
 BOOST_REQUIRE( usable );
+
+
+!!!1233328.cpp!!!	test_make_chooser_methods(in params : string, in type : string, in specielist : string, in rate : double, in count : size_t, in exp_rate : double) : void
+particle::particle_manager pman;
+{
+  particle::specie spc1;
+  spc1.set_label( "CA" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.11 );
+  spc1.set_rate( 0.2 );
+  spc1.set_valency( 1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::MOBILE );
+  spc1.append_position( particle::coordinate( 2.0, 2.0, 0.0 ), particle::centroid( 3.0, 2.0, 2.0, 0.0 ) );
+  pman.add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "CO" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.2 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::FLEXIBLE );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 2.0 ), particle::centroid( 3.0, 0.0, 0.0, 2.0 ) );
+  pman.add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "OX" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.2 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::CHANNEL_ONLY );
+  spc1.append_position( particle::coordinate( 2.0, 0.0, 2.0 ) );
+  pman.add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "Na" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.2 );
+  spc1.set_valency( 1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 2.0, 0.0, 0.0 ) );
+  pman.add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "Cl" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.2 );
+  spc1.set_rate( 0.2 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.3123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 2.0, 0.0 ) );
+  pman.add_specie( spc1 );
+}
+pman.add_predefined_particles();
+BOOST_REQUIRE_EQUAL( pman.specie_count(), 5 );
+BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 6 );
+
+std::stringstream ss;
+{
+  std::unique_ptr< trial::base_chooser > chsr = Chooser::make_chooser( params, type, specielist, rate );
+  BOOST_CHECK_EQUAL( chsr->rate(), rate );
+  BOOST_CHECK_EQUAL( chsr->type(), type );
+  BOOST_CHECK_EQUAL( chsr->specie_list(), specielist );
+  BOOST_CHECK( chsr->parameters() == params );
+  boost::archive::text_oarchive oa( ss );
+  // write class instance to archive
+  oa << chsr;
+}
+{
+  std::unique_ptr< trial::base_chooser > chsr;
+  boost::archive::text_iarchive ia( ss );
+  // read class instance from archive
+  ia >> chsr;
+  BOOST_CHECK_EQUAL( chsr->rate(), rate );
+  BOOST_CHECK_EQUAL( chsr->type(), type );
+  BOOST_CHECK_EQUAL( chsr->specie_list(), specielist );
+  BOOST_CHECK( chsr->parameters() == params );
+  boost::ptr_vector< trial::base_choice > choices;
+  chsr->generate_choices( pman.get_species(), choices );
+  BOOST_REQUIRE_EQUAL( choices.size(), count );
+  for( std::size_t idx = 0; idx != count; ++idx )
+  {
+    BOOST_CHECK_CLOSE( choices[ idx ].probability(), exp_rate, 0.00001 );
+  }
+}
+
 !!!783408.cpp!!!	choice_hash_test() : void
 {
   // Test for canonical pattern
@@ -292,6 +410,10 @@ BOOST_CHECK_EQUAL( var1->probability(), prob );
 
 trial_test::test_base_choice_methods( var1 );
 
+{
+  std::map< std::string, std::string > params;
+  trial_test::test_choice_generate< trial::add_specie >( params );
+}
 !!!1206704.cpp!!!	jump_choice_test() : void
 const double prob = 0.1;
 {
@@ -315,6 +437,8 @@ trial_test::test_base_choice_methods( var1 );
 std::map< std::string, std::string > params;
 
 trial_test::test_choice_generate< trial::jump_choice >( params );
+
+trial_test::test_make_chooser_methods< trial::chooser< trial::jump_choice > >( params, "jump", "", 0.5, 2, 0.1 );
 !!!1206832.cpp!!!	jump_in_choice_test() : void
 const double prob = 0.1;
 {
@@ -336,6 +460,11 @@ BOOST_CHECK_EQUAL( var1->probability(), prob );
 
 trial_test::test_base_choice_methods( var1 );
 
+{
+  std::map< std::string, std::string > params;
+  params[ core::strngs::fsregn() ] = "bulk";
+  trial_test::test_choice_generate< trial::jump_in >( params );
+}
 !!!1206960.cpp!!!	jump_out_choice_test() : void
 const double prob = 0.1;
 {
@@ -357,6 +486,11 @@ BOOST_CHECK_EQUAL( var1->probability(), prob );
 
 trial_test::test_base_choice_methods( var1 );
 
+{
+  std::map< std::string, std::string > params;
+  params[ core::strngs::fsregn() ] = "bulk";
+  trial_test::test_choice_generate< trial::jump_out >( params );
+}
 !!!1213744.cpp!!!	jump_around_choice_test() : void
 const double prob = 0.1;
 {
@@ -378,6 +512,11 @@ BOOST_CHECK_EQUAL( var1->probability(), prob );
 
 trial_test::test_base_choice_methods( var1 );
 
+{
+  std::map< std::string, std::string > params;
+  params[ core::strngs::fsregn() ] = "bulk";
+  trial_test::test_choice_generate< trial::jump_around >( params );
+}
 !!!441776.cpp!!!	move_choice_test() : void
 {
   // Test is virtual object pattern
@@ -404,6 +543,11 @@ BOOST_CHECK_EQUAL( var1->max_displacement(), delta );
 
 trial_test::test_base_choice_methods( var1 );
 
+{
+  std::map< std::string, std::string > params;
+  params[ "delta" ] = "0.5";
+  trial_test::test_choice_generate< trial::move_choice >( params );
+}
 !!!1207216.cpp!!!	remove_specie_choice_test() : void
 const double prob = 0.1;
 {
@@ -424,6 +568,10 @@ BOOST_CHECK_EQUAL( var1->probability(), prob );
 
 trial_test::test_base_choice_methods( var1 );
 
+{
+  std::map< std::string, std::string > params;
+  trial_test::test_choice_generate< trial::remove_specie >( params );
+}
 !!!791600.cpp!!!	test_chooser_test() : void
 //XXstd::stringstream store;
 //XX{

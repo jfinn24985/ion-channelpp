@@ -1,6 +1,6 @@
 format 75
 "trial_test" // trial::trial_test
-  revision 136
+  revision 137
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -377,6 +377,15 @@ ${docstring}${members}
 	  b parent class_ref 400048 // choice_hash
       end
 
+      classrelation 721584 // <dependency>
+	relation 720688 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 721584 // <dependency>
+	  b parent class_ref 170288 // chooser
+      end
+
       classrelation 289328 // <dependency>
 	relation 289072 -_->
 	  a default
@@ -435,6 +444,63 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+	comment " Run choice.generate on a mockup ensemble. Uses
+ Choice::permitted( spc ) and Choice::make_choice( idx, *params* ) 
+ to create choice object. Params arg to make_choice is the
+ params arg passed to this function.
+
+  ens.size = 6
+  specie_count = 5
+  solute = \"Na\" (x2 particles) and \"Cl\" (x1 particle)
+  mobile = \"CA\" (x1 particle)
+  flexible = \"CO\" (x1 particle)
+  channel only = \"OX\" (x1 particle)
+  system region = \"cell\" (PBC cube)
+  subregion = \"bulk\" (open cube)
+  all particles inside \"bulk\" (and \"cell\")
+  "
+      end
+
+      operation 1233328 "test_make_chooser_methods"
+	class_operation public explicit_return_type "void"
+	nparams 6
+	  param in name "params" explicit_type "string"
+	  param in name "type" explicit_type "string"
+	  param in name "specielist" explicit_type "string"
+	  param in name "rate" explicit_type "double"
+	  param in name "count" explicit_type "size_t"
+	  param in name "exp_rate" explicit_type "double"
+	cpp_decl "    ${comment}template< class Chooser > ${friend}${static}${inline}${virtual}${type} ${name}${(}const std::map< ${t0}, ${t0} > & ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}, ${t5} ${p5}${v5}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}template< class Chooser > ${inline}${type} ${class}::${name}${(}const std::map< ${t0}, ${t0} > & ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}, ${t4} ${p4}, ${t5} ${p5}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Run \"Chooser\" on a mockup ensemble. Uses
+ base_chooser.generate_choices( *params*, *type*, *specielist*, *rate* ) 
+ to create choice object. \"*args*\" to are directly the args passed to 
+ this function.
+
+ \\param count : expected number of choices
+ \\param exp_rate : expected rate of each choice
+
+  ens.size = 6
+  specie_count = 5
+  solute = \"Na\" (x2 particles) and \"Cl\" (x1 particle)
+  mobile = \"CA\" (x1 particle)
+  flexible = \"CO\" (x1 particle)
+  channel only = \"OX\" (x1 particle)
+  system region = \"cell\" (PBC cube)
+  subregion = \"bulk\" (open cube)
+  all particles inside \"bulk\" (and \"cell\")
+  "
       end
 
       operation 783408 "choice_hash_test"
@@ -743,6 +809,7 @@ ${namespace_end}
 
 ${includes}
 // Manuals
+#include \"core/strngs.hpp\"
 #include \"geometry/cube_region.hpp\"
 #include \"geometry/geometry_manager.hpp\"
 #include \"geometry/periodic_cube_region.hpp\"
