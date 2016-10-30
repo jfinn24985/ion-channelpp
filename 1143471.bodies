@@ -66,7 +66,7 @@ if( reader.name().find( core::strngs::rate_label() ) == 0 )
   // --------------------
   // Choice rate
   double rate = 0.0;
-  UTILITY_INPUT( this->rate_ != 0.0, "Parameter \"" + core::strngs::rate_label() + "\" appears more than once in a single " + this->section_label() + " section.", this->section_label() );
+  UTILITY_INPUT( this->missing_required_tags_[ CHOICE_RATE ], "Parameter \"" + core::strngs::rate_label() + "\" appears more than once in a single " + this->section_label() + " section.", this->section_label() );
 
   core::input_base_reader::float_input( core::strngs::rate_label(), reader.value(), "Trial", core::strngs::rate_label(), rate, true, false );
   this->rate_ = rate;
@@ -76,7 +76,7 @@ else if( reader.name().find( core::strngs::fstype() ) == 0 )
 {
   // --------------------
   // Region type
-  UTILITY_INPUT( this->type_.empty(), "Parameter \"" + core::strngs::fstype() + "\" appears more than once in a single " + this->section_label() + " section.", this->section_label() );
+  UTILITY_INPUT( this->missing_required_tags_[ CHOICE_TYPE ], "Parameter \"" + core::strngs::fstype() + "\" appears more than once in a single " + this->section_label() + " section.", this->section_label() );
   UTILITY_INPUT( not reader.value().empty(), "Trial \"" + core::strngs::fstype() + "\" parameter must have a value.", this->section_label() );
   std::string val( reader.dequote( reader.value() ) );
   UTILITY_INPUT( this->has_trial_type( val ), "Region \"" + core::strngs::fstype() + "\" parameter value (" + val + ") is not a valid " + this->section_label() + " type for this application (see documentation).", this->section_label() );
@@ -101,8 +101,12 @@ else
 return true;
 
 !!!204720.cpp!!!	do_read_end() : void
-UTILITY_INPUT( not this->missing_required_tags_.any(), "Not all required tags were present.", this->section_label() );
-
+if( this->missing_required_tags_.any() )
+{
+  // Not all required tags were present.
+  UTILITY_INPUT( not this->missing_required_tags_[ CHOICE_RATE ], "Trial section requires \"" + core::strngs::rate_label() + "\" parameter.", this->section_label() );
+  UTILITY_INPUT( not this->missing_required_tags_[ CHOICE_TYPE ], "Trial section requires \"" + core::strngs::fstype() + "\" parameter.", this->section_label() );
+}
 // find definition
 std::size_t idx = 0;
 for( idx = 0; idx != this->type_to_object_.size(); ++idx )
@@ -127,7 +131,7 @@ if( not this->parameter_set_.empty() )
 this->manager_->add_chooser( defn.factory_( this->parameter_set_, this->type_, this->specie_list_, this->rate_ ) );
 
 !!!1171376.cpp!!!	do_reset() : void
-this->missing_required_tags_ = std::bitset< CHOICE_TAG_COUNT >( true );
+this->missing_required_tags_.set();
 this->parameter_set_.clear();
 this->rate_ = 0.0;
 this->specie_list_.clear();
