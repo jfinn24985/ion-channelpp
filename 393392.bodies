@@ -36,38 +36,6 @@ for( auto & choice: this->choices_ )
 }
 return trial;
 
-!!!746928.cpp!!!	prepare(in species : specie, inout rgnr : random_distribution) : void
-//XXUTILITY_REQUIRE( not this->choosers_.empty (), "Can not run simulation with no possible trials" );
-//XX// Build choices
-//XXthis->choices_.clear();
-//XXfor (auto &chsr : this->choosers_)
-//XX{
-//XX  chsr.generate_choices( species, this->choices_ );
-//XX}
-//XXUTILITY_ENSURE( not this->choices_.empty (), "Can not run simulation with no trials" );
-//XX// Ensure sum of probabilities is 1.0
-//XXdouble sum_choice_rates { 0.0 };
-//XX// reset choice objects
-//XXfor( auto &choice : this->choices_)
-//XX{
-//XX  sum_choice_rates += choice.probability();
-//XX}
-//XXif( not utility::feq( sum_choice_rates, 1.0 ))
-//XX{
-//XX  for (auto &choice : this->choices_)
-//XX  {
-//XX    choice.set_probability( choice.probability() / sum_choice_rates );
-//XX  }
-//XX}
-//XX// Randomize choice order
-//XXsim.get_random().shuffle( this->choices_ );
-//XX
-!!!747312.cpp!!!	write_document(inout wr : input_document) : void
-// Write choosers
-for (auto const& choice : this->choosers_)
-{
-   choice.write_document( wr );
-}
 !!!1240368.cpp!!!	has_chooser(in label : string) : bool
 for( std::size_t idx = 0; idx != this->choosers_.size(); ++idx )
 {
@@ -77,3 +45,39 @@ for( std::size_t idx = 0; idx != this->choosers_.size(); ++idx )
   }
 }
 return false;
+!!!746928.cpp!!!	prepare(in species : specie, in gman : geometry_manager, inout rgnr : random_distribution) : void
+UTILITY_REQUIRE( not this->choosers_.empty (), "Can not run simulation with no possible trials" );
+// Build choices
+this->choices_.clear();
+for (auto &chsr : this->choosers_)
+{
+  chsr.prepare_choices( species, gman, this->choices_ );
+}
+UTILITY_INPUT( not this->choices_.empty (), "No actual trials can be made using the input set of trial types and input ensemble ", core::strngs::fstry() );
+// Ensure sum of probabilities is 1.0
+double sum_choice_rates { 0.0 };
+// reset choice objects
+for( auto &choice : this->choices_)
+{
+  UTILITY_CHECK( choice.probability() > 0.0, "No choice should have zero or negative probability." );
+  UTILITY_CHECK( not utility::feq(  choice.probability(), 0.0 ), "No choice should have zero probability." );
+  sum_choice_rates += choice.probability();
+}
+UTILITY_CHECK( sum_choice_rates > 0.0, "No set of choices should have zero or negative probability." );
+UTILITY_CHECK( not utility::feq( sum_choice_rates, 0.0 ), "No set of choices should have zero probability." );
+if( not utility::feq( sum_choice_rates, 1.0 ))
+{
+  for (auto &choice : this->choices_)
+  {
+    choice.set_probability( choice.probability() / sum_choice_rates );
+  }
+}
+// Randomize choice order
+rgnr.shuffle( this->choices_ );
+
+!!!747312.cpp!!!	write_document(inout wr : input_document) : void
+// Write choosers
+for (auto const& choice : this->choosers_)
+{
+   choice.write_document( wr );
+}

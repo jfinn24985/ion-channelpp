@@ -29,12 +29,6 @@ break;
 // Get old position
 atom.old_position = ens.position( atom.index );
 // New random position within specific region
-if( this->region_index_ == 0 )
-{
-  // not yet assigned
-  this->region_index_ = regions.region_key( this->region_name_ );
-  UTILITY_CHECK( this->region_index_ != 0, "System region and can not be the subregion target of a jump in/out" );
-}
 const double radius = particles.get_specie( atom.key ).radius();
 const auto& regn = regions.get_region( this->region_index_ );
 UTILITY_ALWAYS( regn.is_inside( atom.old_position, radius ), "Particle starts outside target region: Trial type \"jump-around\" requires that particles always begin (and end) in the same region." );
@@ -78,7 +72,7 @@ defn.factory_ = &trial::chooser< jump_in >::make_chooser;
 }
 UTILITY_CHECK( not meta.has_trial_type( defn.type_name_ ), "This type has already been added to this meta object." );
 meta.add_trial_type( defn );
-!!!1211184.cpp!!!	make_choice(in ispec : size_t, in params : string) : jump_around
+!!!1211184.cpp!!!	make_choice(in ispec : size_t, in gman : geometry_manager, in params : string) : jump_around
 // needed information
 // ispec : from ispec arg
 // region_name : from param arg
@@ -92,9 +86,11 @@ UTILITY_INPUT( params.count( region_name_label ) == 1, "Trial type \"jump-around
 UTILITY_INPUT( not params.at( region_name_label ).empty(), "Trial type \"jump-around\" parameter \"" + region_name_label + "\" must have a value.", core::strngs::fstry() );
 region_name = core::input_base_reader::dequote( params.at( region_name_label ) );
 boost::algorithm::trim( region_name );
+const std::size_t region_index = gman.region_key( region_name );
+UTILITY_INPUT( region_index != gman.region_count(), "Trial type \"jump-around\" parameter \"" + region_name_label + "\" value (" + region_name + ") is not a known region label.", core::strngs::fstry() );
 
 // build region object.
-std::unique_ptr< jump_around > current( new jump_around( ispec, region_name ) );
+std::unique_ptr< jump_around > current( new jump_around( ispec, region_index ) );
 return current;
 
 
