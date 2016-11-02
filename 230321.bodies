@@ -180,34 +180,6 @@ std::stringstream ss;
   }
 }
 
-!!!798384.cpp!!!	test_chooser_operation(in chsr : base_chooser, in expected_size : size_t) : void
-//XX// The chooser interface provides a single unique 
-//XX// function, generate_choices. This method takes a
-//XX// simulation object and adds choice objects to a
-//XX// a list. The hash 'key' of the generated choice
-//XX// objects must 'match' the key of the chooser
-//XX// object that generated them.
-//XX
-//XX// call signature
-//XX// void generate_choices(const simulator & sim, boost::ptr_vector< base_choice >& choices) const
-//XX
-//XX
-//XX// generated_choices
-//XX// is_permitted
-//XX// make_choice
-//XX// write_document
-//XX// serialize
-//XX
-//XXboost::ptr_vector< trial::base_choice > choices;
-//XX
-//XX// dummy simulator
-//XXplatform::simulator_fixture simfix;
-//XXsimfix.add_solute_species();
-//XXsimfix.add_localized_species();
-//XX 
-//XXchsr.generate_choices( simfix.sim->get_species(), choices );
-//XX
-//XXBOOST_CHECK( choices.size() == expected_size );
 !!!783408.cpp!!!	choice_hash_test() : void
 {
   // Test for canonical pattern
@@ -362,6 +334,99 @@ std::stringstream store;
 
 }
 
+
+!!!1278640.cpp!!!	choice_manager_test() : void
+{
+  // Test for noncopyable and nonvirtual pattern
+  BOOST_CHECK( std::is_default_constructible< trial::choice_manager >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< trial::choice_manager >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< trial::choice_manager >::type {} );
+  BOOST_CHECK( not( std::is_assignable< trial::choice_manager, trial::choice_manager >::type {} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< trial::choice_manager >::type {} );
+}
+std::stringstream store;
+{
+  // Default ctor
+  boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+  // choice access methods
+  BOOST_CHECK( cman->empty() );
+  BOOST_CHECK_EQUAL( cman->size(), 0 );
+  BOOST_CHECK( cman->begin() == cman->end() );
+  // chooser access methods
+  BOOST_CHECK( cman->empty_chooser() );
+  BOOST_CHECK_EQUAL( cman->size_chooser(), 0 );
+  BOOST_CHECK( cman->begin_chooser() == cman->end_chooser() );
+  bool has = false;
+  BOOST_CHECK_NO_THROW( has = cman->has_chooser( "move" ) );
+  BOOST_CHECK_EQUAL( has, false );
+
+  {
+    core::input_delegater dg( 1 );
+    {
+      boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+      trial::move_choice::add_definition( *meta );
+
+      BOOST_REQUIRE( meta->has_trial_type( "move" ) );
+
+      dg.add_input_delegate( meta );
+    }
+    // Valid input
+    /////////////////////////////
+    std::string canon_input( "trial\ntype \"move\"\nrate 0.5\nspecie Na Cl\nend\n\n" );
+    core::input_preprocess reader;
+    reader.add_buffer( "dummy", canon_input );
+    BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+    BOOST_REQUIRE( not cman->empty_chooser() );
+    BOOST_CHECK_EQUAL( cman->size_chooser(), 1 );
+    BOOST_CHECK( cman->has_chooser( "move" ) );
+  }
+  boost::archive::text_oarchive oa( store );
+  // write class instance to archive
+  oa << cman;
+}
+{
+  boost::shared_ptr< trial::choice_manager > cman2;
+  boost::archive::text_iarchive ia( store );
+  // get class instance from archive
+  ia >> cman2;
+
+  // choice access methods
+  BOOST_CHECK( cman2->empty() );
+  BOOST_CHECK_EQUAL( cman2->size(), 0 );
+  BOOST_CHECK( cman2->begin() == cman2->end() );
+  // chooser access methods
+  BOOST_REQUIRE( not cman2->empty_chooser() );
+  BOOST_CHECK( cman2->has_chooser( "move" ) );
+  BOOST_CHECK_EQUAL( cman2->size_chooser(), 1 );
+  BOOST_CHECK_EQUAL( cman2->begin_chooser()->type(), "move" );
+  BOOST_CHECK_CLOSE( cman2->begin_chooser()->rate(), 0.5, 0.000001 );
+  BOOST_CHECK_EQUAL( cman2->begin_chooser()->specie_list(), "Na Cl" );
+  BOOST_CHECK( cman2->begin_chooser()->parameters().empty() );
+
+  boost::shared_ptr< particle::particle_manager > pman = trial_test::mockup_particle_manager();
+  boost::shared_ptr< geometry::geometry_manager > gman = trial_test::mockup_geometry_manager();
+  boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+  utility::random_distribution rgnr( generator );
+
+  BOOST_REQUIRE_NO_THROW( cman2->prepare( pman->get_species(), *gman, rgnr ) );
+
+  BOOST_CHECK( not cman2->empty() );
+  BOOST_REQUIRE_EQUAL( cman2->size(), 5 );
+  BOOST_CHECK( cman2->begin() != cman2->end() );
+  std::bitset< 5 > all_spc;
+  all_spc.reset(); // set all to none
+  const trial::choice_hash mover( 0, 1, 1, 0 );
+  for (auto const& choice : *cman2 )
+  {
+    BOOST_CHECK_GE( choice.key().key, 0 );
+    BOOST_CHECK_LE( choice.key().key, 4 );
+    BOOST_CHECK( mover.match( choice.key() ) );
+    BOOST_REQUIRE_NO_THROW( all_spc.set( choice.key().key ) );
+  }
+  BOOST_REQUIRE( all_spc.all() );
+}
 
 !!!1207088.cpp!!!	add_specie_choice_test() : void
 const double prob = 0.1;
@@ -577,6 +642,17 @@ boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
 
   dg.add_input_delegate( meta );
 }
+{
+  core::input_help helper;
+  dg.get_documentation( helper );
+  std::stringstream omsg;
+  helper.print( omsg );
+  const std::string msg( omsg.str() );
+  BOOST_CHECK_LE( msg.find( "--rate" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--type" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--specie" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--delta" ), msg.size() );
+}
 // Valid input
 /////////////////////////////
 std::string canon_input( "trial\ntype \"move\"\nrate 0.5\nspecie Na Cl\nend\n\n" );
@@ -591,6 +667,19 @@ BOOST_CHECK_CLOSE( cman->begin_chooser()->rate(), 0.5, 0.000001 );
 BOOST_CHECK_EQUAL( cman->begin_chooser()->specie_list(), "Na Cl" );
 BOOST_CHECK( cman->begin_chooser()->parameters().empty() );
 
+// Echo input.
+core::input_document inp( 1 );
+BOOST_CHECK_NO_THROW( cman->write_document( inp ) );
+BOOST_REQUIRE_EQUAL( inp.size(), 1 );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].label(), "trial" );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].size(), 3 );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "specie" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "type" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "rate" ) );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "specie" ), "Na Cl" );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "type" ), "move" );
+BOOST_REQUIRE_CLOSE( boost::lexical_cast< double >( inp[ 0 ].get_entry( "rate" ) ), 0.5, 0.00001 );
+//inp.write( std::cout );
 !!!1240880.cpp!!!	choice_meta_jump_choice_test() : void
 core::input_delegater dg( 1 );
 boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
@@ -602,6 +691,16 @@ boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
   BOOST_REQUIRE( meta->has_trial_type( "jump" ) );
 
   dg.add_input_delegate( meta );
+}
+{
+  core::input_help helper;
+  dg.get_documentation( helper );
+  std::stringstream omsg;
+  helper.print( omsg );
+  const std::string msg( omsg.str() );
+  BOOST_CHECK_LE( msg.find( "--rate" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--type" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--specie" ), msg.size() );
 }
 // Valid input
 /////////////////////////////
@@ -616,6 +715,19 @@ BOOST_CHECK_EQUAL( cman->begin_chooser()->type(), "jump" );
 BOOST_CHECK_CLOSE( cman->begin_chooser()->rate(), 0.45, 0.000001 );
 BOOST_CHECK_EQUAL( cman->begin_chooser()->specie_list(), "Na Cl" );
 BOOST_CHECK( cman->begin_chooser()->parameters().empty() );
+
+// Echo input.
+core::input_document inp( 1 );
+BOOST_CHECK_NO_THROW( cman->write_document( inp ) );
+BOOST_REQUIRE_EQUAL( inp.size(), 1 );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].label(), "trial" );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].size(), 3 );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "specie" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "type" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "rate" ) );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "specie" ), "Na Cl" );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "type" ), "jump" );
+BOOST_REQUIRE_CLOSE( boost::lexical_cast< double >( inp[ 0 ].get_entry( "rate" ) ), 0.45, 0.00001 );
 !!!1241008.cpp!!!	choice_meta_jump_around_test() : void
 core::input_delegater dg( 1 );
 boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
@@ -627,6 +739,17 @@ boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
   BOOST_REQUIRE( meta->has_trial_type( "jump-around" ) );
 
   dg.add_input_delegate( meta );
+}
+{
+  core::input_help helper;
+  dg.get_documentation( helper );
+  std::stringstream omsg;
+  helper.print( omsg );
+  const std::string msg( omsg.str() );
+  BOOST_CHECK_LE( msg.find( "--rate" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--type" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--specie" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--region" ), msg.size() );
 }
 // Valid input
 /////////////////////////////
@@ -642,6 +765,21 @@ BOOST_CHECK_CLOSE( cman->begin_chooser()->rate(), 0.51, 0.000001 );
 BOOST_CHECK_EQUAL( cman->begin_chooser()->specie_list(), "Na Cl" );
 BOOST_CHECK_EQUAL( cman->begin_chooser()->parameters().size(), 1 );
 BOOST_CHECK_EQUAL( cman->begin_chooser()->parameters().at( "region" ), "\"channel\"" );
+
+// Echo input.
+core::input_document inp( 1 );
+BOOST_CHECK_NO_THROW( cman->write_document( inp ) );
+BOOST_REQUIRE_EQUAL( inp.size(), 1 );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].label(), "trial" );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].size(), 4 );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "specie" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "type" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "rate" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "region" ) );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "specie" ), "Na Cl" );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "type" ), "jump-around" );
+BOOST_REQUIRE_CLOSE( boost::lexical_cast< double >( inp[ 0 ].get_entry( "rate" ) ), 0.51, 0.00001 );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "region" ), "\"channel\"" );
 !!!1241136.cpp!!!	choice_meta_jump_in_test() : void
 core::input_delegater dg( 1 );
 boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
@@ -653,6 +791,17 @@ boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
   BOOST_REQUIRE( meta->has_trial_type( "jump-in" ) );
 
   dg.add_input_delegate( meta );
+}
+{
+  core::input_help helper;
+  dg.get_documentation( helper );
+  std::stringstream omsg;
+  helper.print( omsg );
+  const std::string msg( omsg.str() );
+  BOOST_CHECK_LE( msg.find( "--rate" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--type" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--specie" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--region" ), msg.size() );
 }
 // Valid input
 /////////////////////////////
@@ -668,6 +817,21 @@ BOOST_CHECK_CLOSE( cman->begin_chooser()->rate(), 0.55, 0.000001 );
 BOOST_CHECK_EQUAL( cman->begin_chooser()->specie_list(), "Na Cl" );
 BOOST_CHECK_EQUAL( cman->begin_chooser()->parameters().size(), 1 );
 BOOST_CHECK_EQUAL( cman->begin_chooser()->parameters().at( "region" ), "\"bulk\"" );
+
+// Echo input.
+core::input_document inp( 1 );
+BOOST_CHECK_NO_THROW( cman->write_document( inp ) );
+BOOST_REQUIRE_EQUAL( inp.size(), 1 );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].label(), "trial" );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].size(), 4 );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "specie" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "type" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "rate" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "region" ) );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "specie" ), "Na Cl" );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "type" ), "jump-in" );
+BOOST_REQUIRE_CLOSE( boost::lexical_cast< double >( inp[ 0 ].get_entry( "rate" ) ), 0.55, 0.00001 );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "region" ), "\"bulk\"" );
 !!!1241264.cpp!!!	choice_meta_jump_out_test() : void
 core::input_delegater dg( 1 );
 boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
@@ -679,6 +843,17 @@ boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
   BOOST_REQUIRE( meta->has_trial_type( "jump-out" ) );
 
   dg.add_input_delegate( meta );
+}
+{
+  core::input_help helper;
+  dg.get_documentation( helper );
+  std::stringstream omsg;
+  helper.print( omsg );
+  const std::string msg( omsg.str() );
+  BOOST_CHECK_LE( msg.find( "--rate" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--type" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--specie" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--region" ), msg.size() );
 }
 // Valid input
 /////////////////////////////
@@ -694,6 +869,21 @@ BOOST_CHECK_CLOSE( cman->begin_chooser()->rate(), 0.35, 0.000001 );
 BOOST_CHECK_EQUAL( cman->begin_chooser()->specie_list(), "Na Cl" );
 BOOST_CHECK_EQUAL( cman->begin_chooser()->parameters().size(), 1 );
 BOOST_CHECK_EQUAL( cman->begin_chooser()->parameters().at( "region" ), "centre" );
+
+// Echo input.
+core::input_document inp( 1 );
+BOOST_CHECK_NO_THROW( cman->write_document( inp ) );
+BOOST_REQUIRE_EQUAL( inp.size(), 1 );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].label(), "trial" );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].size(), 4 );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "specie" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "type" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "rate" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "region" ) );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "specie" ), "Na Cl" );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "type" ), "jump-out" );
+BOOST_REQUIRE_CLOSE( boost::lexical_cast< double >( inp[ 0 ].get_entry( "rate" ) ), 0.35, 0.00001 );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "region" ), "centre" );
 !!!1241392.cpp!!!	choice_meta_add_remove_choice_test() : void
 core::input_delegater dg( 1 );
 boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
@@ -705,6 +895,16 @@ boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
   BOOST_REQUIRE( meta->has_trial_type( "individual" ) );
 
   dg.add_input_delegate( meta );
+}
+{
+  core::input_help helper;
+  dg.get_documentation( helper );
+  std::stringstream omsg;
+  helper.print( omsg );
+  const std::string msg( omsg.str() );
+  BOOST_CHECK_LE( msg.find( "--rate" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--type" ), msg.size() );
+  BOOST_CHECK_LE( msg.find( "--specie" ), msg.size() );
 }
 // Valid input
 /////////////////////////////
@@ -719,6 +919,19 @@ BOOST_CHECK_EQUAL( cman->begin_chooser()->type(), "individual" );
 BOOST_CHECK_CLOSE( cman->begin_chooser()->rate(), 0.53, 0.000001 );
 BOOST_CHECK_EQUAL( cman->begin_chooser()->specie_list(), "Na Cl" );
 BOOST_CHECK( cman->begin_chooser()->parameters().empty() );
+
+// Echo input.
+core::input_document inp( 1 );
+BOOST_CHECK_NO_THROW( cman->write_document( inp ) );
+BOOST_REQUIRE_EQUAL( inp.size(), 1 );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].label(), "trial" );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].size(), 3 );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "specie" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "type" ) );
+BOOST_REQUIRE( inp[ 0 ].has_entry( "rate" ) );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "specie" ), "Na Cl" );
+BOOST_REQUIRE_EQUAL( inp[ 0 ].get_entry( "type" ), "individual" );
+BOOST_REQUIRE_CLOSE( boost::lexical_cast< double >( inp[ 0 ].get_entry( "rate" ) ), 0.53, 0.00001 );
 !!!1241520.cpp!!!	trial_input_no_type_test() : void
 core::input_delegater dg( 1 );
 boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
@@ -1376,6 +1589,682 @@ catch( std::runtime_error const& err )
   const std::string msg( err.what() );
   // std::cout << msg << "\n";
   BOOST_CHECK( msg.find( "Trial \"DELTA\" parameter with value (0.5) is not understood by move trial" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1270576.cpp!!!	trial_input_jump_unknown_parameter_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_choice::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump\"\nrate 0.5\ndelta 0.5\nspecie Na Cl\n\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Trial \"delta\" parameter with value (0.5) is not understood by jump trial" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1271728.cpp!!!	trial_input_jump_in_no_region_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_in::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-in" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-in\"\nrate 0.5\n#region bulk\nspecie Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+auto pman = trial_test::mockup_particle_manager();
+auto gman = trial_test::mockup_geometry_manager();
+boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+utility::random_distribution rgnr( generator );
+
+try
+{
+  // attributes from parameters are only tested when choice object
+  // is created (e.g. in choice_manager::prepare)
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  cman->prepare( pman->get_species(), *gman, rgnr );  
+  // If no exception then check for number of choices created.
+  BOOST_CHECK_EQUAL( cman->size(), 2 );
+  BOOST_ERROR( "expected \"cman->prepare( ... )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Jump-in trial requires \"region\" parameter" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1270448.cpp!!!	trial_input_jump_in_region_no_value_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_in::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-in" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-in\"\nrate 0.5\nregion #bulk\nspecie Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+auto pman = trial_test::mockup_particle_manager();
+auto gman = trial_test::mockup_geometry_manager();
+boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+utility::random_distribution rgnr( generator );
+
+try
+{
+  // attributes from parameters are only tested when choice object
+  // is created (e.g. in choice_manager::prepare)
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  cman->prepare( pman->get_species(), *gman, rgnr );  
+  // If no exception then check for number of choices created.
+  BOOST_CHECK_EQUAL( cman->size(), 2 );
+  BOOST_ERROR( "expected \"cman->prepare( ... )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Jump-in trial \"region\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1270064.cpp!!!	trial_input_jump_in_region_bad_value_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_in::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-in" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-in\"\nrate 0.1\nregion one\nspecie Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+auto pman = trial_test::mockup_particle_manager();
+auto gman = trial_test::mockup_geometry_manager();
+boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+utility::random_distribution rgnr( generator );
+try
+{
+  // attributes from parameters are only tested when choice object
+  // is created (e.g. in choice_manager::prepare)
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  cman->prepare( pman->get_species(), *gman, rgnr );  
+  // If no exception then check for number of choices created.
+  BOOST_CHECK_EQUAL( cman->size(), 5 );
+  BOOST_ERROR( "expected \"cman->prepare( ... )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Jump-in trial \"region\" parameter value (one) is not a known region label" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1269936.cpp!!!	trial_input_jump_in_duplicate_region_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_in::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-in" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-in\"\nrate 0.5\nregion bulk\nspecie Na Cl\n\nregion channel\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Trial \"region\" parameter appears more than once" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1269808.cpp!!!	trial_input_jump_in_unknown_parameter_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_in::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-in" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-in\"\nrate 0.5\nDELTA 0.5\nspecie Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Trial \"DELTA\" parameter with value (0.5) is not understood by jump-in trial" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1271856.cpp!!!	trial_input_jump_out_no_region_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_out::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-out" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-out\"\nrate 0.5\n#region bulk\nspecie Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+auto pman = trial_test::mockup_particle_manager();
+auto gman = trial_test::mockup_geometry_manager();
+boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+utility::random_distribution rgnr( generator );
+
+try
+{
+  // attributes from parameters are only tested when choice object
+  // is created (e.g. in choice_manager::prepare)
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  cman->prepare( pman->get_species(), *gman, rgnr );  
+  // If no exception then check for number of choices created.
+  BOOST_CHECK_EQUAL( cman->size(), 2 );
+  BOOST_ERROR( "expected \"cman->prepare( ... )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Jump-out trial requires \"region\" parameter" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1271088.cpp!!!	trial_input_jump_out_region_no_value_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_out::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-out" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-out\"\nrate 0.5\nregion #bulk\nspecie Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+auto pman = trial_test::mockup_particle_manager();
+auto gman = trial_test::mockup_geometry_manager();
+boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+utility::random_distribution rgnr( generator );
+
+try
+{
+  // attributes from parameters are only tested when choice object
+  // is created (e.g. in choice_manager::prepare)
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  cman->prepare( pman->get_species(), *gman, rgnr );  
+  // If no exception then check for number of choices created.
+  BOOST_CHECK_EQUAL( cman->size(), 2 );
+  BOOST_ERROR( "expected \"cman->prepare( ... )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Jump-out trial \"region\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1270960.cpp!!!	trial_input_jump_out_region_bad_value_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_out::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-out" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-out\"\nrate 0.1\nregion one\nspecie Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+auto pman = trial_test::mockup_particle_manager();
+auto gman = trial_test::mockup_geometry_manager();
+boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+utility::random_distribution rgnr( generator );
+try
+{
+  // attributes from parameters are only tested when choice object
+  // is created (e.g. in choice_manager::prepare)
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  cman->prepare( pman->get_species(), *gman, rgnr );  
+  // If no exception then check for number of choices created.
+  BOOST_CHECK_EQUAL( cman->size(), 5 );
+  BOOST_ERROR( "expected \"cman->prepare( ... )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Jump-out trial \"region\" parameter value (one) is not a known region label" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"cman->prepare( ... )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1270832.cpp!!!	trial_input_jump_out_duplicate_region_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_out::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-out" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-out\"\nrate 0.5\nregion bulk\nspecie Na Cl\n\nregion channel\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Trial \"region\" parameter appears more than once" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1270704.cpp!!!	trial_input_jump_out_unknown_parameter_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_out::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-out" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-out\"\nrate 0.5\nDELTA 0.5\nspecie Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Trial \"DELTA\" parameter with value (0.5) is not understood by jump-out trial" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1271984.cpp!!!	trial_input_jump_around_no_region_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_around::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-around" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-around\"\nrate 0.5\n#region bulk\nspecie Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+auto pman = trial_test::mockup_particle_manager();
+auto gman = trial_test::mockup_geometry_manager();
+boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+utility::random_distribution rgnr( generator );
+
+try
+{
+  // attributes from parameters are only tested when choice object
+  // is created (e.g. in choice_manager::prepare)
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  cman->prepare( pman->get_species(), *gman, rgnr );  
+  // If no exception then check for number of choices created.
+  BOOST_CHECK_EQUAL( cman->size(), 2 );
+  BOOST_ERROR( "expected \"cman->prepare( ... )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Jump-around trial requires \"region\" parameter" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1271600.cpp!!!	trial_input_jump_around_region_no_value_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_around::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-around" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-around\"\nrate 0.5\nregion #bulk\nspecie Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+auto pman = trial_test::mockup_particle_manager();
+auto gman = trial_test::mockup_geometry_manager();
+boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+utility::random_distribution rgnr( generator );
+
+try
+{
+  // attributes from parameters are only tested when choice object
+  // is created (e.g. in choice_manager::prepare)
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  cman->prepare( pman->get_species(), *gman, rgnr );  
+  // If no exception then check for number of choices created.
+  BOOST_CHECK_EQUAL( cman->size(), 2 );
+  BOOST_ERROR( "expected \"cman->prepare( ... )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Jump-around trial \"region\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1271472.cpp!!!	trial_input_jump_around_region_bad_value_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_around::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-around" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-around\"\nrate 0.1\nregion one\nspecie Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+auto pman = trial_test::mockup_particle_manager();
+auto gman = trial_test::mockup_geometry_manager();
+boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+utility::random_distribution rgnr( generator );
+try
+{
+  // attributes from parameters are only tested when choice object
+  // is created (e.g. in choice_manager::prepare)
+  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  cman->prepare( pman->get_species(), *gman, rgnr );  
+  // If no exception then check for number of choices created.
+  BOOST_CHECK_EQUAL( cman->size(), 1 );
+  BOOST_ERROR( "expected \"cman->prepare( ... )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Jump-around trial \"region\" parameter value (one) is not a known region label" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"cman->prepare( ... )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1271344.cpp!!!	trial_input_jump_around_duplicate_region_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_around::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-around" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-around\"\nrate 0.5\nregion bulk\nspecie Na Cl\n\nregion channel\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Trial \"region\" parameter appears more than once" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1271216.cpp!!!	trial_input_jump_around_unknown_parameter_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::jump_around::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "jump-around" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"jump-around\"\nrate 0.5\nDELTA 0.5\nspecie Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Trial \"DELTA\" parameter with value (0.5) is not understood by jump-around trial" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1278512.cpp!!!	trial_input_add_specie_unknown_parameter_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
+{
+  boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
+
+  trial::add_specie::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_trial_type( "individual" ) );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "trial\ntype \"individual\"\nrate 0.5\ndelta 0.5\nspecie Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Trial \"delta\" parameter with value (0.5) is not understood by individual trial" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
