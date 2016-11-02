@@ -1339,7 +1339,7 @@ std::stringstream store;
       }
    }
 }
-!!!471856.cpp!!!	input_document_test() : void
+!!!1286704.cpp!!!	input_document_test() : void
 // CTOR TESTS
 // ----------
 const std::size_t version{ 21 };
@@ -1448,6 +1448,56 @@ const std::string label2 { "label2" };
          BOOST_CHECK_EQUAL( *t_iter, *w_iter );
       }
    }}
+!!!471856.cpp!!!	input_definition_test() : void
+{
+  // Static Lifetime method tests: noncopyable virtual pattern
+  BOOST_CHECK( not std::is_default_constructible< core::input_definition >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< core::input_definition >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< core::input_definition >::type{} );
+  BOOST_CHECK( not( std::is_assignable< core::input_definition, core::input_definition >::type{} ) );
+  BOOST_CHECK( std::has_virtual_destructor< core::input_definition >::type{} );
+}
+// ----------
+const std::string label1 { "label1" };
+const std::string seclabel { "label2" };
+const std::string name1 { "name1" };
+const std::string desc1 { "desc1" };
+const std::string name2 { "name2" };
+const std::string desc2 { "desc2" };
+{
+  // default
+  core::input_definition idoc( label1 );
+  BOOST_CHECK_EQUAL( idoc.label(), label1 );
+  BOOST_CHECK_EQUAL( idoc.size(), 0 );
+  BOOST_CHECK_EQUAL( idoc.empty(), true );
+
+  BOOST_CHECK_NO_THROW( idoc.add_definition( name1, desc1 ) );
+  BOOST_CHECK( idoc.has_definition( name1 ) );
+  BOOST_CHECK_EQUAL( idoc.size(), 1 );
+  BOOST_CHECK_EQUAL( idoc.empty(), false );
+
+  BOOST_CHECK_NO_THROW( idoc.add_definition( name2, desc2 ) );
+  BOOST_CHECK( idoc.has_definition( name2 ) );
+  BOOST_CHECK_EQUAL( idoc.size(), 2 );
+
+  core::input_help helper;
+
+  idoc.publish_help( helper, seclabel );
+
+  std::stringstream store;
+  helper.print( store );
+
+  const std::string msg( store.str() );
+
+  BOOST_CHECK_LT( msg.find( "--" + name1 + "(subtype " + label1 + ")" ), msg.size() );
+  BOOST_CHECK_LT( msg.find( "--" + name2 + "(subtype " + label1 + ")" ), msg.size() );
+  BOOST_CHECK_LT( msg.find( desc1 ), msg.size() );
+  BOOST_CHECK_LT( msg.find( desc2 ), msg.size() );
+
+  // Attempt to add definition with existing name.
+  BOOST_CHECK_THROW( idoc.add_definition( name1, desc1 ), std::runtime_error );
+}
+
 !!!899120.cpp!!!	test_meta_lifetime_test() : void
 // CTOR TESTS
 core_test_suite::test_input_base_meta< test_meta >();
@@ -1457,22 +1507,22 @@ core_test_suite::test_input_base_meta< test_meta >();
   std::unique_ptr< test_meta > dobj( new test_meta( label, true, false ) );
   BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 0ul );
   BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 0ul );
-  BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 0ul );
+  BOOST_CHECK_EQUAL( dobj->get_publish_help_count(), 0ul );
 }
-!!!899248.cpp!!!	test_meta_add_documentation_test() : void
+!!!899248.cpp!!!	test_meta_publish_help_test() : void
 {
   // 
-  // Call add_documentation, all other attributes unaffected.
+  // Call publish_help, all other attributes unaffected.
   // 
   std::unique_ptr< test_meta > dobj( new test_meta( "label" ) );
-  BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 0ul );
+  BOOST_CHECK_EQUAL( dobj->get_publish_help_count(), 0ul );
   {
     core::input_help dummy;
-    dobj->add_documentation( dummy );
+    dobj->publish_help( dummy );
     BOOST_CHECK_EQUAL( dobj->entry_map().size(), 0ul );
     BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 0ul );
     BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 0ul );
-    BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 1ul );
+    BOOST_CHECK_EQUAL( dobj->get_publish_help_count(), 1ul );
   }
 }
 !!!891952.cpp!!!	test_meta_read_section_test() : void
@@ -1494,18 +1544,18 @@ const std::string label( "name" );
         BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 0ul );
         BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
         BOOST_CHECK_EQUAL( dobj->get_reset_count(), 1ul );
-        BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 0ul );
+        BOOST_CHECK_EQUAL( dobj->get_publish_help_count(), 0ul );
       }
     }
   }
   {
     core::input_help dummy;
-    dobj->add_documentation( dummy );
+    dobj->publish_help( dummy );
     BOOST_CHECK_EQUAL( dobj->entry_map().size(), 0ul );
     BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 0ul );
     BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
     BOOST_CHECK_EQUAL( dobj->get_reset_count(), 1ul );
-    BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 1ul );
+    BOOST_CHECK_EQUAL( dobj->get_publish_help_count(), 1ul );
   }
 }
 {
@@ -1546,13 +1596,13 @@ const std::string label( "name" );
         BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 3ul );
         BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
         BOOST_CHECK_EQUAL( dobj->get_reset_count(), 1ul );
-        BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 0ul );
+        BOOST_CHECK_EQUAL( dobj->get_publish_help_count(), 0ul );
       }
     }
   }
   {
     core::input_help dummy;
-    dobj->add_documentation( dummy );
+    dobj->publish_help( dummy );
     BOOST_CHECK_EQUAL( dobj->entry_map().size(), 3ul );
     BOOST_CHECK_EQUAL( dobj->entry_map().count( "a" ), 1 );
     BOOST_CHECK_EQUAL( dobj->entry_map().count( "b" ), 1 );
@@ -1568,7 +1618,7 @@ const std::string label( "name" );
     BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 3ul );
     BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
     BOOST_CHECK_EQUAL( dobj->get_reset_count(), 1ul );
-    BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 1ul );
+    BOOST_CHECK_EQUAL( dobj->get_publish_help_count(), 1ul );
   }
 }
 {
@@ -1589,13 +1639,13 @@ const std::string label( "name" );
         BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 3ul );
         BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
         BOOST_CHECK_EQUAL( dobj->get_reset_count(), 1ul );
-        BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 0ul );
+        BOOST_CHECK_EQUAL( dobj->get_publish_help_count(), 0ul );
       }
     }
   }
   {
     core::input_help dummy;
-    dobj->add_documentation( dummy );
+    dobj->publish_help( dummy );
     BOOST_CHECK_EQUAL( dobj->entry_map().size(), 2ul );
     BOOST_CHECK_EQUAL( dobj->entry_map().count( "a" ), 1 );
     BOOST_CHECK_EQUAL( dobj->entry_map().count( "b" ), 1 );
@@ -1607,7 +1657,7 @@ const std::string label( "name" );
     BOOST_CHECK_EQUAL( dobj->get_read_entry_count(), 3ul );
     BOOST_CHECK_EQUAL( dobj->get_read_end_count(), 1ul );
     BOOST_CHECK_EQUAL( dobj->get_reset_count(), 1ul );
-    BOOST_CHECK_EQUAL( dobj->get_add_documentation_count(), 1ul );
+    BOOST_CHECK_EQUAL( dobj->get_publish_help_count(), 1ul );
   }
 }
 
