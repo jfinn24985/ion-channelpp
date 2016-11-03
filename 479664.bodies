@@ -1,8 +1,8 @@
 class region_meta
-!!!1062448.cpp!!!	add_definition(in defn : region_definition) : void
-UTILITY_REQUIRE( not this->has_definition( defn.type_name_ ), "Can not add two region definitions with the same name." );
-this->type_to_object_.push_back( defn );
-!!!1061552.cpp!!!	add_documentation(inout helper : input_help) : void
+!!!1062448.cpp!!!	add_definition(inout defn : region_definition) : void
+UTILITY_REQUIRE( not this->has_definition( defn->label() ), "Can not add two region definitions with the same name." );
+this->type_to_object_.push_back( defn.release() );
+!!!1061552.cpp!!!	publish_help(inout helper : input_help) : void
 const std::string rgnlabel( this->section_label() );
 // ----------------------------------------
 // add section
@@ -32,17 +32,13 @@ helper.add_section( rgnlabel,
 // Subtype parameter documentation.
 for( auto iter = this->type_to_object_.begin(); iter != this->type_to_object_.end(); ++iter )
 {
-  for( auto jter = iter->documentation_.begin(); jter != iter->documentation_.end(); ++jter )
-  {
-    std::string desc = "(for region subtype "+ iter->type_name_ + ")" + jter->second;
-    helper.add_option( rgnlabel, jter->first, desc );
-  }
+  iter->publish_help( helper, rgnlabel );
 }
 
 !!!1062576.cpp!!!	has_definition(in type_name : string) : bool
 for (auto iter = this->type_to_object_.begin(); iter != this->type_to_object_.end(); ++iter )
 {
-  if (iter->type_name_ == type_name )
+  if (iter->label() == type_name )
   {
     return true;
   }
@@ -72,7 +68,7 @@ else
 {
    // --------------------
    // Region subtype specific parameters
-   UTILITY_INPUT (0 == this->parameter_set_.count (reader.name()), ("Parameter \""+reader.name()+"\" appears more than once in a single region section."), this->section_label());
+   UTILITY_INPUT (0 == this->parameter_set_.count( reader.name() ), ("Parameter \""+reader.name()+"\" appears more than once in a single region section."), this->section_label());
    this->parameter_set_.insert (std::make_pair(reader.name(), reader.value()));
 }
 return true;
@@ -83,20 +79,20 @@ UTILITY_INPUT( not this->label_.empty(), "No region label/name was found.", this
 auto factory = this->type_to_object_.begin();
 for ( /* empty */; factory != this->type_to_object_.end(); ++factory )
 {
-  if (factory->type_name_ == this->type_name_ )
+  if (factory->label() == this->type_name_ )
   {
     break;
   }
 }
 UTILITY_INPUT( factory != this->type_to_object_.end(), "No region definition for type \""+this->type_name_+"\" was found.", this->section_label() );
 // check parameters.
-for(auto const& entry : this->parameter_set_)
+for( auto const& entry : this->parameter_set_ )
 {
-   UTILITY_INPUT( factory->documentation_.find( entry.first ) != factory->documentation_.end(), "Parameter with name \""+entry.first+"\" is not valid for region type \""+this->type_name_+"\".", this->section_label() );
+   UTILITY_INPUT( factory->has_definition( entry.first ), "Parameter with name \""+entry.first+"\" is not valid for region type \""+this->type_name_+"\".", this->section_label() );
 }
 // build object and add to manager.
 boost::shared_ptr< geometry::base_region > current;
-current = (*(factory->factory_))( this->label_, this->parameter_set_ );
+current = (*factory)( this->label_, this->parameter_set_ );
 if( current )
 {
   this->manager_->add_region( current );
