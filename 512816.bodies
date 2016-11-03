@@ -58,16 +58,13 @@ if not sys.get_cell_region().is_valid_position( result.new_position, result.key 
 return resultset
 
 !!!1208112.cpp!!!	add_definition(inout meta : choice_meta) : void
-trial::choice_definition defn;
+std::unique_ptr< trial::choice_definition > defn( new trial::choice_definition( "jump-in", &trial::chooser< jump_in >::make_chooser ) );
 
-defn.type_name_ = "jump-in";
-defn.factory_ = &trial::chooser< jump_in >::make_chooser;
 {
-  std::string name = core::strngs::fsregn();
-  std::string help = "[name, required] The name of one of the sub-regions defined in the simulation. It is an error to use the name of the whole simulation region.";
-  defn.parameter_definition_.insert( std::make_pair( name, help ) );
+  std::string help = "[name, required] The name of one of the sub-regions defined in the simulation as target of move. It is an error to use the name of the whole simulation region.";
+  defn->add_definition( core::strngs::fsregn(), help );
 }
-UTILITY_CHECK( not meta.has_trial_type( defn.type_name_ ), "This type has already been added to this meta object." );
+UTILITY_CHECK( not meta.has_trial_type( defn->label() ), "This type has already been added to this meta object." );
 meta.add_trial_type( defn );
 !!!1207984.cpp!!!	make_choice(in ispec : size_t, in gman : geometry_manager, in params : string) : jump_in
 // needed information
@@ -85,6 +82,7 @@ region_name = core::input_base_reader::dequote( params.at( region_name_label ) )
 boost::algorithm::trim( region_name );
 const std::size_t region_index = gman.region_key( region_name );
 UTILITY_INPUT( region_index != gman.region_count(), "Jump-in trial \"" + region_name_label + "\" parameter value (" + region_name + ") is not a known region label.", core::strngs::fstry() );
+UTILITY_INPUT( region_index != 0, "Jump-in trial \"" + region_name_label + "\" parameter value (" + region_name + ") should not be the entire system region.", core::strngs::fstry() );
 
 // build choice object.
 std::unique_ptr< jump_in > current( new jump_in( ispec, region_index ) );

@@ -61,7 +61,15 @@ if not sys.get_cell_region().is_valid_position( atom.new_position, atom.key ):
   return result
 result.add_atom( atom )
 return result
-!!!1178800.cpp!!!	make_choice(in ispec : size_t, in params : string) : move_choice
+!!!1171632.cpp!!!	add_definition(inout meta : choice_meta) : void
+std::unique_ptr< trial::choice_definition > defn( new trial::choice_definition( "move", &trial::chooser< move_choice >::make_chooser ) );
+{
+  std::string help = "[number, optional] The maximum magnitude of the displacement from the original position made by this trial. Default value is " + std::to_string( move_choice::default_delta ) + ".";
+  defn->add_definition( "delta", help );
+}
+UTILITY_CHECK( not meta.has_trial_type( defn->label() ), "This type has already been added to this meta object." );
+meta.add_trial_type( defn );
+!!!1178800.cpp!!!	make_choice(in ispec : size_t, in gman : geometry_manager, in params : string) : move_choice
 // needed information
 // ispec : from ispec arg
 // delta : from param arg
@@ -87,15 +95,3 @@ return current;
 
 
 
-!!!1171632.cpp!!!	add_definition(inout meta : choice_meta) : void
-trial::choice_definition defn;
-
-defn.type_name_ = "move";
-defn.factory_ = &trial::chooser< move_choice >::make_chooser;
-{
-  std::string name = "delta";
-  std::string help = "[number, optional] The maximum magnitude of the displacement from the original position made by this trial. Default value is " + std::to_string( move_choice::default_delta ) + ".";
-  defn.parameter_definition_.insert( std::make_pair( name, help ) );
-}
-UTILITY_CHECK( not meta.has_trial_type( defn.type_name_ ), "This type has already been added to this meta object." );
-meta.add_trial_type( defn );

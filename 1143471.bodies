@@ -1,10 +1,10 @@
 class choice_meta
-!!!826416.cpp!!!	add_trial_type(in ctor : choice_definition) : void
-UTILITY_REQUIRE( not this->has_trial_type( ctor.type_name_ ), ("Attempt to add more than one chooser factory for type \"" + ctor.type_name_ + "\".") );
-this->type_to_object_.push_back( ctor );
+!!!826416.cpp!!!	add_trial_type(inout ctor : choice_definition) : void
+UTILITY_REQUIRE( not this->has_trial_type( ctor->label() ), ("Attempt to add more than one chooser factory for type \"" + ctor->label() + "\".") );
+this->type_to_object_.push_back( ctor.release() );
 
 
-!!!833200.cpp!!!	add_documentation(inout helper : input_help) : void
+!!!833200.cpp!!!	publish_help(inout helper : input_help) : void
 const std::string seclabel( core::strngs::fstry() );
 // ----------------------------------------
 // add section
@@ -36,17 +36,13 @@ helper.add_section( seclabel,
 // Subtype parameter documentation.
 for( auto iter = this->type_to_object_.begin(); iter != this->type_to_object_.end(); ++iter )
 {
-  for( auto jter = iter->parameter_definition_.begin(); jter != iter->parameter_definition_.end(); ++jter )
-  {
-    std::string desc = "(subtype "+ iter->type_name_ + ")" + jter->second;
-    helper.add_option( seclabel, jter->first + "(" + iter->type_name_ + ")", desc );
-  }
+  iter->publish_help( helper, seclabel );
 }
 
 !!!826544.cpp!!!	has_trial_type(in trial_label : string) : bool
 for( auto const& defn : this->type_to_object_ )
 {
-  if( defn.type_name_ == trial_label )
+  if( defn.label() == trial_label )
   {
     return true;
   }
@@ -104,7 +100,7 @@ if( this->missing_required_tags_.any() )
 std::size_t idx = 0;
 for( idx = 0; idx != this->type_to_object_.size(); ++idx )
 {
-  if( this->type_to_object_[ idx ].type_name_ == this->type_ )
+  if( this->type_to_object_[ idx ].label() == this->type_ )
   {
     break;
   }
@@ -116,12 +112,12 @@ if( not this->parameter_set_.empty() )
 {
   for( auto const& entry : this->parameter_set_ )
   {
-    UTILITY_INPUT( defn.parameter_definition_.count( entry.first ) != 0, "Trial \"" + entry.first + "\" parameter with value (" + entry.second + ") is not understood by " + this->type_ + " " + this->section_label() + ".", this->section_label() );
+    UTILITY_INPUT( defn.has_definition( entry.first ) != 0, "Trial \"" + entry.first + "\" parameter with value (" + entry.second + ") is not understood by " + this->type_ + " " + this->section_label() + ".", this->section_label() );
   }
 }
 
 // Use generator to create the chooser object.
-this->manager_->add_chooser( defn.factory_( this->parameter_set_, this->type_, this->specie_list_, this->rate_ ) );
+this->manager_->add_chooser( defn( this->parameter_set_, this->type_, this->specie_list_, this->rate_ ) );
 
 !!!1171376.cpp!!!	do_reset() : void
 this->missing_required_tags_.set();
