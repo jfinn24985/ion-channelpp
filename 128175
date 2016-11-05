@@ -1,6 +1,6 @@
 format 75
 "utility" // utility
-  revision 209
+  revision 210
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -67,11 +67,126 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     //activity diagram settings
     package_name_in_tab default show_context default show_opaque_action_definition default auto_label_position default write_flow_label_horizontally default draw_all_relations default shadow default
     show_infonote default drawing_language default show_stereotype_properties default
+    associated_deployment_view deploymentview_ref 169519 // framework deployment
     comment "Set of non-template classes that use double, ptrdiff_t and size_t
 as the floating point and integral types respectively"
     classdiagram 154545 "Double Stats classes"
       draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
       size A4
+    end
+
+    class 546480 "mean_algorithm"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Class containing algorithm for calculating mean. This
+ class is meant to be privately inherited by classes
+ that wish to contain a running average.
+
+ see wiki and corresponding reference below.
+
+ https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+"
+      operation 1318064 "append"
+	class_operation public explicit_return_type "void"
+	nparams 4
+	  param inout name "mean" explicit_type "double"
+	  param inout name "variance" explicit_type "double"
+	  param in name "val" explicit_type "double"
+	  param in name "count" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}, ${t2} ${p2}, ${t3} ${p3}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}, ${p1}${v1}${)}:
+${docstring}${body}
+"
+	
+	comment " Add a single sample value to the estimate
+
+ \\req count > 0: count == 0 is undefined (will result in X/0)
+
+ NOTE: correct usage is (so count should never be 0!)
+
+  ++count
+ append( mean, variance, val, count )
+
+ count is not updated in this method to allow sets of mean, 
+ variance pairs to share the same count."
+      end
+
+      operation 1317680 "variance"
+	class_operation public explicit_return_type "double"
+	nparams 2
+	  param in name "variance" explicit_type "double"
+	  param in name "count" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  return (count <= 1 ? 0.0 : variance/double(count-1));
+}
+
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}return 0.0 if count <= 1 else (self.variance_/float(count-1))
+"
+	
+	comment " Calculate the estimate's sample variance"
+      end
+
+      operation 1318192 "merge"
+	class_operation public explicit_return_type "void"
+	nparams 6
+	  param inout name "lh_mean" explicit_type "double"
+	  param inout name "lh_var" explicit_type "double"
+	  param inout name "lh_count" explicit_type "size_t"
+	  param in name "rh_mean" explicit_type "double"
+	  param in name "rh_var" explicit_type "double"
+	  param in name "rh_count" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}, ${t5} ${p5}${v5}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}, ${t2} & ${p2}, ${t3} ${p3}, ${t4} ${p4}, ${t5} ${p5}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Merge together two sets of statistics
+
+ see wiki and corresponding reference below
+
+ https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
+ 
+ Chan, Tony F.; Golub, Gene H.; LeVeque, Randall J. (1979),
+ \"Updating Formulae and a Pairwise Algorithm for Computing
+ Sample Variances.\" (PDF), Technical Report STAN-CS-79-773,
+ Department of Computer Science, Stanford University.
+ 
+"
+      end
     end
 
     class 176433 "basic_mean"
@@ -768,13 +883,41 @@ ${docstring}${members}
 
  (Unit test suite \"estimate_test_suite\")
 "
-      classrelation 285745 // <generalisation>
-	relation 285489 ---|>
+      classrelation 767792 // <generalisation>
+	relation 766896 ---|>
 	  a private
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 285745 // <generalisation>
-	  b parent class_ref 176433 // basic_mean
+	    classrelation_ref 767792 // <generalisation>
+	  b parent class_ref 546480 // mean_algorithm
+      end
+
+      attribute 591664 "mean_"
+	private explicit_type "double"
+	init_value "0.0"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Geometric mean value"
+      end
+
+      attribute 591536 "variance_"
+	private explicit_type "double"
+	init_value "0.0"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Sum of differences squared 
+
+ (NOTE: real variance == this value/(count-1))"
       end
 
       attribute 226865 "count_"
@@ -787,6 +930,139 @@ ${docstring}${members}
 	python_decl "${comment}${self}${name} = ${value}
 "
 	idl_decl ""
+	comment " Number of samples taken"
+      end
+
+      extra_member 530736 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 318513 "estimater"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: mean_()
+, variance_()
+, count_(0ul)
+{}
+"
+	
+	
+	
+	
+      end
+
+      operation 318641 "estimater"
+	stereotype "copy"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "other" type class_ref 176049 // estimater
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}${)}${volatile}${throw}
+: mean_( ${p0}.mean_ )
+, variance_( ${p0}.variance_ ) 
+, count_( ${p0}.count_ ) 
+{}
+"
+	
+	
+	
+	
+      end
+
+      operation 770096 "estimater"
+	stereotype "move"
+	public explicit_return_type ""
+	nparams 1
+	  param inout name "other" type class_ref 176049 // estimater
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${v0}${)}${volatile}${throw}
+: mean_( std::move( ${p0}.mean_ ) )
+, variance_( std::move( ${p0}.variance_ ) )
+, count_( std::move( ${p0}.count_ ) )
+{}
+"
+	
+	
+	
+	
+      end
+
+      operation 318897 "operator="
+	cpp_inline public return_type class_ref 176049 // estimater
+	nparams 1
+	  param in name "other" type class_ref 176049 // estimater
+	cpp_decl "    ${comment}${inline}${type}& ${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
+{
+  this->swap( ${p0} );
+  return *this;
+}
+"
+	
+	
+	
+	
+      end
+
+      extra_member 181169 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;
+
+" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 319153 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} 
+{
+  ar & mean_;
+  ar & variance_;
+  ar & count_;
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 319281 "swap"
+	cpp_inline public explicit_return_type "void"
+	nparams 1
+	  param inout name "other" type class_ref 176049 // estimater
+	cpp_decl "    ${comment}${inline}${type} ${name}${(}${t0} & ${p0}${v0}${)}${volatile}${throw}
+{
+  std::swap( this->mean_, ${p0}.mean_ );
+  std::swap( this->variance_, ${p0}.variance_ );
+  std::swap( this->count_, ${p0}.count_ );
+}
+"
+	
+	
+	
+	
+      end
+
+      extra_member 530864 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
       end
 
       operation 318257 "append"
@@ -796,7 +1072,7 @@ ${docstring}${members}
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} 
 {
   ++this->count_;
-  this->basic_mean::append(val, this->count_);
+  mean_algorithm::append(this->mean_, this->variance_, val, this->count_);
 }
 "
 	
@@ -832,7 +1108,7 @@ ${docstring}return self.count_
 	  param in name "other" type class_ref 176049 // estimater
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  return (this->count_ == other.count_) and this->basic_mean::equivalent(other);
+  return (this->count_ == other.count_) and (this->mean_ == other.mean_) and (this->variance_ == other.variance_);
 }
 "
 	
@@ -842,45 +1118,6 @@ ${docstring}${body}
 "
 	
 	comment "Test if two estimaters are equivalent"
-      end
-
-      operation 318513 "estimater"
-	public explicit_return_type ""
-	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} : basic_mean(), count_(0ul) {};
-"
-	
-	
-	
-	
-      end
-
-      operation 318641 "estimater"
-	stereotype "copy"
-	public explicit_return_type ""
-	nparams 1
-	  param in name "other" type class_ref 176049 // estimater
-	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}${)}${volatile}${throw}
- : basic_mean(${p0}), count_(${p0}.count_) {}
-"
-	
-	
-	
-	
-      end
-
-      operation 770096 "estimater"
-	stereotype "move"
-	public explicit_return_type ""
-	nparams 1
-	  param inout name "other" type class_ref 176049 // estimater
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${v0}${)}${volatile}${throw}
- : basic_mean(std::move(${p0})), count_(${p0}.count_) {}
-"
-	
-	
-	
-	
       end
 
       operation 318769 "insert"
@@ -910,7 +1147,7 @@ ${docstring}for val in iterable:
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} 
 {
-  return this->basic_mean::mean();
+  return this->mean_;
 }
 "
 	
@@ -919,34 +1156,60 @@ ${docstring}for val in iterable:
 	
       end
 
-      operation 318897 "operator="
-	cpp_inline public return_type class_ref 176049 // estimater
+      operation 1318576 "merge"
+	public explicit_return_type "void"
 	nparams 1
 	  param in name "other" type class_ref 176049 // estimater
-	cpp_decl "    ${comment}${inline}${type}& ${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  this->swap (${p0});
-  return *this;
+  mean_algorithm::merge( this->mean_, this->variance_, this->count_, ${p0}.mean_, ${p0}.variance_, ${p0}.count_ );
 }
 "
 	
 	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
 	
+	comment " Merge two estimates of the same statistic together."
+      end
+
+      operation 1318320 "operator=="
+	stereotype "friend"
+	friend public explicit_return_type "bool"
+	nparams 2
+	  param in name "lhs" type class_ref 176049 // estimater
+	  param in name "rhs" type class_ref 176049 // estimater
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  return lhs.equivalent( ${p1} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
 	
       end
 
-      extra_member 356784 "operator=="
-	
-	cpp "friend inline bool operator==(const estimater &lhs, const estimater &rhs)
+      operation 1318448 "operator!="
+	stereotype "friend"
+	friend public explicit_return_type "bool"
+	nparams 2
+	  param in name "lhs" type class_ref 176049 // estimater
+	  param in name "rhs" type class_ref 176049 // estimater
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  return lhs.equivalent( rhs );
+  return not lhs.equivalent( ${p1} );
 }
-" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-	comment " Friendly op =="
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
       end
 
       operation 319025 "reset"
@@ -954,7 +1217,8 @@ ${docstring}for val in iterable:
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
-  this->basic_mean::reset();
+  this->mean_ = 0.0;
+  this->variance_ = 0.0;
   this->count_ = 0;
 }
 "
@@ -967,59 +1231,12 @@ super(${class},self).reset()
 	
       end
 
-      extra_member 181169 "friend"
-	
-	cpp "
-  friend class boost::serialization::access;
-
-" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      operation 319153 "serialize"
-	stereotype "template"
-	cpp_inline private explicit_return_type "void"
-	nparams 2
-	  param inout name "ar" explicit_type "Archive"
-	  param in name "version" explicit_type "unsigned int"
-	cpp_decl "    ${comment}template<class Archive>
-  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} 
-{
-    ar & boost::serialization::base_object< basic_mean >(*this);
-    ar & count_;
-  }
-"
-	
-	
-	
-	
-      end
-
-      operation 319281 "swap"
-	cpp_inline public explicit_return_type "void"
-	nparams 1
-	  param inout name "other" type class_ref 176049 // estimater
-	cpp_decl "    ${comment}${inline}${type} ${name}${(}${t0} & ${p0}${v0}${)}${volatile}${throw}
-{
-   this->basic_mean::swap(${p0});
-   std::swap(this->count_, ${p0}.count_);
-}
-"
-	
-	
-	
-	
-      end
-
       operation 319409 "variance"
 	const cpp_inline public explicit_return_type "double"
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} 
 {
-  return this->basic_mean::variance(this->count_);
+  return mean_algorithm::variance(this->variance_, this->count_);
 }
 "
 	
@@ -8656,6 +8873,58 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
+    artifact 530224 "mean_algorithm"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// manual includes
+#include \"utility/fuzzy_equals.hpp\"
+#include \"utility/utility.hpp\"
+// -
+#include <cmath>
+// -
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 546480 // mean_algorithm
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
     artifact 288688 "memory_sink"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -8806,6 +9075,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 207409 // estimater_matrix
 	artifact_ref 288688 // memory_sink
 	artifact_ref 343215 // random
+	artifact_ref 530224 // mean_algorithm
 	artifact_ref 580143 // utility
       end
       comment "Authors: Justin Finnerty
@@ -8892,6 +9162,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ${comment}
 ${includes}
 // manual includes
+#include \"utility/config.hpp\"
+// - 
 #include <limits>
 // manual includes
 ${declarations}

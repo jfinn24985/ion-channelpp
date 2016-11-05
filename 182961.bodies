@@ -310,6 +310,15 @@ estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
 }
 
 !!!327857.cpp!!!	estimater_lifetime() : void
+{
+  // Canonical pattern
+  BOOST_CHECK( std::is_default_constructible< utility::estimater >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< utility::estimater >::type{} );
+  BOOST_CHECK(std::is_move_constructible< utility::estimater >::type{} );
+  BOOST_CHECK( (std::is_assignable< utility::estimater, utility::estimater >::type{}) );
+  BOOST_CHECK( not std::has_virtual_destructor< utility::estimater >::type{} );
+}
+
 estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
 {
   // TEST: default ctor
@@ -455,6 +464,25 @@ estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
   BOOST_CHECK_EQUAL(test_var.count(), 31);
   BOOST_CHECK(utility::feq(test_var.mean(), exemplar.mean));
   BOOST_CHECK(utility::feq(test_var.variance(), exemplar.svar));
+}
+{
+  // TEST: merge method
+  utility::estimater v1, v2, v3, v4;
+
+  v1.insert(&exemplar.var[0], &exemplar.var[31]);
+  v2.insert(&exemplar.var[0], &exemplar.var[15]);
+  v3.insert(&exemplar.var[15], &exemplar.var[31]);
+
+  v4 = v2;
+  v4.merge( v3 );
+  BOOST_CHECK_EQUAL( v1.count(), 31 );
+  BOOST_CHECK_EQUAL( v2.count(), 15 );
+  BOOST_CHECK_EQUAL( v3.count(), 16 );
+  BOOST_CHECK_EQUAL( v4.count(), 31 );
+  BOOST_CHECK( utility::feq( v4.mean(), exemplar.mean ) );
+  BOOST_CHECK( utility::feq( v4.variance(), exemplar.svar ) );
+  BOOST_CHECK( utility::feq( v4.mean(), v1.mean() ) );
+  BOOST_CHECK( utility::feq( v4.variance(), v1.variance() ) );
 }
 
 !!!356657.cpp!!!	estimate_array_lifetime() : void

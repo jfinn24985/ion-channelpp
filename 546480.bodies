@@ -1,0 +1,66 @@
+class mean_algorithm
+!!!1318064.cpp!!!	append(inout mean : double, inout variance : double, in val : double, in count : size_t) : void
+if( count == 1 )
+{
+  mean = val;
+  variance = 0.0;
+}
+else
+{
+  const double av_old( mean );
+  mean += ( val - av_old )/double( count );
+  variance += ( val - av_old )*( val - mean );
+}
+
+!!!1318064.python!!!	append(inout mean : double, inout variance : double, in val : double, in count : size_t) : void
+if count == 1:
+  self.mean_ = val
+  self.variance_ = 0.0
+else:
+  av_old = self.mean_
+  self.mean_ += (val - av_old)/float(count)
+  self.variance_ += (val - av_old)*(val - self.mean_);
+!!!1318192.cpp!!!	merge(inout lh_mean : double, inout lh_var : double, inout lh_count : size_t, in rh_mean : double, in rh_var : double, in rh_count : size_t) : void
+// Cases
+//  lh_count : rh_count : action
+//      0    :  ---     : swap(lh,rh)
+//      1    :   0      : no op
+//      1    :   1      : append(lh, rhmean)
+//      1    :  >1      : append(rh, lhmean), swap(lh,rh)
+//     >1    :   0      : no op
+//     >1    :   1      : append(lh, rhmean)
+//     >1    :  >1      : MERGE
+
+if( rh_count == 0 ) return;
+if( rh_count == 1 )
+{
+  UTILITY_REQUIRE( utility::feq( rh_var, 0.0 ), "Variance should be zero for count <= 1" );
+  ++lh_count;
+  append( lh_mean, lh_var, rh_mean, lh_count );
+  return;
+}
+if( lh_count == 1 )
+{
+  ++rh_count;
+  append( rh_mean, rh_var, lh_mean, rh_count );
+  lh_mean = rh_mean;
+  lh_var = rh_var;
+  lh_count = rh_count;
+  return;
+}
+else
+{
+  //  m_(l+r) = m_l.n_l/(n_l + n_r) + m_r.n_r/(n_l + n_r)
+  //  d = m_r - m_l
+  //  d^2 = (m_r - m_l)^2 == m_r^2 - 2.m_r.m_l + m_l^2
+  //  v_(l+r) = v_l + v_r + d^2.(n_l.n_r/(n_l+n_r))
+  //  n_(l+r) = (n_l + n_r)
+  const std::size_t lh_count_old( lh_count );
+  const double delta_sq( std::pow( rh_mean, 2 ) - 2 * rh_mean * lh_mean + std::pow( lh_mean, 2 ) );
+  lh_count += rh_count;
+  lh_mean *= ( double( lh_count_old )/double( lh_count ) );
+  lh_mean += rh_mean * ( double( rh_count )/double( lh_count ) );
+  lh_var += rh_var + ( delta_sq * rh_count * lh_count_old / double( lh_count ) );
+}
+
+
