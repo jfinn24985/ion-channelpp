@@ -75,7 +75,7 @@ return gman;
 !!!1185584.cpp!!!	test_base_choice_methods(inout choice : base_choice) : void
 std::stringstream ss;
 double prob;
-trial::choice_hash key;
+particle::change_hash key;
 // serialization test
 {
   prob = choice->probability();
@@ -130,6 +130,7 @@ for( std::size_t idx = 0; idx != pman->specie_count(); ++idx )
     for( std::size_t attempts = 0; attempts != 1024; ++attempts )
     {
       std::unique_ptr< particle::change_set > tryit( chc->generate( *pman, *gman, rgnr ) );
+      BOOST_CHECK( chc->key() == tryit->id() );
       BOOST_REQUIRE( tryit->fail() or ( tryit->size() > 0 ) );
       if( not tryit->fail() )
       {
@@ -180,127 +181,6 @@ std::stringstream ss;
   }
 }
 
-!!!783408.cpp!!!	choice_hash_test() : void
-{
-  // Test for canonical pattern
-  BOOST_CHECK( std::is_default_constructible< trial::choice_hash >::type {} );
-  BOOST_CHECK( std::is_copy_constructible< trial::choice_hash >::type {} );
-  BOOST_CHECK( std::is_move_constructible< trial::choice_hash >::type {} );
-  BOOST_CHECK( ( std::is_assignable< trial::choice_hash, trial::choice_hash >::type {} ) );
-  BOOST_CHECK( not std::has_virtual_destructor< trial::choice_hash >::type {} );
-}
-std::stringstream store;
-{
-  // Default ctor
-  trial::choice_hash var1;
-  BOOST_CHECK_EQUAL( var1.key, 0 );
-  BOOST_CHECK_EQUAL( var1.start, 0 );
-  BOOST_CHECK_EQUAL( var1.finish, 0 );
-  BOOST_CHECK_EQUAL( var1.subtype, 0 );
-
-  trial::choice_hash var2;
-  BOOST_CHECK( var1.equivalent( var2 ) );
-  BOOST_CHECK( var1 == var2 );
-  BOOST_CHECK( var1 >= var2 );
-  BOOST_CHECK( var1 <= var2 );
-  BOOST_CHECK( not (var1 != var2) );
-  BOOST_CHECK( not (var1.less_than( var2 ) ) );
-  BOOST_CHECK( not (var1 < var2) );
-
-  var1.key = 1;
-  var1.start = 2;
-  var1.finish = 3;
-  var1.subtype = 4;
-
-  BOOST_CHECK( not var1.equivalent( var2 ) );
-
-  trial::choice_hash var3( 1, 2, 3, 4 );
-  BOOST_CHECK( var1.key == var3.key );
-  BOOST_CHECK( var1.start == var3.start );
-  BOOST_CHECK( var1.finish == var3.finish );
-  BOOST_CHECK( var1.subtype == var3.subtype );
-
-  // copy ctor
-  trial::choice_hash var4( var1 );
-  BOOST_CHECK( var1 == var4 );
-
-  // move ctor
-  trial::choice_hash var5( std::move( var4 ) );
-  BOOST_CHECK( var1 == var5 );
-
-  var5.subtype = 5;
-  BOOST_CHECK( var1 != var5 );
-  // op=
-  var5 = var3;
-  BOOST_CHECK( var1 == var5 );
-
-  boost::archive::text_oarchive oa(store);
-  // write class instance to archive
-  oa << var1;
-}
-{
-  trial::choice_hash var1;
-  trial::choice_hash var2;
-
-  BOOST_CHECK( var1 == var2 );
-
-  boost::archive::text_iarchive ia(store);
-  // get class instance from archive
-  ia >> var1;
-
-  BOOST_CHECK( var1 != var2 );
-  BOOST_CHECK_EQUAL( var1.key, 1 );
-  BOOST_CHECK_EQUAL( var1.start, 2 );
-  BOOST_CHECK_EQUAL( var1.finish, 3 );
-  BOOST_CHECK_EQUAL( var1.subtype, 4 );
-}
-{
-  // Check comparison
-  trial::choice_hash var1( 1, 2, 3, 4 );
-  trial::choice_hash var2( 1, 2, 3, 5 );
-  BOOST_CHECK( var1.key == var2.key );
-  BOOST_CHECK( var1.start == var2.start );
-  BOOST_CHECK( var1.finish == var2.finish );
-  BOOST_CHECK( var1.subtype < var2.subtype );
-
-  BOOST_CHECK( var1 != var2 );
-  BOOST_CHECK( var1 < var2 );
-  BOOST_CHECK( var1 <= var2 );
-  BOOST_CHECK( var2 > var1 );
-  BOOST_CHECK( var2 >= var1 );
-  BOOST_CHECK( not var1.match( var2 ) );
-
-  var2 = var1;
-  ++var2.finish;
-
-  BOOST_CHECK( var1 != var2 );
-  BOOST_CHECK( var1 < var2 );
-  BOOST_CHECK( var1 <= var2 );
-  BOOST_CHECK( var2 > var1 );
-  BOOST_CHECK( var2 >= var1 );
-  BOOST_CHECK( not var1.match( var2 ) );
-
-  var2 = var1;
-  ++var2.start;
-
-  BOOST_CHECK( var1 != var2 );
-  BOOST_CHECK( var1 < var2 );
-  BOOST_CHECK( var1 <= var2 );
-  BOOST_CHECK( var2 > var1 );
-  BOOST_CHECK( var2 >= var1 );
-  BOOST_CHECK( not var1.match( var2 ) );
-
-  var2 = var1;
-  ++var2.key;
-
-  BOOST_CHECK( var1 != var2 );
-  BOOST_CHECK( var1 < var2 );
-  BOOST_CHECK( var1 <= var2 );
-  BOOST_CHECK( var2 > var1 );
-  BOOST_CHECK( var2 >= var1 );
-  BOOST_CHECK( var1.match( var2 ) );
-
-}
 !!!1185712.cpp!!!	base_choice_test() : void
 {
   // Test for virtual noncopy pattern
@@ -314,7 +194,7 @@ std::stringstream store;
 {
 // Public ctor 1
   const double prob = 0.1;
-  trial::choice_hash key1( 1, 2, 3, 4 );
+  particle::change_hash key1( 1, 2, 3, 4 );
   boost::shared_ptr< trial::base_choice > var1( new test_choice( key1 ) );
   BOOST_CHECK_EQUAL( var1->key(), key1 );
   BOOST_CHECK_EQUAL( var1->probability(), 0 );
@@ -327,7 +207,7 @@ std::stringstream store;
 
 {
 // Public ctor 2
-  trial::choice_hash key2( 1, 0, 0, 0 );
+  particle::change_hash key2( 1, 0, 0, 0 );
   boost::shared_ptr< trial::base_choice > var2( new test_choice( 1ul ) );
   BOOST_CHECK_EQUAL( var2->key(), key2 );
   BOOST_CHECK_EQUAL( var2->probability(), 0 );
@@ -417,13 +297,13 @@ std::stringstream store;
   BOOST_CHECK( cman2->begin() != cman2->end() );
   std::bitset< 5 > all_spc;
   all_spc.reset(); // set all to none
-  const trial::choice_hash mover( 0, 1, 1, 0 );
+  const particle::change_hash mover( 0, 1, 1, 0 );
   for (auto const& choice : *cman2 )
   {
-    BOOST_CHECK_GE( choice.key().key, 0 );
-    BOOST_CHECK_LE( choice.key().key, 4 );
+    BOOST_CHECK_GE( choice.key().key(), 0 );
+    BOOST_CHECK_LE( choice.key().key(), 4 );
     BOOST_CHECK( mover.match( choice.key() ) );
-    BOOST_REQUIRE_NO_THROW( all_spc.set( choice.key().key ) );
+    BOOST_REQUIRE_NO_THROW( all_spc.set( choice.key().key() ) );
   }
   BOOST_REQUIRE( all_spc.all() );
 }
@@ -438,7 +318,7 @@ const double prob = 0.1;
   BOOST_CHECK( not( std::is_assignable< trial::add_specie, trial::add_specie >::type {} ) );
   BOOST_CHECK( std::has_virtual_destructor< trial::add_specie >::type {} );
 }
-trial::choice_hash key1( 0, 0, 1, 0 );
+particle::change_hash key1( 0, 0, 1, 0 );
 boost::shared_ptr< trial::add_specie > var1( new trial::add_specie( 0ul ) );
 BOOST_CHECK_EQUAL( var1->key(), key1 );
 BOOST_CHECK_EQUAL( var1->probability(), 0 );
@@ -465,7 +345,7 @@ const double prob = 0.1;
   BOOST_CHECK( not( std::is_assignable< trial::jump_choice, trial::jump_choice >::type {} ) );
   BOOST_CHECK( std::has_virtual_destructor< trial::jump_choice >::type {} );
 }
-trial::choice_hash key1( 0, 1, 1, 1 );
+particle::change_hash key1( 0, 1, 1, 1 );
 boost::shared_ptr< trial::jump_choice > var1( new trial::jump_choice( 0ul ) );
 BOOST_CHECK_EQUAL( var1->key(), key1 );
 BOOST_CHECK_EQUAL( var1->probability(), 0 );
@@ -490,7 +370,7 @@ const double prob = 0.1;
   BOOST_CHECK( not( std::is_assignable< trial::jump_in, trial::jump_in >::type {} ) );
   BOOST_CHECK( std::has_virtual_destructor< trial::jump_in >::type {} );
 }
-trial::choice_hash key1( 0, 1, 1, 2 );
+particle::change_hash key1( 0, 1, 1, 2 );
 boost::shared_ptr< trial::jump_in > var1( new trial::jump_in( 0ul, 1 ) );
 BOOST_CHECK_EQUAL( var1->key(), key1 );
 BOOST_CHECK_EQUAL( var1->probability(), 0 );
@@ -518,7 +398,7 @@ const double prob = 0.1;
   BOOST_CHECK( not( std::is_assignable< trial::jump_out, trial::jump_out >::type {} ) );
   BOOST_CHECK( std::has_virtual_destructor< trial::jump_out >::type {} );
 }
-trial::choice_hash key1( 0, 1, 1, 3 );
+particle::change_hash key1( 0, 1, 1, 3 );
 boost::shared_ptr< trial::jump_out > var1( new trial::jump_out( 0ul, 1ul ) );
 BOOST_CHECK_EQUAL( var1->key(), key1 );
 BOOST_CHECK_EQUAL( var1->probability(), 0 );
@@ -546,7 +426,7 @@ const double prob = 0.1;
   BOOST_CHECK( not( std::is_assignable< trial::jump_around, trial::jump_around >::type {} ) );
   BOOST_CHECK( std::has_virtual_destructor< trial::jump_around >::type {} );
 }
-trial::choice_hash key1( 0, 1, 1, 4 );
+particle::change_hash key1( 0, 1, 1, 4 );
 boost::shared_ptr< trial::jump_around > var1( new trial::jump_around( 0ul, 1ul ) );
 BOOST_CHECK_EQUAL( var1->key(), key1 );
 BOOST_CHECK_EQUAL( var1->probability(), 0 );
@@ -576,7 +456,7 @@ trial_test::test_base_choice_methods( var1 );
 
 const double prob = 0.1;
 const double delta = 10.0;
-trial::choice_hash key1( 0, 1, 1, 0 );
+particle::change_hash key1( 0, 1, 1, 0 );
 boost::shared_ptr< trial::move_choice > var1( new trial::move_choice( 0ul ) );
 BOOST_CHECK_EQUAL( var1->key(), key1 );
 BOOST_CHECK_EQUAL( var1->probability(), 0 );
@@ -607,7 +487,7 @@ const double prob = 0.1;
   BOOST_CHECK( not( std::is_assignable< trial::remove_specie, trial::remove_specie >::type {} ) );
   BOOST_CHECK( std::has_virtual_destructor< trial::remove_specie >::type {} );
 }
-trial::choice_hash key1( 0, 1, 0, 0 );
+particle::change_hash key1( 0, 1, 0, 0 );
 boost::shared_ptr< trial::remove_specie > var1( new trial::remove_specie( 0ul ) );
 BOOST_CHECK_EQUAL( var1->key(), key1 );
 BOOST_CHECK_EQUAL( var1->probability(), 0 );
