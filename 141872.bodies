@@ -18,7 +18,7 @@ self.ensemble_ = ensemble(self)
 
 !!!168496.python!!!	__del__(in self : )
 self.ensemble_ = None
-self.observers_ = None
+self.observables_ = None
 if self.report_sig_ != None and len(self.report_sig_) == 0:
   self.report_sig_.disconnect_all_slots()
   self.report_sig_ = None
@@ -38,7 +38,7 @@ if self.outer_sig_ != None and len(self.outer_sig_) == 0:
 , data_source_()
 , ensemble_(new particle::ensemble(*this))
 , evaluators_()
-, observers_()
+, observables_()
 , rates_()
 , species_()
 , cell_region_()
@@ -103,12 +103,12 @@ if self.outer_sig_ != None and len(self.outer_sig_) == 0:
    decoder.add_input_delegate( delegate );
 }
 {
-   // Add input decoder class for the generic observer types. This handles the instantiation
-   // of the requested observers
-   std::unique_ptr< observer::sampler_meta > tmp_( new observer::sampler_meta );
-   tmp_->type_to_object_[ observer::metropolis_sampler::type_label_() ]= &observer::metropolis_sampler::make_sampler;
-   tmp_->type_to_object_[ observer::rdf_sampler::type_label_() ]= &observer::rdf_sampler::make_sampler;
-   tmp_->type_to_object_[ observer::specie_count::type_label_() ]= &observer::specie_count::make_sampler;
+   // Add input decoder class for the generic observable types. This handles the instantiation
+   // of the requested observables
+   std::unique_ptr< observable::sampler_meta > tmp_( new observable::sampler_meta );
+   tmp_->type_to_object_[ observable::metropolis_sampler::type_label_() ]= &observable::metropolis_sampler::make_sampler;
+   tmp_->type_to_object_[ observable::rdf_sampler::type_label_() ]= &observable::rdf_sampler::make_sampler;
+   tmp_->type_to_object_[ observable::specie_count::type_label_() ]= &observable::specie_count::make_sampler;
    boost::shared_ptr< core::input_base_meta > delegate( tmp_.release() );
    decoder.add_input_delegate( delegate );
 }
@@ -134,12 +134,12 @@ if self.outer_sig_ != None and len(self.outer_sig_) == 0:
    decoder.add_input_delegate (delegate);
 }
 {
-   // Add input decoder class for the generic observer types. This handles the instantiation
-   // of the requested observers
-   std::unique_ptr< observer::sampler_meta > tmp_ (new observer::sampler_meta);
-   tmp_->type_to_object_[observer::metropolis_sampler::type_label_()]= &observer::metropolis_sampler::make_sampler;
-   tmp_->type_to_object_[observer::rdf_sampler::type_label_()]= &observer::rdf_sampler::make_sampler;
-   tmp_->type_to_object_[observer::specie_count::type_label_()]= &observer::specie_count::make_sampler;
+   // Add input decoder class for the generic observable types. This handles the instantiation
+   // of the requested observables
+   std::unique_ptr< observable::sampler_meta > tmp_ (new observable::sampler_meta);
+   tmp_->type_to_object_[observable::metropolis_sampler::type_label_()]= &observable::metropolis_sampler::make_sampler;
+   tmp_->type_to_object_[observable::rdf_sampler::type_label_()]= &observable::rdf_sampler::make_sampler;
+   tmp_->type_to_object_[observable::specie_count::type_label_()]= &observable::specie_count::make_sampler;
    boost::shared_ptr< core::input_base_meta > delegate (tmp_.release());
    decoder.add_input_delegate (delegate);
 }
@@ -181,7 +181,7 @@ for (auto const& choice : this->choices_)
 {
   os << boost::format(choice_row) % choice.label() % this->species_[choice.specie_key()].label() % (choice.probability()*100.0) << "\n";
 }
-for (auto const& obsr : this->observers_)
+for (auto const& obsr : this->observables_)
 {
   obsr.description(os);
 }
@@ -218,15 +218,15 @@ print >>os, "[choices] trial types and rates"
 print >>os, " %6s %4s %7s" % ( "type", "spc.", "rate(%)" )
 for choice in self.choices_:
   print >>os, " %6s %4s %7.2f" % ( choice.label(), self.species_[choice.specie_key()].label(), choice.probability()*100.0 )
-for observer in self.observers_:
-  observer.description( os )
+for observable in self.observables_:
+  observable.description( os )
 for potl in self.evaluators_:
   potl.description( os )
 self.ensemble_.description( os )
 
 !!!169776.cpp!!!	do_enrol() : void
 this->ensemble_->enrol( *this );
-for (auto & obs : this->observers_)
+for (auto & obs : this->observables_)
 {
   obs.enrol( *this );
 }
@@ -236,8 +236,8 @@ for (auto &choice : this->choices_)
 {
   choice.reset();
 }
-// reset observers and prepare for simulation
-for (auto &obs : this->observers_)
+// reset observables and prepare for simulation
+for (auto &obs : this->observables_)
 {
   obs.prepare ( *this );
 }
@@ -253,8 +253,8 @@ this->total_energy();
 self.outer_loop_index_ = 0
 for choice in self.choices_:
   choice.reset()
-for observer in self.observers_:
-  observer.prepare( self )
+for observable in self.observables_:
+  observable.prepare( self )
 for evaluator in self.evaluators_:
   evaluator.prepare( self )
 self.prepare_sig_( self )
@@ -477,13 +477,13 @@ for ispec in range(specie_count):
 self.ranf_.shuffle(self.choices_)
 !!!173616.cpp!!!	run(inout oslog : ostream) : void
 UTILITY_REQUIRE(not this->evaluators_.empty (), "Can not run simulation with no energy evaluators");
-UTILITY_REQUIRE(not this->observers_.empty (), "Can not run simulation with no observers");
+UTILITY_REQUIRE(not this->observables_.empty (), "Can not run simulation with no observables");
 // do thermalization
 this->run_loop(this->equilibration_interval_, oslog);
 oslog << "\nEND OF THERMALISATION\n\n";
-if ( this->imc_ < this->observers_.size() )
+if ( this->imc_ < this->observables_.size() )
 {
-  observer::igcmc *imc { dynamic_cast< observer::igcmc* >( &(this->observers_[this->imc_]) ) };
+  observable::igcmc *imc { dynamic_cast< observable::igcmc* >( &(this->observables_[this->imc_]) ) };
   UTILITY_REQUIRE(imc != nullptr, "Observer at IMC index was not of expected derived type.");
   while (not imc->at_end())
   {
