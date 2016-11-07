@@ -567,64 +567,64 @@ estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
 }
 
 !!!356785.cpp!!!	estimate_array_data_collection() : void
-estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
+estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
 {
   // TESTS FOR CORRECTNESS
-  utility::estimate_array var (100);
+  utility::estimate_array var( 100 );
 
   // Insure start from zero
-  BOOST_CHECK_EQUAL(var.count(), 0ul);
-  BOOST_CHECK_EQUAL(var.size(), 100ul);
-  for (std::size_t ith = 0; ith != var.size(); ++ith)
+  BOOST_CHECK_EQUAL( var.count(), 0ul );
+  BOOST_CHECK_EQUAL( var.size(), 100ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
   {
-    BOOST_CHECK_EQUAL(var.mean(ith), 0.0);
-    BOOST_CHECK_EQUAL(var.variance(ith), 0.0);
+    BOOST_CHECK_EQUAL( var.mean( ith ), 0.0 );
+    BOOST_CHECK_EQUAL( var.variance( ith ), 0.0 );
   }
 
   // Add first data points (all 4.0)
-  var.append (exemplar.data4.begin(), exemplar.data4.end());
-  BOOST_CHECK_EQUAL(var.count(), 1ul);
-  for (std::size_t ith = 0; ith != var.size(); ++ith)
+  var.append( exemplar.data4.begin(), exemplar.data4.end() );
+  BOOST_CHECK_EQUAL( var.count(), 1ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
   {
-    BOOST_CHECK_EQUAL(var.mean(ith), 4.0);
-    BOOST_CHECK_EQUAL(var.variance(ith), 0.0);
+    BOOST_CHECK_EQUAL( var.mean( ith ), 4.0 );
+    BOOST_CHECK_EQUAL( var.variance( ith ), 0.0 );
   }
 
   // Add second data points (all 5.0)
-  var.append (exemplar.data5.begin(), exemplar.data5.end());
+  var.append( exemplar.data5.begin(), exemplar.data5.end() );
 
-  BOOST_CHECK_EQUAL(var.count(), 2ul);
-  for (std::size_t ith = 0; ith != var.size(); ++ith)
+  BOOST_CHECK_EQUAL( var.count(), 2ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
   {
-    BOOST_CHECK_EQUAL(var.mean(ith), 4.5);
-    BOOST_CHECK_EQUAL(var.variance(ith), 0.5);
+    BOOST_CHECK_EQUAL( var.mean( ith ), 4.5 );
+    BOOST_CHECK_EQUAL( var.variance( ith ), 0.5 );
   }
 
   // Add third data points (all 6.0)
-  var.append (exemplar.data6.begin(), exemplar.data6.end());
+  var.append( exemplar.data6.begin(), exemplar.data6.end() );
 
-  BOOST_CHECK_EQUAL(var.count(), 3ul);
-  for (std::size_t ith = 0; ith != var.size(); ++ith)
+  BOOST_CHECK_EQUAL( var.count(), 3ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
   {
-    BOOST_CHECK_EQUAL(var.mean(ith), 5.0);
-    BOOST_CHECK_EQUAL(var.variance(ith), 1.0);
+    BOOST_CHECK_EQUAL( var.mean( ith ), 5.0 );
+    BOOST_CHECK_EQUAL( var.variance( ith ), 1.0 );
   }
 
   // Add fourth data points (from 1.0, 2.0, ... 100.0)
-  var.append (exemplar.data_index.begin(), exemplar.data_index.end());
+  var.append( exemplar.data_index.begin(), exemplar.data_index.end() );
 
-  BOOST_CHECK_EQUAL(var.count(), 4ul);
+  BOOST_CHECK_EQUAL( var.count(), 4ul );
   double val = 0.0;
-  for (std::size_t ith = 0; ith != var.size(); ++ith)
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
   {
-    auto sqr = [](double a)
+    auto sqr = []( double a )
     {
       return a*a;
     };
-    const double mean(3.75+val/4.0);
-    const double variance((sqr(4-mean) + sqr(5-mean) + sqr(6-mean) + sqr(val - mean))/3.0);
-    BOOST_CHECK(utility::feq(var.mean(ith),mean));
-    BOOST_CHECK(utility::feq(var.variance(ith),variance));
+    const double mean( 3.75+val/4.0 );
+    const double variance( ( sqr( 4-mean ) + sqr( 5-mean ) + sqr( 6-mean ) + sqr( val - mean ) )/3.0 );
+    BOOST_CHECK( utility::feq( var.mean( ith ),mean ) );
+    BOOST_CHECK( utility::feq( var.variance( ith ),variance ) );
     val += 1.0;
   }
 }
@@ -632,50 +632,61 @@ estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
   // BAD DATA
   {
     // DATA TOO SHORT for ARRAY
-    utility::estimate_array var (110);
+    utility::estimate_array var( 110 );
 
     // Insure start from zero
-    BOOST_CHECK_EQUAL(var.count(), 0ul);
-    BOOST_CHECK_EQUAL(var.size(), 110ul);
+    BOOST_CHECK_EQUAL( var.count(), 0ul );
+    BOOST_CHECK_EQUAL( var.size(), 110ul );
 
-    // Add first data points (all 4.0)
-    auto last = var.append (exemplar.data4.begin(), exemplar.data4.end());
-    BOOST_CHECK(last == exemplar.data4.end());
-    BOOST_CHECK_EQUAL(var.count(), 1ul);
-    for (std::size_t ith = 0; ith != var.size(); ++ith)
+    // Attempt to add first data points (all 4.0), should fail without
+    // updating array.
+    BOOST_REQUIRE_THROW( var.append_safe( exemplar.data4.begin(), exemplar.data4.end() ), std::runtime_error ) ;
+    BOOST_CHECK_EQUAL( var.count(), 0ul );
+
+    // Attempt to add first data points (all 4.0), should fail but
+    // "partially" update the array.
+    BOOST_CHECK_THROW( var.append( exemplar.data4.begin(), exemplar.data4.end() ), std::runtime_error ) ;
+    BOOST_CHECK_EQUAL( var.count(), 1ul );
+    for( std::size_t ith = 0; ith != var.size(); ++ith )
     {
-      if (ith < exemplar.data4.size())
+      if( ith < exemplar.data4.size() )
       {
-        BOOST_CHECK_EQUAL(var.mean(ith), 4.0);
-        BOOST_CHECK_EQUAL(var.variance(ith), 0.0);
+        BOOST_CHECK_EQUAL( var.mean( ith ), 4.0 );
+        BOOST_CHECK_EQUAL( var.variance( ith ), 0.0 );
       }
       else
       {
-        BOOST_CHECK_EQUAL(var.mean(ith), 0.0);
-        BOOST_CHECK_EQUAL(var.variance(ith), 0.0);
+        BOOST_CHECK_EQUAL( var.mean( ith ), 0.0 );
+        BOOST_CHECK_EQUAL( var.variance( ith ), 0.0 );
       }
     }
   }
   {
     // DATA TOO LONG for ARRAY
-    utility::estimate_array var (90);
+    utility::estimate_array var( 90 );
 
     // Insure start from zero
-    BOOST_CHECK_EQUAL(var.count(), 0ul);
-    BOOST_CHECK_EQUAL(var.size(), 90ul);
+    BOOST_CHECK_EQUAL( var.count(), 0ul );
+    BOOST_CHECK_EQUAL( var.size(), 90ul );
 
-    // Add first data points (all 4.0)
-    auto last = var.append (exemplar.data4.begin(), exemplar.data4.end());
-    BOOST_CHECK(last == exemplar.data4.end()-10);
-    BOOST_CHECK_EQUAL(var.count(), 1ul);
-    for (std::size_t ith = 0; ith != var.size(); ++ith)
+    // Attempt to add first data points (all 4.0), should fail without
+    // updating array.
+    BOOST_REQUIRE_THROW( var.append_safe( exemplar.data4.begin(), exemplar.data4.end() ), std::runtime_error );
+    BOOST_CHECK_EQUAL( var.count(), 0ul );
+
+    // Attempt to add first data points (all 4.0), should fail but
+    // "partially" update the array.
+    BOOST_CHECK_THROW( var.append( exemplar.data4.begin(), exemplar.data4.end() ), std::runtime_error );
+    BOOST_CHECK_EQUAL( var.count(), 1ul );
+    for( std::size_t ith = 0; ith != var.size(); ++ith )
     {
-      BOOST_CHECK_EQUAL(var.mean(ith), 4.0);
-      BOOST_CHECK_EQUAL(var.variance(ith), 0.0);
+      BOOST_CHECK_EQUAL( var.mean( ith ), 4.0 );
+      BOOST_CHECK_EQUAL( var.variance( ith ), 0.0 );
     }
   }
 
 }
+
 
 
 

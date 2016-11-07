@@ -1,6 +1,6 @@
 format 75
 "utility" // utility
-  revision 210
+  revision 211
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -1266,17 +1266,41 @@ ${inlines}
 
  (TODO: Unit test suite \"estimate_test_suite\")
 "
-      classrelation 285873 // array_ (<directional composition>)
-	relation 285617 *-->
-	  stereotype "vector"
-	  a role_name "array_" multiplicity "*" private
-	    comment "Array of estimates with a single counter"
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+      classrelation 787888 // <generalisation>
+	relation 786992 ---|>
+	  a private
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 787888 // <generalisation>
+	  b parent class_ref 546480 // mean_algorithm
+      end
+
+      attribute 604720 "means_"
+	private explicit_type "double"
+	multiplicity "*"
+	stereotype "vector"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
 "
-	    python "${comment}${self}${name} = ${stereotype}()
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${stereotype}()
 "
-	    classrelation_ref 285873 // array_ (<directional composition>)
-	  b parent class_ref 176433 // basic_mean
+	idl_decl ""
+	comment " Array of means"
+      end
+
+      attribute 604848 "vars_"
+	private explicit_type "double"
+	multiplicity "*"
+	stereotype "vector"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${stereotype}()
+"
+	idl_decl ""
+	comment " Array of variance data"
       end
 
       attribute 226737 "count_"
@@ -1290,58 +1314,19 @@ ${inlines}
 	idl_decl ""
       end
 
-      operation 317361 "append"
-	stereotype "template"
-	public explicit_return_type "IterType"
-	nparams 2
-	  param in name "begin" explicit_type "IterType"
-	  param in name "end" explicit_type "IterType"
-	cpp_decl "    ${comment}template<typename IterType>
-  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
-{
-  ++this->count_;
-  for (auto beg = this->array_.begin(); beg != this->array_.end() and begin != end; ++beg, ++begin)
-  {
-    beg->append (*begin, this->count_);
-  }
-  return begin;
-}
-"
+      extra_member 544560 "LIFETIME"
 	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment " Append an array of values data to the current estimator array
-
- distance(begin,end) < 0 is undefined
- distance(begin,end) < size, zero appended for missing elements
- distance(begin,end) > size, extra elements ignored
-
- returns iterator after the last element used"
-      end
-
-      operation 317233 "count"
-	const public explicit_return_type "size_t"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->count_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
       end
 
       operation 316977 "estimate_array"
 	public explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} : array_(), count_() {};
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} : means_(), vars_(), count_() {};
 "
 	
 	
@@ -1355,7 +1340,7 @@ ${docstring}${body}
 	public explicit_return_type ""
 	nparams 1
 	  param in name "sz" explicit_type "size_t"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw} : array_(sz), count_() {}
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw} : means_(sz), vars_(sz), count_() {}
 "
 	
 	
@@ -1371,8 +1356,28 @@ ${docstring}${body}
 	nparams 1
 	  param in name "source" type class_ref 175665 // estimate_array
 	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
-: array_(source.array_)
+: means_(source.means_)
+, vars_(source.vars_)
 , count_(source.count_)
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1340848 "estimate_array"
+	stereotype "move"
+	public explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 175665 // estimate_array
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
+: means_( std::move( source.means_ ) )
+, vars_( std::move( source.vars_ ) )
+, count_( std::move( source.count_ ) )
 {}
 "
 	
@@ -1396,22 +1401,6 @@ ${docstring}${body}
 	
       end
 
-      operation 318001 "mean"
-	const public explicit_return_type "double"
-	nparams 1
-	  param in name "idx" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->array_[idx].mean();
-}"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-      end
-
       operation 374705 "operator="
 	public return_type class_ref 175665 // estimate_array
 	nparams 1
@@ -1430,13 +1419,216 @@ ${docstring}${body}
 	
       end
 
+      extra_member 180913 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;
+
+" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 316849 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+    ar & means_; ar & vars_; ar & count_;
+  }
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 373169 "swap"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "other" type class_ref 175665 // estimate_array
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  std::swap(this->means_, other.means_);
+  std::swap(this->vars_, other.vars_);
+  std::swap(this->count_, other.count_);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 544432 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 317361 "append"
+	stereotype "template"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "begin" explicit_type "IterType"
+	  param in name "end" explicit_type "IterType"
+	cpp_decl "    ${comment}template<typename IterType>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ++this->count_;
+  std::size_t idx = 0;
+  for( idx = 0; idx != this->size() and begin != end; ++idx, ++begin )
+  {
+    mean_algorithm::append( this->means_[ idx ], this->vars_[ idx ], *begin, this->count_ );
+  }
+  UTILITY_REQUIRE( begin == end and idx == this->size(), \"Input data size does not match and array size\" );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Append an array of values data to the current estimator array
+
+ distance(begin,end) < 0 is undefined
+
+ \\pre distance(begin, end) == size : this is tested at end of
+ method, leaving the array will be in an undefined state."
+      end
+
+      operation 1341232 "append_safe"
+	stereotype "template"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "begin" explicit_type "IterType"
+	  param in name "end" explicit_type "IterType"
+	cpp_decl "    ${comment}template<typename IterType>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  std::vector< double > tmp( begin, end );
+  append( tmp );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Append an array of values data to the current estimator array
+
+ distance(begin,end) < 0 is undefined
+
+ \\pre distance(begin, end) == size : this is tested before the
+ array is updated providing a strong exception safety guarrantee."
+      end
+
+      operation 1341104 "append"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "arr" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::vector< ${t0} > & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::vector< ${t0} > & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Append an array of values data to the current estimator array
+
+ distance(begin,end) < 0 is undefined
+
+ \\pre distance(begin, end) == size : this is tested at end of
+ method, leaving the array will be in an undefined state."
+      end
+
+      operation 317233 "count"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->count_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 318001 "mean"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "idx" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+#if defined DEBUG && DEBUG != 0
+  return this->means_.at( idx );
+#else
+  return this->means_[ idx ];
+#endif
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1340976 "merge"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "other" type class_ref 175665 // estimate_array
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Merge two estimate arrays of the same size
+
+ \\pre size = other.size"
+      end
+
       operation 317617 "resize"
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "sz" explicit_type "size_t"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  return this->array_.resize(sz);
+  this->means_.resize( sz ); this->vars_.resize( sz );
 }
 "
 	
@@ -1465,69 +1657,17 @@ ${docstring}${body}
 	
       end
 
-      extra_member 180913 "friend"
-	
-	cpp "
-  friend class boost::serialization::access;
-
-" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      operation 316849 "serialize"
-	stereotype "template"
-	cpp_inline private explicit_return_type "void"
-	nparams 2
-	  param inout name "ar" explicit_type "Archive"
-	  param in name "version" explicit_type "unsigned int"
-	cpp_decl "    ${comment}template<class Archive>
-  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
-    ar & array_;
-    ar & count_;
-  }
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-      end
-
       operation 317489 "size"
 	const public explicit_return_type "size_t"
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
-  return this->array_.size();
+  return this->means_.size();
 }
 "
 	
 	
 	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-      end
-
-      operation 373169 "swap"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "other" type class_ref 175665 // estimate_array
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  std::swap(this->array_, other.array_);
-  std::swap(this->count_, other.count_);
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
 ${docstring}${body}
 "
 	
@@ -1539,7 +1679,11 @@ ${docstring}${body}
 	  param in name "idx" explicit_type "size_t"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  return this->array_[idx].variance(this->count_);
+#if defined DEBUG && DEBUG != 0
+  return mean_algorithm::variance( this->vars_.at( idx ), this->count_ );
+#else
+  return mean_algorithm::variance( this->vars_[idx], this->count_ );
+#endif
 }
 "
 	
@@ -5730,7 +5874,7 @@ or -1 if no information could be found."
 	php ""
 	python ""
 	idl ""
-	comment "Exemplars of various possible observer objects."
+	comment "Exemplars of various possible observable objects."
       end
 
       attribute 577455 "compilation_program_"
