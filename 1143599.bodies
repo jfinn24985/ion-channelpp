@@ -1,5 +1,17 @@
 class evaluator_meta
-!!!842160.cpp!!!	add_documentation(inout helper : input_help) : void
+!!!842416.cpp!!!	add_evaluator_type(inout defn : evaluator_definition) : void
+UTILITY_REQUIRE( 0 == this->has_type( defn->label() ), ( "Attempt to add more than one evaluator factory for type \"" + defn->label() + "\"." ) );
+this->type_to_object_.push_back( defn.release() );
+!!!1362736.cpp!!!	has_type(in label : string) : bool
+for( auto const& defn : this->type_to_object_ )
+{
+  if( defn.label() == label )
+  {
+    return true;
+  }
+}
+return false;
+!!!842160.cpp!!!	publish_help(inout helper : input_help) : void
 const std::string seclabel( core::strngs::evaluator_label() );
 // ----------------------------------------
 // add section
@@ -19,49 +31,55 @@ core::input_help::exemplar().add_section( seclabel,
   const std::string description( "[required, string] trial subtype (see documentation for valid subtypes)." );
   core::input_help::exemplar().add_option( seclabel, core::strngs::fstype(), description );
 }
-//  simulator : [optional] simulator subtype
+// Subtype parameter documentation.
+for( auto const& iter : this->type_to_object_ )
 {
-  const std::string description("[optional, string] specific simulator subtype to add the evaluator to (see documentation for valid subtypes).");
-  core::input_help::exemplar().add_option( seclabel, core::strngs::simulator_label(), description );
+  iter.publish_help( helper, seclabel );
 }
-
-!!!842416.cpp!!!	add_evaluator_type(in eval_label : string, in ctor : evaluator_meta::evaluator_generator_fn) : void
-UTILITY_REQUIRE( 0 == this->type_to_object_.count( eval_label ), ("Attempt to add more than one evaluator factory for type \""+eval_label+"\"."), this->section_label() );
-this->type_to_object_.insert( std::make_pair( eval_label, ctor ) );
-
-
 !!!203824.cpp!!!	do_read_entry(inout reader : input_base_reader) : bool
-if (reader.name().find(core::strngs::fstype()) == 0)
+if( reader.name().find( core::strngs::fstype() ) == 0 )
 {
-   // --------------------
-   // Evaluator type
-   UTILITY_INPUT(not reader.value().empty(), "Evaluator type must have a value.", this->section_label());
-   std::string val (reader.dequote(reader.value()));
-   UTILITY_INPUT(type_to_object_.count(val) != 0, "Evaluator type must be one of allowed values for this program (see documentation).", this->section_label());
-   this->type_ = val;
-   missing_required_tags_.reset(EVALUATOR_TYPE);
+  // --------------------
+  // Evaluator type
+  UTILITY_INPUT( this->missing_required_tags_[ EVALUATOR_TYPE ], ( "Evaluator \"type\" parameter appears more than once in a single in section" ), this->section_label() );
+  UTILITY_INPUT( not reader.value().empty(), "Evaluator \"type\" parameter must have a value.", this->section_label() );
+  std::string val( reader.dequote( reader.value() ) );
+  UTILITY_INPUT( this->has_type( val ), "Evaluator \"type\" parameter value (" + val + ") does not name a valid evaluator for this application (see documentation).", this->section_label() );
+  this->type_ = val;
+  missing_required_tags_.reset( EVALUATOR_TYPE );
 }
 else
 {
-   // --------------------
-   // Choice specific parameters
-   UTILITY_INPUT (0 == this->parameter_set_.count (reader.name()), ("keyword \""+reader.name()+"\" appears more than once in a single in specie section"), this->section_label());
-   this->parameter_set_.insert (std::make_pair(reader.name(), reader.value()));
+  // --------------------
+  // Choice specific parameters
+  UTILITY_INPUT( 0 == this->parameter_set_.count( reader.name() ), ( "keyword \""+reader.name()+"\" appears more than once in a single in specie section" ), this->section_label() );
+  this->parameter_set_.insert( std::make_pair( reader.name(), reader.value() ) );
 }
 return true;
-!!!203952.cpp!!!	do_read_end() : void
-UTILITY_INPUT (not this->missing_required_tags_.any(), "Not all required tags were present.", this->section_label());
-// Add to all simulator types!
-//
-// Give the generator functional the simulator type in
-// in case the evaluator is not valid for a particular
-// simulator type or there are different evaluator types
-// for different simulators.
-this->type_to_object_[ this->type_ ]( this->parameter_set_, *(this->manager_) );
 
-// Reset the meta data
-this->missing_required_tags_ = std::bitset< EVALUATOR_TAG_COUNT >( true );
+!!!203952.cpp!!!	do_read_end() : void
+UTILITY_INPUT( not this->missing_required_tags_[ EVALUATOR_TYPE ], ( "Evaluator \"type\" parameter missing in input." ), this->section_label() );
+UTILITY_INPUT (not this->missing_required_tags_.any(), "Not all required tags were present.", this->section_label());
+
+// Call functor method to create evaluator
+for( const auto& defn : this->type_to_object_ )
+{
+  if( defn.label() == this->type_ )
+  { 
+    // check parameters are in definition
+    for( const auto& entry : this->parameter_set_ )
+    {
+      UTILITY_INPUT( defn.has_definition( entry.first ), "Parameter with name \""+entry.first+"\" is not valid for evaluator type \"" + this->type_ + "\".", this->section_label() );
+    } 
+
+    this->manager_->add_evaluator( defn( this->parameter_set_ ) );
+    return;
+  }
+}
+// error to get here
+UTILITY_CHECK( false, "should never reach this point in the code." );
+!!!1362352.cpp!!!	do_reset() : void
+// Reset meta data
+this->missing_required_tags_.set();
 this->parameter_set_.clear();
 this->type_.clear();
-!!!842288.cpp!!!	has_trial_type(in eval_label : string) : bool
-return 0 != this->type_to_object_.count( eval_label );

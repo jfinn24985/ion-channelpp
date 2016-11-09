@@ -1,19 +1,20 @@
 class evaluator_manager
 !!!841008.cpp!!!	serialize(inout ar : Archive, in version : unsigned int) : void
 ar & evaluators_;
-!!!841776.cpp!!!	compute_potential(in spcs : specie, in ens : ensemble, inout changes : change_set, in start_index : size_t = 0) : void
+!!!841776.cpp!!!	compute_potential(in pman : particle_manager, inout changes : change_set, in start_index : size_t = 0) : void
 // Calculate energy
 for ( auto const& evaluator : this->evaluators_ )
 {
-  evaluator.compute_potential( spcs, ens, changes, start_index );
+  evaluator.compute_potential( pman, changes, start_index );
   if ( changes.fail() ) break;
 }
-!!!841648.cpp!!!	compute_total_potential(in sim : simulator) : double
+!!!841648.cpp!!!	compute_total_potential(in pman : particle_manager) : double
+double result = 0.0;
 for (auto const& evltr : this->evaluators_)
 {
-  evltr.compute_total_potential( sim );
+  result += evltr.compute_total_potential( pman );
 }
-
+return result;
 !!!841264.cpp!!!	description(inout os : ostream) : void
 if ( not this->evaluators_.empty() )
 {
@@ -60,11 +61,11 @@ for ( auto & evaluator : this->evaluators_ )
   evaluator.on_conclude_trial( changes );
 }
 
-!!!841392.cpp!!!	prepare(inout sim : simulator) : void
+!!!841392.cpp!!!	prepare(inout pman : particle_manager) : void
 // reset the evaluators
 for (auto &evltr : this->evaluators_)
 {
-  evltr.prepare ( *this );
+  evltr.prepare( pman );
 }
 
 !!!842032.cpp!!!	write_document(inout wr : input_document) : void
