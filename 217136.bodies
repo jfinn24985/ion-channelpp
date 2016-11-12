@@ -14,40 +14,21 @@ std::stringstream log;
 {
   evaluator::evaluator_manager mgr;
   BOOST_CHECK_EQUAL( mgr.size(), 0 );
+  BOOST_CHECK_EQUAL( mgr.permittivity(), evaluator::evaluator_manager::standard_aqueous_permittivity() );
+  BOOST_CHECK_EQUAL( mgr.temperature(), evaluator::evaluator_manager::standard_room_temperature() );
   BOOST_CHECK( mgr.empty() );
 }
 // Constructor test method
+const double tmpt{ 300.0 };
+const double perm{ 42.0 };
 {
   // default
   evaluator::evaluator_manager mgr;
-//XX
-//XX   BOOST_CHECK_EQUAL( icceval.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( icceval.empty(), true );
-//XX   BOOST_CHECK_EQUAL( icceval.type_label(), core::strngs::fsptch() );
-//XX   BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx.dat" );
-//XX   BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch.dat" );
-//XX   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.6 );
-//XX   BOOST_CHECK_EQUAL( icceval.get_dxw(), 1.6 );
-//XX   BOOST_CHECK_EQUAL( icceval.get_nsub0(), 10 );
-//XX
-//XX   BOOST_CHECK_NO_THROW( icceval.set_a_matrix_filename( "amx-test.txt" ) );
-//XX   BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx-test.txt" );
-//XX
-//XX   BOOST_CHECK_NO_THROW( icceval.set_patch_filename( "patch-test.txt" ) );
-//XX   BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch-test.txt" );
-//XX
-//XX   BOOST_CHECK_NO_THROW( icceval.set_dxf( 1.25 ) );
-//XX   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.25 );
-//XX
-//XX   BOOST_CHECK_NO_THROW( icceval.set_dxw( 3.5 ) );
-//XX   BOOST_CHECK_EQUAL( icceval.get_dxw(), 3.5 );
-//XX
-//XX   BOOST_CHECK_NO_THROW( icceval.set_nsub0( 11 ) );
-//XX   BOOST_CHECK_EQUAL( icceval.get_nsub0(), 11 );
-//XX
-//XX   BOOST_CHECK_EQUAL( icceval.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( icceval.empty(), true );
-//XX
+  mgr.permittivity( perm );
+  BOOST_CHECK_EQUAL( mgr.permittivity(), perm );
+  mgr.temperature( tmpt );
+  BOOST_CHECK_EQUAL( mgr.temperature(), tmpt );
+
   boost::archive::text_oarchive oa( store );
   oa << mgr;
 }
@@ -59,128 +40,296 @@ std::stringstream log;
   ia >> mgr;
   BOOST_CHECK_EQUAL( mgr.size(), 0 );
   BOOST_CHECK( mgr.empty() );
-//XX
-//XX   BOOST_CHECK_EQUAL( icceval.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( icceval.empty(), true );
-//XX   BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx-test.txt" );
-//XX   BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch-test.txt" );
-//XX   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.25 );
-//XX   BOOST_CHECK_EQUAL( icceval.get_dxw(), 3.5 );
-//XX   BOOST_CHECK_EQUAL( icceval.get_nsub0(), 11 );
-//XX
+  BOOST_CHECK_EQUAL( mgr.permittivity(), perm );
+  BOOST_CHECK_EQUAL( mgr.temperature(), tmpt );
 }
-//XX// Manual build test
-//XX{
-//XX   // default
-//XX   evaluator::induced_charge icceval;
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   // Set parameters as per 'fix'.
-//XX   BOOST_CHECK_NO_THROW( icceval.set_dxf( fix.dxf() ) );
-//XX   BOOST_CHECK_NO_THROW( icceval.set_dxw( fix.dxw() ) );
-//XX   BOOST_CHECK_NO_THROW( icceval.set_nsub0( fix.nsub() ) );
-//XX   BOOST_CHECK_NO_THROW( icceval.set_alfa( fix.temperature() ) );
-//XX   BOOST_CHECK_NO_THROW( icceval.set_permittivity( fix.epsw() ) );
-//XX   BOOST_CHECK_EQUAL( icceval.get_alfa(), fix.alfa() );
-//XX   BOOST_CHECK_EQUAL( icceval.get_permittivity(), fix.epsw() );
-//XX
-//XX   // Build amx from data from 'fix'. We need to
-//XX   // do this as simfix is not derived from channel_system.
-//XX   BOOST_CHECK_NO_THROW( icceval.create_amx( fix.zl1(), fix.rl1(), fix.rl4(), fix.rlvest(), fix.rlmemb(), fix.epsw(), fix.epspr(), log ) );
-//XX
-//XX   // We assume this simple size test means that the surface grid and the A
-//XX   // matrix are correctly built because independent tests of the surface grid
-//XX   // and A matrix classes produce the correct results.
-//XX   BOOST_CHECK_EQUAL( icceval.size(), fix.expected_grid_size() );
-//XX}
-//XX{
-//XX   // Construction as if from an input file with no parameters
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   std::map< std::string, std::string > params;
-//XX   // Empty parameter list allowed
-//XX   BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
-//XX
-//XX   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
-//XX   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
-//XX   BOOST_REQUIRE( nullptr != llp );
-//XX   BOOST_CHECK_EQUAL( llp->get_dxf(), 1.6);
-//XX
-//XX   // write_document test
-//XX   core::input_document wr( 1 );
-//XX   bep->write_document( wr );
-//XX   BOOST_CHECK_EQUAL( wr.size(), 1  );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].label(), core::strngs::evaluator_label() );
-//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fstype() ) );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fstype() ), core::strngs::fsptch() );
-//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsdxw() ) );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsdxw() ), std::to_string( 1.6 ) );
-//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsdxf() ) );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsdxf() ), std::to_string( 1.6 ) );
-//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsnsub() ) );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsnsub() ), std::to_string( 10 ) );
-//XX}
-//XX{
-//XX   // Construction as if from an input file with valid parameters
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   std::map< std::string, std::string > params;
-//XX   params[ core::strngs::fsdxf() ] = "4.0";
-//XX   params[ core::strngs::fsdxw() ] = "6.0";
-//XX   params[ core::strngs::fsnsub() ] = "50";
-//XX   // Empty parameter list allowed
-//XX   BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
-//XX
-//XX   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
-//XX   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
-//XX   BOOST_REQUIRE( nullptr != llp );
-//XX   BOOST_CHECK_EQUAL( llp->get_dxf(), 4.0 );
-//XX   BOOST_CHECK_EQUAL( llp->get_dxw(), 6.0 );
-//XX   BOOST_CHECK_EQUAL( llp->get_nsub0(), 50 );
-//XX}
-//XX{
-//XX   // Construction as if from an input file with valid parameters
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   std::map< std::string, std::string > params;
-//XX   params[ core::strngs::fsdxf() ] = "4";
-//XX   // Empty parameter list allowed
-//XX   BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
-//XX
-//XX   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
-//XX   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
-//XX   BOOST_REQUIRE( nullptr != llp );
-//XX   BOOST_CHECK_EQUAL( llp->get_dxf(), 4.0 );
-//XX}
-//XX{
-//XX   // Construction as if from an input file with invalid parameters : invalid value
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   std::map< std::string, std::string > params;
-//XX   params[ core::strngs::fsdxf() ] = "four";
-//XX   // Empty parameter list allowed
-//XX   BOOST_REQUIRE_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ), std::runtime_error );
-//XX}
-//XX{
-//XX   // Construction as if from an input file with invalid parameters : invalid name
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   std::map< std::string, std::string > params;
-//XX   params[ core::strngs::fsiwid() ] = "4.0";
-//XX   // Empty parameter list allowed
-//XX   BOOST_REQUIRE_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ), std::runtime_error );
-//XX}
-//XX{
-//XX   // Construction as if from an input file with invalid parameters we would
-//XX   // like to be valid
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   std::map< std::string, std::string > params;
-//XX   params[ "amxfile" ] = "amx.txt";
-//XX   params[ "patchfile" ] = "patch.txt";
-//XX   // Empty parameter list allowed
-//XX   BOOST_REQUIRE_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ), std::runtime_error );
-//XX}
+!!!1370032.cpp!!!	evaluator_definition_lifetime() : void
+{
+  //  Constructor tests
+  BOOST_CHECK( not std::is_default_constructible< evaluator::evaluator_definition >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< evaluator::evaluator_definition >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< evaluator::evaluator_definition >::type {} );
+  BOOST_CHECK( ( not std::is_assignable< evaluator::evaluator_definition, evaluator::evaluator_definition >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< evaluator::evaluator_definition >::type {} );
+}
+const std::string defn_label( "evaluator" );
+{
+  evaluator::evaluator_definition defn( defn_label, [](std::map<std::string, std::string>)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; });
+  BOOST_CHECK_EQUAL( defn.label(), defn_label );
+  BOOST_CHECK_EQUAL( defn.size(), 0 );
+  BOOST_CHECK( defn.empty() );
+}
+
+!!!1369520.cpp!!!	evaluator_meta_lifetime() : void
+{
+  //  Constructor tests
+  BOOST_CHECK( std::is_default_constructible< evaluator::evaluator_meta >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< evaluator::evaluator_meta >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< evaluator::evaluator_meta >::type {} );
+  BOOST_CHECK( ( not std::is_assignable< evaluator::evaluator_meta, evaluator::evaluator_meta >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< evaluator::evaluator_meta >::type {} );
+}
+const std::string meta_label( "evaluator" );
+{
+  evaluator::evaluator_meta meta;
+  BOOST_CHECK_EQUAL( meta.required(), true );
+  BOOST_CHECK_EQUAL( meta.multiple(), true );
+  BOOST_CHECK_EQUAL( meta.section_label(), core::strngs::evaluator_label() );
+  BOOST_CHECK_EQUAL( meta.size(), 0 );
+  BOOST_CHECK( meta.empty() );
+
+  meta.add_definition( std::unique_ptr< evaluator::evaluator_definition >( new evaluator::evaluator_definition( "coloumb", [](std::map<std::string, std::string>)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; }) ) );
+  
+  BOOST_CHECK_EQUAL( meta.size(), 1 );
+  BOOST_CHECK( not meta.empty() );
+  BOOST_CHECK( meta.has_definition( "coloumb" ) );
+
+}
+
+!!!1380272.cpp!!!	coulomb_lifetime_tests() : void
+{
+  //  Constructor tests
+  BOOST_CHECK( std::is_default_constructible< evaluator::coulomb >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< evaluator::coulomb >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< evaluator::coulomb >::type {} );
+  BOOST_CHECK( ( not std::is_assignable< evaluator::coulomb, evaluator::coulomb >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< evaluator::coulomb >::type {} );
+}
+const std::string defn_label( "coulomb" );
+{
+  evaluator::coulomb eval;
+  BOOST_CHECK_EQUAL( eval.type_label(), defn_label );
+  BOOST_CHECK_EQUAL( eval.factor(), 0.0 );
+}
+
+!!!1380144.cpp!!!	coulomb_static_method_tests() : void
+{
+  // Static method tests.
+  BOOST_CHECK_CLOSE( evaluator::coulomb::invariant_factor(), 167109.7903783501, 0.0000001 );
+}
+const std::string defn_label( "coulomb" );
+{
+  BOOST_CHECK_EQUAL( evaluator::coulomb::type_label_(), defn_label );
+
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr;
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::coulomb::make_evaluator( {} ) );
+  BOOST_REQUIRE( eval_ptr );
+  evaluator::coulomb *clmb_ptr = dynamic_cast< evaluator::coulomb* >( eval_ptr.get() );
+  BOOST_REQUIRE( clmb_ptr != nullptr );
+  BOOST_CHECK_EQUAL( eval_ptr->type_label(), defn_label );
+  BOOST_CHECK_EQUAL( clmb_ptr->factor(), 0.0 );
+
+  std::unique_ptr< evaluator::evaluator_definition > defn_ptr;
+  BOOST_REQUIRE_NO_THROW( defn_ptr = evaluator::coulomb::make_definition() );
+  BOOST_REQUIRE( defn_ptr );
+  BOOST_CHECK_EQUAL( defn_ptr->label(), defn_label );
+}
+
+!!!1380528.cpp!!!	coulomb_evaluator_r1_test() : void
+// Build basic system.
+particle::particle_manager pman;
+{
+  particle::specie spc1;
+  spc1.set_label( "Na" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( 1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
+  pman.add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "Cl" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.2 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.3123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 1.0, 0.0 ) );
+  pman.add_specie( spc1 );
+}
+pman.add_predefined_particles();
+BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
+BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 2 );
+
+boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+geometry::geometry_manager gman( sys_rgn );
+
+evaluator::evaluator_manager eman;
+
+evaluator::coulomb eval;
+BOOST_CHECK_EQUAL( eval.factor(), 0.0 );
+
+eval.prepare( pman, gman, eman );
+BOOST_CHECK_CLOSE( eval.factor(), evaluator::coulomb::invariant_factor()/( eman.permittivity() * eman.temperature() ), 0.000001 );
+
+double energy = 0.0;
+BOOST_REQUIRE_NO_THROW( energy = eval.compute_total_potential( pman, gman ) );
+BOOST_CHECK_CLOSE( -energy, eval.factor(), 0.000001 );
+!!!1380400.cpp!!!	coulomb_evaluator_r2_test() : void
+// Build basic system.
+particle::particle_manager pman;
+{
+  particle::specie spc1;
+  spc1.set_label( "Na" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( 1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
+  pman.add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "Cl" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.2 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.3123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 2.0, 0.0 ) );
+  pman.add_specie( spc1 );
+}
+pman.add_predefined_particles();
+BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
+BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 2 );
+
+boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+geometry::geometry_manager gman( sys_rgn );
+
+evaluator::evaluator_manager eman;
+
+evaluator::coulomb eval;
+BOOST_CHECK_EQUAL( eval.factor(), 0.0 );
+
+eval.prepare( pman, gman, eman );
+BOOST_CHECK_CLOSE( eval.factor(), evaluator::coulomb::invariant_factor()/( eman.permittivity() * eman.temperature() ), 0.000001 );
+
+double energy = 0.0;
+BOOST_REQUIRE_NO_THROW( energy = eval.compute_total_potential( pman, gman ) );
+BOOST_CHECK_CLOSE( -energy, eval.factor()/2.0, 0.000001 );
+!!!1380656.cpp!!!	coulomb_evaluator_d4r1_test() : void
+// Build basic system.
+particle::particle_manager pman;
+{
+  particle::specie spc1;
+  spc1.set_label( "Na" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( 1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 1.0, 0.0 ) );
+  pman.add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "Cl" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.2 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.3123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 1.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 0.0, 0.0 ) );
+  pman.add_specie( spc1 );
+}
+pman.add_predefined_particles();
+BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
+BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 4 );
+
+boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+geometry::geometry_manager gman( sys_rgn );
+
+evaluator::evaluator_manager eman;
+
+evaluator::coulomb eval;
+BOOST_CHECK_EQUAL( eval.factor(), 0.0 );
+
+eval.prepare( pman, gman, eman );
+BOOST_CHECK_CLOSE( eval.factor(), evaluator::coulomb::invariant_factor()/( eman.permittivity() * eman.temperature() ), 0.000001 );
+
+double energy = 0.0;
+BOOST_REQUIRE_NO_THROW( energy = eval.compute_total_potential( pman, gman ) );
+BOOST_CHECK_CLOSE( -energy, (4.0 - std::sqrt(2.0)) * eval.factor(), 0.000001 );
+!!!1380784.cpp!!!	coulomb_evaluator_d8r1_test() : void
+// Build basic system.
+particle::particle_manager pman;
+{
+  particle::specie spc1;
+  spc1.set_label( "Na" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( 1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 1.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 0.0, 1.0, 1.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 0.0, 1.0 ) );
+  pman.add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "Cl" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.2 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.3123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 1.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 0.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 1.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 1.0, 1.0 ) );
+  pman.add_specie( spc1 );
+}
+pman.add_predefined_particles();
+BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
+BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
+
+boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+geometry::geometry_manager gman( sys_rgn );
+
+evaluator::evaluator_manager eman;
+
+std::stringstream store;
+{
+
+  evaluator::coulomb eval;
+  BOOST_CHECK_EQUAL( eval.factor(), 0.0 );
+
+  eval.prepare( pman, gman, eman );
+  BOOST_CHECK_CLOSE( eval.factor(), evaluator::coulomb::invariant_factor()/( eman.permittivity() * eman.temperature() ), 0.000001 );
+
+  double energy = 0.0;
+  BOOST_REQUIRE_NO_THROW( energy = eval.compute_total_potential( pman, gman ) );
+  BOOST_CHECK_CLOSE( -energy, ( 12.0 - ( 6 * std::sqrt( 2.0 ) ) + ( 4 / std::sqrt( 3 ) ) ) * eval.factor(), 0.000001 );
+
+
+  boost::archive::text_oarchive oa( store );
+  oa << eval;
+}
+{
+  evaluator::coulomb eval;
+  boost::archive::text_iarchive ia( store );
+  ia >> eval;
+
+  double energy = 0.0;
+  BOOST_REQUIRE_NO_THROW( energy = eval.compute_total_potential( pman, gman ) );
+  BOOST_CHECK_CLOSE( -energy, ( 12.0 - ( 6 * std::sqrt( 2.0 ) ) + ( 4 / std::sqrt( 3 ) ) ) * eval.factor(), 0.000001 );
+}
 
 !!!311600.cpp!!!	localizer_test() : void
 //XXconst double spring_factor( 2.0 );

@@ -1,18 +1,20 @@
 class evaluator_manager
 !!!841008.cpp!!!	serialize(inout ar : Archive, in version : unsigned int) : void
 ar & evaluators_;
-!!!841776.cpp!!!	compute_potential(in pman : particle_manager, inout changes : change_set, in start_index : size_t = 0) : void
+ar & permittivity_;
+ar & temperature_;
+!!!841776.cpp!!!	compute_potential(in pman : particle_manager, in gman : geometry_manager, inout changes : change_set) : void
 // Calculate energy
 for ( auto const& evaluator : this->evaluators_ )
 {
-  evaluator.compute_potential( pman, changes, start_index );
+  evaluator.compute_potential( pman, gman, changes );
   if ( changes.fail() ) break;
 }
-!!!841648.cpp!!!	compute_total_potential(in pman : particle_manager) : double
+!!!841648.cpp!!!	compute_total_potential(in pman : particle_manager, in gman : geometry_manager) : double
 double result = 0.0;
 for (auto const& evltr : this->evaluators_)
 {
-  result += evltr.compute_total_potential( pman );
+  result += evltr.compute_total_potential( pman, gman );
 }
 return result;
 !!!841264.cpp!!!	description(inout os : ostream) : void
@@ -61,11 +63,11 @@ for ( auto & evaluator : this->evaluators_ )
   evaluator.on_conclude_trial( changes );
 }
 
-!!!841392.cpp!!!	prepare(inout pman : particle_manager) : void
+!!!841392.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager) : void
 // reset the evaluators
 for (auto &evltr : this->evaluators_)
 {
-  evltr.prepare( pman );
+  evltr.prepare( pman, gman, *this );
 }
 
 !!!842032.cpp!!!	write_document(inout wr : input_document) : void

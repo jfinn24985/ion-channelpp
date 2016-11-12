@@ -2,7 +2,9 @@ class coulomb
 !!!594737.python!!!	__init__(inout self : , inout sim : simulator)
 sim.add_evaluator( self )
 pass
-!!!247985.cpp!!!	compute_potential(in spcs : specie, in ens : ensemble, inout changes : change_set, in start_index : size_t) : void
+!!!247985.cpp!!!	compute_potential(in pman : particle_manager, in gman : geometry_manager, inout changes : change_set) : void
+auto const& spcs = pman.get_species();
+auto const& ens = pman.get_ensemble();
 // For each atom
 for (auto &atom : changes)
 {
@@ -11,7 +13,7 @@ for (auto &atom : changes)
   double energy_new = 0.0;
   // Cache minimum inter-particle distances
   const double ri =  spcs[ atom.key ].radius();
-  for (std::size_t j = start_index; j != ens.size(); ++j)
+  for (std::size_t j = 0; j != ens.size(); ++j)
   {
     // Only use active particles.
     if (j != idx and particle::specie_key::nkey != ens.key (j))
@@ -41,69 +43,7 @@ for (auto &atom : changes)
   atom.energy_old += energy_old * spcs[ atom.key ].valency() * this->scalar_;
   atom.energy_new += energy_new * spcs[ atom.key ].valency() * this->scalar_;
 }
-
-// auto &ens (sys.get_ensemble());
-// auto &spcs (sys.get_species());
-// 
-// // For each atom
-// for (auto &atom : changes)
-// {
-//   // split in to two loops if necessary
-//   std::size_t start (atom.index == start_index ? atom.index + 1 : start_index);
-//   std::size_t end (atom.index > start_index ? atom.index : ens.size());
-//   double energy_old = 0.0;
-//   double energy_new = 0.0;
-//   // Cache minimum inter-particle distances
-//   std::vector< double > cutoff (sys.specie_count(), spcs[ atom.key ].radius());
-//   for (size_t ispec = 0; ispec != sys.specie_count(); ++ispec)
-//   {
-//     cutoff[ispec] += spcs[ ispec ].radius();
-//   }
-//   while (start < end)
-//   {
-//     for (std::size_t j = start; j < end; ++j)
-//     {
-//       // Only use active particles.
-//       const size_t jkey (ens.key (j));
-//       if (particle::specie_key::nkey != jkey)
-//       {
-//         if (atom.do_new)
-//         {
-//           // NEW
-//           // --------------------------------
-//           // Check for overlap
-//           if (atom.new_rij[j] < cutoff[jkey])
-//           {
-//             changes.set_fail();
-//             return;
-//           }
-//           // Use atom.new_rij
-//           energy_new += spcs[jkey].valency() / atom.new_rij[j];
-//         }
-//         if (atom.do_old)
-//         {
-//           // OLD
-//           // --------------------------------
-//           // Use atom.old_rij
-//           energy_old += spcs[jkey].valency() / atom.old_rij[j];
-//         }
-//       }
-//     }
-//     if (end == atom.index)
-//     {
-//       start = atom.index + 1;
-//       end = ens.size();
-//     }
-//     else
-//     {
-//       break;
-//     }
-//   }
-//   atom.energy_old += energy_old*spcs[ atom.key ].valency()*this->scalar_;
-//   atom.energy_new += energy_new*spcs[ atom.key ].valency()*this->scalar_;
-// }
-// 
-!!!247985.python!!!	compute_potential(in spcs : specie, in ens : ensemble, inout changes : change_set, in start_index : size_t) : void
+!!!247985.python!!!	compute_potential(in pman : particle_manager, in gman : geometry_manager, inout changes : change_set) : void
 if changes.fail:
   return
 import numpy as np
@@ -140,11 +80,11 @@ for atom in changes.changes:
   # scale the energy by constants and add to atom
   atom.energy_old += energy_old * spcs[ atom.key ].valency() * self.scalar_
   atom.energy_new += energy_new * spcs[ atom.key ].valency() * self.scalar_
-!!!538800.cpp!!!	compute_total_potential(in sim : simulator) : double
+!!!538800.cpp!!!	compute_total_potential(in pman : particle_manager, in gman : geometry_manager) : double
 // Calculate the pairwise coulomb energies between
 // all charged particles.
 double energy = 0.0;
-auto const& ens = sim.get_ensemble();
+auto const& ens = pman.get_ensemble();
 std::vector< double > rij( ens.size(), 0.0 );
 for (std::size_t idx = 0; idx != ens.size() - 1; ++idx)
 {
@@ -153,9 +93,9 @@ for (std::size_t idx = 0; idx != ens.size() - 1; ++idx)
    {
       continue;
    }
-   const double qi = sim.get_specie( ispec ).valency();
+   const double qi = pman.get_specie( ispec ).valency();
    // calculate rij vector
-   sim.compute_distances( ens.position( idx ), ens.get_coordinates(), rij, ens.size(), idx + 1 );
+   gman.calculate_distances( ens.position( idx ), ens.get_coordinates(), rij, idx + 1, ens.size() );
    
    for (std::size_t jdx = idx + 1; jdx != ens.size(); ++jdx)
    {
@@ -164,13 +104,13 @@ for (std::size_t idx = 0; idx != ens.size() - 1; ++idx)
       {
          continue;
       }
-      energy += qi * sim.get_specie( jspec ).valency() / rij[ jdx ];
+      energy += qi * pman.get_specie( jspec ).valency() / rij[ jdx ];
    }
 }
 // scale energy
 energy *= this->scalar_;
 return energy;
-!!!538800.python!!!	compute_total_potential(in sim : simulator) : double
+!!!538800.python!!!	compute_total_potential(in pman : particle_manager, in gman : geometry_manager) : double
 if changes.fail:
   return
 import numpy as np
@@ -209,7 +149,8 @@ for atom in changes.changes:
   atom.energy_new += energy_new * spcs[ atom.key ].valency() * self.scalar_
 !!!489137.cpp!!!	do_description(inout os : ostream) : void
 os << " Compute the change in pair-wise Coulomb potential\n";
-os << " Scale factor: " << this->factor_ << " / ( permittivity * T )\n";
+os << " Scale factor: " << invariant_factor() << " / ( permittivity * T )\n";
+os << "             = " << this->factor() << "\n";
 !!!489137.python!!!	do_description(inout os : ostream) : void
 print >>os, "[evaluator] coulomb"
 print >>os, " Calculate the change in interparticle Coulomb"
@@ -217,10 +158,14 @@ print >>os, " potential."
 print >>os, " Independent scale factor: ", self.factor_
 print >>os, " Temperature dep. factor : ", self.scalar_
 pass
+!!!1369904.cpp!!!	make_definition() : evaluator_definition
+std::unique_ptr< evaluator_definition > defn( new evaluator_definition( coulomb::type_label_(), &coulomb::make_evaluator ) );
+return defn;
 !!!248241.cpp!!!	type_label_() : string
   return std::string("coulomb");
-!!!248113.cpp!!!	make_evaluator(in param_set : std::map< std::string, std::string >, inout sim : simulator) : void
+!!!248113.cpp!!!	make_evaluator(in param_set : string) : base_evaluator
 // Check no parameters have been set
-UTILITY_INPUT(param_set.empty(),"Coulomb evaluator requires no input parameters.",core::strngs::evaluator_label());
-std::unique_ptr< coulomb > cc(new coulomb);
-sim.add_evaluator( cc.release() );
+UTILITY_INPUT( param_set.empty(), "Coulomb evaluator requires no input parameters.", core::strngs::evaluator_label() );
+std::unique_ptr< evaluator::base_evaluator > cc( new coulomb );
+return cc;
+
