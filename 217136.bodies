@@ -331,6 +331,45 @@ std::stringstream store;
   BOOST_CHECK_CLOSE( -energy, ( 12.0 - ( 6 * std::sqrt( 2.0 ) ) + ( 4 / std::sqrt( 3 ) ) ) * eval.factor(), 0.000001 );
 }
 
+!!!1394352.cpp!!!	localizer_lifetime_tests() : void
+{
+  //  Constructor tests
+  BOOST_CHECK( std::is_default_constructible< evaluator::localizer >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< evaluator::localizer >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< evaluator::localizer >::type {} );
+  BOOST_CHECK( ( not std::is_assignable< evaluator::localizer, evaluator::localizer >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< evaluator::localizer >::type {} );
+}
+const std::string defn_label( "localizer" );
+{
+  evaluator::localizer eval;
+  BOOST_CHECK_EQUAL( eval.type_label(), defn_label );
+  BOOST_CHECK_EQUAL( eval.spring_factor(), evaluator::localizer::default_spring_factor() );
+}
+
+!!!1394224.cpp!!!	localizer_static_method_tests() : void
+{
+  // Static method tests.
+  BOOST_CHECK_CLOSE( evaluator::localizer::default_spring_factor(), 4.5, 0.0000001 );
+}
+const std::string defn_label( "localize" );
+{
+  BOOST_CHECK_EQUAL( evaluator::localizer::type_label_(), defn_label );
+
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr;
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( {} ) );
+  BOOST_REQUIRE( eval_ptr );
+  evaluator::localizer *clmb_ptr = dynamic_cast< evaluator::localizer* >( eval_ptr.get() );
+  BOOST_REQUIRE( clmb_ptr != nullptr );
+  BOOST_CHECK_EQUAL( eval_ptr->type_label(), defn_label );
+  BOOST_CHECK_EQUAL( clmb_ptr->spring_factor(), 4.5 );
+
+  std::unique_ptr< evaluator::evaluator_definition > defn_ptr;
+  BOOST_REQUIRE_NO_THROW( defn_ptr = evaluator::localizer::make_definition() );
+  BOOST_REQUIRE( defn_ptr );
+  BOOST_CHECK_EQUAL( defn_ptr->label(), defn_label );
+}
+
 !!!311600.cpp!!!	localizer_test() : void
 //XXconst double spring_factor( 2.0 );
 //XXauto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2)->void{

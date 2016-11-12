@@ -1,33 +1,33 @@
 class localizer
-!!!276016.cpp!!!	make_evaluator(in param_set : std::map< std::string, std::string >, inout sim : simulator) : void
-// Check no parameters have been set
-UTILITY_INPUT(param_set.size() <= 1,"Localisation evaluator requires only one input parameter.",core::strngs::evaluator_label());
-std::unique_ptr< localizer > cc(new localizer);
-if (param_set.count( core::strngs::fskmob() ) == 1)
-{
-   try
-   {
-      cc->set_spring_factor( boost::lexical_cast< double >( param_set.at( core::strngs::fskmob() ) ) );
-   }
-   catch(boost::bad_lexical_cast const& err)
-   {
-      const bool read_input_value = false;
-      UTILITY_INPUT(read_input_value == true,"Value for parameter "+core::strngs::fskmob()+" could not be read as a number: \""+param_set.at( core::strngs::fskmob() )+"\".", core::strngs::evaluator_label());
+!!!1381040.cpp!!!	make_definition() : evaluator_definition
+std::unique_ptr< evaluator_definition > defn( new evaluator_definition( localizer::type_label_(), &localizer::make_evaluator ) );
+// Add parameter definitions.
+defn->add_definition( core::strngs::fskmob(), "[optional, number] The spring factor of the harmonic localization force. The default value is 4.5. This value when paired with R values equal to 2 x X-ray B-factor/RMSD give a force field that should produce an atom distribution similar to that of the X-ray or atomic simulation." );
+return defn;
+!!!276016.cpp!!!	make_evaluator(in param_set : string) : base_evaluator
+// Evaluator meta should ensure only valid parameters were
+// set.
+UTILITY_CHECK( param_set.size() == 0 or param_set.count( core::strngs::fskmob() ) == 1, "Invalid parameter set passed as argument." );
 
-   }
-}
-else
-{
-   UTILITY_INPUT(param_set.size() == 0,"Unknown parameter name "+param_set.begin()->first+", Localization evaluator knows only parameter "+core::strngs::fskmob()+".", core::strngs::evaluator_label());
+double spring_factor;
 
+std::unique_ptr< localizer > cc( new localizer );
+if( param_set.count( core::strngs::fskmob() ) == 1 )
+{
+  core::input_base_reader::float_input( core::strngs::fskmob(), param_set.at( core::strngs::fskmob() ), type_label_(), core::strngs::evaluator_label(), spring_factor, false, false );
+  cc->spring_factor( spring_factor );
 }
-sim.add_evaluator( cc.release() );
+std::unique_ptr< base_evaluator > result( cc.release() );
+return result;
+
 !!!276272.cpp!!!	type_label_() : string
   return core::strngs::localizer_label();
-!!!275376.cpp!!!	compute_potential(in spcs : specie, in ens : ensemble, inout changes : change_set, in start_index : size_t = 0) : void
+!!!275376.cpp!!!	compute_potential(in pman : particle_manager, in gman : geometry_manager, inout changes : change_set) : void
+auto const& spcs = pman.get_species();
+auto const& ens = pman.get_ensemble();
 for (auto &atom: changes)
 {
-   if ( atom.key == ens.nkey )
+   if ( particle::specie_key::nkey ==  atom.key )
    {
       continue;
    }
@@ -38,9 +38,7 @@ for (auto &atom: changes)
       // Get localization data after converting global index into a per-specie index
       const particle::centroid rs( spcs[ atom.key ].get_localization_data( ens.specie_index( atom.index ) ) );
       // new penalty
-      const double r_sq{ std::pow( atom.new_position.x - rs.x, 2 )
-            + std::pow( atom.new_position.y - rs.y, 2 )
-            + std::pow( atom.new_position.z - rs.z, 2 ) };
+      const double r_sq{ gman.calculate_distance_squared( atom.new_position, rs.position() ) };
       if (rs.r * rs.r < r_sq)
       {
          // New position outside of cutoff, fail move.
@@ -51,35 +49,36 @@ for (auto &atom: changes)
 
       // old penalty
       atom.energy_old += this->spring_factor_ *
-            ( std::pow( atom.old_position.x - rs.x, 2 )
-            + std::pow( atom.old_position.y - rs.y, 2 )
-            + std::pow( atom.old_position.z - rs.z, 2 ) ) / (rs.r * rs.r);
+            ( gman.calculate_distance_squared( atom.old_position, rs.position() ) ) / (rs.r * rs.r);
 
    }
 }
-!!!538928.cpp!!!	compute_total_potential(in sim : simulator) : double
+!!!538928.cpp!!!	compute_total_potential(in pman : particle_manager, in gman : geometry_manager) : double
 double energy = 0.0;
-auto const& ens = sim.get_ensemble();
-for (std::size_t idx = 0; idx != ens.size(); ++idx)
+auto const& ens = pman.get_ensemble();
+for( std::size_t idx = 0; idx != ens.size(); ++idx )
 {
-   std::size_t ispec = ens.key( idx );
-   if (particle::specie_key::nkey == ispec)
-   {
-      continue;
-   }
-   // ASSUMPTION: localized atoms can only be moved, not
-   // added or removed.
-   if ( sim.get_specie( ispec ).is_localized() )
-   { 
-      // Get localization data after converting global index into a per-specie index
-      const particle::centroid rs( sim.get_specie( ispec ).get_localization_data( ens.specie_index( idx ) ) );
-      const particle::coordinate pos = ens.position( idx );
-      // penalty
-      const double r_sq{ std::pow( pos.x - rs.x, 2 ) + std::pow( pos.y - rs.y, 2 ) + std::pow( pos.z - rs.z, 2 ) };
-      energy += this->spring_factor_ * r_sq / (rs.r * rs.r);
-   }
+  std::size_t ispec = ens.key( idx );
+  if( particle::specie_key::nkey == ispec )
+  {
+    continue;
+  }
+  // ASSUMPTION: localized atoms can only be moved, not
+  // added or removed.
+  if( pman.get_specie( ispec ).is_localized() )
+  {
+    // Get localization data after converting global index into a per-specie index
+    const particle::centroid rs( pman.get_specie( ispec ).get_localization_data( ens.specie_index( idx ) ) );
+    // penalty
+    const double r_sq
+    {
+      gman.calculate_distance_squared( ens.position( idx ), rs.position() )
+    };
+    energy += this->spring_factor_ * r_sq / ( rs.r * rs.r );
+  }
 }
 return energy;
+
 !!!275504.cpp!!!	do_description(inout os : ostream) : void
 os << " Compute the harmonic potential to localize specific particles\n\n";
 os << "  For a harmonic oscillator the potential stored in a particle is\n\n";
