@@ -1658,7 +1658,37 @@ std::stringstream idoc;
 wrtr.write( idoc );
 const std::string sdoc( idoc.str() );
 BOOST_CHECK_LE( sdoc.find( canon ), sdoc.size() );
-!!!1401904.cpp!!!	input_no_type_test() : void
+!!!1409072.cpp!!!	input_unknown_parameter_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  m->add_definition( evaluator::coulomb::make_definition() );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype coulomb\nmobk 4.5\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"mobk\" is not valid in a evaluator \"coulomb\" type section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1408432.cpp!!!	input_no_type_test() : void
 // Test read input (specie meta)
 boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
 core::input_delegater dg( 1 );
@@ -1688,7 +1718,67 @@ catch( std::exception const& err )
 {
   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
 }
-!!!1401776.cpp!!!	evaluator_meta_localizer_test() : void
+!!!1408560.cpp!!!	input_type_no_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  m->add_definition( evaluator::coulomb::make_definition() );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype #localizer\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"type\" requires a value in a evaluator section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1401904.cpp!!!	input_type_bad_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  m->add_definition( evaluator::coulomb::make_definition() );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype localizer\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"type\" value (localizer) does not name a valid evaluator subtype (see documentation)." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1408688.cpp!!!	evaluator_meta_localizer_test() : void
 // Test read input (specie meta)
 boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
 core::input_delegater dg( 1 );
@@ -1725,3 +1815,79 @@ wrtr.write( idoc );
 const std::string sdoc( idoc.str() );
 BOOST_CHECK_LE( sdoc.find( canon ), sdoc.size() );
 
+!!!1408944.cpp!!!	input_localizer_no_mobk_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  m->add_definition( evaluator::localizer::make_definition() );
+
+  core::input_help hlpr;
+  m->publish_help( hlpr );
+  {
+    std::stringstream ss;
+    hlpr.print( ss );
+    BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+    BOOST_CHECK( ss.str().find( "--mobk" ) < ss.str().size() );
+  }
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"localize\"\nmobk #one\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "localize \"mobk\" parameter requires a value." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1401776.cpp!!!	input_localizer_bad_mobk_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  m->add_definition( evaluator::localizer::make_definition() );
+
+  core::input_help hlpr;
+  m->publish_help( hlpr );
+  {
+    std::stringstream ss;
+    hlpr.print( ss );
+    BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+    BOOST_CHECK( ss.str().find( "--mobk" ) < ss.str().size() );
+  }
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"localize\"\nmobk one\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "localize \"mobk\" parameter value (one) is not a number" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
