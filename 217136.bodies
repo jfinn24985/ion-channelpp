@@ -60,32 +60,6 @@ const std::string defn_label( "evaluator" );
   BOOST_CHECK( defn.empty() );
 }
 
-!!!1369520.cpp!!!	evaluator_meta_lifetime() : void
-{
-  //  Constructor tests
-  BOOST_CHECK( std::is_default_constructible< evaluator::evaluator_meta >::type {} );
-  BOOST_CHECK( not std::is_copy_constructible< evaluator::evaluator_meta >::type {} );
-  BOOST_CHECK( not std::is_move_constructible< evaluator::evaluator_meta >::type {} );
-  BOOST_CHECK( ( not std::is_assignable< evaluator::evaluator_meta, evaluator::evaluator_meta >::type {} ) );
-  BOOST_CHECK( std::has_virtual_destructor< evaluator::evaluator_meta >::type {} );
-}
-const std::string meta_label( "evaluator" );
-{
-  evaluator::evaluator_meta meta;
-  BOOST_CHECK_EQUAL( meta.required(), true );
-  BOOST_CHECK_EQUAL( meta.multiple(), true );
-  BOOST_CHECK_EQUAL( meta.section_label(), core::strngs::evaluator_label() );
-  BOOST_CHECK_EQUAL( meta.size(), 0 );
-  BOOST_CHECK( meta.empty() );
-
-  meta.add_definition( std::unique_ptr< evaluator::evaluator_definition >( new evaluator::evaluator_definition( "coloumb", [](std::map<std::string, std::string>)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; }) ) );
-  
-  BOOST_CHECK_EQUAL( meta.size(), 1 );
-  BOOST_CHECK( not meta.empty() );
-  BOOST_CHECK( meta.has_definition( "coloumb" ) );
-
-}
-
 !!!1380272.cpp!!!	coulomb_lifetime_tests() : void
 {
   //  Constructor tests
@@ -215,6 +189,43 @@ BOOST_CHECK_CLOSE( eval.factor(), evaluator::coulomb::invariant_factor()/( eman.
 double energy = 0.0;
 BOOST_REQUIRE_NO_THROW( energy = eval.compute_total_potential( pman, gman ) );
 BOOST_CHECK_CLOSE( -energy, eval.factor()/2.0, 0.000001 );
+
+// calculate move from current position to position in r1 test
+// (1 angstrom distance)
+
+// find Chloride particle
+const std::size_t lispec = pman.get_specie_key( "Cl" );
+const std::size_t lidx = pman.get_ensemble().nth_specie_index( lispec, 0 );
+{
+  // Move particle 1 angstrom distance
+  const particle::coordinate pstart( pman.get_ensemble().position( lidx ) );
+  const particle::coordinate pend( 0.0, 1.0, 0.0 );
+  particle::change_atom atm( lispec );
+  atm.index = lidx;
+  atm.do_old = true;
+  atm.old_position = pstart;
+  gman.calculate_distances( atm.old_position, pman.get_ensemble().get_coordinates(), atm.old_rij, 0, pman.get_ensemble().size() );
+  atm.do_old = true;
+  atm.new_position = pend;
+  gman.calculate_distances( atm.new_position, pman.get_ensemble().get_coordinates(), atm.new_rij, 0, pman.get_ensemble().size() );
+
+  particle::change_set move;
+  move.add_atom( atm );
+
+  const double distance( std::sqrt( gman.calculate_distance_squared( pstart, pend ) ) );
+
+  BOOST_CHECK_CLOSE_FRACTION( distance, 1.0, 0.0000000001 );
+  // r1 - r2 total energies
+  const double delta_energy( -eval.factor()/2.0 );
+
+  // Calculate energy
+  eval.compute_potential( pman, gman, move );
+  BOOST_REQUIRE( not move.fail() );
+  BOOST_CHECK_CLOSE_FRACTION( move.energy(), delta_energy, 0.0000000001 );
+}
+
+
+
 !!!1380656.cpp!!!	coulomb_evaluator_d4r1_test() : void
 // Build basic system.
 particle::particle_manager pman;
@@ -305,30 +316,33 @@ geometry::geometry_manager gman( sys_rgn );
 evaluator::evaluator_manager eman;
 
 std::stringstream store;
+double expected_value = 0.0;
 {
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( new evaluator::coulomb{} );
+  evaluator::coulomb* llp = dynamic_cast< evaluator::coulomb* >( eval_ptr.get() );
+  BOOST_REQUIRE( nullptr != llp );
+  BOOST_CHECK_EQUAL( llp->factor(), 0.0 );
 
-  evaluator::coulomb eval;
-  BOOST_CHECK_EQUAL( eval.factor(), 0.0 );
+  eval_ptr->prepare( pman, gman, eman );
+  BOOST_CHECK_CLOSE( llp->factor(), evaluator::coulomb::invariant_factor()/( eman.permittivity() * eman.temperature() ), 0.000001 );
 
-  eval.prepare( pman, gman, eman );
-  BOOST_CHECK_CLOSE( eval.factor(), evaluator::coulomb::invariant_factor()/( eman.permittivity() * eman.temperature() ), 0.000001 );
+  expected_value = -( 12.0 - ( 6 * std::sqrt( 2.0 ) ) + ( 4 / std::sqrt( 3 ) ) ) * llp->factor();
 
   double energy = 0.0;
-  BOOST_REQUIRE_NO_THROW( energy = eval.compute_total_potential( pman, gman ) );
-  BOOST_CHECK_CLOSE( -energy, ( 12.0 - ( 6 * std::sqrt( 2.0 ) ) + ( 4 / std::sqrt( 3 ) ) ) * eval.factor(), 0.000001 );
-
+  BOOST_REQUIRE_NO_THROW( energy = eval_ptr->compute_total_potential( pman, gman ) );
+  BOOST_CHECK_CLOSE( energy, expected_value, 0.000001 );
 
   boost::archive::text_oarchive oa( store );
-  oa << eval;
+  oa << eval_ptr;
 }
 {
-  evaluator::coulomb eval;
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr;
   boost::archive::text_iarchive ia( store );
-  ia >> eval;
+  ia >> eval_ptr;
 
   double energy = 0.0;
-  BOOST_REQUIRE_NO_THROW( energy = eval.compute_total_potential( pman, gman ) );
-  BOOST_CHECK_CLOSE( -energy, ( 12.0 - ( 6 * std::sqrt( 2.0 ) ) + ( 4 / std::sqrt( 3 ) ) ) * eval.factor(), 0.000001 );
+  BOOST_REQUIRE_NO_THROW( energy = eval_ptr->compute_total_potential( pman, gman ) );
+  BOOST_CHECK_CLOSE( energy, expected_value, 0.000001 );
 }
 
 !!!1394352.cpp!!!	localizer_lifetime_tests() : void
@@ -340,7 +354,7 @@ std::stringstream store;
   BOOST_CHECK( ( not std::is_assignable< evaluator::localizer, evaluator::localizer >::type {} ) );
   BOOST_CHECK( std::has_virtual_destructor< evaluator::localizer >::type {} );
 }
-const std::string defn_label( "localizer" );
+const std::string defn_label( core::strngs::localizer_label() );
 {
   evaluator::localizer eval;
   BOOST_CHECK_EQUAL( eval.type_label(), defn_label );
@@ -352,7 +366,7 @@ const std::string defn_label( "localizer" );
   // Static method tests.
   BOOST_CHECK_CLOSE( evaluator::localizer::default_spring_factor(), 4.5, 0.0000001 );
 }
-const std::string defn_label( "localize" );
+const std::string defn_label( core::strngs::localizer_label() );
 {
   BOOST_CHECK_EQUAL( evaluator::localizer::type_label_(), defn_label );
 
@@ -370,349 +384,261 @@ const std::string defn_label( "localize" );
   BOOST_CHECK_EQUAL( defn_ptr->label(), defn_label );
 }
 
-!!!311600.cpp!!!	localizer_test() : void
-//XXconst double spring_factor( 2.0 );
-//XXauto set_atom = [](trial::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2, double eps1, double eps2)->void{
-//XX  a.do_old = b1;
-//XX  a.do_new = b2;
-//XX  a.index = idx;
-//XX  a.old_position = p1;
-//XX  a.new_position = p2;
-//XX  a.eps_old = eps1;
-//XX  a.eps_new = eps2;
-//XX};
-//XXstd::stringstream store;
-//XX{
-//XX   // static method test
-//XX   BOOST_CHECK_EQUAL( core::strngs::localizer_label(), evaluator::localizer::type_label_() );
-//XX}
-//XX// Constructor test methods
-//XX{
-//XX   // default
-//XX   evaluator::localizer ll;
-//XX   BOOST_CHECK_EQUAL( ll.get_spring_factor(), 4.5 );
-//XX   BOOST_CHECK_EQUAL( core::strngs::localizer_label(), ll.type_label() );
-//XX   ll.set_spring_factor( spring_factor );
-//XX   BOOST_CHECK_EQUAL( ll.get_spring_factor(), spring_factor );
-//XX
-//XX   {
-//XX      // copy ctor
-//XX      evaluator::localizer lcopy( ll );
-//XX      BOOST_CHECK_EQUAL( ll.get_spring_factor(), spring_factor );
-//XX      BOOST_CHECK_EQUAL( lcopy.get_spring_factor(), spring_factor );
-//XX   }
-//XX   {
-//XX      // assignment
-//XX      evaluator::localizer lcopy;
-//XX      BOOST_CHECK_EQUAL( lcopy.get_spring_factor(), 4.5 );
-//XX      lcopy = ll;
-//XX      BOOST_CHECK_EQUAL( ll.get_spring_factor(), spring_factor );
-//XX      BOOST_CHECK_EQUAL( lcopy.get_spring_factor(), spring_factor );
-//XX   }
-//XX   {
-//XX      // move ctor
-//XX      evaluator::localizer lcopy( std::move( evaluator::localizer( ll ) ) );
-//XX      BOOST_CHECK_EQUAL( ll.get_spring_factor(), spring_factor );
-//XX      BOOST_CHECK_EQUAL( lcopy.get_spring_factor(), spring_factor );
-//XX   }
-//XX   {
-//XX      // swap ctor
-//XX      evaluator::localizer lcopy( ll );
-//XX      BOOST_CHECK_EQUAL( ll.get_spring_factor(), spring_factor );
-//XX      evaluator::localizer lswap;
-//XX      BOOST_CHECK_EQUAL( lswap.get_spring_factor(), 4.5 );
-//XX      lcopy.swap( lswap );
-//XX      BOOST_CHECK_EQUAL( lcopy.get_spring_factor(), 4.5 );
-//XX      BOOST_CHECK_EQUAL( lswap.get_spring_factor(), spring_factor );
-//XX      lswap.swap( lcopy );
-//XX      BOOST_CHECK_EQUAL( lswap.get_spring_factor(), 4.5 );
-//XX      BOOST_CHECK_EQUAL( lcopy.get_spring_factor(), spring_factor );
-//XX      std::swap( lcopy, lswap );
-//XX      BOOST_CHECK_EQUAL( lcopy.get_spring_factor(), 4.5 );
-//XX      BOOST_CHECK_EQUAL( lswap.get_spring_factor(), spring_factor );
-//XX   }
-//XX   // serialize
-//XX   boost::archive::text_oarchive oa( store );
-//XX   oa << ll;
-//XX}
-//XX{
-//XX   evaluator::localizer ll;
-//XX   BOOST_CHECK_EQUAL( ll.get_spring_factor(), 4.5 );
-//XX   // deserialize
-//XX   boost::archive::text_iarchive ia( store );
-//XX   ia >> ll;
-//XX   BOOST_CHECK_EQUAL( ll.get_spring_factor(), spring_factor );
-//XX}
-//XX{
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   std::map< std::string, std::string > params;
-//XX   // Empty parameter list allowed
-//XX   BOOST_CHECK_NO_THROW( evaluator::localizer::make_evaluator( params, *simfix.sim ) );
-//XX
-//XX   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
-//XX   evaluator::localizer const* llp = dynamic_cast< evaluator::localizer const* >( bep );
-//XX   BOOST_REQUIRE( nullptr != llp );
-//XX   BOOST_CHECK_EQUAL( llp->get_spring_factor(), 4.5 );
-//XX
-//XX   // write_document test
-//XX   core::input_document wr( 1 );
-//XX   bep->write_document( wr );
-//XX   BOOST_CHECK_EQUAL( wr.size(), 1  );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].label(), core::strngs::evaluator_label() );
-//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fstype() ) );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fstype() ), core::strngs::localizer_label() );
-//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fskmob() ) );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fskmob() ), std::to_string( 4.5 ) );
-//XX}
-//XX{
-//XX   platform::simulator_fixture simfix;
-//XX   std::map< std::string, std::string > params;
-//XX   params.insert( std::make_pair( core::strngs::fskmob(), "1.0" ) );
-//XX
-//XX   // One arg list with "mobk"
-//XX   BOOST_CHECK_NO_THROW( evaluator::localizer::make_evaluator( params, *simfix.sim ) );
-//XX
-//XX   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
-//XX   evaluator::localizer const* llp = dynamic_cast< evaluator::localizer const* >( bep );
-//XX   BOOST_REQUIRE( nullptr != llp );
-//XX   BOOST_CHECK_EQUAL( llp->get_spring_factor(), 1.0 );
-//XX
-//XX   // write_document test
-//XX   core::input_document wr( 1 );
-//XX   bep->write_document( wr );
-//XX   BOOST_CHECK_EQUAL( wr.size(), 1  );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].label(), core::strngs::evaluator_label() );
-//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fstype() ) );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fstype() ), core::strngs::localizer_label() );
-//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fskmob() ) );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fskmob() ), std::to_string( 1.0 ) );
-//XX
-//XX   // write description
-//XX   std::stringstream desc;
-//XX   bep->description( desc );
-//XX   // 0 = evaluator, 1 = type, 2 = kmob, 3 = kmob value
-//XX   std::bitset< 3 > flags;
-//XX   flags.set();
-//XX   // Parse description
-//XX   while( true )
-//XX   {
-//XX      std::string line;
-//XX      std::getline( desc, line );
-//XX      // DEBUG : std::cout << "LINE[" << line << "]\n";
-//XX      if ( desc.eof() )
-//XX      {
-//XX         break;
-//XX      }
-//XX      if ( line.empty() )
-//XX      {
-//XX         continue;
-//XX      }
-//XX      if ( line.find( core::strngs::evaluator_label() ) != std::string::npos )
-//XX      {
-//XX         flags.set( 0, true );
-//XX         if ( line.find( core::strngs::localizer_label() ) != std::string::npos )
-//XX         {
-//XX            flags.set( 1, true );
-//XX         }
-//XX      }
-//XX      if ( line.find( core::strngs::fskmob() ) != std::string::npos )
-//XX      {
-//XX         flags.set( 2, true );
-//XX         if ( line.find( core::strngs::localizer_label() ) != std::string::npos )
-//XX         {
-//XX            const std::size_t split_pos { line.find(':') };
-//XX            BOOST_REQUIRE( std::string::npos != split_pos );
-//XX            std::stringstream ss( line.substr( split_pos ) );
-//XX            double value;
-//XX            ss >> value;
-//XX            BOOST_CHECK_EQUAL( value, 1.0 );
-//XX         }
-//XX      }
-//XX   }
-//XX   BOOST_CHECK_MESSAGE( flags[ 0 ], core::strngs::evaluator_label() << " not found." );
-//XX   BOOST_CHECK_MESSAGE( flags[ 1 ], core::strngs::localizer_label() << " not found." );
-//XX   BOOST_CHECK_MESSAGE( flags[ 2 ], core::strngs::fskmob() << " not found." );
-//XX}
-//XX{
-//XX   platform::simulator_fixture simfix;
-//XX   std::map< std::string, std::string > params;
-//XX   params.insert( std::make_pair( "rate", "1.0" ) );
-//XX
-//XX   // ERROR One arg list not "mobk"
-//XX   BOOST_CHECK_THROW( evaluator::localizer::make_evaluator( params, *simfix.sim ), std::runtime_error );
-//XX}
-//XX{
-//XX   platform::simulator_fixture simfix;
-//XX   simfix.add_solute_species();
-//XX
-//XX   simfix.add_localized_species();
-//XX
-//XX   std::map< std::string, std::string > params;
-//XX   params.insert( std::make_pair( core::strngs::fskmob(), "1.0" ) );
-//XX
-//XX   BOOST_CHECK_NO_THROW( evaluator::localizer::make_evaluator( params, *simfix.sim ) );
-//XX
-//XX   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
-//XX   evaluator::localizer const* llp = dynamic_cast< evaluator::localizer const* >( bep );
-//XX   BOOST_REQUIRE( nullptr != llp );
-//XX   BOOST_CHECK_EQUAL( llp->get_spring_factor(), 1.0 );
-//XX
-//XX   {
-//XX      std::stringstream dummy_log;
-//XX      simfix.sim->generate_simulation( dummy_log );
-//XX   }
-//XX
-//XX   // find first localized particle.
-//XX   std::size_t mobidx( simfix.sim->get_ensemble().size() );
-//XX   for (std::size_t ispec = 0; ispec != simfix.sim->specie_count(); ++ispec)
-//XX   {
-//XX      if ( simfix.sim->get_specie(ispec).is_localized() and simfix.sim->get_specie(ispec).count() > 0)
-//XX      {
-//XX         mobidx = simfix.sim->get_ensemble().nth_specie_index(ispec, 0);
-//XX         break;
-//XX      }
-//XX   }
-//XX   BOOST_REQUIRE(mobidx != simfix.sim->get_ensemble().size());
-//XX
-//XX   BOOST_CHECK_EQUAL(simfix.sim->energy(), 0.0);
-//XX
-//XX   {
-//XX      // Move particle zero distance
-//XX      test_choice choice;
-//XX      trial::change_set move( choice );
-//XX      trial::change_atom atm(simfix.sim->get_ensemble().key(mobidx));
-//XX      set_atom(atm, true, true, mobidx, simfix.sim->get_ensemble().position(mobidx), simfix.sim->get_ensemble().position(mobidx), simfix.sim->get_ensemble().eps(mobidx), simfix.sim->get_ensemble().eps(mobidx));
-//XX      move.add_atom(atm);
-//XX
-//XX      // Calculate distance vectors.
-//XX      for (auto & atom : move)
-//XX      {
-//XX        if (atom.do_old)
-//XX        {
-//XX          simfix.sim->compute_distances( atom.old_position, simfix.sim->get_ensemble().get_coordinates(), atom.old_rij, simfix.sim->get_ensemble().size(), 0 );
-//XX        }
-//XX        if (atom.do_new)
-//XX        {
-//XX          simfix.sim->compute_distances( atom.new_position, simfix.sim->get_ensemble().get_coordinates(), atom.new_rij, simfix.sim->get_ensemble().size(), 0 );
-//XX        }
-//XX      }
-//XX      // Calculate energy
-//XX      for ( auto const& evaluator : simfix.sim->get_evaluators() )
-//XX      {
-//XX        evaluator.compute_potential( simfix.sim->get_species(), simfix.sim->get_ensemble(), move, 0 );
-//XX        if ( move.fail() ) break;
-//XX      }
-//XX
-//XX      BOOST_CHECK_EQUAL( move.energy(), 0.0 );
-//XX   }
-//XX   {
-//XX      // Move particle 1 angstrom distance
-//XX      test_choice choice;
-//XX      trial::change_set move( choice );
-//XX      const particle::coordinate pstart( simfix.sim->get_ensemble().position( mobidx ) );
-//XX      const particle::coordinate pend( pstart.x + 0.6, pstart.y, pstart.z - 0.8 );
-//XX      trial::change_atom atm(simfix.sim->get_ensemble().key(mobidx));
-//XX      set_atom(atm, true, true, mobidx, pstart, pend, simfix.sim->get_ensemble().eps(mobidx), simfix.sim->get_ensemble().eps(mobidx));
-//XX      move.add_atom(atm);
-//XX
-//XX      const double distance( std::sqrt( std::pow( pstart.x - pend.x, 2 )
-//XX               + std::pow( pstart.y - pend.y, 2 ) + std::pow( pstart.z - pend.z, 2 ) ) );
-//XX
-//XX      BOOST_CHECK_CLOSE_FRACTION( distance, 1.0, 0.0000000001 );
-//XX      // U = 1/2 k x^2 : spring factor == 1/2 k
-//XX      const double delta_energy( 1.0 );
-//XX
-//XX      // Calculate distance vectors.
-//XX      for ( auto & atom : move )
-//XX      {
-//XX        if (atom.do_old)
-//XX        {
-//XX          simfix.sim->compute_distances( atom.old_position, simfix.sim->get_ensemble().get_coordinates(), atom.old_rij, simfix.sim->get_ensemble().size(), 0 );
-//XX        }
-//XX        if (atom.do_new)
-//XX        {
-//XX          simfix.sim->compute_distances( atom.new_position, simfix.sim->get_ensemble().get_coordinates(), atom.new_rij, simfix.sim->get_ensemble().size(), 0 );
-//XX        }
-//XX      }
-//XX      // Calculate energy
-//XX      for ( auto const& evaluator : simfix.sim->get_evaluators() )
-//XX      {
-//XX        evaluator.compute_potential( simfix.sim->get_species(), simfix.sim->get_ensemble(), move, 0 );
-//XX        if ( move.fail() ) break;
-//XX      }
-//XX
-//XX      BOOST_REQUIRE( not move.fail() );
-//XX      BOOST_CHECK_CLOSE_FRACTION( move.energy(), delta_energy, 0.0000000001 );
-//XX   }
-//XX   {
-//XX      // Move particle 0.5 angstrom distance
-//XX      test_choice choice;
-//XX      trial::change_set move( choice );
-//XX      const particle::coordinate pstart( simfix.sim->get_ensemble().position( mobidx ) );
-//XX      const particle::coordinate pend( pstart.x + 0.3, pstart.y - 0.4, pstart.z );
-//XX      trial::change_atom atm(simfix.sim->get_ensemble().key( mobidx ));
-//XX      set_atom(atm, true, true, mobidx, pstart, pend, simfix.sim->get_ensemble().eps(mobidx), simfix.sim->get_ensemble().eps(mobidx));
-//XX      move.add_atom( atm );
-//XX
-//XX      const double distance( std::sqrt( std::pow( pstart.x - pend.x, 2 )
-//XX               + std::pow( pstart.y - pend.y, 2 ) + std::pow( pstart.z - pend.z, 2 ) ) );
-//XX      BOOST_CHECK_CLOSE_FRACTION( distance, 0.5, 0.0000000001 );
-//XX
-//XX      // U = 1/2 k x^2 : spring factor == 1/2 k
-//XX      const double delta_energy( 0.25 );
-//XX
-//XX      // Skip distance vectors.
-//XX
-//XX      // Calculate energy
-//XX      for ( auto const& evaluator : simfix.sim->get_evaluators() )
-//XX      {
-//XX        evaluator.compute_potential( simfix.sim->get_species(), simfix.sim->get_ensemble(), move, 0 );
-//XX        if ( move.fail() ) break;
-//XX      }
-//XX
-//XX      BOOST_REQUIRE( not move.fail() );
-//XX      BOOST_CHECK_CLOSE_FRACTION( move.energy(), delta_energy, 0.0000000001 );
-//XX   }
-//XX   {
-//XX      // Move particle outside localization cutoff distance
-//XX      test_choice choice;
-//XX      trial::change_set move( choice );
-//XX      const particle::coordinate pstart( simfix.sim->get_ensemble().position( mobidx ) );
-//XX      const particle::centroid pctr( simfix.sim->get_specie( simfix.sim->get_ensemble().key( mobidx ) ).get_localization_data( 0 ) );
-//XX      const particle::coordinate pend( pstart.x + pctr.r * 1.1, pstart.y, pstart.z );
-//XX      trial::change_atom atm(simfix.sim->get_ensemble().key(mobidx));
-//XX      set_atom(atm, true, true, mobidx, pstart, pend, simfix.sim->get_ensemble().eps(mobidx), simfix.sim->get_ensemble().eps(mobidx));
-//XX      move.add_atom(atm);
-//XX
-//XX      const double distance( std::sqrt( std::pow( pstart.x - pend.x, 2 )
-//XX               + std::pow( pstart.y - pend.y, 2 ) + std::pow( pstart.z - pend.z, 2 ) ) );
-//XX
-//XX      BOOST_CHECK_CLOSE_FRACTION( distance, pctr.r * 1.1, 0.0000000001 );
-//XX
-//XX      // Calculate distance vectors.
-//XX      for ( auto & atom : move )
-//XX      {
-//XX        if (atom.do_old)
-//XX        {
-//XX          simfix.sim->compute_distances( atom.old_position, simfix.sim->get_ensemble().get_coordinates(), atom.old_rij, simfix.sim->get_ensemble().size(), 0 );
-//XX        }
-//XX        if (atom.do_new)
-//XX        {
-//XX          simfix.sim->compute_distances( atom.new_position, simfix.sim->get_ensemble().get_coordinates(), atom.new_rij, simfix.sim->get_ensemble().size(), 0 );
-//XX        }
-//XX      }
-//XX      // Calculate energy
-//XX      for ( auto const& evaluator : simfix.sim->get_evaluators() )
-//XX      {
-//XX        evaluator.compute_potential( simfix.sim->get_species(), simfix.sim->get_ensemble(), move, 0 );
-//XX        if ( move.fail() ) break;
-//XX      }
-//XX
-//XX      BOOST_REQUIRE( move.fail() );
-//XX   }
-//XX
-//XX}
+!!!1401008.cpp!!!	localizer_methods_test() : void
+std::stringstream store;
+const double spring_factor( 2.0 );
+{
+  // static method test
+  BOOST_CHECK_EQUAL( core::strngs::localizer_label(), evaluator::localizer::type_label_() );
+}
+// Constructor test methods
+{
+  // default
+  evaluator::localizer ll;
+  BOOST_CHECK_EQUAL( ll.spring_factor(), evaluator::localizer::default_spring_factor() );
+  ll.spring_factor( spring_factor );
+  BOOST_CHECK_EQUAL( ll.spring_factor(), spring_factor );
+
+  // write_document test
+  core::input_document wr( 1 );
+  ll.write_document( wr );
+  BOOST_CHECK_EQUAL( wr.size(), 1 );
+  BOOST_CHECK_EQUAL( wr[ 0 ].label(), core::strngs::evaluator_label() );
+  BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fstype() ) );
+  BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fstype() ), core::strngs::localizer_label() );
+  BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fskmob() ) );
+  BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fskmob() ), std::to_string( spring_factor ) );
+
+  // serialize
+  boost::archive::text_oarchive oa( store );
+  oa << ll;
+}
+{
+  evaluator::localizer ll;
+  BOOST_CHECK_EQUAL( ll.spring_factor(),  evaluator::localizer::default_spring_factor() );
+  // deserialize
+  boost::archive::text_iarchive ia( store );
+  ia >> ll;
+  BOOST_CHECK_EQUAL( ll.spring_factor(), spring_factor );
+
+  // write description
+  std::stringstream desc;
+  ll.description( desc );
+  // 0 = evaluator, 1 = type, 2 = kmob (+ check kmob value)
+  std::bitset< 3 > flags;
+  flags.set();
+  // Parse description
+  while( true )
+  {
+    std::string line;
+    std::getline( desc, line );
+    // DEBUG : std::cout << "LINE[" << line << "]\n";
+    if( desc.eof() )
+    {
+      break;
+    }
+    if( line.empty() )
+    {
+      continue;
+    }
+    if( line.find( core::strngs::evaluator_label() ) != std::string::npos )
+    {
+      flags.set( 0, true );
+      if( line.find( core::strngs::localizer_label() ) != std::string::npos )
+      {
+        flags.set( 1, true );
+      }
+    }
+    if( line.find( core::strngs::fskmob() ) != std::string::npos )
+    {
+      flags.set( 2, true );
+      if( line.find( core::strngs::localizer_label() ) != std::string::npos )
+      {
+        const std::size_t split_pos
+        {
+          line.find( ':' )
+        };
+        BOOST_REQUIRE( std::string::npos != split_pos );
+        std::stringstream ss( line.substr( split_pos ) );
+        double value;
+        ss >> value;
+        BOOST_CHECK_CLOSE( value, spring_factor, 0.000001 );
+      }
+    }
+  }
+  BOOST_CHECK_MESSAGE( flags[ 0 ], core::strngs::evaluator_label() << " not found." );
+  BOOST_CHECK_MESSAGE( flags[ 1 ], core::strngs::localizer_label() << " not found." );
+  BOOST_CHECK_MESSAGE( flags[ 2 ], core::strngs::fskmob() << " not found." );
+
+}
+{
+  std::map< std::string, std::string > params;
+  params[ core::strngs::fskmob() ] = "1.0";
+  // One arg list with "mobk"
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr;
+  BOOST_CHECK_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( params ) );
+
+  evaluator::localizer* llp = dynamic_cast< evaluator::localizer* >( eval_ptr.get() );
+  BOOST_REQUIRE( nullptr != llp );
+  BOOST_CHECK_EQUAL( llp->spring_factor(), 1.0 );
+
+  // write_document test
+  core::input_document wr( 1 );
+  eval_ptr->write_document( wr );
+  BOOST_CHECK_EQUAL( wr.size(), 1 );
+  BOOST_CHECK_EQUAL( wr[ 0 ].label(), core::strngs::evaluator_label() );
+  BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fstype() ) );
+  BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fstype() ), core::strngs::localizer_label() );
+  BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fskmob() ) );
+  BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fskmob() ), std::to_string( 1.0 ) );
+
+  // serialize
+  boost::archive::text_oarchive oa( store );
+  oa << eval_ptr;
+}
+{
+  std::unique_ptr< evaluator::base_evaluator > ll;
+  // deserialize
+  boost::archive::text_iarchive ia( store );
+  ia >> ll;
+  evaluator::localizer* llp = dynamic_cast< evaluator::localizer* >( ll.get() );
+  BOOST_REQUIRE( nullptr != llp );
+  BOOST_CHECK_EQUAL( llp->spring_factor(), 1.0 );
+}
+
+!!!1401136.cpp!!!	localizer_evaluator_test() : void
+// Build basic system.
+particle::particle_manager pman;
+{
+  particle::specie spc1;
+  spc1.set_label( "Na" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( 1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
+  pman.add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "Cl" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.2 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.3123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  pman.add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "OX" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.2 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.3123 );
+  spc1.set_type( particle::specie::MOBILE );
+  // Original position is on localization point, therefore potential is zero
+  spc1.append_position( particle::coordinate( 1.0, 1.0, 1.0 ), particle::centroid( 3.0, 1.0, 1.0, 1.0 ) );
+  pman.add_specie( spc1 );
+}
+
+pman.add_predefined_particles();
+BOOST_REQUIRE_EQUAL( pman.specie_count(), 3 );
+BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 2 );
+
+boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+geometry::geometry_manager gman( sys_rgn );
+
+evaluator::evaluator_manager eman;
+
+{
+  std::map< std::string, std::string > params;
+  params.insert( std::make_pair( core::strngs::fskmob(), "1.0" ) );
+  std::unique_ptr< base_evaluator > eval_ptr;
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( params ) );
+
+  double energy = 0.0;
+
+  BOOST_REQUIRE_NO_THROW( energy = eval_ptr->compute_total_potential( pman, gman ) );
+  BOOST_CHECK_CLOSE_FRACTION( energy, 0.0, 0.0000000001 );
+
+  // find localized particle
+  const std::size_t lispec = pman.get_specie_key( "OX" );
+  const std::size_t lidx = pman.get_ensemble().nth_specie_index( lispec, 0 );
+  {
+    // Move particle 1 angstrom distance
+    const particle::coordinate pstart( pman.get_ensemble().position( lidx ) );
+    const particle::coordinate pend( pstart.x + 0.6, pstart.y, pstart.z - 0.8 );
+    particle::change_atom atm( lispec );
+    atm.index = lidx;
+    atm.do_old = true;
+    atm.do_new = true;
+    atm.old_position = pstart;
+    atm.new_position = pend;
+    particle::change_set move;
+    move.add_atom( atm );
+
+    const double distance( std::sqrt( gman.calculate_distance_squared( pstart, pend ) ) );
+
+    BOOST_CHECK_CLOSE_FRACTION( distance, 1.0, 0.0000000001 );
+    // U = 1/2 k x^2 : spring factor == 1/2 k
+    const double delta_energy( 1.0/9.0 );
+
+    // Calculate energy
+    eval_ptr->compute_potential( pman, gman, move );
+    BOOST_REQUIRE( not move.fail() );
+    BOOST_CHECK_CLOSE_FRACTION( move.energy(), delta_energy, 0.0000000001 );
+  }
+  {
+    // Move particle 1 angstrom distance
+    const particle::coordinate pstart( pman.get_ensemble().position( lidx ) );
+    const particle::coordinate pend( pstart.x + 0.3, pstart.y, pstart.z - 0.4 );
+    particle::change_atom atm( lispec );
+    atm.index = lidx;
+    atm.do_old = true;
+    atm.do_new = true;
+    atm.old_position = pstart;
+    atm.new_position = pend;
+    particle::change_set move;
+    move.add_atom( atm );
+
+    const double distance( std::sqrt( gman.calculate_distance_squared( pstart, pend ) ) );
+
+    BOOST_CHECK_CLOSE_FRACTION( distance, 0.5, 0.0000000001 );
+    // U = 1/2 k x^2 : spring factor == 1/2 k
+    const double delta_energy( 0.25/9.0 );
+
+    // Calculate energy
+    eval_ptr->compute_potential( pman, gman, move );
+    BOOST_REQUIRE( not move.fail() );
+    BOOST_CHECK_CLOSE_FRACTION( move.energy(), delta_energy, 0.0000000001 );
+  }
+  {
+    // Move particle 1 angstrom distance
+    const particle::coordinate pstart( pman.get_ensemble().position( lidx ) );
+    const particle::coordinate pend( pstart.x + 1.9, pstart.y, pstart.z - 2.4 );
+    particle::change_atom atm( lispec );
+    atm.index = lidx;
+    atm.do_old = true;
+    atm.do_new = true;
+    atm.old_position = pstart;
+    atm.new_position = pend;
+    particle::change_set move;
+    move.add_atom( atm );
+
+    const double distance( std::sqrt( gman.calculate_distance_squared( pstart, pend ) ) );
+
+    BOOST_CHECK_CLOSE_FRACTION( distance, 3.061, 0.001 );
+
+    // Calculate energy
+    eval_ptr->compute_potential( pman, gman, move );
+    BOOST_REQUIRE( move.fail() );
+  }
+}
 !!!359216.cpp!!!	arc_integrator_test() : void
 //XXconst double za0( 5.0 );
 //XXconst double ra0( 4.0 );
@@ -1670,3 +1596,132 @@ const std::string defn_label( "localize" );
 //XX//XX        BOOST_CHECK_CLOSE_FRACTION( area, 2*core::constants::pi()*40.0*10, 0.0001 );
 //XX//XX     }
 //XX//XX  }
+!!!1369520.cpp!!!	evaluator_meta_lifetime_test() : void
+{
+  //  Constructor tests
+  BOOST_CHECK( not std::is_default_constructible< evaluator::evaluator_meta >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< evaluator::evaluator_meta >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< evaluator::evaluator_meta >::type {} );
+  BOOST_CHECK( ( not std::is_assignable< evaluator::evaluator_meta, evaluator::evaluator_meta >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< evaluator::evaluator_meta >::type {} );
+}
+const std::string meta_label( "evaluator" );
+{
+  boost::shared_ptr< evaluator::evaluator_manager > eman( new evaluator::evaluator_manager{} );
+  evaluator::evaluator_meta meta( eman );
+  BOOST_CHECK_EQUAL( meta.required(), true );
+  BOOST_CHECK_EQUAL( meta.multiple(), true );
+  BOOST_CHECK_EQUAL( meta.section_label(), core::strngs::evaluator_label() );
+  BOOST_CHECK_EQUAL( meta.size(), 0 );
+  BOOST_CHECK( meta.empty() );
+
+  meta.add_definition( std::unique_ptr< evaluator::evaluator_definition >( new evaluator::evaluator_definition( "coloumb", [](std::map<std::string, std::string>)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; }) ) );
+  
+  BOOST_CHECK_EQUAL( meta.size(), 1 );
+  BOOST_CHECK( not meta.empty() );
+  BOOST_CHECK( meta.has_definition( "coloumb" ) );
+
+}
+
+!!!1401520.cpp!!!	evaluator_meta_coulomb_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  m->add_definition( evaluator::coulomb::make_definition() );
+
+  core::input_help hlpr;
+  m->publish_help( hlpr );
+  {
+    std::stringstream ss;
+    hlpr.print( ss );
+    BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+  }
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"coulomb\"\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+BOOST_REQUIRE_EQUAL( mngr->size(), 1ul );
+BOOST_CHECK_EQUAL( mngr->get_evaluators()[ 0 ].type_label(), "coulomb" );
+
+std::string canon( "evaluator\ntype coulomb\nend\n" );
+
+core::input_document wrtr( 1ul );
+mngr->write_document( wrtr );
+std::stringstream idoc;
+wrtr.write( idoc );
+const std::string sdoc( idoc.str() );
+BOOST_CHECK_LE( sdoc.find( canon ), sdoc.size() );
+!!!1401904.cpp!!!	input_no_type_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  m->add_definition( evaluator::coulomb::make_definition() );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Required parameter \"type\" was not found in a evaluator section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1401776.cpp!!!	evaluator_meta_localizer_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  m->add_definition( evaluator::localizer::make_definition() );
+
+  core::input_help hlpr;
+  m->publish_help( hlpr );
+  {
+    std::stringstream ss;
+    hlpr.print( ss );
+    BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+    BOOST_CHECK( ss.str().find( "--mobk" ) < ss.str().size() );
+  }
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"localize\"\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+BOOST_REQUIRE_EQUAL( mngr->size(), 1ul );
+BOOST_CHECK_EQUAL( mngr->get_evaluators()[ 0 ].type_label(), "localize" );
+
+std::string canon( "evaluator\nmobk 4.500000\ntype localize\nend\n" );
+
+core::input_document wrtr( 1ul );
+mngr->write_document( wrtr );
+std::stringstream idoc;
+wrtr.write( idoc );
+const std::string sdoc( idoc.str() );
+BOOST_CHECK_LE( sdoc.find( canon ), sdoc.size() );
+
