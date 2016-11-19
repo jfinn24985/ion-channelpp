@@ -1,5 +1,5 @@
-class digitiser
-!!!315569.cpp!!!	digitiser(in aminimum : double, in amaximum : double, in abinwidth : double)
+class digitizer
+!!!315569.cpp!!!	digitizer(in aminimum : double, in amaximum : double, in abinwidth : double)
 : minimum_(std::min(aminimum,amaximum))
 , step_(std::abs(abinwidth))
 , width_(std::abs(amaximum - aminimum))
@@ -19,3 +19,43 @@ class digitiser
   // Adjust width to match step and size.
   width_ = step_ * size_;
 }
+!!!1433648.cpp!!!	extend_up(in maxval : double) : size_t
+UTILITY_REQUIRE( maxval > this->maximum(), "extend_up can not reduce range." );
+const std::size_t add = std::ceiling( ( maxval - this->maximum() ) / this->bin_width() );
+const double change = add * this->step_;
+this->width_ += change;
+this->size_ = add;
+return add;
+!!!1433776.cpp!!!	extend_down(in minval : double) : size_t
+UTILITY_REQUIRE( minval < this->minimum(), "extend_down can not reduce range." );
+const std::size_t add = std::ceiling( ( this->minimum() - minval ) / this->bin_width() );
+const double change = add * this->bin_width();
+this->minimum_ -= change;
+this->width_ += change;
+this->size_ = add;
+return add;
+!!!1433904.cpp!!!	shrink_up(in maxval : double) : size_t
+UTILITY_REQUIRE( maxval < this->maximum(), "shrink_up can not extend range." );
+const std::size_t del = std::floor( ( this->maximum() - maxval ) / this->bin_width() );
+UTILITY_REQUIRE( del < this->size(), "shrink_up can not clear range." );
+if( del > 0 )
+{
+  const double change = del * this->step_;
+  this->width_ -= change;
+  this->size_ -= del;
+}
+return del;
+
+!!!1434032.cpp!!!	shrink_down(in minval : double) : size_t
+UTILITY_REQUIRE( minval > this->minimum(), "shrink_down can not extend range." );
+const std::size_t del = std::floor( ( minval - this->minimum() ) / this->bin_width() );
+UTILITY_REQUIRE( del < this->size(), "shrink_down can not clear range." );
+if( del > 0 )
+{
+  const double change = del * this->step_;
+  this->minimum_ += change;
+  this->width_ -= change;
+  this->size_ -= del;
+}
+return del;
+

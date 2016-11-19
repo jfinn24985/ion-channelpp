@@ -1,6 +1,6 @@
 format 75
 "utility" // utility
-  revision 211
+  revision 212
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -71,7 +71,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     comment "Set of non-template classes that use double, ptrdiff_t and size_t
 as the floating point and integral types respectively"
     classdiagram 154545 "Double Stats classes"
-      draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
+      draw_all_relations default hide_attributes default hide_operations yes hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
       size A4
     end
 
@@ -1265,6 +1265,21 @@ ${inlines}
       comment " Manage mean and (biased) variance of a 1D set of data
 
  (TODO: Unit test suite \"estimate_test_suite\")
+
+ This array is meant to be used with an digitizer object that
+ maps a range of a field into a digital range. It provides
+ methods to extend (||resize|| and ||reindex||) the array if
+ the digitizer needs to record values outside the originally
+ expected range. It also provides methods to reduce (||resize||
+ and ||remove||) the array if the recorded values lie in
+ a subset of the originally expected range.  ||reindex||
+ can add places at the beginning and/or end of the original
+ range. ||resize|| can extend or remove data from the top of
+ the original range. ||remove|| erases data at the beginning
+ of the original range. As ||reindex|| and ||remove|| take or
+ add data to the beginning of the array the digitizer object
+ must be adjusted to maintain the correct mapping from field
+ range to digital range.
 "
       classrelation 787888 // <generalisation>
 	relation 786992 ---|>
@@ -1504,12 +1519,12 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Append an array of values data to the current estimator array
+	comment " Append an array of data values to the current estimator array
 
  distance(begin,end) < 0 is undefined
 
  \\pre distance(begin, end) == size : this is tested at end of
- method, leaving the array will be in an undefined state."
+ method, so on error the array will be in an undefined state."
       end
 
       operation 1341232 "append_safe"
@@ -1564,6 +1579,27 @@ ${docstring}${body}
  method, leaving the array will be in an undefined state."
       end
 
+      operation 1433520 "clear"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  this->count_ = 0;
+  this->means_.${name}(); this->vars_.${name}();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Remove all elements of the array. All data is lost.
+
+ \\post size = 0. count = 0
+"
+      end
+
       operation 317233 "count"
 	const public explicit_return_type "size_t"
 	nparams 0
@@ -1578,6 +1614,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+	comment " The number of sample cycles."
       end
 
       operation 318001 "mean"
@@ -1598,6 +1635,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+	comment " The geometric means of the samples at a given index"
       end
 
       operation 1340976 "merge"
@@ -1617,9 +1655,92 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Merge two estimate arrays of the same size
+	comment " Merge two estimate arrays of the same size. The indexing digitizers are assumed
+ to be the same.
 
  \\pre size = other.size"
+      end
+
+      operation 1433264 "reindex"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "extend" explicit_type "size_t"
+	  param in name "zero" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The index of the array is usually mapped to some external
+ field by a digitizer. The digitizer maps a range of the field
+ into an index starting at zero. If a value in the field lies
+ outside the digitizer's original range then the original index
+ must be changed. It needs to be extended if the new value is
+ above the original range. It needs to be remapped if the new
+ value is below the original range.
+
+ This method extends and if necessary moves data to allow the
+ digitizer remaps its range. Note that this invalidates all
+ subrange to index mappings that may have been saved. In other
+ words the digitizer should always be used to access the array
+ from a value in the field. Likewise copies of the digitizer
+ also become invalid.
+
+ This operation never loses data.
+
+ \\param extend : Extend indices beyond the current top of
+     the array. This does not move data.
+
+ \\param zero : Extend the indices below the current zero
+     of the array. This involves moving data.
+
+ \\post newsize = oldsize + extend + zero
+
+ \\post newindex = oldindex + zero
+"
+      end
+
+      operation 1433392 "remove"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "zero" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The index of the array is usually mapped to some external
+ field by a digitizer. The digitizer maps a range of the field
+ into an index starting at zero. If the digitizer realises that
+ all values below a certain index are never accessed it may
+ want to reindex the array be removing empty values at the
+ beginning of the array. 
+
+ \\param zero : The index of an existing element that becomes
+     the new zeroth. All data between [ 0, zero ) is lost.
+
+ \\pre size > zero
+
+ \\post newsize = oldsize - zero
+
+ \\post newindex = oldindex - zero
+"
       end
 
       operation 317617 "resize"
@@ -1628,7 +1749,7 @@ ${docstring}${body}
 	  param in name "sz" explicit_type "size_t"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  this->means_.resize( sz ); this->vars_.resize( sz );
+  this->means_.${name}( sz ); this->vars_.${name}( sz );
 }
 "
 	
@@ -1637,6 +1758,25 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+	comment " The index of the array is usually mapped to some external
+ field by a digitizer. The digitizer maps a range of the field
+ into an index starting at zero. If the digitizer realises that
+ all values above a certain index are never accessed it may
+ want to remove the empty values at the end of the array if
+ sz is less than size. Alternatively it may want to extend the
+ array if sz is greater than sz.
+
+ \\param sz : The index of an existing element that becomes
+     the new last index. For sz < size all data between 
+     [ sz, size ) is lost. For sz > size all data
+     [ oldsize, size ) === 0.
+
+ \\pre size != sz
+
+ \\post newsize = sz
+
+ \\post newindex = oldindex
+"
       end
 
       operation 317745 "reset"
@@ -1655,6 +1795,10 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+	comment " Set all data to zero. The size of the array is unchanged.
+
+ \\post count = 0, mean[] === 0, var[] === 0, size = oldsize
+"
       end
 
       operation 317489 "size"
@@ -1671,6 +1815,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+	comment " The number of elements"
       end
 
       operation 317873 "variance"
@@ -1692,6 +1837,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+	comment " The variance at element idx. var = 0 if count < 2"
       end
     end
 
@@ -2511,104 +2657,13 @@ ${inlines}
 	comment " The number of bins on this axis"
       end
 
-      operation 316209 "bin_maximum"
-	const cpp_inline public explicit_return_type "double"
-	nparams 1
-	  param in name "bin" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->minimum_ + (bin + 1) * this->step_;
-}
-"
+      extra_member 578480 "LIFETIME"
 	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment " The end of a particular bin"
-      end
-
-      operation 316337 "bin_midpoint"
-	const public explicit_return_type "double"
-	nparams 1
-	  param in name "bin" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->minimum_ + bin * this->step_ + this->step_ / 2;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment " The mid-point of a particular bin
-
- @require bin < size()"
-      end
-
-      operation 316081 "bin_minimum"
-	const public explicit_return_type "double"
-	nparams 1
-	  param in name "bin" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->minimum_ + bin * this->step_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment " The beginning of a particular bin
-
- @require bin < size()"
-      end
-
-      operation 315953 "bin_width"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->step_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment " The width of each bin"
-      end
-
-      operation 316593 "convert"
-	const cpp_inline public explicit_return_type "size_t"
-	nparams 1
-	  param in name "val" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  UTILITY_REQUIRE(this->in_range(val), \"Target value outside of range.\");
-  return std::min(this->size()
-                  , std::size_t(std::floor((val - this->minimum_)/this->step_)));
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment " The bin number a value maps on to.
-
-Note: mapping uses half closed intervals
-
-bin_minimum(x) <= r < bin_maximum(x), 
-therefore bin number is x+1 when r == bin_maximum(x)"
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
       end
 
       operation 315313 "digitizer"
@@ -2710,58 +2765,83 @@ ${docstring}${body}
  bins of the given width fits in the range."
       end
 
-      operation 316465 "in_range"
-	const public explicit_return_type "bool"
+      operation 1434800 "digitizer"
+	stereotype "move"
+	public explicit_return_type ""
 	nparams 1
-	  param in name "val" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  return (this->minimum_ <= val) and (val < this->minimum_ + this->width_);
-}
+	  param inout name "source" type class_ref 175409 // digitizer
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
+: this->minimum_( std::move( source.minimum_ ) )
+, this->step_( std::move( source.step_ ) )
+, this->width_( std::move( source.width_ ) )
+, this->size_( std::move( source.size_ ) )
+{}
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
 ${docstring}${body}
 "
 	
-	comment " Check is value is in the histogram range
-
-true if minimum < val <= maximum"
       end
 
-      operation 315697 "minimum"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->minimum_;
-}
+      operation 1434672 "digitizer"
+	stereotype "copy"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 175409 // digitizer
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
+: this->minimum_( source.minimum_ )
+, this->step_( source.step_ )
+, this->width_( source.width_ )
+, this->size_( source.size_ )
+{}
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
 ${docstring}${body}
 "
 	
-	comment " The beginning of the histogram range"
       end
 
-      operation 315825 "maximum"
-	const public explicit_return_type "double"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+      operation 1434544 "operator="
+	public return_type class_ref 175409 // digitizer
+	nparams 1
+	  param in name "source" type class_ref 175409 // digitizer
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
 {
-  return this->minimum_ + this->width_;
+  this->swap( ${p0} );
+  return *this;
 }
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
 ${docstring}${body}
 "
 	
-	comment " The end of the histogram range"
+      end
+
+      operation 1434928 "swap"
+	stereotype "copy"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 175409 // digitizer
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} & ${p0}${)}${volatile}${throw}
+{
+  std::swap( this->minimum_, source.minimum_ );
+  std::swap( this->step_, source.step_ );
+  std::swap( this->width_, source.width_ );
+  std::swap( this->size_, source.size_ );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
       end
 
       extra_member 180785 "friend"
@@ -2796,12 +2876,23 @@ ${docstring}${body}
 	
       end
 
-      operation 316721 "size"
-	const cpp_inline public explicit_return_type "size_t"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} {
-    return this->size_;
-  };
+      extra_member 578352 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 316209 "bin_maximum"
+	const cpp_inline public explicit_return_type "double"
+	nparams 1
+	  param in name "bin" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->minimum_ + (bin + 1) * this->step_;
+}
 "
 	
 	
@@ -2809,7 +2900,89 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " The number of bins in the range"
+	comment " The end of a particular bin"
+      end
+
+      operation 316337 "bin_midpoint"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "bin" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->minimum_ + bin * this->step_ + this->step_ / 2;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " The mid-point of a particular bin
+
+ @require bin < size()"
+      end
+
+      operation 316081 "bin_minimum"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "bin" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->minimum_ + bin * this->step_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " The beginning of a particular bin
+
+ @require bin < size()"
+      end
+
+      operation 315953 "bin_width"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->step_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " The width of each bin"
+      end
+
+      operation 316593 "convert"
+	const cpp_inline public explicit_return_type "size_t"
+	nparams 1
+	  param in name "val" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  UTILITY_REQUIRE(this->in_range(val), \"Target value outside of range.\");
+  return std::min(this->size()
+                  , std::size_t(std::floor((val - this->minimum_)/this->step_)));
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " The bin number a value maps on to.
+
+Note: mapping uses half closed intervals
+
+bin_minimum(x) <= r < bin_maximum(x), 
+therefore bin number is x+1 when r == bin_maximum(x)"
       end
 
       operation 448561 "equivalent"
@@ -2830,6 +3003,196 @@ ${docstring}${body}
 "
 	
       end
+
+      operation 1433648 "extend_up"
+	public explicit_return_type "size_t"
+	nparams 1
+	  param in name "maxval" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Extend the allowable range above the current maximum. The new
+ maximum will be maxval rounded up to the next bin edge. The
+ number of new bins is returned.
+ 
+ \\pre maxval > maximum
+
+ \\return number of new bins
+
+ \\post maximum >= maxval"
+      end
+
+      operation 1433776 "extend_down"
+	public explicit_return_type "size_t"
+	nparams 1
+	  param in name "minval" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Extend the allowable range below the current minimum. The new
+ minimum will be minval rounded up to the next bin edge. The
+ number of new bins is returned.
+ 
+ \\pre minval < minimum
+
+ \\return number of new bins
+
+ \\post minimum <= minval
+"
+      end
+
+      operation 316465 "in_range"
+	const public explicit_return_type "bool"
+	nparams 1
+	  param in name "val" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return (this->minimum_ <= val) and (val < this->minimum_ + this->width_);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Check is value is in the histogram range
+
+true if minimum < val <= maximum"
+      end
+
+      operation 315825 "maximum"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->minimum_ + this->width_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " The end of the histogram range"
+      end
+
+      operation 315697 "minimum"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->minimum_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " The beginning of the histogram range"
+      end
+
+      operation 1433904 "shrink_up"
+	public explicit_return_type "size_t"
+	nparams 1
+	  param in name "maxval" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Decrease the allowable range to below the current maximum. The
+ new maximum will be maxval rounded up to the next bin edge. The
+ number of new bins removed is returned.  If maxval is greater
+ than bin_minimum( size -1 ) then this will result in no change
+ and zero will be returned. At least one bin must remain.
+
+ \\pre bin_maximum( 0 ) <= maxval <= maximum
+
+ \\return number of new bins removed : [ 0, size ]
+
+ \\post maximum >= maxval and minimum != maximum
+"
+      end
+
+      operation 1434032 "shrink_down"
+	public explicit_return_type "size_t"
+	nparams 1
+	  param in name "minval" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Decrease the allowable range to above the current minimum. The
+ new minimum will be minval rounded down to the next bin edge. The
+ number of new bins removed is returned.  If minval is less
+ than bin_maximum( 0 ) then this will result in no change
+ and zero will be returned. At least one bin must remain.
+
+ \\pre minimum < minval <= bin_minimum( size - 1 )
+
+ \\return number of new bins removed : [ 0, size ]
+
+ \\post minimum <= minval and minimum != maximum
+"
+      end
+
+      operation 316721 "size"
+	const cpp_inline public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} {
+    return this->size_;
+  };
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " The number of bins in the range"
+      end
+
     end
 
     class 174897 "digital_sampler"
@@ -4090,6 +4453,608 @@ ${docstring}${body}
 {
   std::swap(this->counts_, other.counts_);
   std::swap(this->digitizer_, other.digitizer_);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+    end
+
+    class 585776 "histogram"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " A combination of digitizer and data array."
+      classrelation 857392 // converter_ (<directional composition>)
+	relation 856496 *-->
+	  a role_name "converter_" private
+	    comment " Object that converts a continuous value into a digital index. "
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	    python "${comment}${self}${name} = ${type}()
+"
+	    classrelation_ref 857392 // converter_ (<directional composition>)
+	  b parent class_ref 175409 // digitizer
+      end
+
+      classrelation 857520 // data_ (<directional composition>)
+	relation 856624 *-->
+	  a role_name "data_" private
+	    comment " The histogram of observation counts."
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	    python "${comment}${self}${name} = ${type}()
+"
+	    classrelation_ref 857520 // data_ (<directional composition>)
+	  b parent class_ref 175665 // estimate_array
+      end
+
+      attribute 631600 "sample_"
+	private explicit_type "size_t"
+	multiplicity "*"
+	stereotype "vector"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${stereotype}()
+"
+	idl_decl ""
+	comment " The counts of values being sampled (not archived, copied
+ or swapped).  This vector is used to record the bin counts
+ during sampling.  It is only used during the ||sample|| method
+ so is neither copied or archived.  Making it an attribute
+ allows it to be adjusted if the range needs to be extended
+ during sampling.
+"
+      end
+
+      attribute 631472 "extendable_"
+	private explicit_type "bool"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Whether the histogram can automatically extend if the
+ sampled range exceeds the expected range."
+      end
+
+      extra_member 578736 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1435056 "histogram"
+	private explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " For serialization"
+      end
+
+      operation 1435696 "histogram"
+	public explicit_return_type ""
+	nparams 4
+	  param in name "minval" explicit_type "double"
+	  param in name "maxval" explicit_type "double"
+	  param in name "binwidth" explicit_type "double"
+	  param in name "extendable" explicit_type "bool"
+	    defaultvalue "false"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}${)}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Construct object with the given range and bin width.
+ Indicate if the histogram can automatically expand if the
+ sampled range exceeds the expected range.
+
+ \\param minval, maxval : expected observation range.
+
+ \\param bincount : the number of bins in the range.
+
+ \\param extendable : whether to allow extending of range.
+"
+      end
+
+      operation 1435824 "histogram"
+	public explicit_return_type ""
+	nparams 4
+	  param in name "minval" explicit_type "double"
+	  param in name "maxval" explicit_type "double"
+	  param in name "bincount" explicit_type "int"
+	  param in name "extendable" explicit_type "bool"
+	    defaultvalue "false"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}${)}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Construct object with the given range and desired number
+ of bins.  Indicate if the histogram can automatically expand
+ if the sampled range exceeds the expected range.
+
+ \\param minval, maxval : expected observation range.
+
+ \\param bincount : the number of bins in the range.
+
+ \\param extendable : whether to allow extending of range.
+"
+      end
+
+      operation 1435312 "histogram"
+	stereotype "move"
+	public explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 585776 // histogram
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
+: this->converter_( std::move( ${p0}.converter_ ) )
+, this->data_( std::move( ${p0}.data_ ) )
+, this->sample_()
+, this->extendable_( std::move( ${p0}.extendable_ ) )
+{}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1435440 "histogram"
+	stereotype "copy"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 585776 // histogram
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
+: this->converter_( ${p0}.converter_ )
+, this->data_( ${p0}.data_ )
+, this->sample_()
+, this->extendable_( ${p0}.extendable_ )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1435184 "~histogram"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1435568 "operator="
+	public return_type class_ref 585776 // histogram
+	nparams 1
+	  param in name "source" type class_ref 585776 // histogram
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->swap( ${p0} );
+  return *this;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1438128 "swap"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "source" type class_ref 585776 // histogram
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  std::swap(: this->converter_, ${p0}.converter_ );
+  std::swap(, this->data_, ${p0}.data_ );
+  std::swap(, this->extendable_, ${p0}.extendable_ );
+}
+
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 578992 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1437488 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+    ar & converter_;
+    ar & data_;
+    ar & extendable_;
+  };
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 578608 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1437744 "auto_extendable"
+	stereotype "get"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->extendable_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1437616 "auto_extendable"
+	stereotype "set"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "doit" explicit_type "bool"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->extendable_ = ${p0};
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1436080 "extend"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "val" explicit_type ""
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Extend the histogram to include the given value. This
+ method is independent of is_auto_extendable.
+
+ \\pre not in_range( val )"
+      end
+
+      operation 1438000 "merge"
+	public explicit_return_type "bool"
+	nparams 1
+	  param in name "other" type class_ref 585776 // histogram
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Merge two histograms. If the ranges of the digitizers are
+ not the same but they have some equivalent bins, then the
+ histograms are adjusted to give equivalent digitizers and
+ data structures before merging.
+
+ Returns false if merge was not possible.
+"
+      end
+
+      operation 1435952 "sample"
+	cpp_inline public explicit_return_type "void"
+	nparams 2
+	  param in name "begin" explicit_type "InIter"
+	  param in name "end" explicit_type "InIter"
+	cpp_decl "    ${comment}template< class ${t0} > ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  this->reset_sampler();
+  for( ; ${p0} != ${p1}, ++${p0} )
+  {
+    this->sample( static_cast< double >( *${p0} ) );
+  }
+  this->data_.append( this->sample_.begin(), this->sample_.end() );
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Sample the given range of data. The arguments are only expected
+ to satisfy a model of the input iterator. If observable is not
+ auto_extendable then out-of-range values raise an exception.
+"
+      end
+
+      operation 1438256 "sample"
+	private explicit_return_type "void"
+	nparams 1
+	  param in name "val" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1436208 "reset_sampler"
+	private explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 578864 "ACCESSORS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+	comment " Access internal data"
+      end
+
+      operation 1436720 "bin_maximum"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "idx" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->converter_.${name}( ${p0} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1436976 "bin_midpoint"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "idx" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->converter_.${name}( ${p0} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1436848 "bin_minimum"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "idx" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->converter_.${name}( ${p0} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1437232 "bin_mean"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "idx" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->data_.${name}( ${p0} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1437104 "bin_variance"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "idx" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->data_.${name}( ${p0} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1436592 "maximum"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->converter_.${name}();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1436464 "minimum"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->converter_.${name}();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1436336 "in_range"
+	const public explicit_return_type "bool"
+	nparams 1
+	  param in name "val" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->converter_.${name}( ${p0} );
+}
+
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1437360 "size"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->converter_.${name}();
 }
 "
 	

@@ -16,6 +16,52 @@ for( std::size_t idx = 0; idx != this->size(); ++idx )
   mean_algorithm::merge( this->means_[ idx ], this->vars_[ idx ], lhcount, other.means_[ idx ], other.vars_[ idx ], other.count_ );
 }
 this->count_ = lhcount;
+!!!1433264.cpp!!!	reindex(in extend : size_t, in zero : size_t) : void
+const std::size_t add = extend + zero;
+UTILITY_REQUIRE( 0 != add, "Can not reindex with extend + zero == 0" );
+const std::size_t oldsize = this->means_.size();
+this->means_.resize( oldsize + add );
+this->vars_.resize( oldsize + add );
+if( 0 != zero and 0 != oldsize )
+{
+  {
+    auto first = this->means_.begin();
+    auto last = first;
+    auto result = first;
+    std::advance( last, oldsize );
+    std::advance( result, oldsize + zero );
+    std::copy_backward( first, last, result );
+  }
+  {
+    auto first = this->vars_.begin();
+    auto last = first;
+    auto result = first;
+    std::advance( last, oldsize );
+    std::advance( result, oldsize + zero );
+    std::copy_backward( first, last, result );
+  }
+}
+
+!!!1433392.cpp!!!	remove(in zero : size_t) : void
+UTILITY_REQUIRE( 0 != zero, "Can not remove with zero == 0" );
+const std::size_t oldsize = this->means_.size();
+UTILITY_REQUIRE( oldsize > zero, "Can not remove with zero =< size" );
+{
+  auto result = this->means_.begin();
+  auto first = result;
+  auto last = this->means_.end();
+  std::advance( first, zero );
+  std::copy( first, last, result );
+}
+{
+  auto result = this->vars_.begin();
+  auto first = result;
+  auto last = this->vars_.end();
+  std::advance( first, zero );
+  std::copy( first, last, result );
+}
+this->means_.resize( oldsize - zero );
+this->vars_.resize( oldsize - zero );
 !!!317745.cpp!!!	reset() : void
 std::fill( this->means_.begin(), this->means_.end(), 0.0 );
 std::fill( this->vars_.begin(), this->vars_.end(), 0.0 );

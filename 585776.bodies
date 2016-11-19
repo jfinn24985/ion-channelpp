@@ -1,0 +1,114 @@
+class histogram
+!!!1436080.cpp!!!	extend(in val : ) : void
+// Two options val > max or val < min
+if( val > this->maximum() )
+{
+  // resize up
+  const std::size_t add = this->converter_.extend_up( val );
+  const std::size_t oldsize = this->data_.size();
+  UTILITY_CHECK( oldsize + add == this->converter_.size();
+  this->data_.reindex( 0, add );
+  this->sample_.resize( oldsize + add );
+  std::copy_backward( this->sample_.begin(), this->sample_.begin() + oldsize, this->sample_.end() );
+}
+else if( val < this->minimum() )
+{
+  const std::size_t add = this->converter_.extend_down( val );
+  const std::size_t oldsize = this->data_.size();
+  UTILITY_CHECK( oldsize + add == this->converter_.size();
+  this->data_.resize( oldsize + add );
+  this->sample_.resize( oldsize + add );
+}
+else
+{
+  UTILITY_REQUIRE( this->in_range( val ), "Attend to extend range with value inside existing range." );
+}
+!!!1438000.cpp!!!	merge(in other : histogram) : bool
+// use ref to source so we can switch to copy if needed
+histogram const* source_ptr = &source;
+// optional editable copy of source if needed
+std::unique_ptr< histogram > copy;
+
+if( not this->converter_.equivalent( source_ptr->converter_ ) )
+{
+  if( this->bin_width() != source_ptr->bin_width() )
+  {
+    return false;
+  }
+  if( not utility::feq( this->minimum(), source_ptr->minimum() ) )
+  {
+    // if this has smaller range, adjust this object.
+    if( this->minimum() > source_ptr->minimum() )
+    {
+      const double diff = this->minimum() - source_ptr->minimum();
+      if( not utility::feq( diff/this->bin_width(), std::nearbyint( diff/this->bin_width() ) ) )
+      {
+        return false;
+      }
+      this->extend( source_ptr->minimum() + this->bin_width() / 2.0 );
+      UTILITY_CHECK( utility::feq( this->minimum(), source_ptr->minimum() ), "Should have the same minima" );
+    }
+    else
+    {
+      // need to alter source
+      if( not copy )
+      {
+        copy.reset( new histogram( source ) );
+        source_ptr = copy.get();
+      }
+      const double diff = source_ptr->minimum() - this->minimum();
+      if( not utility::feq( diff/this->bin_width(), std::nearbyint( diff/this->bin_width() ) ) )
+      {
+        return false;
+      }
+      copy->extend( this->minimum() + this->bin_width() / 2.0 );
+      UTILITY_CHECK( utility::feq( this->minimum(), source_ptr->minimum() ), "Should have the same minima" );
+    }
+  }
+  if( not utility::feq( this->maximum(), source_ptr->maximum() ) )
+  {
+    // if this has smaller range, adjust this object.
+    if( this->maximum() < source_ptr->maximum() )
+    {
+      const double diff = source_ptr->maximum() - this->maximum();
+      if( not utility::feq( diff/this->bin_width(), std::nearbyint( diff/this->bin_width() ) ) )
+      {
+        return false;
+      }
+      this->extend( source_ptr->maximum() - this->bin_width() / 2.0 );
+      UTILITY_CHECK( utility::feq( this->maximum(), source_ptr->maximum() ), "Should have the same maxima" );
+    }
+    else
+    {
+      // need to alter source
+      if( not copy )
+      {
+        copy.reset( new histogram( source ) );
+        source_ptr = copy.get();
+      }
+      const double diff = this->maximum() - source_ptr->maximum();
+      if( not utility::feq( diff/this->bin_width(), std::nearbyint( diff/this->bin_width() ) ) )
+      {
+        return false;
+      }
+      copy->extend( this->maximum() - this->bin_width() / 2.0 );
+      UTILITY_CHECK( utility::feq( this->maximum(), source_ptr->maximum() ), "Should have the same maxima" );
+    }
+  }
+}
+// should now be equivalent
+this->data_.merge( source_ptr->data_ );
+
+!!!1438256.cpp!!!	sample(in val : double) : void
+if( not this->converter_.in_range( val ) )
+{
+  UTILITY_REQUIRE( this->extendable_, "Sampled value out of expected range." );
+  this->extend( val );
+}
+++this->sample_[ this->converter_.convert( val ) ];
+!!!1436208.cpp!!!	reset_sampler() : void
+if( this->sample_.size() != this->data_.size() )
+{
+  this->sample_.resize( this->data_.size() );
+}
+std::fill( this->sample_.begin(), this->sample_.end(), std::size_t( 0ul ) );
