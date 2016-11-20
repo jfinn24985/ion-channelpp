@@ -1,6 +1,6 @@
 format 75
 "utility" // utility
-  revision 212
+  revision 213
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -2608,6 +2608,15 @@ ${inlines}
  ENSURE minimum < maximum
  ENSURE bin count > 0
 "
+      classrelation 864048 // <dependency>
+	relation 863152 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 864048 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
       attribute 227249 "minimum_"
 	private explicit_type "double"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -2691,7 +2700,9 @@ ${docstring}${body}
 	  param in name "aminimum" explicit_type "double"
 	  param in name "amaximum" explicit_type "double"
 	  param in name "acount" explicit_type "size_t"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}${)}
 : minimum_(std::min(aminimum,amaximum))
 , step_(acount > 0 ? std::abs(amaximum - aminimum)/double(acount) : 0)
 , width_(std::abs(amaximum - aminimum))
@@ -2700,6 +2711,7 @@ ${docstring}${body}
   UTILITY_REQUIRE(acount > 0, \"Can not have zero bin number\");
   UTILITY_REQUIRE(amaximum > aminimum, \"Minimum of range must be less than the maximum\");
 }
+
 "
 	
 	
@@ -2721,7 +2733,9 @@ Note that amin > amax is well-defined. "
 	  param in name "aminimum" explicit_type "double"
 	  param in name "amaximum" explicit_type "double"
 	  param in name "acount" explicit_type "int"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}${)}${volatile}${throw}
 : ${name}(${p0}, ${p1}, std::size_t(${p2}))
 {
   UTILITY_REQUIRE(${p2} > 0, \"Can not have negative bin number\");
@@ -2771,10 +2785,10 @@ ${docstring}${body}
 	nparams 1
 	  param inout name "source" type class_ref 175409 // digitizer
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
-: this->minimum_( std::move( source.minimum_ ) )
-, this->step_( std::move( source.step_ ) )
-, this->width_( std::move( source.width_ ) )
-, this->size_( std::move( source.size_ ) )
+: minimum_( std::move( source.minimum_ ) )
+, step_( std::move( source.step_ ) )
+, width_( std::move( source.width_ ) )
+, size_( std::move( source.size_ ) )
 {}
 "
 	
@@ -2791,10 +2805,10 @@ ${docstring}${body}
 	nparams 1
 	  param in name "source" type class_ref 175409 // digitizer
 	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
-: this->minimum_( source.minimum_ )
-, this->step_( source.step_ )
-, this->width_( source.width_ )
-, this->size_( source.size_ )
+: minimum_( source.minimum_ )
+, step_( source.step_ )
+, width_( source.width_ )
+, size_( source.size_ )
 {}
 "
 	
@@ -2824,11 +2838,10 @@ ${docstring}${body}
       end
 
       operation 1434928 "swap"
-	stereotype "copy"
-	public explicit_return_type ""
+	public explicit_return_type "void"
 	nparams 1
-	  param in name "source" type class_ref 175409 // digitizer
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} & ${p0}${)}${volatile}${throw}
+	  param inout name "source" type class_ref 175409 // digitizer
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
   std::swap( this->minimum_, source.minimum_ );
   std::swap( this->step_, source.step_ );
@@ -3008,9 +3021,9 @@ ${docstring}${body}
 	public explicit_return_type "size_t"
 	nparams 1
 	  param in name "maxval" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -3036,9 +3049,9 @@ ${docstring}${body}
 	public explicit_return_type "size_t"
 	nparams 1
 	  param in name "minval" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -3119,9 +3132,9 @@ ${docstring}${body}
 	public explicit_return_type "size_t"
 	nparams 1
 	  param in name "maxval" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -3150,9 +3163,9 @@ ${docstring}${body}
 	public explicit_return_type "size_t"
 	nparams 1
 	  param in name "minval" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -3192,7 +3205,516 @@ ${docstring}${body}
 	
 	comment " The number of bins in the range"
       end
+    end
 
+    class 506032 "digitizer_3d"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Convert a coordinate inside a bounding box into a linear
+ index suitable for making a histogram. Convert a linear
+ index into a subcube of the bounding box (\"corners\").
+
+ Bounding box is
+ ( x_axis.mininum, y_axis.minimum, z_axis.minimum ) to 
+  ( x_axis.maxinum, y_axis.maximum, z_axis.maximum )"
+      classrelation 686000 // <dependency>
+	relation 685104 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 686000 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      class 506160 "index_3d_type"
+	visibility package stereotype "typedef" explicit_base_type "size_t"
+	cpp_decl "${comment}typedef std::array< ${type}, 3 > ${name};
+"
+	java_decl ""
+	php_decl ""
+	python_decl ""
+	idl_decl "${comment}typedef ${type} ${name};
+"
+	explicit_switch_type ""
+	
+      end
+
+      attribute 550192 "xaxis_"
+	private type class_ref 175409 // digitizer
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " X-axis digitizer"
+      end
+
+      attribute 550320 "yaxis_"
+	private type class_ref 175409 // digitizer
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Y-axis digitizer"
+      end
+
+      attribute 550448 "zaxis_"
+	private type class_ref 175409 // digitizer
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Z-axis digitiser"
+      end
+
+      attribute 550576 "spacing_"
+	private explicit_type "double"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Sampling cube/digitiser width"
+      end
+
+      attribute 550704 "yskip_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Number of bins in X direction."
+      end
+
+      attribute 550832 "zskip_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Number of bins in XY plane"
+      end
+
+      attribute 550960 "size_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Total number of bins"
+      end
+
+      extra_member 458288 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1151024 "digitizer_3d"
+	public explicit_return_type ""
+	nparams 3
+	  param in name "small" type class_ref 986799 // coordinate
+	  param in name "big" type class_ref 986799 // coordinate
+	  param in name "spacing" explicit_type "double"
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} ${p2}${)}${throw}
+: xaxis_( std::min( small.x, big.x ), std::max( small.x, big.x ), spacing )
+, yaxis_( std::min( small.y, big.y ), std::max( small.y, big.y ), spacing )
+, zaxis_( std::min( small.z, big.z ), std::max( small.z, big.z ), spacing )
+, spacing_( spacing )
+, yskip_( xaxis_.size() )
+, zskip_( yaxis_.size() * yskip_ )
+, size_( zaxis_.size() * zskip_ )
+{
+  UTILITY_REQUIRE( spacing > 0.0, \"Cannot define digitizer with zero or negative spacing.\" );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Create digitizer.
+
+ NOTE: spacing <= 0.0 is undefined."
+      end
+
+      operation 1151920 "digitizer_3d"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " For serialization."
+      end
+
+      operation 1152048 "~digitizer_3d"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1152176 "digitizer_3d"
+	stereotype "move"
+	public explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 506032 // digitizer_3d
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
+: xaxis_( std::move( ${p0}.xaxis_ ) )
+, yaxis_( std::move( ${p0}.yaxis_ ) )
+, zaxis_( std::move( ${p0}.zaxis_ ) )
+, spacing_( std::move( ${p0}.spacing_ ) )
+, yskip_( std::move( ${p0}.yskip_ ) )
+, zskip_( std::move( ${p0}.zskip_ ) )
+, size_( std::move( ${p0}.size_ ) )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1152304 "digitizer_3d"
+	stereotype "copy"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 506032 // digitizer_3d
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
+: xaxis_( ${p0}.xaxis_ )
+, yaxis_( ${p0}.yaxis_ )
+, zaxis_( ${p0}.zaxis_ )
+, spacing_( ${p0}.spacing_ )
+, yskip_( ${p0}.yskip_ )
+, zskip_( ${p0}.zskip_ )
+, size_( ${p0}.size_ )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1152560 "swap"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "source" type class_ref 506032 // digitizer_3d
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  std::swap( xaxis_, ${p0}.xaxis_ );
+  std::swap( yaxis_, ${p0}.yaxis_ );
+  std::swap( zaxis_, ${p0}.zaxis_ );
+  std::swap( spacing_, ${p0}.spacing_ );
+  std::swap( yskip_, ${p0}.yskip_ );
+  std::swap( zskip_, ${p0}.zskip_ );
+  std::swap( size_, ${p0}.size_ );
+}
+
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1152432 "operator="
+	public return_type class_ref 506032 // digitizer_3d
+	nparams 1
+	  param in name "source" type class_ref 506032 // digitizer_3d
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->swap( ${p0} );
+  return *this;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 458160 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1152688 "serialize"
+	public explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "a_ver" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}template< class ${t0} > ${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ar & xaxis_; ar & yaxis_; ar & zaxis_; ar & spacing_; ar & yskip_; ar & zskip_; ar & size_;
+}
+"
+	
+	
+	
+	
+	comment "Read/write object to an archive."
+      end
+
+      extra_member 458416 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1151152 "convert"
+	const public explicit_return_type "size_t"
+	nparams 1
+	  param in name "pos" type class_ref 986799 // coordinate
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  const std::size_t xidx = xaxis_.convert( pos.x );
+  const std::size_t yidx = yaxis_.convert( pos.y );
+  const std::size_t zidx = zaxis_.convert( pos.z );
+  return zidx * zskip_ + yidx * yskip_ + xidx;
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Convert a coordinate inside the bounding box into a
+ linear index.
+
+ \\pre xaxis.in_range(pos.x) and yaxis.in_range(pos.y) and zaxis.in_range(pos.z)
+ \\post result < size"
+      end
+
+      operation 1152816 "convert"
+	const public explicit_return_type "void"
+	nparams 2
+	  param in name "pos" type class_ref 986799 // coordinate
+	  param inout name "idx" type class_ref 506160 // index_3d_type
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
+{
+  idx[0] = xaxis_.convert( pos.x );
+  idx[1] = yaxis_.convert( pos.y );
+  idx[2] = zaxis_.convert( pos.z );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Convert a coordinate inside the bounding box into a
+ 3D index.
+
+ \\pre xaxis.in_range(pos.x) and yaxis.in_range(pos.y) and zaxis.in_range(pos.z)
+ \\post result[0] < xaxis.size, result[1] < yaxis.size, result[2] < zaxis.size"
+      end
+
+      operation 1152944 "convert"
+	const public explicit_return_type "size_t"
+	nparams 1
+	  param in name "idx" type class_ref 506160 // index_3d_type
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return idx[2] * zskip_ + idx[1] * yskip_ + idx[0];
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Convert a 3D index into a linear index.
+
+ \\pre xaxis.in_range(pos.x) and yaxis.in_range(pos.y) and zaxis.in_range(pos.z)
+ \\post result[0] < xaxis.size, result[1] < yaxis.size, result[2] < zaxis.size"
+      end
+
+      operation 1151280 "corners"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "idx" explicit_type "size_t"
+	  param inout name "points" type class_ref 986799 // coordinate
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, std::array< ${t1}, 8 > & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, std::array< ${t1}, 8 > & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate corners of the sampling cube at given index.
+
+ \\pre idx < size
+ \\post all points inside bounding box defined by ( x_axis.mininum, y_axis.minimum, z_axis.minimum ) to 
+  ( x_axis.maxinum, y_axis.maximum, z_axis.maximum )"
+      end
+
+      operation 1153072 "corners"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "idx" type class_ref 506160 // index_3d_type
+	  param inout name "points" type class_ref 986799 // coordinate
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, std::array< ${t1}, 8 > & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, std::array< ${t1}, 8 > & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate corners of the sampling cube at given index.
+
+ \\pre idx[0] < xaxis.size and idx[1] < yaxis.size and idx[2] < zaxis.size
+ \\post all points inside bounding box defined by ( x_axis.mininum, y_axis.minimum, z_axis.minimum ) to 
+  ( x_axis.maxinum, y_axis.maximum, z_axis.maximum )"
+      end
+
+      operation 1151408 "size"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return size_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The number of bins"
+      end
+
+      operation 1151536 "x_axis"
+	const public return_type class_ref 175409 // digitizer
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return xaxis_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1151664 "y_axis"
+	const public return_type class_ref 175409 // digitizer
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return yaxis_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1151792 "z_axis"
+	const public return_type class_ref 175409 // digitizer
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return zaxis_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
     end
 
     class 174897 "digital_sampler"
@@ -4633,10 +5155,10 @@ ${docstring}${body}
 	nparams 1
 	  param inout name "source" type class_ref 585776 // histogram
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
-: this->converter_( std::move( ${p0}.converter_ ) )
-, this->data_( std::move( ${p0}.data_ ) )
-, this->sample_()
-, this->extendable_( std::move( ${p0}.extendable_ ) )
+: converter_( std::move( ${p0}.converter_ ) )
+, data_( std::move( ${p0}.data_ ) )
+, sample_()
+, extendable_( std::move( ${p0}.extendable_ ) )
 {}"
 	
 	
@@ -4652,10 +5174,10 @@ ${docstring}${body}
 	nparams 1
 	  param in name "source" type class_ref 585776 // histogram
 	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
-: this->converter_( ${p0}.converter_ )
-, this->data_( ${p0}.data_ )
-, this->sample_()
-, this->extendable_( ${p0}.extendable_ )
+: converter_( ${p0}.converter_ )
+, data_( ${p0}.data_ )
+, sample_()
+, extendable_( ${p0}.extendable_ )
 {}
 "
 	
@@ -4703,9 +5225,9 @@ ${docstring}${body}
 	  param inout name "source" type class_ref 585776 // histogram
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  std::swap(: this->converter_, ${p0}.converter_ );
-  std::swap(, this->data_, ${p0}.data_ );
-  std::swap(, this->extendable_, ${p0}.extendable_ );
+  std::swap( this->converter_, ${p0}.converter_ );
+  std::swap( this->data_, ${p0}.data_ );
+  std::swap( this->extendable_, ${p0}.extendable_ );
 }
 
 "
@@ -4795,10 +5317,10 @@ ${docstring}${body}
       operation 1436080 "extend"
 	public explicit_return_type "void"
 	nparams 1
-	  param in name "val" explicit_type ""
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	  param in name "val" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -4818,7 +5340,7 @@ ${docstring}${body}
       operation 1438000 "merge"
 	public explicit_return_type "bool"
 	nparams 1
-	  param in name "other" type class_ref 585776 // histogram
+	  param in name "source" type class_ref 585776 // histogram
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
@@ -4849,7 +5371,7 @@ ${docstring}${body}
 	cpp_decl "    ${comment}template< class ${t0} > ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
   this->reset_sampler();
-  for( ; ${p0} != ${p1}, ++${p0} )
+  for( ; ${p0} != ${p1}; ++${p0} )
   {
     this->sample( static_cast< double >( *${p0} ) );
   }
@@ -4948,7 +5470,7 @@ ${docstring}${body}
 	
       end
 
-      operation 1436848 "bin_minimum"
+      operation 1444784 "bin_minimum"
 	const public explicit_return_type "double"
 	nparams 1
 	  param in name "idx" explicit_type "size_t"
@@ -4965,13 +5487,29 @@ ${docstring}${body}
 	
       end
 
+      operation 1436848 "bin_width"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->converter_.${name}();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
       operation 1437232 "bin_mean"
 	const public explicit_return_type "double"
 	nparams 1
 	  param in name "idx" explicit_type "size_t"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  return this->data_.${name}( ${p0} );
+  return this->data_.mean( ${p0} );
 }
 "
 	
@@ -4988,7 +5526,7 @@ ${docstring}${body}
 	  param in name "idx" explicit_type "size_t"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  return this->data_.${name}( ${p0} );
+  return this->data_.variance( ${p0} );
 }
 "
 	
@@ -9563,16 +10101,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
-    artifact 187569 "estimater"
+    artifact 550448 "digitizer"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
 #define @{PROJECT}${NAMESPACE}_${NAME}_HPP
 
 ${comment}
-// Manual includes
-#include \"utility/archive.hpp\"
-#include \"utility/utility.hpp\"
 ${includes}
+#include \"utility/utility.hpp\"
 ${declarations}
 ${namespace_start}
 ${definition}
@@ -9586,18 +10122,14 @@ ${namespace_end}
 #endif
 
 ${includes}
+// manual includes
+#include <cmath>
+// -
 ${namespace_start}
 ${members}
 ${namespace_end}"
-      python_src "${comment}
-${definition}"
       associated_classes
-	class_ref 176433 // basic_mean
 	class_ref 175409 // digitizer
-	class_ref 175665 // estimate_array
-	class_ref 176049 // estimater
-	class_ref 174897 // digital_sampler
-	class_ref 276529 // binary_estimate
       end
       comment "----------------------------------------------------------------------
 DATA-SET SUMMARY/REDUCTION CLASSES
@@ -9625,16 +10157,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
-    artifact 207409 "estimater_matrix"
+    artifact 504112 "digitizer_3d"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
 #define @{PROJECT}${NAMESPACE}_${NAME}_HPP
 
 ${comment}
-// Manual includes
-#include \"utility/archive.hpp\"
-#include \"utility/utility.hpp\"
-//-
 ${includes}
 ${declarations}
 ${namespace_start}
@@ -9652,17 +10180,120 @@ ${includes}
 ${namespace_start}
 ${members}
 ${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
       associated_classes
-	class_ref 189489 // estimate_2d
-	class_ref 189745 // estimate_3d
-	class_ref 190001 // digital_2d_sampler
-	class_ref 190257 // digital_3d_sampler
+	class_ref 506032 // digitizer_3d
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 187569 "estimater"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+// Manual includes
+#include \"utility/archive.hpp\"
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+#include \"utility/utility.hpp\"
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${definition}"
+      associated_classes
+	class_ref 176049 // estimater
       end
       comment "----------------------------------------------------------------------
 DATA-SET SUMMARY/REDUCTION CLASSES
 
-These classes provide classes to manage statistical sampling in
-2 or 3D histograms or fields and to calculate mean and
+These classes provide classes to manage statistical sampling such
+as histograms and single value estimates and to calculate mean and
+variance of the estimations.
+
+Authors: Justin Finnerty
+
+----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at
+your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 550320 "estimate_array"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// manual includes
+#include \"utility/utility.hpp\"
+// -
+${namespace_start}
+${members}
+${namespace_end}"
+      associated_classes
+	class_ref 175665 // estimate_array
+      end
+      comment "----------------------------------------------------------------------
+DATA-SET SUMMARY/REDUCTION CLASSES
+
+These classes provide classes to manage statistical sampling such
+as histograms and single value estimates and to calculate mean and
 variance of the estimations.
 
 Authors: Justin Finnerty
@@ -9773,6 +10404,55 @@ ${definition}"
       end
       ncouples 1
       key "butter ldflags" value "-lgdbm"
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at
+your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 550192 "histogram"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// manual includes
+#include \"utility/fuzzy_equals.hpp\"
+// -
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 585776 // histogram
+      end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -10181,10 +10861,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 143407 // mathutil
 	artifact_ref 186287 // machine
 	artifact_ref 187569 // estimater
-	artifact_ref 207409 // estimater_matrix
 	artifact_ref 288688 // memory_sink
 	artifact_ref 343215 // random
+	artifact_ref 504112 // digitizer_3d
 	artifact_ref 530224 // mean_algorithm
+	artifact_ref 550192 // histogram
+	artifact_ref 550320 // estimate_array
+	artifact_ref 550448 // digitizer
 	artifact_ref 580143 // utility
       end
       comment "Authors: Justin Finnerty
@@ -10251,6 +10934,123 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    deploymentnode 128048 "unused?"
+    end
+
+    artifact 550576 "basic_mean"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 176433 // basic_mean
+      end
+      comment "----------------------------------------------------------------------
+DATA-SET SUMMARY/REDUCTION CLASSES
+
+These classes provide classes to manage statistical sampling in
+2 or 3D histograms or fields and to calculate mean and
+variance of the estimations.
+
+Authors: Justin Finnerty
+
+----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at
+your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 207409 "estimater_matrix"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+// Manual includes
+#include \"utility/archive.hpp\"
+#include \"utility/utility.hpp\"
+//-
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+${namespace_start}
+${members}
+${namespace_end}"
+      associated_classes
+	class_ref 189489 // estimate_2d
+	class_ref 189745 // estimate_3d
+	class_ref 190001 // digital_2d_sampler
+	class_ref 190257 // digital_3d_sampler
+      end
+      comment "----------------------------------------------------------------------
+DATA-SET SUMMARY/REDUCTION CLASSES
+
+These classes provide classes to manage statistical sampling in
+2 or 3D histograms or fields and to calculate mean and
+variance of the estimations.
+
+Authors: Justin Finnerty
+
+----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at
+your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
