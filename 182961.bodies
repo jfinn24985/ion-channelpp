@@ -217,7 +217,7 @@ estimater_test_fw const& exemplar(estimater_test_fw::exmplr);
   BOOST_CHECK( utility::feq( v4.variance(), v1.variance() ) );
 }
 
-!!!356657.cpp!!!	estimate_array_lifetime() : void
+!!!1452720.cpp!!!	estimate_array_lifetime() : void
 {
   // Canonical pattern
   BOOST_CHECK( std::is_default_constructible< utility::estimate_array >::type{} );
@@ -266,13 +266,16 @@ estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
       BOOST_CHECK_EQUAL( var.variance( ith ), 1.0 );
     }
 
-    utility::estimate_array var_copy( var );
-    BOOST_CHECK_EQUAL( var_copy.count(), 3ul );
-    BOOST_CHECK_EQUAL( var_copy.size(), 100ul );
-    for( std::size_t ith = 0; ith != var_copy.size(); ++ith )
     {
-      BOOST_CHECK_EQUAL( var_copy.mean( ith ), 5.0 );
-      BOOST_CHECK_EQUAL( var_copy.variance( ith ), 1.0 );
+      // copy
+      utility::estimate_array var_copy( var );
+      BOOST_CHECK_EQUAL( var_copy.count(), 3ul );
+      BOOST_CHECK_EQUAL( var_copy.size(), 100ul );
+      for( std::size_t ith = 0; ith != var_copy.size(); ++ith )
+      {
+        BOOST_CHECK_EQUAL( var_copy.mean( ith ), 5.0 );
+        BOOST_CHECK_EQUAL( var_copy.variance( ith ), 1.0 );
+      }
     }
 
     boost::archive::text_oarchive oa( store );
@@ -287,6 +290,38 @@ estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
       BOOST_CHECK_EQUAL( var.mean( ith ), 5.0 );
       BOOST_CHECK_EQUAL( var.variance( ith ), 1.0 );
     }
+    {
+      // assign
+      utility::estimate_array var_copy;
+
+      BOOST_CHECK_EQUAL( var_copy.count(), 0ul );
+      BOOST_CHECK_EQUAL( var_copy.size(), 0ul );
+
+      var_copy = var;
+      BOOST_CHECK_EQUAL( var_copy.count(), 3ul );
+      BOOST_CHECK_EQUAL( var_copy.size(), 100ul );
+      for( std::size_t ith = 0; ith != var_copy.size(); ++ith )
+      {
+        BOOST_CHECK_EQUAL( var_copy.mean( ith ), 5.0 );
+        BOOST_CHECK_EQUAL( var_copy.variance( ith ), 1.0 );
+      }
+    }
+
+    {
+      // move
+      utility::estimate_array var_copy1( var );
+      BOOST_CHECK_EQUAL( var_copy1.count(), 3ul );
+      BOOST_CHECK_EQUAL( var_copy1.size(), 100ul );
+      utility::estimate_array var_copy( std::move( var_copy1 ) );
+      BOOST_CHECK_EQUAL( var_copy.count(), 3ul );
+      BOOST_CHECK_EQUAL( var_copy.size(), 100ul );
+      for( std::size_t ith = 0; ith != var_copy.size(); ++ith )
+      {
+        BOOST_CHECK_EQUAL( var_copy.mean( ith ), 5.0 );
+        BOOST_CHECK_EQUAL( var_copy.variance( ith ), 1.0 );
+      }
+    }
+
   }
   {
     utility::estimate_array var;
@@ -305,6 +340,8 @@ estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
     }
   }
 }
+!!!356657.cpp!!!	estimate_array_methods() : void
+estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
 {
   // merge
   utility::estimate_array var1( 100 );
@@ -412,9 +449,7 @@ estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
     BOOST_CHECK_CLOSE( var1.variance( ith ), 6.9166666666667, 0.0000000001 );
   }
 }
-
-
-!!!356785.cpp!!!	estimate_array_data_collection() : void
+!!!1452848.cpp!!!	estimate_array_data_collection() : void
 estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
 {
   // TESTS FOR CORRECTNESS
@@ -476,70 +511,453 @@ estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
     val += 1.0;
   }
 }
+!!!1453232.cpp!!!	estimate_array_short_append_safe_test() : void
+estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
 {
-  // BAD DATA
+  // TESTS FOR CORRECTNESS
+  utility::estimate_array var( 100 );
+
+  // Add some data points
+  var.append( exemplar.data4.begin(), exemplar.data4.end() );
+  var.append( exemplar.data5.begin(), exemplar.data5.end() );
+  var.append( exemplar.data6.begin(), exemplar.data6.end() );
+
+  BOOST_CHECK_EQUAL( var.count(), 3ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
   {
-    // DATA TOO SHORT for ARRAY
-    utility::estimate_array var( 110 );
-
-    // Insure start from zero
-    BOOST_CHECK_EQUAL( var.count(), 0ul );
-    BOOST_CHECK_EQUAL( var.size(), 110ul );
-
-    // Attempt to add first data points (all 4.0), should fail without
-    // updating array.
-    BOOST_REQUIRE_THROW( var.append_safe( exemplar.data4.begin(), exemplar.data4.end() ), std::runtime_error ) ;
-    BOOST_CHECK_EQUAL( var.count(), 0ul );
-
-    // Attempt to add first data points (all 4.0), should fail but
-    // "partially" update the array.
-    BOOST_CHECK_THROW( var.append( exemplar.data4.begin(), exemplar.data4.end() ), std::runtime_error ) ;
-    BOOST_CHECK_EQUAL( var.count(), 1ul );
-    for( std::size_t ith = 0; ith != var.size(); ++ith )
-    {
-      if( ith < exemplar.data4.size() )
-      {
-        BOOST_CHECK_EQUAL( var.mean( ith ), 4.0 );
-        BOOST_CHECK_EQUAL( var.variance( ith ), 0.0 );
-      }
-      else
-      {
-        BOOST_CHECK_EQUAL( var.mean( ith ), 0.0 );
-        BOOST_CHECK_EQUAL( var.variance( ith ), 0.0 );
-      }
-    }
-  }
-  {
-    // DATA TOO LONG for ARRAY
-    utility::estimate_array var( 90 );
-
-    // Insure start from zero
-    BOOST_CHECK_EQUAL( var.count(), 0ul );
-    BOOST_CHECK_EQUAL( var.size(), 90ul );
-
-    // Attempt to add first data points (all 4.0), should fail without
-    // updating array.
-    BOOST_REQUIRE_THROW( var.append_safe( exemplar.data4.begin(), exemplar.data4.end() ), std::runtime_error );
-    BOOST_CHECK_EQUAL( var.count(), 0ul );
-
-    // Attempt to add first data points (all 4.0), should fail but
-    // "partially" update the array.
-    BOOST_CHECK_THROW( var.append( exemplar.data4.begin(), exemplar.data4.end() ), std::runtime_error );
-    BOOST_CHECK_EQUAL( var.count(), 1ul );
-    for( std::size_t ith = 0; ith != var.size(); ++ith )
-    {
-      BOOST_CHECK_EQUAL( var.mean( ith ), 4.0 );
-      BOOST_CHECK_EQUAL( var.variance( ith ), 0.0 );
-    }
+    BOOST_CHECK_EQUAL( var.mean( ith ), 5.0 );
+    BOOST_CHECK_EQUAL( var.variance( ith ), 1.0 );
   }
 
+  // DATA TOO SHORT for ARRAY
+
+  // Attempt to add first data points (all 4.0), should fail without
+  // updating array.
+  try
+  {
+    var.append_safe( exemplar.data4.begin(), exemplar.data4.end() - 10 );
+    BOOST_ERROR( "Short data set was accepted without error." );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Input data size does not match and array size" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+  BOOST_CHECK_EQUAL( var.count(), 3ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
+  {
+    BOOST_CHECK_EQUAL( var.mean( ith ), 5.0 );
+    BOOST_CHECK_EQUAL( var.variance( ith ), 1.0 );
+  }
+}
+!!!1453104.cpp!!!	estimate_array_short_append_test() : void
+estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
+{
+  // TESTS FOR CORRECTNESS
+  utility::estimate_array var( 100 );
+
+  // Add some data points
+  var.append( exemplar.data4.begin(), exemplar.data4.end() );
+  var.append( exemplar.data5.begin(), exemplar.data5.end() );
+  var.append( exemplar.data6.begin(), exemplar.data6.end() );
+
+  BOOST_CHECK_EQUAL( var.count(), 3ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
+  {
+    BOOST_CHECK_EQUAL( var.mean( ith ), 5.0 );
+    BOOST_CHECK_EQUAL( var.variance( ith ), 1.0 );
+  }
+
+  // DATA TOO SHORT for ARRAY
+
+  // Attempt to add first data points (all 4.0), should fail without
+  // updating array.
+  try
+  {
+    var.append( exemplar.data4.begin(), exemplar.data4.end() - 10 );
+    BOOST_ERROR( "Short data set was accepted without error." );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Input data size does not match and array size" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+  BOOST_CHECK_EQUAL( var.count(), 4ul );
+  for( std::size_t ith = 0; ith != var.size() - 10; ++ith )
+  {
+    BOOST_CHECK_EQUAL( var.mean( ith ), 4.75 );
+    BOOST_CHECK_CLOSE( var.variance( ith ), .91666666666666663, 0.0000001 );
+  }
+  for( std::size_t ith = var.size() - 10; ith != var.size(); ++ith )
+  {
+    BOOST_CHECK_EQUAL( var.mean( ith ), 5.0 );
+    BOOST_CHECK_CLOSE( var.variance( ith ), 0.66666666666666663, 0.0000001 );
+  }
+}
+!!!1452976.cpp!!!	estimate_array_long_append_safe_test() : void
+estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
+{
+  // TESTS FOR CORRECTNESS
+  utility::estimate_array var( 90 );
+
+  // Add some data points
+  var.append( exemplar.data4.begin(), exemplar.data4.end() - 10 );
+  var.append( exemplar.data5.begin(), exemplar.data5.end() - 10 );
+  var.append( exemplar.data6.begin(), exemplar.data6.end() - 10 );
+
+  BOOST_CHECK_EQUAL( var.count(), 3ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
+  {
+    BOOST_CHECK_EQUAL( var.mean( ith ), 5.0 );
+    BOOST_CHECK_EQUAL( var.variance( ith ), 1.0 );
+  }
+
+  // DATA TOO SHORT for ARRAY
+
+  // Attempt to add first data points (all 4.0), should fail without
+  // updating array.
+  try
+  {
+    var.append_safe( exemplar.data4.begin(), exemplar.data4.end() );
+    BOOST_ERROR( "Long data set was accepted without error." );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Input data size does not match and array size" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+  BOOST_CHECK_EQUAL( var.count(), 3ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
+  {
+    BOOST_CHECK_EQUAL( var.mean( ith ), 5.0 );
+    BOOST_CHECK_EQUAL( var.variance( ith ), 1.0 );
+  }
+}
+!!!356785.cpp!!!	estimate_array_long_append_test() : void
+estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
+{
+  // TESTS FOR CORRECTNESS
+  utility::estimate_array var( 90 );
+
+  // Add some data points
+  var.append( exemplar.data4.begin(), exemplar.data4.end() - 10 );
+  var.append( exemplar.data5.begin(), exemplar.data5.end() - 10 );
+  var.append( exemplar.data6.begin(), exemplar.data6.end() - 10 );
+
+  BOOST_CHECK_EQUAL( var.count(), 3ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
+  {
+    BOOST_CHECK_EQUAL( var.mean( ith ), 5.0 );
+    BOOST_CHECK_EQUAL( var.variance( ith ), 1.0 );
+  }
+
+  // DATA TOO SHORT for ARRAY
+
+  // Attempt to add first data points (all 4.0), should fail without
+  // updating array.
+  try
+  {
+    var.append( exemplar.data4.begin(), exemplar.data4.end() );
+    BOOST_ERROR( "Short data set was accepted without error." );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Input data size does not match and array size" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+  BOOST_CHECK_EQUAL( var.count(), 4ul );
+  for( std::size_t ith = 0; ith != var.size() - 10; ++ith )
+  {
+    BOOST_CHECK_EQUAL( var.mean( ith ), 4.75 );
+    BOOST_CHECK_CLOSE( var.variance( ith ), 0.91666666666666663, 0.00000001 );
+  }
+}
+!!!1451440.cpp!!!	digitizer_lifetime() : void
+{
+  // Canonical pattern
+  BOOST_CHECK( std::is_default_constructible< utility::digitizer >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< utility::digitizer >::type{} );
+  BOOST_CHECK( std::is_move_constructible< utility::digitizer >::type{} );
+  BOOST_CHECK( ( std::is_assignable< utility::digitizer, utility::digitizer >::type{} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< utility::digitizer >::type{} );
 }
 
+{
+  // Default ctor
+  utility::digitizer var;
+  BOOST_CHECK_EQUAL( var.minimum(), 0.0 );
+  BOOST_CHECK_EQUAL( var.maximum(), 0.0 );
+  BOOST_CHECK_EQUAL( var.size(), 0ul );
+  for( int x = -10; x != 11; ++x )
+  {
+    BOOST_REQUIRE( not var.in_range( double( x )/5.0 ) );
+  }
+}
+std::stringstream store;
+{
+  // Min/Max/Count ctor
+  utility::digitizer var( -1.0, 1.0, 21ul );
+  BOOST_CHECK_EQUAL( var.minimum(), -1.0 );
+  BOOST_CHECK_EQUAL( var.maximum(), 1.0 );
+  BOOST_CHECK_EQUAL( var.size(), 21ul );
+  BOOST_CHECK( utility::feq( var.bin_width(), 0.095238095238095233 ) );
 
+  boost::archive::text_oarchive oa(store);
+  // write class instances to archive
+  oa << var;
 
+  {
+    // copy
+    utility::digitizer var2( var );
+    BOOST_CHECK_EQUAL( var2.minimum(), -1.0 );
+    BOOST_CHECK_EQUAL( var2.maximum(), 1.0 );
+    BOOST_CHECK_EQUAL( var2.size(), 21ul );
+    BOOST_CHECK( utility::feq( var2.bin_width(), 0.095238095238095233 ) );
+    BOOST_CHECK( var == var2 );
+  }
+  {
+    // assign
+    utility::digitizer var2;
+    BOOST_CHECK_EQUAL( var2.minimum(), 0.0 );
+    BOOST_CHECK_EQUAL( var2.maximum(), 0.0 );
+    var2 = var;
+    BOOST_CHECK_EQUAL( var2.minimum(), -1.0 );
+    BOOST_CHECK_EQUAL( var2.maximum(), 1.0 );
+    BOOST_CHECK_EQUAL( var2.size(), 21ul );
+    BOOST_CHECK( utility::feq( var2.bin_width(), 0.095238095238095233 ) );
+    BOOST_CHECK( var == var2 );
+  }
+  {
+    // move
+    utility::digitizer var1( var );
+    BOOST_CHECK_EQUAL( var1.minimum(), -1.0 );
+    BOOST_CHECK_EQUAL( var1.maximum(), 1.0 );
+    utility::digitizer var2( std::move( var1 ) );
+    BOOST_CHECK_EQUAL( var2.minimum(), -1.0 );
+    BOOST_CHECK_EQUAL( var2.maximum(), 1.0 );
+    BOOST_CHECK_EQUAL( var2.size(), 21ul );
+    BOOST_CHECK( utility::feq( var2.bin_width(), 0.095238095238095233 ) );
+    BOOST_CHECK( var == var2 );
+  }
+}
+{
+  // Min/Max/Step
+  utility::digitizer var( -1.0, 1.0, 0.1 );
+  BOOST_CHECK_EQUAL( var.minimum(), -1.0 );
+  BOOST_CHECK_EQUAL( var.maximum(), 1.0 );
+  BOOST_CHECK_EQUAL( var.bin_width(), 0.1 );
+  BOOST_CHECK_EQUAL( var.size(), 20ul );
+}
+{
+  utility::digitizer var;
+ 
+  boost::archive::text_iarchive ia(store);
+  // read class instances from archive
+  ia >> var;
+  BOOST_CHECK_EQUAL( var.minimum(), -1.0 );
+  BOOST_CHECK_EQUAL( var.maximum(), 1.0 );
+  BOOST_CHECK_EQUAL( var.size(), 21ul );
+  BOOST_CHECK( utility::feq( var.bin_width(), 0.095238095238095233 ) );
+} 
 
+!!!1451568.cpp!!!	digitizer_bad_range_ctor1_test() : void
+// INVALID DIGITISER CTORS
+// Min/Max/Step Min>Max
+try
+{
+  utility::digitizer var( 2.0,1.0,0.1 );
+  BOOST_ERROR( "Able to construct digitizer with min > max" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  BOOST_CHECK( msg.find( "Minimum of range must be less than the maximum" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
 
-!!!356273.cpp!!!	digitizer_lifetime() : void
+!!!356273.cpp!!!	digitizer_zero_range_ctor1_test() : void
+// INVALID DIGITISER CTORS
+// Min/Max/Step Min=Max
+try
+{
+  utility::digitizer var( 1.0,1.0,0.1 );
+  BOOST_ERROR( "Able to construct digitizer with min == max" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  BOOST_CHECK( msg.find( "Minimum of range must be less than the maximum" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1451824.cpp!!!	digitizer_zero_width_ctor1_test() : void
+// INVALID DIGITISER CTORS
+// Min/Max/Step Step=0
+try
+{
+  utility::digitizer var( 1.0, 2.0, 0.0 );
+  BOOST_ERROR( "Able to construct digitizer with step = 0" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  BOOST_CHECK( msg.find( "Step size must be greater than zero" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1451696.cpp!!!	digitizer_negative_width_ctor1_test() : void
+// INVALID DIGITISER CTORS
+// Min/Max/Step Step<0.0
+try
+{
+  utility::digitizer var( 0.0, 1.0, -0.1 );
+  BOOST_ERROR( "Able to construct digitizer with step = 0" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  BOOST_CHECK( msg.find( "Step size must be greater than zero" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+!!!1452208.cpp!!!	digitizer_bad_range_ctor2_test() : void
+// INVALID DIGITISER CTORS
+// Min/Max/Count Min>Max
+try
+{
+  utility::digitizer var( 2.0,1.0,1ul );
+  BOOST_ERROR( "Able to construct digitizer with min > max" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  BOOST_CHECK( msg.find( "Minimum of range must be less than the maximum" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+!!!1452080.cpp!!!	digitizer_zero_range_ctor2_test() : void
+// INVALID DIGITISER CTORS
+// Min/Max/Count Min=Max
+try
+{
+  utility::digitizer var( 1.0,1.0, 1ul );
+  BOOST_ERROR( "Able to construct digitizer with min == max" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  BOOST_CHECK( msg.find( "Minimum of range must be less than the maximum" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1451952.cpp!!!	digitizer_zero_count_ctor2_test() : void
+// INVALID DIGITISER CTORS
+// Min/Max/Step Step=0
+try
+{
+  utility::digitizer var( -1.0,1.0, 0ul );
+  BOOST_ERROR( "Able to construct digitizer with count = 0" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  BOOST_CHECK( msg.find( "Can not have zero bin number" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1452336.cpp!!!	digitizer_methods() : void
+{
+  // Min/Max/Count ctor
+  utility::digitizer var( -1.0,1.0,21ul );
+  BOOST_CHECK( utility::feq( var.bin_width(), 0.095238095238095233 ) );
+  for( int x = -10; x != 11; ++x )
+  {
+    if( not var.in_range( double( x )/5.0 ) )
+    {
+      if( -5 <= x and x < 5 )
+      {
+        std::stringstream ss;
+        ss << double( x )/5.0 << " should be in range!";
+        BOOST_ERROR( ss.str() );
+      }
+    }
+    else
+    {
+      if( -5 > x or x >= 5 )
+      {
+        std::stringstream ss;
+        ss << double( x )/5.0 << " should NOT be in range!";
+        BOOST_ERROR( ss.str() );
+      }
+    }
+  }
+  // Min/Max/Count with literal
+  utility::digitizer var2( -1.0, 1.0, 21 );
+  BOOST_CHECK( var2.equivalent( var ) );}
+{
+  // Min/Max/Step
+  utility::digitizer var( -1.0,1.0,0.1 );
+  BOOST_CHECK_EQUAL( var.size(), 20ul );
+  for( int x = -10; x != 11; ++x )
+  {
+    if( not var.in_range( double( x )/5.0 ) )
+    {
+      if( -5 <= x and x < 5 )
+      {
+        std::stringstream ss;
+        ss << double( x )/5.0 << " should be in range!";
+        BOOST_ERROR( ss.str() );
+      }
+    }
+    else
+    {
+      if( -5 > x or x >= 5 )
+      {
+        std::stringstream ss;
+        ss << double( x )/5.0 << " should NOT be in range!";
+        BOOST_ERROR( ss.str() );
+      }
+    }
+  }
+}
+!!!1451312.cpp!!!	histogram_lifetime() : void
 {
   // Default ctor
   utility::digitizer var;
@@ -665,12 +1083,12 @@ estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
   catch(...) {}
 }
 !!!776880.cpp!!!	pattern_test_test() : void
-// test match to canonical pattern
-pattern_test::canonical< int, true, true >( 1, 2 );
-pattern_test::canonical< double, true, true >( 1.0, 2.0 );
-// test match to comparable pattern
-pattern_test::comparable< int >( 4, 2, 1, 2 );
-pattern_test::comparable< double >( 4.0, 2.0, 1.0, 2.0 );
+//XX// test match to canonical pattern
+//XXpattern_test::canonical< int, true, true >( 1, 2 );
+//XXpattern_test::canonical< double, true, true >( 1.0, 2.0 );
+//XX// test match to comparable pattern
+//XXpattern_test::comparable< int >( 4, 2, 1, 2 );
+//XXpattern_test::comparable< double >( 4.0, 2.0, 1.0, 2.0 );
 !!!329009.cpp!!!	basic_mean_lifetime() : void
 //XX
 //XXestimater_test_fw const& exemplar(estimater_test_fw::exmplr);
