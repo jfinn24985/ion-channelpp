@@ -959,129 +959,99 @@ catch( std::exception const& err )
 }
 !!!1451312.cpp!!!	histogram_lifetime() : void
 {
+  // Canonical pattern
+  BOOST_CHECK( std::is_default_constructible< utility::histogram >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< utility::histogram >::type{} );
+  BOOST_CHECK( std::is_move_constructible< utility::histogram >::type{} );
+  BOOST_CHECK( ( std::is_assignable< utility::histogram, utility::histogram >::type{} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< utility::histogram >::type{} );
+}
+
+{
   // Default ctor
-  utility::digitizer var;
-  BOOST_CHECK_EQUAL(var.minimum(), 0.0);
-  BOOST_CHECK_EQUAL(var.maximum(), 0.0);
-  BOOST_CHECK_EQUAL(var.size(), 0ul);
-  for(int x = -10; x != 11; ++x)
+  utility::histogram var;
+  BOOST_CHECK_EQUAL( var.minimum(), 0.0 );
+  BOOST_CHECK_EQUAL( var.maximum(), 0.0 );
+  BOOST_CHECK_EQUAL( var.size(), 0ul );
+  BOOST_CHECK_EQUAL( var.auto_extendable(), false );
+  for( int x = -10; x != 11; ++x )
   {
-    BOOST_REQUIRE(not var.in_range(double(x)/5.0));
+    BOOST_REQUIRE( not var.in_range( double( x )/5.0 ) );
   }
 }
+std::stringstream store;
 {
   // Min/Max/Count ctor
-  utility::digitizer var(-1.0,1.0,21ul);
-  BOOST_CHECK_EQUAL(var.minimum(), -1.0);
-  BOOST_CHECK_EQUAL(var.maximum(), 1.0);
-  BOOST_CHECK_EQUAL(var.size(), 21ul);
-  BOOST_CHECK(utility::feq(var.bin_width(), 0.095238095238095233));
-  for(int x = -10; x != 11; ++x)
+  utility::histogram var( -1.0, 1.0, 21ul, true );
+  BOOST_CHECK_EQUAL( var.minimum(), -1.0 );
+  BOOST_CHECK_EQUAL( var.maximum(), 1.0 );
+  BOOST_CHECK_EQUAL( var.size(), 21ul );
+  BOOST_CHECK_EQUAL( var.auto_extendable(), true );
+  BOOST_CHECK( utility::feq( var.bin_width(), 0.095238095238095233 ) );
+
+  boost::archive::text_oarchive oa(store);
+  // write class instances to archive
+  oa << var;
+
   {
-    if (not var.in_range(double(x)/5.0))
-    {
-      if (-5 <= x and x < 5)
-      {
-        std::stringstream ss;
-        ss << double(x)/5.0 << " should be in range!";
-        BOOST_ERROR(ss.str());
-      }
-    }
-    else
-    {
-      if (-5 > x or x >= 5)
-      {
-        std::stringstream ss;
-        ss << double(x)/5.0 << " should NOT be in range!";
-        BOOST_ERROR(ss.str());
-      }
-    }
+    // copy
+    utility::histogram var2( var );
+    BOOST_CHECK_EQUAL( var2.minimum(), -1.0 );
+    BOOST_CHECK_EQUAL( var2.maximum(), 1.0 );
+    BOOST_CHECK_EQUAL( var2.size(), 21ul );
+    BOOST_CHECK_EQUAL( var2.auto_extendable(), true );
+    BOOST_CHECK( utility::feq( var2.bin_width(), 0.095238095238095233 ) );
+    // BOOST_CHECK( var == var2 );
   }
-  // Min/Max/Count with literal
-  utility::digitizer var2(-1.0,1.0,21);
-  BOOST_CHECK( var2.equivalent( var ) );
+  {
+    // assign
+    utility::histogram var2;
+    BOOST_CHECK_EQUAL( var2.minimum(), 0.0 );
+    BOOST_CHECK_EQUAL( var2.maximum(), 0.0 );
+    BOOST_CHECK_EQUAL( var2.auto_extendable(), false );
+    var2 = var;
+    BOOST_CHECK_EQUAL( var2.minimum(), -1.0 );
+    BOOST_CHECK_EQUAL( var2.maximum(), 1.0 );
+    BOOST_CHECK_EQUAL( var2.size(), 21ul );
+    BOOST_CHECK_EQUAL( var2.auto_extendable(), true );
+    BOOST_CHECK( utility::feq( var2.bin_width(), 0.095238095238095233 ) );
+    // BOOST_CHECK( var == var2 );
+  }
+  {
+    // move
+    utility::histogram var1( var );
+    BOOST_CHECK_EQUAL( var1.minimum(), -1.0 );
+    BOOST_CHECK_EQUAL( var1.maximum(), 1.0 );
+    utility::histogram var2( std::move( var1 ) );
+    BOOST_CHECK_EQUAL( var2.minimum(), -1.0 );
+    BOOST_CHECK_EQUAL( var2.maximum(), 1.0 );
+    BOOST_CHECK_EQUAL( var2.size(), 21ul );
+    BOOST_CHECK_EQUAL( var2.auto_extendable(), true );
+    BOOST_CHECK( utility::feq( var2.bin_width(), 0.095238095238095233 ) );
+    // BOOST_CHECK( var == var2 );
+  }
 }
 {
   // Min/Max/Step
-  utility::digitizer var (-1.0,1.0,0.1);
-  BOOST_CHECK_EQUAL(var.minimum(), -1.0);
-  BOOST_CHECK_EQUAL(var.maximum(), 1.0);
-  BOOST_CHECK_EQUAL(var.bin_width(), 0.1);
-  BOOST_CHECK_EQUAL(var.size(), 20ul);
-  for(int x = -10; x != 11; ++x)
-  {
-    if (not var.in_range(double(x)/5.0))
-    {
-      if (-5 <= x and x < 5)
-      {
-        std::stringstream ss;
-        ss << double(x)/5.0 << " should be in range!";
-        BOOST_ERROR(ss.str());
-      }
-    }
-    else
-    {
-      if (-5 > x or x >= 5)
-      {
-        std::stringstream ss;
-        ss << double(x)/5.0 << " should NOT be in range!";
-        BOOST_ERROR(ss.str());
-      }
-    }
-  }
+  utility::histogram var( -1.0, 1.0, 0.1 );
+  BOOST_CHECK_EQUAL( var.minimum(), -1.0 );
+  BOOST_CHECK_EQUAL( var.maximum(), 1.0 );
+  BOOST_CHECK_EQUAL( var.bin_width(), 0.1 );
+  BOOST_CHECK_EQUAL( var.auto_extendable(), false );
+  BOOST_CHECK_EQUAL( var.size(), 20ul );
 }
-// INVALID DIGITISER CTORS
 {
-  // Min/Max/Step Min>Max
-  try
-  {
-    utility::digitizer var(2.0,1.0,0.1);
-    BOOST_ERROR("Able to construct digitizer with min > max");
-  }
-  catch(...) {}
-  // Min/Max/Step Min=Max
-  try
-  {
-    utility::digitizer var(1.0,1.0,0.1);
-    BOOST_ERROR("Able to construct digitizer with min == max");
-  }
-  catch(...) {}
-  // Min/Max/Step Step=0
-  try
-  {
-    utility::digitizer var(2.0,1.0,0.0);
-    BOOST_ERROR("Able to construct digitizer with step = 0");
-  }
-  catch(...) {}
-  // Min/Max/Step Step<0.0
-  try
-  {
-    utility::digitizer var(0.0,1.0,-0.1);
-    BOOST_ERROR("Able to construct digitizer with step < 0");
-  }
-  catch(...) {}
-  // Min/Max/Count Min>Max
-  try
-  {
-    utility::digitizer var(2.0,1.0,1ul);
-    BOOST_ERROR("Able to construct digitizer with min > max");
-  }
-  catch(...) {}
-  // Min/Max/Count Min=Max
-  try
-  {
-    utility::digitizer var(1.0,1.0,1ul);
-    BOOST_ERROR("Able to construct digitizer with min == max");
-  }
-  catch(...) {}
-  // Min/Max/Count Count=0
-  try
-  {
-    utility::digitizer var(-1.0,1.0,0ul);
-    BOOST_ERROR("Able to construct digitizer with bin count = 0");
-  }
-  catch(...) {}
-}
+  utility::histogram var;
+ 
+  boost::archive::text_iarchive ia(store);
+  // read class instances from archive
+  ia >> var;
+  BOOST_CHECK_EQUAL( var.minimum(), -1.0 );
+  BOOST_CHECK_EQUAL( var.maximum(), 1.0 );
+  BOOST_CHECK_EQUAL( var.size(), 21ul );
+  BOOST_CHECK_EQUAL( var.auto_extendable(), true );
+  BOOST_CHECK( utility::feq( var.bin_width(), 0.095238095238095233 ) );
+} 
 !!!776880.cpp!!!	pattern_test_test() : void
 //XX// test match to canonical pattern
 //XXpattern_test::canonical< int, true, true >( 1, 2 );
