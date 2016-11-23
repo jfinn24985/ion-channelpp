@@ -22,20 +22,21 @@ class histogram
 if( val > this->maximum() )
 {
   // resize up
+  const std::size_t oldsize = this->converter_.size();
   const std::size_t add = this->converter_.extend_up( val );
-  const std::size_t oldsize = this->data_.size();
+  UTILITY_CHECK( oldsize + add == this->converter_.size(), "Digitizer size change differs from advised change." );
+  this->data_.resize( oldsize + add );
+  this->sample_.resize( oldsize + add );
+}
+else if( val < this->minimum() )
+{
+  const std::size_t oldsize = this->converter_.size();
+  const std::size_t add = this->converter_.extend_down( val );
   UTILITY_CHECK( oldsize + add == this->converter_.size(), "Digitizer size change differs from advised change." );
   this->data_.reindex( 0, add );
   this->sample_.resize( oldsize + add );
   std::copy_backward( this->sample_.begin(), this->sample_.begin() + oldsize, this->sample_.end() );
-}
-else if( val < this->minimum() )
-{
-  const std::size_t add = this->converter_.extend_down( val );
-  const std::size_t oldsize = this->data_.size();
-  UTILITY_CHECK( oldsize + add == this->converter_.size(), "Digitizer size change differs from advised change." );
-  this->data_.resize( oldsize + add );
-  this->sample_.resize( oldsize + add );
+  std::fill( this->sample_.begin(), this->sample_.begin() + add, 0.0 );
 }
 else
 {

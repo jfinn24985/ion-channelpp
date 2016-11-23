@@ -957,7 +957,7 @@ catch( std::exception const& err )
     }
   }
 }
-!!!1451312.cpp!!!	histogram_lifetime() : void
+!!!1471536.cpp!!!	histogram_lifetime() : void
 {
   // Canonical pattern
   BOOST_CHECK( std::is_default_constructible< utility::histogram >::type{} );
@@ -1052,6 +1052,131 @@ std::stringstream store;
   BOOST_CHECK_EQUAL( var.auto_extendable(), true );
   BOOST_CHECK( utility::feq( var.bin_width(), 0.095238095238095233 ) );
 } 
+!!!1451312.cpp!!!	histogram_iterator_lifetime() : void
+{
+  // Canonical pattern
+  BOOST_CHECK( std::is_default_constructible< utility::histogram::bin_iterator >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< utility::histogram::bin_iterator >::type{} );
+  BOOST_CHECK( std::is_move_constructible< utility::histogram::bin_iterator >::type{} );
+  BOOST_CHECK( ( std::is_assignable< utility::histogram::bin_iterator, utility::histogram::bin_iterator >::type{} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< utility::histogram::bin_iterator >::type{} );
+}
+{
+  // Default ctor
+  utility::histogram::bin_iterator iter1;
+  utility::histogram::bin_iterator iter2;
+  BOOST_CHECK( iter1 == iter2 );
+  BOOST_CHECK( not ( iter1 != iter2 ) );
+  BOOST_CHECK( not ( iter1 < iter2 ) );
+  BOOST_CHECK( iter1 <= iter2 );
+  BOOST_CHECK( not ( iter1 > iter2 ) );
+  BOOST_CHECK( iter1 >= iter2 );
+  BOOST_CHECK_EQUAL( iter1 - iter2, 0L );
+
+  // Min/Max/Count ctor
+  utility::histogram var( -1.0, 1.0, 21ul, true );
+  BOOST_CHECK_EQUAL( std::distance( var.begin(), var.end() ), 21L );
+  {
+    // copy
+    utility::histogram::bin_iterator iter3( var.begin() );
+    BOOST_CHECK( iter3 == var.begin() );
+    BOOST_CHECK( iter3 != var.end() );
+    BOOST_CHECK( iter3 < var.end() );
+    BOOST_CHECK( iter3 <= var.end() );
+    BOOST_CHECK( iter3 <= var.begin() );
+    BOOST_CHECK( not( iter3 > var.begin() ) );
+    BOOST_CHECK( iter3 >= var.begin() );
+    ++iter3;
+    BOOST_CHECK( iter3 > var.begin() );
+    BOOST_CHECK( iter3 >= var.begin() );
+    BOOST_CHECK( not( iter3 <= var.begin() ) );
+    BOOST_CHECK( iter3 != var.begin() );
+    BOOST_CHECK( iter3 != var.end() );
+    BOOST_CHECK_EQUAL( *iter3, 0.0 );
+    BOOST_CHECK( utility::feq( iter3.width(), 0.095238095238095233 ) );
+    BOOST_CHECK_CLOSE( iter3.width(), 0.095238095238095233, 0.000000000001 );
+    BOOST_CHECK( utility::feq( iter3.minimum(), -1.0 + 0.095238095238095233 ) );
+    BOOST_CHECK_CLOSE( iter3.minimum(), -1.0 + 0.095238095238095233, 0.000000000001 );
+    BOOST_CHECK( utility::feq( iter3.maximum(), -1.0 + 2*0.095238095238095233 ) );
+    BOOST_CHECK_CLOSE( iter3.maximum(), -1.0 + 2*0.095238095238095233, 0.000000000001 );
+    BOOST_CHECK( utility::feq( iter3.midpoint(), -1.0 + 1.5*0.095238095238095233 ) );
+    BOOST_CHECK_CLOSE( iter3.midpoint(), -1.0 + 1.5*0.095238095238095233, 0.000000000001 );
+    BOOST_CHECK( utility::feq( iter3.mean(), 0.0 ) );
+    BOOST_CHECK( utility::feq( iter3.variance(), 0.0 ) );
+  }
+  {
+    // assign
+    utility::histogram::bin_iterator iter3;
+    BOOST_CHECK( iter3 == iter1 );
+    iter3 = var.begin();
+    BOOST_CHECK( iter3 == var.begin() );
+  }
+  {
+    // move
+    utility::histogram::bin_iterator iter3( var.begin() );
+    BOOST_CHECK( iter3 == var.begin() );
+    utility::histogram::bin_iterator iter4( std::move( iter3 ) );
+    BOOST_CHECK( iter4 == var.begin() );
+  }
+  for( auto iter = var.begin(); iter != var.end(); ++iter )
+  {
+    BOOST_CHECK_EQUAL( *iter, 0.0 );
+  }
+  for( auto val : var )
+  {
+    BOOST_CHECK_EQUAL( val, 0.0 );
+  }
+}
+!!!1471664.cpp!!!	histogram_data_collection() : void
+estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
+{
+  // TESTS FOR CORRECTNESS
+  utility::histogram var( 3.5, 4.5, 5, true );
+
+  // Insure start from zero
+  BOOST_CHECK_EQUAL( var.count(), 0ul );
+  BOOST_CHECK_EQUAL( var.size(), 5ul );
+  BOOST_CHECK_EQUAL( var.bin_width(), 0.2 );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
+  {
+    BOOST_CHECK_EQUAL( var.bin_mean( ith ), 0.0 );
+    BOOST_CHECK_EQUAL( var.bin_variance( ith ), 0.0 );
+  }
+
+  // Add first data points (all 4.0)
+  var.sample( exemplar.data4.begin(), exemplar.data4.end() );
+  BOOST_CHECK_EQUAL( var.count(), 1ul );
+  BOOST_CHECK_EQUAL( var.size(), 5ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
+  {
+    BOOST_CHECK_EQUAL( var.bin_mean( ith ), ( ith == 2 ? 100.0 : 0.0 ) );
+    BOOST_CHECK_EQUAL( var.bin_variance( ith ), 0.0 );
+  }
+
+  // Add second data points (all 5.0)
+  var.sample( exemplar.data5.begin(), exemplar.data5.end() );
+
+  BOOST_CHECK_EQUAL( var.count(), 2ul );
+  BOOST_REQUIRE_EQUAL( var.size(), 8ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
+  {
+    BOOST_CHECK_CLOSE( var.bin_mean( ith ), ( ith == 2 or ith == 7 ? 50.0 : 0.0 ), 0.000001 );
+    BOOST_CHECK_CLOSE( var.bin_variance( ith ), ( ith == 2 or ith == 7 ? 5000.0 : 0.0 ), 0.000001 );
+  }
+
+  // Add third data points (all 6.0)
+  var.sample( exemplar.data6.begin(), exemplar.data6.end() );
+
+  BOOST_CHECK_EQUAL( var.count(), 3ul );
+  BOOST_REQUIRE_EQUAL( var.size(), 13ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
+  {
+    BOOST_CHECK_CLOSE( var.bin_mean( ith ), ( ith == 2 or ith == 7 or ith == 12 ? (100.0/3.0) : 0.0 ), 0.000001 );
+    BOOST_CHECK_CLOSE( var.bin_variance( ith ), ( ith == 2 or ith == 7 or ith == 12 ? (10000.0/3.0) : 0.0 ), 0.000001 );
+  }
+
+
+}
 !!!776880.cpp!!!	pattern_test_test() : void
 //XX// test match to canonical pattern
 //XXpattern_test::canonical< int, true, true >( 1, 2 );
