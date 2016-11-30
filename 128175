@@ -1,6 +1,6 @@
 format 75
 "utility" // utility
-  revision 219
+  revision 222
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -5072,7 +5072,12 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
-      comment " A combination of digitizer and data array."
+      comment " A combination of digitizer and data array.
+
+ Sampling can be done in one of two ways. If one has access to all
+ the sample data at once, then the sample(iter, iter) method can be
+ used. If sampling is done piecemeal, then begin_sample, 
+ sample_datum and end_sample can be used."
       classrelation 857392 // converter_ (<directional composition>)
 	relation 856496 *-->
 	  a role_name "converter_" private
@@ -6217,12 +6222,12 @@ ${docstring}${body}
 	  param in name "end" explicit_type "InIter"
 	cpp_decl "    ${comment}template< class ${t0} > ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  this->reset_sampler();
+  this->begin_sample();
   for( ; ${p0} != ${p1}; ++${p0} )
   {
-    this->sample( static_cast< double >( *${p0} ) );
+    this->sample_datum( static_cast< double >( *${p0} ) );
   }
-  this->data_.append( this->sample_.begin(), this->sample_.end() );
+  this->end_sample();
 }"
 	
 	
@@ -6236,8 +6241,8 @@ ${docstring}${body}
 "
       end
 
-      operation 1438256 "sample"
-	private explicit_return_type "void"
+      operation 1438256 "sample_datum"
+	public explicit_return_type "void"
 	nparams 1
 	  param in name "val" explicit_type "double"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
@@ -6253,10 +6258,23 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+	comment " Add one datum to the sampling subobject.
+
+ The correct way to use this method is in combination with
+ sample_datum and end_sample. e.g.
+ '''
+   begin_sample (call once)
+   ...
+   sample_datum (0,*) calls
+   ...
+   end_sample (call once)
+ '''
+
+"
       end
 
-      operation 1436208 "reset_sampler"
-	private explicit_return_type "void"
+      operation 1436208 "begin_sample"
+	public explicit_return_type "void"
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
 "
@@ -6271,6 +6289,51 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+	comment " Initialize the sampling subobject.
+
+ The correct way to use this method is in combination with
+ sample_datum and end_sample. e.g.
+ '''
+   begin_sample (call once)
+   ...
+   sample_datum (0,*) calls
+   ...
+   end_sample (call once)
+ '''
+
+"
+      end
+
+      operation 1484976 "end_sample"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  this->data_.append( this->sample_.begin(), this->sample_.end() );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Copy data from the sampling subobject to the estimate
+ array object.
+
+ The correct way to use this method is in combination with
+ sample_datum and end_sample. e.g.
+ '''
+   begin_sample (call once)
+   ...
+   sample_datum (0,*) calls
+   ...
+   end_sample (call once)
+ '''
+
+"
       end
 
       extra_member 578864 "ACCESSORS"
@@ -8540,11 +8603,23 @@ ${docstring}${members}
 	comment "The path of the archive in the OS filesystem."
       end
 
+      attribute 651440 "uuid_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl ""
+	idl_decl ""
+	comment " The unique identifier for a simulation"
+      end
+
       operation 577712 "base_sink"
 	protected explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
 : path_()
+, uuid_()
 {}
 "
 	
@@ -8553,6 +8628,7 @@ ${docstring}${members}
 ${docstring}${body}
 "
 	
+	comment " Constructor for serialization."
       end
 
       operation 578352 "base_sink"
@@ -8561,6 +8637,7 @@ ${docstring}${body}
 	  param in name "path" explicit_type "string"
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
 : path_( ${p0} )
+, uuid_( make_uuid_string() )
 {}
 "
 	
@@ -8647,7 +8724,7 @@ ${docstring}${body}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-   ar & this->path_;
+   ar & this->path_; ar & this->uuid_;
 }"
 	
 	
@@ -8760,6 +8837,23 @@ ${docstring}${body}
  single file archives this will be the filename"
       end
 
+      operation 1491760 "make_uuid_string"
+	class_operation private explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment "Generate a UUID string"
+      end
+
       operation 556080 "read"
 	public explicit_return_type "bool"
 	nparams 2
@@ -8802,6 +8896,23 @@ Return true if document exists and has its content read. Return
 false if the document does not exist."
       end
 
+      operation 1491632 "uuid"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->${name}_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the run UUID string"
+      end
+
       operation 556208 "write"
 	public explicit_return_type "void"
 	nparams 2
@@ -8841,6 +8952,15 @@ ${docstring}${body}
 	
 	comment "Write a \"content\" of file with the given \"subpath\" into the archive.
 Any file with the given \"subpath\" will be overwritten."
+      end
+
+      classrelation 897968 // <dependency>
+	relation 897072 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 897968 // <dependency>
+	  b parent class_ref 1075759 // uuid_t
       end
     end
 
@@ -10922,6 +11042,16 @@ ${definition}
 ${namespace_end}
 #endif
 "
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+${namespace_start}
+${members}
+${namespace_end}"
       python_src "${comment}
 ${import}
 ${definition}"
@@ -11773,6 +11903,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 186287 // machine
 	artifact_ref 187569 // estimater
 	artifact_ref 207409 // estimater_matrix
+	artifact_ref 288560 // base_sink
 	artifact_ref 288688 // memory_sink
 	artifact_ref 343215 // random
 	artifact_ref 504112 // digitizer_3d
