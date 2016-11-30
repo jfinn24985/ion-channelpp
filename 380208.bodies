@@ -1,42 +1,4 @@
 class acceptance_observable
-!!!718896.cpp!!!	build_dictionary_(in trial : change_set) : void
-// downgrade /pre checks for private method.
-UTILITY_CHECK(trial.choice() != nullptr, "Malformed change set with nul choice pointer");
-UTILITY_CHECK(this->dictionary_.end() == this->dictionary_.find((void*)trial.choice()),
-              "Attempt to add choice object multiple times to dictionary.");
-// Search data if it contains more entries than dictionary
-if (this->data_.size() > this->dictionary_.size())
-{
-  // May be in data but not in dictionary
-  const std::string label
-  {
-    trial.choice()->label()
-  };
-  const std::size_t key
-  {
-    trial.choice()->key().key
-  };
-  for (std::size_t idx = 0; idx != this->data_.size(); ++idx)
-  {
-    auto & item = this->data_[idx];
-    if (item.label == label and item.specie_key == key)
-    {
-      // item pointer should be nul
-      UTILITY_CHECK(item.hash == nullptr, "Attempt to map two choice objects to single acceptance sample");
-      item.hash = (void*)trial.choice();
-      this->dictionary_.insert(std::make_pair((void*)trial.choice(), idx));
-      UTILITY_ENSURE(this->dictionary_.end() != this->dictionary_.find((void*)trial.choice()), "Unable to find choice after adding to dictionary");
-      return; // exit, no more to do.
-    }
-  }
-}
-// If here then no existing datum object found; add one.
-{
-  this->data_.push_back(acceptance_datum(trial.choice()->label(), trial.choice(), trial.choice()->key().key));
-  this->dictionary_.insert(std::make_pair((void*)trial.choice(), this->data_.size() - 1));
-}
-UTILITY_ENSURE(this->dictionary_.end() != this->dictionary_.find((void*)trial.choice()), "Unable to find choice after adding to dictionary");
-
 !!!718128.cpp!!!	description(inout out : ostream) : void
 out << "[sampler] " << this->type_label_() << "\n";
 out << " Collect and report trial acceptance probabilities.\n";
@@ -55,66 +17,124 @@ std::unique_ptr< tracked_definition > result( new tracked_definition( type_label
 // no extra parameters
 meta.add_tracked_type( result );
 
-!!!718640.cpp!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
-const static boost::format title_str( " %6s %8s %10s %10s %7s %s" );
-out << boost::format(title_str) % "Trial" % "Specie" % "Success" % "Attempt" % "Rate(%)" % "Total(%)" << "\n";
-const static boost::format format_str(" %6s SPC[%3s] %10d %10d %7.3f %7.3f\n");
-std::map< std::size_t, std::vector< std::size_t > > reorder_datum;
-// Sort data by specie key.
-for (std::size_t idx = 0; idx != this->data_.size(); ++idx)
+!!!718640.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
+// data is  [change_hash] : <<success/trial>> : <<attempts>>
+// (0, 1, 1, 0) 0.66666667          0 0.30000000 0.00000000
+if( not this->data_.empty() )
 {
-  auto itr = reorder_datum.find(this->data_[idx].specie_key);
-  if (reorder_datum.end() == itr)
+// CHECK ALL COUNTS ARE EQUAL
+UTILITY_ENSURE_OLD( const std::size_t check_counter = this->data_.begin()->second.first.count() );
+const static boost::format title_str( " %14s %10s %10s %10s %10s" );
+out << boost::format( title_str ) % "Trial" % "Accept.av" % "Accept.var" % "Trial.av" % "Trial.var" << "\n";
+const static boost::format format_str( " %14s %10.8f %10.8f %10.8f %10.8f" );
+typedef boost::tuple< std::string, double, double, double, double > datum_t;
+std::vector< datum_t > dataset;
+for( auto const& entry : this->data_ )
+{
+  std::stringstream hashval;
+  hashval << entry.first;
+  dataset.push_back( { hashval.str(), entry.second.first.mean(), entry.second.first.variance(), entry.second.second.mean(), entry.second.second.variance() } );
+  out << boost::format( format_str ) % hashval.str() % entry.second.first.mean() % entry.second.first.variance() % entry.second.second.mean() % entry.second.second.variance() << "\n";
+  UTILITY_ENSURE( check_counter == entry.second.first.count(), "Serious error, estimater counters should all be equal" );
+  UTILITY_ENSURE( check_counter == entry.second.second.count(), "Serious error, estimater counters should all be equal" );
+}
+{
+  // Write out trial acceptance data
+
+  const std::string filename { "acceptance.dat" }; 
+  const std::size_t sz { this->data_.size() };
+
+  core::output_dataset dset { sink.uuid(), [sz](){ return sz; } };
+  dset.set_title( "Trial acceptance and rate data." );
+
+  dset.push_back_entry( core::output_field( "TRIAL", "CHANGE_HASH", [&dataset]( std::ostream& os, std::size_t ii )
   {
-    std::vector< std::size_t > tmp;
-    tmp.push_back(idx);
-    reorder_datum.insert(std::make_pair(this->data_[idx].specie_key, tmp));
+    os << boost::tuples::get< 0 >( dataset[ii] );
+  } ) );
+
+  dset.push_back_entry( core::output_field( "ACCEPT.MEAN", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
+  {
+    os << boost::tuples::get< 1 >( dataset[ii] );
+  } ) );
+
+  dset.push_back_entry( core::output_field( "ACCEPT.VAR", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
+  {
+    os << boost::tuples::get< 2 >( dataset[ii] );
+  } ) );
+
+  dset.push_back_entry( core::output_field( "ATTEMPT.MEAN", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
+  {
+    os << boost::tuples::get< 3 >( dataset[ii] );
+  } ) );
+
+  dset.push_back_entry( core::output_field( "ATTEMPT.VARIANCE", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
+  {
+    os << boost::tuples::get< 4 >( dataset[ii] );
+  } ) );
+
+  dset.write( filename, sink );
+}
+}
+!!!1485104.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+// If we have a vary rare trial it might not appear in the
+// first sample window. Therefore we may need to add an
+// estimater after the first sample window. This would
+// require incrementing the counter of new estimater by
+// calling append "count" times with zero.
+std::size_t count = 0;
+if( not this->data_.empty() )
+{
+  count = this->data_.begin()->second.first.count();
+}
+for( auto & entry : this->dictionary_ )
+{
+  // entry.first : hash
+  // entry.second.first : success
+  // entry.second.second : attempts
+  auto iter = this->data_.find( entry.first );
+  // iter->first : hash
+  // iter->second.first : success chance per attempt
+  // iter->second.second : attempt chance
+  if( this->data_.end() == iter )
+  {
+    iter = this->data_.insert( std::make_pair( entry.first, std::pair< utility::estimater, utility::estimater >{} ) ).first;
+    // for late added estimaters we need to increase their
+    // counter
+    for( std::size_t catchup = 0; catchup != count; ++catchup)
+    {
+       iter->second.first.append( 0.0 );
+       iter->second.second.append( 0.0 );
+    }
+  }
+  if( 0 == entry.second.second )
+  {
+     iter->second.first.append( 0.0 );
+     iter->second.second.append( 0.0 );
   }
   else
   {
-    itr->second.push_back(idx);
+     iter->second.first.append( double(entry.second.first)/double(entry.second.second) );
+     iter->second.second.append( double(entry.second.second)/double(this->total_) );
   }
+  // reset counters
+  entry.second.first = 0ul;
+  entry.second.second = 0ul;
 }
-for (auto & entry : reorder_datum)
-{
-  std::sort(entry.second.begin(),entry.second.end(),[this](std::size_t x, std::size_t y){ return this->data_[x].label < this->data_[y].label; });
-  for (auto idx : entry.second)
-  {
-    auto const& datum = this->data_[idx];
-    {
-      if (datum.success > 0)
-      {
-        out << boost::format(format_str) % datum.label
-        % sim.get_specie(datum.specie_key).label()
-        % datum.success % datum.attempts
-        % (datum.probability() * 100.0)
-        % ((datum.attempts * 100.0)/this->total_);
-      }
-      else
-      {
-        out << boost::format(format_str) % datum.label
-        % sim.get_specie(datum.specie_key).label()
-        % 0 % datum.attempts % 0.0
-        % ((datum.attempts * 100.0)/this->total_);
-      }
-    }
-  }
-}
-
+// reset total count
+this->total_ = 0ul;
 !!!718000.cpp!!!	on_trial_end(in trial : change_set) : void
 ++this->total_;
-auto iter = this->dictionary_.find((void*)trial.choice());
-if (this->dictionary_.end() == iter)
+auto iter = this->dictionary_.find( trial.id() );
+if( this->dictionary_.end() == iter )
 {
-  this->build_dictionary_(trial);
-  iter = this->dictionary_.find((void*)trial.choice());
+  iter = this->dictionary_.insert( std::pair< particle::change_hash, std::pair< std::size_t, std::size_t > >( trial.id(), { 0ul, 0ul } ) ).first;
 }
-++(this->data_[iter->second]).attempts;
+++(iter->second.second);
 if (trial.accept())
 {
-  ++(this->data_[iter->second]).success;
+  ++(iter->second.first);
 }
-!!!718512.cpp!!!	prepare(inout sim : simulator) : void
+!!!718512.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in sman : report_manager) : void
 this->data_.clear();
 this->dictionary_.clear();
 this->total_ = 0ul;

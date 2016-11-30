@@ -1,4 +1,117 @@
 class observable_test_suite
+!!!1505584.cpp!!!	mockup_particle_manager() : particle_manager
+boost::shared_ptr< particle::particle_manager > pman( new particle::particle_manager );
+{
+  particle::specie spc1;
+  spc1.set_label( "CA" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.11 );
+  spc1.set_rate( 0.2 );
+  spc1.set_valency( 1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::MOBILE );
+  spc1.append_position( particle::coordinate( 2.0, 2.0, 0.0 ), particle::centroid( 3.0, 2.0, 2.0, 0.0 ) );
+  pman->add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "CO" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.2 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::FLEXIBLE );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 2.0 ), particle::centroid( 3.0, 0.0, 0.0, 2.0 ) );
+  pman->add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "OX" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.2 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::CHANNEL_ONLY );
+  spc1.append_position( particle::coordinate( 2.0, 0.0, 2.0 ) );
+  pman->add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "Na" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.2 );
+  spc1.set_valency( 1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 2.0, 0.0, 0.0 ) );
+  pman->add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "Cl" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.2 );
+  spc1.set_rate( 0.2 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.3123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 2.0, 0.0 ) );
+  pman->add_specie( spc1 );
+}
+pman->add_predefined_particles();
+return pman;
+!!!1505456.cpp!!!	mockup_geometry_manager() : geometry_manager
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 5.0 ) );
+boost::shared_ptr< geometry::geometry_manager > gman( new geometry::geometry_manager( regn ) );
+{
+  boost::shared_ptr< geometry::base_region > bulk( new geometry::cube_region( "bulk", 4.0, particle::coordinate( 0.0, 0.0, 0.0 ), true ) );
+  gman->add_region( bulk );
+}
+return gman;
+!!!1484848.cpp!!!	base_observable_method_test(inout obs : base_observable, in label : string) : void
+std::stringstream store;
+std::string description;
+std::string document;
+{
+  BOOST_CHECK_EQUAL( label, obs->get_label() );
+  {
+    std::stringstream desc;
+    obs->description( desc );
+    description = desc.str();
+  }
+  {
+    std::stringstream doc;
+    core::input_document idoc( 1ul );
+    obs->write_document( idoc );
+    idoc.write( doc );
+    document = doc.str();
+    BOOST_CHECK_LT( document.find( label ), document.size() );
+  }
+  boost::archive::text_oarchive oa( store );
+  oa << obs;
+}
+{
+  boost::shared_ptr< observable::base_observable > copy;
+  boost::archive::text_iarchive ia( store );
+  ia >> copy;
+  BOOST_CHECK_EQUAL( label, copy->get_label() );
+  {
+    std::stringstream desc;
+    copy->description( desc );
+  }
+  {
+    std::stringstream doc;
+    core::input_document idoc( 1ul );
+    copy->write_document( idoc );
+    idoc.write( doc );
+    BOOST_CHECK_EQUAL( document, doc.str() );
+  }
+}
+
 !!!1348016.cpp!!!	sampler_definition_lifetime_test() : void
 {
   // Static Lifetime method tests: virtual pattern
@@ -39,24 +152,24 @@ class observable_test_suite
   BOOST_CHECK_EQUAL( tmp.size(), 0ul );
   BOOST_CHECK_EQUAL( tmp.label(), "acceptance" );
 }
-!!!1348272.cpp!!!	sampler_meta_test() : void
-//XX{
-//XX  // Static Lifetime method tests: virtual pattern
-//XX
-//XX  BOOST_CHECK( not std::is_default_constructible< observable::sampler_meta >::type{} );
-//XX  BOOST_CHECK( not std::is_copy_constructible< observable::sampler_meta >::type{} );
-//XX  BOOST_CHECK( not std::is_move_constructible< observable::sampler_meta >::type{} );
-//XX  BOOST_CHECK( ( not std::is_assignable< observable::sampler_meta, observable::sampler_meta >::type{} ) );
-//XX  BOOST_CHECK( not std::has_virtual_destructor< observable::sampler_meta >::type{} );
-//XX}
-//XX{
-//XX  // default ctor
-//XX  boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
-//XX  observable::sampler_meta tmp( oman );
-//XX
-//XX  //BOOST_CHECK( tmp.empty() );
-//XX  //BOOST_CHECK_EQUAL( tmp.size(), 0ul );
-//XX}
+!!!1348272.cpp!!!	sampler_meta_lifetime_test() : void
+{
+  // Static Lifetime method tests: virtual pattern
+
+  BOOST_CHECK( not std::is_default_constructible< observable::sampler_meta >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< observable::sampler_meta >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< observable::sampler_meta >::type{} );
+  BOOST_CHECK( ( not std::is_assignable< observable::sampler_meta, observable::sampler_meta >::type{} ) );
+  BOOST_CHECK( std::has_virtual_destructor< observable::sampler_meta >::type{} );
+}
+{
+  // default ctor
+  boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+  observable::sampler_meta tmp( oman );
+
+  //BOOST_CHECK( tmp.empty() );
+  //BOOST_CHECK_EQUAL( tmp.size(), 0ul );
+}
 !!!1348400.cpp!!!	report_manager_lifetime_test() : void
 //XX{
 //XX  // Static Lifetime method tests: virtual pattern
@@ -74,3 +187,202 @@ class observable_test_suite
 //XX  BOOST_CHECK( tmp.empty() );
 //XX  BOOST_CHECK_EQUAL( tmp.size(), 0ul );
 //XX}
+!!!1498928.cpp!!!	acceptance_observable_lifetime_test() : void
+{
+  // Static Lifetime method tests: virtual pattern
+
+  BOOST_CHECK( not std::is_default_constructible< observable::acceptance_observable >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< observable::acceptance_observable >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< observable::acceptance_observable >::type{} );
+  BOOST_CHECK( ( not std::is_assignable< observable::acceptance_observable, observable::acceptance_observable >::type{} ) );
+  BOOST_CHECK( std::has_virtual_destructor< observable::acceptance_observable >::type{} );
+}
+{
+  // factory ctor
+  std::map< std::string, std::string > params;
+  boost::shared_ptr< observable::tracked_observable > var( observable::acceptance_observable::make_sampler( params ) );
+
+  observable_test_suite::base_observable_method_test( var, "trial-rate" );
+}
+!!!1498800.cpp!!!	acceptance_observable_method_test() : void
+{
+  boost::shared_ptr< particle::particle_manager > pman = observable_test_suite::mockup_particle_manager();
+  boost::shared_ptr< geometry::geometry_manager > gman = observable_test_suite::mockup_geometry_manager();
+  utility::memory_sink sink;
+  // factory ctor
+  std::map< std::string, std::string > params;
+  boost::shared_ptr< observable::tracked_observable > var( observable::acceptance_observable::make_sampler( params ) );
+
+  observable::acceptance_observable *pvar = dynamic_cast< observable::acceptance_observable* >( var.get() );
+
+  BOOST_REQUIRE( pvar != nullptr );
+
+  std::vector< particle::change_hash > dummy_trials;
+  dummy_trials.push_back( { 0, 1, 1, 0 } ); // A 1 0
+  dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 0 1
+  dummy_trials.push_back( { 0, 1, 1, 1 } ); // C 1 0
+  dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 0 0
+  dummy_trials.push_back( { 0, 1, 1, 1 } ); // C 1 1
+  dummy_trials.push_back( { 0, 1, 1, 0 } ); // A 0 0
+  dummy_trials.push_back( { 0, 1, 1, 0 } ); // A 1 0
+  dummy_trials.push_back( { 0, 1, 1, 1 } ); // C 0 1
+  dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 1 0
+  dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 0 0
+  // Out first set of dummy trials
+  {
+    typedef boost::tuples::tuple< particle::change_hash, std::size_t, std::size_t, double, double > result_t;
+    std::vector< result_t > dummy_results;
+    dummy_results.push_back( result_t( { 0, 1, 1, 0 }, 2, 3, 0.66666666666667, 0.3 ) );
+    dummy_results.push_back( result_t( { 1, 1, 1, 0 }, 1, 4, 0.25, 0.4 ) );
+    dummy_results.push_back( result_t( { 0, 1, 1, 1 }, 2, 3, 0.66666666666667, 0.3 ) );
+
+    std::size_t counter = 0;
+    for( auto id : dummy_trials )
+    {
+      particle::change_set tmp;
+      tmp.id( id );
+      if( ( counter % 2 ) == 0 )
+      {
+        tmp.set_accept( true );
+      }
+      var->on_trial_end( tmp );
+      ++counter;
+    }
+    for( auto const& res : dummy_results )
+    {
+      BOOST_REQUIRE( pvar->has_sample( boost::tuples::get< 0 >( res ) ) );
+      BOOST_CHECK_EQUAL( pvar->get_sample( boost::tuples::get< 0 >( res ) ).first, boost::tuples::get< 1 >( res ) );
+      BOOST_CHECK_EQUAL( pvar->get_sample( boost::tuples::get< 0 >( res ) ).second, boost::tuples::get< 2 >( res ) );
+    }
+    var->on_sample( *pman, *gman );
+    for( auto const& res : dummy_results )
+    {
+      BOOST_REQUIRE( pvar->has_datum( boost::tuples::get< 0 >( res ) ) );
+      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).first.mean(), boost::tuples::get< 3 >( res ), 0.00000001 );
+      BOOST_CHECK_EQUAL( pvar->get_datum( boost::tuples::get< 0 >( res ) ).first.count(), 1ul );
+      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).second.mean(), boost::tuples::get< 4 >( res ), 0.00000001 );
+      BOOST_CHECK_EQUAL( pvar->get_datum( boost::tuples::get< 0 >( res ) ).second.count(), 1ul );
+    }
+  }
+  {
+    std::stringstream out;
+    var->on_report( out, sink );
+    // std::cout << out.str() << "\n";
+    BOOST_REQUIRE( sink.exists( "acceptance.dat" ) );
+    // std::string buf;
+    // sink.read( "acceptance.dat", buf );
+    // std::cout << buf << "\n";
+  }
+  // Second set of dummy trials
+  {
+    typedef boost::tuples::tuple< particle::change_hash, std::size_t, std::size_t, double, double, double, double > result_t;
+    std::vector< result_t > dummy_results;
+    dummy_results.push_back( result_t( { 0, 1, 1, 0 }, 0, 3, 0.33333333333333, 0.2222222222222, 0.3, 0.0 ) );
+    dummy_results.push_back( result_t( { 1, 1, 1, 0 }, 1, 4, 0.25, 0.0, 0.4, 0.0 ) );
+    dummy_results.push_back( result_t( { 0, 1, 1, 1 }, 2, 3, 0.66666666666667, 0.0, 0.3, 0.0 ) );
+
+    std::size_t counter = 0;
+    for( auto id : dummy_trials )
+    {
+      particle::change_set tmp;
+      tmp.id( id );
+      if( ( counter % 3 ) == 1 )
+      {
+        tmp.set_accept( true );
+      }
+      var->on_trial_end( tmp );
+      ++counter;
+    }
+    for( auto const& res : dummy_results )
+    {
+      BOOST_REQUIRE( pvar->has_sample( boost::tuples::get< 0 >( res ) ) );
+      BOOST_CHECK_EQUAL( pvar->get_sample( boost::tuples::get< 0 >( res ) ).first, boost::tuples::get< 1 >( res ) );
+      BOOST_CHECK_EQUAL( pvar->get_sample( boost::tuples::get< 0 >( res ) ).second, boost::tuples::get< 2 >( res ) );
+    }
+    var->on_sample( *pman, *gman );
+    for( auto const& res : dummy_results )
+    {
+      BOOST_REQUIRE( pvar->has_datum( boost::tuples::get< 0 >( res ) ) );
+      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).first.mean(), boost::tuples::get< 3 >( res ), 0.00000001 );
+      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).first.variance(), boost::tuples::get< 4 >( res ), 0.00000001 );
+      BOOST_CHECK_EQUAL( pvar->get_datum( boost::tuples::get< 0 >( res ) ).first.count(), 2ul );
+      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).second.mean(), boost::tuples::get< 5 >( res ), 0.00000001 );
+      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).second.variance(), boost::tuples::get< 6 >( res ), 0.00000001 );
+      BOOST_CHECK_EQUAL( pvar->get_datum( boost::tuples::get< 0 >( res ) ).second.count(), 2ul );
+    }
+  }
+  {
+    std::stringstream out;
+    var->on_report( out, sink );
+    // std::cout << out.str() << "\n";
+    BOOST_REQUIRE( sink.exists( "acceptance.dat" ) );
+    // std::string buf;
+    // sink.read( "acceptance.dat", buf );
+    // std::cout << buf << "\n";
+  }
+  // Third set of dummy trials with new id keys
+  //0 dummy_trials.push_back( { 0, 1, 1, 0 } ); // A 1
+  dummy_trials[ 1 ] = { 1, 1, 1, 1 };           // D 0
+  //2 dummy_trials.push_back( { 0, 1, 1, 1 } ); // C 1
+  //3 dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 0
+  //4 dummy_trials.push_back( { 0, 1, 1, 1 } ); // C 1
+  dummy_trials[ 5 ] = { 1, 1, 1, 1 };           // D 0
+  //6 dummy_trials.push_back( { 0, 1, 1, 0 } ); // A 1
+  dummy_trials[ 7 ] = { 1, 1, 1, 1 };            // D 0
+  //8 dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 1
+  //9 dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 0
+  // Out first set of dummy trials
+  {
+    typedef boost::tuples::tuple< particle::change_hash, std::size_t, std::size_t, double, double, double, double > result_t;
+    std::vector< result_t > dummy_results;
+    dummy_results.push_back( result_t( { 0, 1, 1, 0 }, 2, 2, 0.55555555555555558, 0.2592592592592593, 8.0/30.0, 0.00333333333333333 ) );
+    dummy_results.push_back( result_t( { 1, 1, 1, 0 }, 1, 3, 0.27777777777777778, 0.002314814814814815, 11.0/30.0, 0.00333333333333333 ) );
+    dummy_results.push_back( result_t( { 0, 1, 1, 1 }, 2, 2, 0.77777777777777779, 0.03703703703703704, 8.0/30.0, 0.00333333333333333 ) );
+    dummy_results.push_back( result_t( { 1, 1, 1, 1 }, 0, 3, 0.0, 0.0, 0.1, 0.03 ) );
+
+    std::size_t counter = 0;
+    for( auto id : dummy_trials )
+    {
+      particle::change_set tmp;
+      tmp.id( id );
+      if( ( counter % 2 ) == 0 )
+      {
+        tmp.set_accept( true );
+      }
+      var->on_trial_end( tmp );
+      ++counter;
+    }
+    for( auto const& res : dummy_results )
+    {
+      BOOST_REQUIRE( pvar->has_sample( boost::tuples::get< 0 >( res ) ) );
+      BOOST_CHECK_EQUAL( pvar->get_sample( boost::tuples::get< 0 >( res ) ).first, boost::tuples::get< 1 >( res ) );
+      BOOST_CHECK_EQUAL( pvar->get_sample( boost::tuples::get< 0 >( res ) ).second, boost::tuples::get< 2 >( res ) );
+    }
+    var->on_sample( *pman, *gman );
+    for( auto const& res : dummy_results )
+    {
+      BOOST_REQUIRE( pvar->has_datum( boost::tuples::get< 0 >( res ) ) );
+      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).first.mean(), boost::tuples::get< 3 >( res ), 0.00000001 );
+      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).first.variance(), boost::tuples::get< 4 >( res ), 0.00000001 );
+      BOOST_CHECK_EQUAL( pvar->get_datum( boost::tuples::get< 0 >( res ) ).first.count(), 3ul );
+      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).second.mean(), boost::tuples::get< 5 >( res ), 0.00000001 );
+      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).second.variance(), boost::tuples::get< 6 >( res ), 0.00000001 );
+      BOOST_CHECK_EQUAL( pvar->get_datum( boost::tuples::get< 0 >( res ) ).second.count(), 3ul );
+    }
+  }
+  {
+    std::stringstream out;
+    std::string canon_log = "          Trial  Accept.av Accept.var   Trial.av  Trial.var\n   (0, 1, 1, 0) 0.55555556 0.25925926 0.26666667 0.00333333\n   (0, 1, 1, 1) 0.77777778 0.03703704 0.26666667 0.00333333\n   (1, 1, 1, 0) 0.27777778 0.00231481 0.36666667 0.00333333\n   (1, 1, 1, 1) 0.00000000 0.00000000 0.10000000 0.03000000";
+    std::string canon_rep = "# UUID:  \n# TITLE: \"Trial acceptance and rate data.\" \n# FIELDS: TRIAL ACCEPT.MEAN ACCEPT.VAR ATTEMPT.MEAN ATTEMPT.VARIANCE \n# UNITS: CHANGE_HASH RATE RATE RATE RATE \n(0, 1, 1, 0) 0.555556 0.259259 0.266667 0.00333333 \n(0, 1, 1, 1) 0.777778 0.037037 0.266667 0.00333333 \n(1, 1, 1, 0) 0.277778 0.00231481 0.366667 0.00333333 \n(1, 1, 1, 1) 0 0 0.1 0.03 ";
+    var->on_report( out, sink );
+    //std::cout << out.str() << "\n";
+    BOOST_CHECK_LT( out.str().find( canon_log ), out.str().size() );
+    BOOST_REQUIRE( sink.exists( "acceptance.dat" ) );
+    std::string buf;
+    sink.read( "acceptance.dat", buf );
+    BOOST_CHECK_LT( buf.find( canon_rep ), buf.size() );
+    // std::cout << buf << "\n";
+  }
+}
+
+
