@@ -1,124 +1,4 @@
 class specie_count
-!!!487857.cpp!!!	description(inout out : ostream) : void
-out << "SAMPLER [" << this->type_label_() << "]\n";
-out << " Sample average specie numbers.\n";
-!!!487857.python!!!	description(inout out : ostream) : void
-print >>os, "[observable]",self.type_label()
-print >>os, " Sample the average particle number in the whole"
-print >>os, " cell of each specie."
-print >>os, " Provides signals:",self.type_label()+"-mean",self.type_label()+"-variance"
-pass
-!!!672944.cpp!!!	get_value() : boost::any
-boost::any result = &this->count_;
-return result;
-!!!365361.cpp!!!	make_sampler(in paramset : string, inout rep : report_manager) : void
-UTILITY_INPUT( paramset.empty(), "The "+specie_count::type_label_()+" sampler takes no parameters.", core::strngs::sampler_label() );
-boost::shared_ptr< sampled_observable > smplr(new specie_count);
-rep.add_sample(smplr);
-!!!594865.cpp!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
-if (not this->count_.empty())
-{
-   boost::format fmt_head(" %3s %7s %8s %8s %8s %8s");
-   out << boost::format(fmt_head) % "SPC" % "COUNT" % "[]" % "<COUNT>" % "<[]>" % "VAR" << "\n";
-   const static boost::format fmt_row1(" %3s %7d %8.4f ######## ######## ########");
-   const static boost::format fmt_row2(" %3s %7d %8.4f %8.4f %8.4f %8.4f");
-   for (size_t ispec = 0; ispec != this->count_.size(); ++ispec)
-   {
-      auto const& runr = this->count_[ispec];
-      auto const& spc = sim.get_specie(ispec);
-      const double count_to_conc = core::constants::to_SI()/sim.volume( ispec );
-      if (runr.count() == 0)
-      {
-         out << boost::format(fmt_row1) % spc.label() % spc.count() % (spc.count()*count_to_conc) << "\n";
-      }
-      else
-      {
-         out << boost::format(fmt_row2) % spc.label() % spc.count() % (spc.count()*count_to_conc) % runr.mean() % (runr.mean()*count_to_conc) % runr.variance() << "\n";
-      }
-   }
-
-   {
-      // Write out specie count data
-      const std::string filename { "specie-count.dat" };
-
-      const std::size_t loopindex { sim.get_outer_loop_index() };
-
-      core::output_series dset { sim.run_uuid() };
-      dset.set_title( "Time series specie counts" );
-
-      dset.push_back_entry( core::output_field( "INDEX", "ORDINAL", [loopindex](std::ostream& os, std::size_t)
-      {
-         os << loopindex;
-      } ) );
-
-      for (std::size_t ispec = 0; ispec != this->count_.size(); ++ispec)
-      {
-         auto const& spc = sim.get_specie( ispec );
-         auto estmt = this->count_[ ispec ];
-         dset.push_back_entry( core::output_field( spc.label() + "_MEAN" , "COUNT", [estmt](std::ostream& os, std::size_t)
-         {
-            os << estmt.mean();
-         } ) );
-         dset.push_back_entry( core::output_field( spc.label() + "_VAR" , "COUNT", [estmt](std::ostream& os, std::size_t)
-         {
-            os << estmt.variance();
-         } ) );
-      }
-
-      dset.write( filename, reporter.get_sink(), sim.report_interval() == loopindex );
-   }
-}
-!!!594865.python!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
-if self.count_ != None:
-  print >>out, " %3s %7s %8s %8s %8s %8s"%("SPC","COUNT","[]","<COUNT>","<[]>","VAR")
-  from constants import constants
-  for ispec, (runr, spc) in enumerate( zip( self.count_, sim.get_species() ) ):
-    count_to_conc = constants.to_SI()/sim.get_cell_region().volume( ispec )
-    if spc.count == None:
-      print >>out," %3s ########"% (spc.label())
-    else:
-      if runr.count() == 0:
-        print >>out," %3s %7d %8.4f ######## ######## ########"% (spc.label(),spc.count(),(spc.count()*count_to_conc))
-      else:
-        print >>out," %3s %7d %8.4f %8.4f %8.4f %8.4f"% (spc.label(),spc.count(),(spc.count()*count_to_conc),runr.mean(),(runr.mean()*count_to_conc),runr.variance())
-pass
-
-!!!304177.cpp!!!	on_sample(in sim : simulator) : void
-size_t ispec = 0;
-for (auto const& spc : sim.get_species())
-{
-  this->count_[ispec].append( spc.count() );
-  ++ispec;
-}
-!!!304177.python!!!	on_sample(in sim : simulator) : void
-for m, s in zip( self.count_, sys.get_species() ):
-  m.append( s.count() )
-# publish data
-if len( self.mean_signal_ ) != 0:
-  self.mean_signal_( self.count_ )
-pass
-!!!304305.cpp!!!	prepare(inout sim : simulator) : void
-if (this->count_.size() != sim.specie_count())
-{
-  this->count_.clear();
-}
-if (this->count_.empty())
-{
-  this->count_.resize(sim.specie_count());
-}
-else
-{
-  for (auto &mean : this->count_) mean.reset();
-}
-!!!304305.python!!!	prepare(inout sim : simulator) : void
-if not self.count_ or len(self.count_) !=  sim.specie_count():
-  self.count_ = []
-  from estimater import estimater
-  for i in range( sim.specie_count() ):
-    self.count_.append( estimater() )
-else:
-  for mean in self.count_:
-    mean.reset()
 !!!594993.python!!!	__init__(inout self : , in sim : simulator)
 sim.add_observable( self );
 pass
@@ -134,6 +14,127 @@ if self.mean_signal_ != None and len(self.mean_signal_) != 0:
   self.mean_signal_ = None
 pass
 
+!!!1512112.cpp!!!	add_definition(inout meta : sampler_meta) : void
+std::unique_ptr< sampler_definition > result( new sampler_definition( type_label_(), &specie_count::make_sampler ) );
+// no extra parameters
+meta.add_sampler_type( result );
+
+!!!487857.cpp!!!	description(inout out : ostream) : void
+out << "[sampler] " << this->type_label_() << "\n";
+out << " Sample average specie numbers.\n";
+!!!487857.python!!!	description(inout out : ostream) : void
+print >>os, "[observable]",self.type_label()
+print >>os, " Sample the average particle number in the whole"
+print >>os, " cell of each specie."
+print >>os, " Provides signals:",self.type_label()+"-mean",self.type_label()+"-variance"
+pass
+!!!672944.cpp!!!	get_value() : boost::any
+boost::any result = &this->count_;
+return result;
+!!!365361.cpp!!!	make_sampler(in paramset : string) : base_observable
+UTILITY_INPUT( paramset.empty(), "The "+specie_count::type_label_()+" sampler takes no parameters.", core::strngs::sampler_label() );
+boost::shared_ptr< base_observable > smplr(new specie_count);
+return smplr;
+!!!594865.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
+if( this->count_.count() > 0 )
+{
+  boost::format fmt_head( " %3s %10s %10s %10s" );
+  out << boost::format( fmt_head ) % "SPC" % "<COUNT>" % "VAR" % "<[]>" << "\n";
+  const static boost::format fmt_row( " %3d %10.5f %10.4f %10.7f" );
+  for( size_t idx = 0; idx != this->specie_list_.size(); ++idx )
+  {
+    const double count_to_conc = core::constants::to_SI() / this->volume( idx );
+    out << boost::format( fmt_row ) % this->specie_key( idx ) % this->mean( idx ) % this->variance( idx ) % (this->mean( idx )/count_to_conc) << "\n";
+  }
+  {
+    // Write out specie count data
+    const std::string filename { "specie-count.dat" }; 
+    const std::size_t index { this->count_.count() };
+
+    core::output_series dset { sink.uuid() };
+    dset.set_title( "Time series specie counts" );
+
+    dset.push_back_entry( core::output_field( "INDEX", "ORDINAL", [index]( std::ostream& os, std::size_t )
+    {
+      os << index;
+    } ) );
+
+    for( size_t idx = 0; idx != this->specie_list_.size(); ++idx )
+    {
+      std::stringstream ss;
+      ss << "SPC[" << this->specie_key( idx ) << "]";
+      double mean = this->mean( idx );
+      double var = this->variance( idx );
+      dset.push_back_entry( core::output_field( ss.str() + "_MEAN" , "COUNT", [mean]( std::ostream& os, std::size_t )
+      {
+        os << mean;
+      } ) );
+      dset.push_back_entry( core::output_field( ss.str() + "_VAR" , "COUNT", [var]( std::ostream& os, std::size_t )
+      {
+        os << var;
+      } ) );
+    }
+
+    dset.write( filename, sink, not sink.exists( filename ) );
+  }
+}
+
+!!!594865.python!!!	on_report(inout out : ostream, inout sink : base_sink) : void
+if self.count_ != None:
+  print >>out, " %3s %7s %8s %8s %8s %8s"%("SPC","COUNT","[]","<COUNT>","<[]>","VAR")
+  from constants import constants
+  for ispec, (runr, spc) in enumerate( zip( self.count_, sim.get_species() ) ):
+    count_to_conc = constants.to_SI()/sim.get_cell_region().volume( ispec )
+    if spc.count == None:
+      print >>out," %3s ########"% (spc.label())
+    else:
+      if runr.count() == 0:
+        print >>out," %3s %7d %8.4f ######## ######## ########"% (spc.label(),spc.count(),(spc.count()*count_to_conc))
+      else:
+        print >>out," %3s %7d %8.4f %8.4f %8.4f %8.4f"% (spc.label(),spc.count(),(spc.count()*count_to_conc),runr.mean(),(runr.mean()*count_to_conc),runr.variance())
+pass
+
+!!!304177.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+auto const& ens = pman.get_ensemble(); 
+std::vector< double > sample( this->specie_list_.size() );
+for( std::size_t idx = 0; idx != this->specie_list_.size(); ++idx )
+{
+  sample[ idx ] = double( ens.specie_count( this->specie_list_[ idx ].first ) );
+}
+UTILITY_CHECK( sample.size() == this->count_.size(), "Mismatched array sizes" );
+this->count_.append( sample );
+!!!304177.python!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+for m, s in zip( self.count_, sys.get_species() ):
+  m.append( s.count() )
+# publish data
+if len( self.mean_signal_ ) != 0:
+  self.mean_signal_( self.count_ )
+pass
+!!!304305.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in sman : report_manager) : void
+this->specie_list_.clear();
+this->count_.clear();
+for( std::size_t ispec = 0; ispec != pman.specie_count(); ++ispec )
+{
+  if( pman.get_specie( ispec ).is_solute() )
+  {
+    std::pair< std::size_t, double > entry( ispec, gman.system_region().volume( pman.get_specie( ispec ).radius() ) );
+    this->specie_list_.push_back( entry );
+  }
+}
+// is no solute an error?
+if( not this->specie_list_.empty() )
+{
+  this->count_.resize( this->specie_list_.size() );
+}
+!!!304305.python!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in sman : report_manager) : void
+if not self.count_ or len(self.count_) !=  sim.specie_count():
+  self.count_ = []
+  from estimater import estimater
+  for i in range( sim.specie_count() ):
+    self.count_.append( estimater() )
+else:
+  for mean in self.count_:
+    mean.reset()
 !!!217008.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
 wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
 
