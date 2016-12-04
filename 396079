@@ -1,6 +1,6 @@
 format 75
 "observable" // observable
-  revision 197
+  revision 199
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -2999,9 +2999,8 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
-      comment "Observe and report the average number of particles, with irregular sampling.
-
-(TODO: An exact average is possible by sampling every trial.)"
+      comment " Observe and report the average number of particles from periodic sampling.
+"
       classrelation 904624 // <generalisation>
 	relation 903728 ---|>
 	  a public
@@ -3481,7 +3480,466 @@ ${docstring}${body}
 
  \\pre idx < size"
       end
+    end
 
+    class 612016 "specie_region_count"
+      visibility protected 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl "class ${name}(object):
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Observe and report the average number of particles per region with
+ periodic sampling."
+      classrelation 917808 // <generalisation>
+	relation 916912 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 917808 // <generalisation>
+	  b parent class_ref 1144367 // base_observable
+      end
+
+      classrelation 917936 // <dependency>
+	relation 917040 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 917936 // <dependency>
+	  b parent class_ref 271792 // output_series
+      end
+
+      classrelation 918064 // <dependency>
+	relation 917168 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 918064 // <dependency>
+	  b parent class_ref 1016239 // strngs
+      end
+
+      classrelation 918192 // count_ (<directional composition>)
+	relation 917296 *-->
+	  a role_name "count_" multiplicity "1" private
+	    comment " The particle count estimates."
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	    python "${comment}${self}${name} = ${type}()
+"
+	    classrelation_ref 918192 // count_ (<directional composition>)
+	  b parent class_ref 175665 // estimate_array
+      end
+
+      attribute 664496 "volume_"
+	private explicit_type "double"
+	multiplicity "*"
+	stereotype "vector"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${stereotype}()
+"
+	idl_decl ""
+	comment " The per-region volumes for each specie. vol(reg,spc) = volume_[ ireg * nspec = ispec ]."
+      end
+
+      attribute 664752 "nspec_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The number of active species."
+      end
+
+      extra_member 618800 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1532592 "specie_region_count"
+	protected explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	
+	
+	comment " For serialization and factory"
+      end
+
+      operation 1532976 "~specie_region_count"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	
+	
+      end
+
+      classrelation 918320 // <dependency>
+	relation 917424 -_->
+	  stereotype "friend"
+	  a package
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 918320 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      operation 1533104 "serialize"
+	public explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "size_t"
+	cpp_decl "    ${comment}template< class ${t0} > ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ${p0} & boost::serialization::base_object< base_observable >(*this);
+  ar & this->count_; ar & this->volume_; ar & this->nspec_;
+}
+"
+	
+	
+	
+	
+      end
+
+      extra_member 618928 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1533232 "add_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 1144111 // sampler_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add definition for generating objects of this 
+ class to the meta object."
+      end
+
+      operation 1533360 "description"
+	const public explicit_return_type "void"
+	nparams 1
+	  param inout name "out" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Log message descibing the observable and its parameters"
+      end
+
+      operation 1533488 "get_label"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return ${class}::type_label_();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}return \"specie-count\"
+"
+	
+      end
+
+      operation 1533616 "get_value"
+	const public explicit_return_type "boost::any"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Retrieve the current specie count estimates
+
+ \\return type estimater_array const*const"
+      end
+
+      operation 1533744 "make_sampler"
+	class_operation public return_type class_ref 1144367 // base_observable
+	nparams 1
+	  param in name "paramset" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}std::map< ${t0}, ${t0} > const& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}std::map< ${t0}, ${t0} > const& ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Generate specie_count object using data in paramset. As this
+ sampler takes no special parameters the paramset should be
+ empty."
+      end
+
+      operation 1533872 "on_report"
+	public explicit_return_type "void"
+	nparams 2
+	  param inout name "out" explicit_type "ostream"
+	  param inout name "sink" type class_ref 313520 // base_sink
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}, ${p1}${v1}${)}:
+${docstring}${body}
+"
+	
+	comment " Write the average specie counts to out and the data sink."
+      end
+
+      operation 1534000 "on_sample"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "pman" type class_ref 446128 // particle_manager
+	  param in name "gman" type class_ref 452656 // geometry_manager
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Sample average particle numbers."
+      end
+
+      operation 1534128 "prepare"
+	public explicit_return_type "void"
+	nparams 3
+	  param in name "pman" type class_ref 446128 // particle_manager
+	  param in name "gman" type class_ref 452656 // geometry_manager
+	  param in name "sman" type class_ref 340656 // report_manager
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, const ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, const ${t2} & ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Prepare the sampler for a simulation run. Reset any existing data."
+      end
+
+      operation 1534256 "type_label_"
+	class_operation public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}{
+  return ${type}(\"specie-region-count\");
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 1534384 "do_write_document"
+	const cpp_virtual private explicit_return_type "void"
+	nparams 2
+	  param inout name "wr" type class_ref 163632 // input_document
+	  param in name "ix" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Write an input file section.
+
+ only throw possible should be from os.write() operation"
+      end
+
+      extra_member 619056 "LOCAL METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1534512 "empty"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->count_.${name}();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Do we have any estimates of specie count"
+      end
+
+      operation 1534640 "mean"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "idx" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->count_.${name}( ${p0} );
+}
+
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Mean count of specie at given index
+
+ \\pre idx < size"
+      end
+
+      operation 1534768 "size"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->count_.${name}();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " How many estimates do we have"
+      end
+
+      operation 1535024 "variance"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "idx" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->count_.${name}( ${p0} );
+}
+
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Variance of the count of specie at given index
+
+ \\pre idx < size"
+      end
+
+      operation 1535152 "volume"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "idx" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->volume_[ ${p0} ];
+}
+
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Mean count of specie at given index
+
+ \\pre idx < size"
+      end
     end
 
     activity 128177 "ALPHA"
@@ -7449,12 +7907,69 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
+    artifact 563632 "specie_region_count"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_KEY( observable::specie_region_count );
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// manual includes
+#include \"particle/ensemble.hpp\"
+// -
+#include <boost/format.hpp>
+// --
+${namespace_start}
+${members}
+${namespace_end}
+
+BOOST_CLASS_EXPORT_IMPLEMENT( observable::specie_region_count );"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 612016 // specie_region_count
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
     artifact 769583 "libionch_observable"
       stereotype "library"
       associated_artifacts
 	artifact_ref 181041 // specie_count
 	artifact_ref 351792 // report_manager
 	artifact_ref 377904 // acceptance_observable
+	artifact_ref 563632 // specie_region_count
 	artifact_ref 631215 // base_observable
 	artifact_ref 789807 // sampler_meta
       end

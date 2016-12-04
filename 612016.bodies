@@ -1,0 +1,165 @@
+class specie_region_count
+!!!1533232.cpp!!!	add_definition(inout meta : sampler_meta) : void
+std::unique_ptr< sampler_definition > result( new sampler_definition( type_label_(), &specie_region_count::make_sampler ) );
+// no extra parameters
+meta.add_sampler_type( result );
+
+!!!1533360.cpp!!!	description(inout out : ostream) : void
+out << "[sampler] " << this->type_label_() << "\n";
+out << " Sample average per-region specie numbers.\n";
+!!!1533360.python!!!	description(inout out : ostream) : void
+print >>os, "[observable]",self.type_label()
+print >>os, " Sample the average particle number in the whole"
+print >>os, " cell of each specie."
+print >>os, " Provides signals:",self.type_label()+"-mean",self.type_label()+"-variance"
+pass
+!!!1533616.cpp!!!	get_value() : boost::any
+boost::any result = &this->count_;
+return result;
+!!!1533744.cpp!!!	make_sampler(in paramset : string) : base_observable
+UTILITY_INPUT( paramset.empty(), "The "+specie_region_count::type_label_()+" sampler takes no parameters.", core::strngs::sampler_label() );
+boost::shared_ptr< base_observable > smplr(new specie_region_count);
+return smplr;
+!!!1533872.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
+if( this->count_.count() > 0 )
+{
+  boost::format fmt_head( " %3s %3s %10s %10s %10s" );
+  out << boost::format( fmt_head ) % "REG" % "SPC" % "<COUNT>" % "VAR" % "<[]>" << "\n";
+  const static boost::format fmt_row( " %3d %3d %10.5f %10.4f %10.7f" );
+  const std::size_t nreg = this->count_.size() / this->nspec_;
+  UTILITY_CHECK( ( this->count_.size() % this->nspec_ ) == 0, "Array size is not a multiple of the number of species." );
+  for( size_t ireg = 0; ireg != nreg; ++ireg )
+  {
+    const std::size_t offset = ireg * this->nspec_;
+    for( size_t ispec = 0; ispec != this->nspec_; ++ispec )
+    {
+      const double count_to_conc = core::constants::to_SI() / this->volume( offset + ispec );
+      out << boost::format( fmt_row ) % ireg % ispec % this->mean( offset + ispec ) % this->variance( offset + ispec ) % ( this->mean( offset + ispec )/count_to_conc ) << "\n";
+    }
+  }
+  {
+    // Write out specie count data
+    const std::string filename { this->type_label_() + ".dat" };
+    const std::size_t index { this->count_.count() };
+
+    core::output_series dset { sink.uuid() };
+    dset.set_title( "Time series pre-region specie counts" );
+
+    dset.push_back_entry( core::output_field( "INDEX", "ORDINAL", [index]( std::ostream& os, std::size_t )
+    {
+      os << index;
+    } ) );
+
+    for( size_t ireg = 0; ireg != nreg; ++ireg )
+    {
+      const std::size_t offset = ireg * this->nspec_;
+      for( size_t ispec = 0; ispec != this->nspec_; ++ispec )
+      {
+        std::stringstream ss;
+        ss << "REGSPC[" << ireg << "," << ispec << "]";
+        double mean = this->mean( offset + ispec );
+        double var = this->variance( offset + ispec );
+        dset.push_back_entry( core::output_field( ss.str() + "_MEAN" , "COUNT", [mean]( std::ostream& os, std::size_t )
+        {
+          os << mean;
+        } ) );
+        dset.push_back_entry( core::output_field( ss.str() + "_VAR" , "COUNT", [var]( std::ostream& os, std::size_t )
+        {
+          os << var;
+        } ) );
+      }
+    }
+    dset.write( filename, sink, not sink.exists( filename ) );
+  }
+}
+
+
+
+!!!1533872.python!!!	on_report(inout out : ostream, inout sink : base_sink) : void
+if self.count_ != None:
+  print >>out, " %3s %7s %8s %8s %8s %8s"%("SPC","COUNT","[]","<COUNT>","<[]>","VAR")
+  from constants import constants
+  for ispec, (runr, spc) in enumerate( zip( self.count_, sim.get_species() ) ):
+    count_to_conc = constants.to_SI()/sim.get_cell_region().volume( ispec )
+    if spc.count == None:
+      print >>out," %3s ########"% (spc.label())
+    else:
+      if runr.count() == 0:
+        print >>out," %3s %7d %8.4f ######## ######## ########"% (spc.label(),spc.count(),(spc.count()*count_to_conc))
+      else:
+        print >>out," %3s %7d %8.4f %8.4f %8.4f %8.4f"% (spc.label(),spc.count(),(spc.count()*count_to_conc),runr.mean(),(runr.mean()*count_to_conc),runr.variance())
+pass
+
+!!!1534000.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+auto const& ens = pman.get_ensemble();
+const std::size_t nspec = pman.specie_count();
+const std::size_t nreg = gman.region_count();
+std::vector< std::size_t > sample( this->count_.size() );
+std::vector< double > radii( nspec );
+UTILITY_CHECK( sample.size() == nspec * nreg, "Estimate array is wrong size for simulation" );
+// Region '0' is always all of cell
+for( std::size_t ispec = 0; ispec != nspec; ++ispec )
+{
+  sample[ ispec ] = ens.specie_count( ispec );
+  radii[ ispec ] = pman.get_specie( ispec ).radius();
+}
+if( nreg > 1 )
+{
+  for( std::size_t ireg = 1; ireg != nreg; ++ireg )
+  {
+    const std::size_t offset = ireg * nspec;
+    auto const& reg = gman.get_region( ireg );
+    for( std::size_t idx = 0; idx != ens.size(); ++idx )
+    {
+      const std::size_t ispec = ens.key( idx );
+      if( ispec != particle::specie_key::nkey )
+      {
+        if( reg.is_inside( ens.position( idx ), radii[ ispec ] ) )
+        {
+          ++sample[ offset + ispec ];
+        }
+      }
+    }
+  }
+}
+// we use "unsafe" append as we know "sample" is right size.
+this->count_.append( sample.begin(), sample.end() );
+!!!1534000.python!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+for m, s in zip( self.count_, sys.get_species() ):
+  m.append( s.count() )
+# publish data
+if len( self.mean_signal_ ) != 0:
+  self.mean_signal_( self.count_ )
+pass
+!!!1534128.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in sman : report_manager) : void
+this->count_.clear();
+this->nspec_ = pman.specie_count();
+const std::size_t nreg = gman.region_count();
+this->volume_.resize( this->nspec_ * nreg );
+std::vector< double > radii( this->nspec_ );
+for( std::size_t ispec = 0; ispec != pman.specie_count(); ++ispec )
+{
+  radii[ ispec ] = pman.get_specie( ispec ).radius();
+}
+for( std::size_t ireg = 0; ireg != gman.region_count(); ++ireg )
+{
+  const std::size_t offset = ireg * this->nspec_;
+  auto const& reg = gman.get_region( ireg );
+  for( std::size_t ispec = 0; ispec != this->nspec_; ++ispec )
+  {
+    this->volume_[ offset + ispec ] = reg.volume( radii[ ispec ] );
+  }
+}
+this->count_.resize( this->nspec_ * nreg );
+!!!1534128.python!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in sman : report_manager) : void
+if not self.count_ or len(self.count_) !=  sim.specie_count():
+  self.count_ = []
+  from estimater import estimater
+  for i in range( sim.specie_count() ):
+    self.count_.append( estimater() )
+else:
+  for mean in self.count_:
+    mean.reset()
+!!!1534384.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
+
