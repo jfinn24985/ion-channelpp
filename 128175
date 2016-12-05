@@ -1,6 +1,6 @@
 format 75
 "utility" // utility
-  revision 224
+  revision 225
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -5152,6 +5152,18 @@ ${docstring}${members}
  sampled range exceeds the expected range."
       end
 
+      attribute 677808 "sampling_"
+	private explicit_type "bool"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Is this histogram sampling?"
+      end
+
       class 592304 "bin_iterator"
 	visibility package 
 	cpp_decl "${comment}${template}class ${name}: public std::iterator<std::random_access_iterator_tag,double>
@@ -5914,6 +5926,7 @@ ${docstring}${body}
 , data_()
 , sample_()
 , extendable_()
+, sampling_( false )
 {}
 "
 	
@@ -6028,6 +6041,7 @@ ${docstring}${body}
 , data_( std::move( ${p0}.data_ ) )
 , sample_()
 , extendable_( std::move( ${p0}.extendable_ ) )
+, sampling_( std::move( ${p0}.sampling_ ) )
 {}"
 	
 	
@@ -6047,6 +6061,7 @@ ${docstring}${body}
 , data_( ${p0}.data_ )
 , sample_()
 , extendable_( ${p0}.extendable_ )
+, sampling_( ${p0}.sampling_ )
 {}
 "
 	
@@ -6097,6 +6112,7 @@ ${docstring}${body}
   std::swap( this->converter_, ${p0}.converter_ );
   std::swap( this->data_, ${p0}.data_ );
   std::swap( this->extendable_, ${p0}.extendable_ );
+  std::swap( this->sampling_, ${p0}.sampling_ );
 }
 
 "
@@ -6129,6 +6145,7 @@ ${docstring}${body}
     ar & converter_;
     ar & data_;
     ar & extendable_;
+    ar & sampling_;
   };
 "
 	
@@ -6183,6 +6200,70 @@ ${docstring}${body}
 	
       end
 
+      operation 1436208 "begin_sample"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Initialize the sampling subobject.
+
+ The correct way to use this method is in combination with
+ sample_datum and end_sample. e.g.
+ '''
+   begin_sample (call once)
+   ...
+   sample_datum (0,*) calls
+   ...
+   end_sample (call once)
+ '''
+
+"
+      end
+
+      operation 1484976 "end_sample"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  this->data_.append( this->sample_.begin(), this->sample_.end() );
+  this->sampling_ = false;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Copy data from the sampling subobject to the estimate
+ array object.
+
+ The correct way to use this method is in combination with
+ sample_datum and end_sample. e.g.
+ '''
+   begin_sample (call once)
+   ...
+   sample_datum (0,*) calls
+   ...
+   end_sample (call once)
+ '''
+
+"
+      end
+
       operation 1436080 "extend"
 	public explicit_return_type "void"
 	nparams 1
@@ -6204,6 +6285,22 @@ ${docstring}${body}
  method is independent of is_auto_extendable.
 
  \\pre not in_range( val )"
+      end
+
+      operation 1556400 "is_sampling"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->sampling_;
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Is this in sampling phase?"
       end
 
       operation 1438000 "merge"
@@ -6230,6 +6327,25 @@ ${docstring}${body}
 
  Returns false if merge was not possible.
 "
+      end
+
+      operation 1556912 "reset"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Reset the objects state, size should remain constant"
       end
 
       operation 1435952 "sample"
@@ -6276,69 +6392,6 @@ ${docstring}${body}
 "
 	
 	comment " Add one datum to the sampling subobject.
-
- The correct way to use this method is in combination with
- sample_datum and end_sample. e.g.
- '''
-   begin_sample (call once)
-   ...
-   sample_datum (0,*) calls
-   ...
-   end_sample (call once)
- '''
-
-"
-      end
-
-      operation 1436208 "begin_sample"
-	public explicit_return_type "void"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Initialize the sampling subobject.
-
- The correct way to use this method is in combination with
- sample_datum and end_sample. e.g.
- '''
-   begin_sample (call once)
-   ...
-   sample_datum (0,*) calls
-   ...
-   end_sample (call once)
- '''
-
-"
-      end
-
-      operation 1484976 "end_sample"
-	public explicit_return_type "void"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  this->data_.append( this->sample_.begin(), this->sample_.end() );
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Copy data from the sampling subobject to the estimate
- array object.
 
  The correct way to use this method is in combination with
  sample_datum and end_sample. e.g.
