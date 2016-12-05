@@ -1,6 +1,6 @@
 format 75
 "observable" // observable
-  revision 200
+  revision 201
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -2530,6 +2530,15 @@ ${docstring}${members}
 	  b parent class_ref 353840 // tracked_observable
       end
 
+      classrelation 938288 // <dependency>
+	relation 937392 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 938288 // <dependency>
+	  b parent class_ref 278960 // output_dataset
+      end
+
       classrelation 299441 // boltzmann_factor_ (<directional composition>)
 	relation 299185 *-->
 	  a role_name "boltzmann_factor_" multiplicity "1" private
@@ -2552,6 +2561,123 @@ ${docstring}${members}
 "
 	    classrelation_ref 299313 // energy_change_ (<directional composition>)
 	  b parent class_ref 176049 // estimater
+      end
+
+      classrelation 938160 // energy_ (<directional composition>)
+	relation 937264 *-->
+	  a role_name "energy_" multiplicity "1" private
+	    comment "Histogram of the energy"
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	    python "${comment}${self}${name} = ${type}()
+"
+	    classrelation_ref 938160 // energy_ (<directional composition>)
+	  b parent class_ref 585776 // histogram
+      end
+
+      extra_member 632624 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1556272 "metropolis_sampler"
+	private explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+: tracked_observable()
+, boltzmann_factor_()
+, energy_change_()
+, energy_( 0.0, 1.0, 0.01, true )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " For serialization and factory"
+      end
+
+      operation 173745 "~metropolis_sampler"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} = default;"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 147761 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 173489 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+  ${p0} & boost::serialization::base_object< tracked_observable >(*this);
+  ${p0} & boltzmann_factor_;
+  ${p0} & energy_change_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 632496 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1556016 "add_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 1144111 // sampler_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add definition for generating objects of this 
+ class to the meta object."
       end
 
       operation 487601 "description"
@@ -2577,7 +2703,7 @@ ${docstring}${body}
       operation 174129 "get_label"
 	const public explicit_return_type "string"
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}
 {
@@ -2617,30 +2743,16 @@ energy change.
       end
 
       operation 175025 "make_sampler"
-	class_operation public explicit_return_type "void"
-	nparams 2
+	class_operation public return_type class_ref 353840 // tracked_observable
+	nparams 1
 	  param in name "param_set" explicit_type "string"
-	  param inout name "rep" type class_ref 340656 // report_manager
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::map< ${t0}, ${t0} >& ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}{
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${)}${const}${volatile}${throw}
+{
   ${body}
 }
 "
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
-      operation 173745 "~metropolis_sampler"
-	cpp_virtual public explicit_return_type ""
-	nparams 0
-	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} = default;"
 	
 	
 	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
@@ -2653,7 +2765,7 @@ ${docstring}${body}
 	cpp_virtual public explicit_return_type "void"
 	nparams 1
 	  param in name "trial" type class_ref 986543 // change_set
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
 {
@@ -2669,15 +2781,35 @@ ${docstring}${body}
 	comment "Collect information about the a_trial move"
       end
 
+      operation 1556144 "on_sample"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "pman" type class_ref 446128 // particle_manager
+	  param in name "gman" type class_ref 452656 // geometry_manager
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Accumulate data after a sequence of trials."
+      end
+
       operation 174769 "on_report"
 	public explicit_return_type "void"
-	nparams 3
-	  param in name "sim" type class_ref 1129135 // simulator
+	nparams 2
 	  param inout name "out" explicit_type "ostream"
-	  param inout name "reporter" type class_ref 340656 // report_manager
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
+	  param inout name "sink" type class_ref 313520 // base_sink
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -2686,16 +2818,18 @@ ${docstring}${body}
 	
 	
 	
-	comment "Reporting operations."
+	comment " Reporting operations."
       end
 
       operation 174641 "prepare"
 	cpp_virtual public explicit_return_type "void"
-	nparams 1
-	  param inout name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+	nparams 3
+	  param in name "pman" type class_ref 446128 // particle_manager
+	  param in name "gman" type class_ref 452656 // geometry_manager
+	  param in name "sman" type class_ref 340656 // report_manager
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, const ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, const ${t2} & ${p2}${)}${const}${throw}
 {
   ${body}
 }
@@ -2706,38 +2840,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment "Prepare for a main simulation loop"
-      end
-
-      extra_member 147761 "friend"
-	
-	cpp "
-  friend class boost::serialization::access;" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      operation 173489 "serialize"
-	stereotype "template"
-	cpp_inline private explicit_return_type "void"
-	nparams 2
-	  param inout name "ar" explicit_type "Archive"
-	  param in name "version" explicit_type "unsigned int"
-	cpp_decl "    ${comment}template<class Archive>
-  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
-  ${p0} & boost::serialization::base_object< tracked_observable >(*this);
-  ${p0} & boltzmann_factor_;
-  ${p0} & energy_change_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
+	comment " Prepare for a main simulation loop"
       end
 
       operation 174385 "type_label_"
@@ -2777,6 +2880,63 @@ ${docstring}${body}
 "
 	
 	comment " Add type of sampler to wr[ix] document section"
+      end
+
+      extra_member 632368 "LOCAL METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1556656 "boltzmann_factor"
+	const public return_type class_ref 176049 // estimater
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->${name}_;
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The boltzmann estimater"
+      end
+
+      operation 1556784 "energy_change"
+	const public return_type class_ref 176049 // estimater
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->${name}_;
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The log( -energy ) estimater"
+      end
+
+      operation 1556528 "energy"
+	const public return_type class_ref 585776 // histogram
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->${name}_;
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The histogram of log( -E )"
       end
     end
 
@@ -7796,6 +7956,9 @@ ${declarations}
 ${namespace_start}
 ${definition}
 ${namespace_end}
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_KEY( observable::metropolis_sampler );
 #endif
 "
       cpp_src "${comment}
@@ -7813,8 +7976,7 @@ ${namespace_start}
 ${members}
 ${namespace_end}
 
-#include <boost/serialization/export.hpp>
-BOOST_CLASS_EXPORT_GUID(observable::metropolis_sampler, \"observable::metropolis_observable\");
+BOOST_CLASS_EXPORT_IMPLEMENT( observable::metropolis_sampler );
 
 "
       associated_classes
@@ -8111,6 +8273,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     artifact 769583 "libionch_observable"
       stereotype "library"
       associated_artifacts
+	artifact_ref 135345 // metropolis_sampler
 	artifact_ref 181041 // specie_count
 	artifact_ref 275248 // density_zaxis
 	artifact_ref 351792 // report_manager

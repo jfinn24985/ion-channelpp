@@ -1,32 +1,47 @@
 class metropolis_sampler
+!!!1556016.cpp!!!	add_definition(inout meta : sampler_meta) : void
+std::unique_ptr< tracked_definition > result( new tracked_definition( type_label_(), &metropolis_sampler::make_sampler ) );
+// no extra parameters
+meta.add_tracked_type( result );
+
 !!!487601.cpp!!!	description(inout out : ostream) : void
 out << "[sampler] " << this->type_label_() << "\n";
 out << " Sample the metropolis factor of each trial\n";
 !!!672688.cpp!!!	get_value() : boost::any
 boost::any result = std::make_pair( this->boltzmann_factor_, this->energy_change_ );
 return result;
-!!!175025.cpp!!!	make_sampler(in param_set : string, inout rep : report_manager) : void
+!!!175025.cpp!!!	make_sampler(in param_set : string) : tracked_observable
 UTILITY_INPUT(param_set.empty(),"The "+type_label_()+" sampler requires no parameters.",core::strngs::sampler_label());
 boost::shared_ptr< tracked_observable > smplr(new metropolis_sampler);
-rep.add_tracked(smplr);
+return smplr;
 !!!1162543.cpp!!!	on_trial_end(in trial : change_set) : void
-if (not trial.fail())
+if( not this->energy_.is_sampling() )
+{
+  this->energy_.begin_sample();
+}
+if( not trial.fail() )
 {
   // Collect factor for all trials that reached Metropolis/Hastings acceptance
   // check.
-  this->boltzmann_factor_.append(trial.metropolis_factor ());
-  this->energy_change_.append(std::exp(-trial.energy ()));
+  this->boltzmann_factor_.append( trial.metropolis_factor() );
+  const double tmp = std::exp( -trial.energy() );
+  this->energy_change_.append( tmp );
+  this->energy_.sample_datum( tmp );
 }
 else
 {
   // For all trials that failed before Metropolis/Hastings acceptance
-  // check we accept the previous trial again. The failures are due to 
+  // check we accept the previous trial again. The failures are due to
   // things like particle-particle or cutoff distance overlap.
-  this->boltzmann_factor_.append(0.0);
+  this->boltzmann_factor_.append( 0.0 );
   // The difference in energy will be zero:
-  this->energy_change_.append(1.0);
+  this->energy_change_.append( 1.0 );
+  this->energy_.sample_datum( 1.0 );
 }
-!!!174769.cpp!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
+
+!!!1556144.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+this->energy_.end_sample();
+!!!174769.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
 out << this->get_label()
     << " : P_mean       = " << this->boltzmann_factor_.mean() << " var = "
     << this->boltzmann_factor_.variance() << "\n";
@@ -34,8 +49,52 @@ out << std::string(this->get_label().size(),' ')
     << " : -log(P_mean) = " << -std::log(this->energy_change_.mean()) << " var = "
     << std::log(this->energy_change_.variance()) << "\n";
 out << core::strngs::horizontal_bar() << "\n";
-!!!174641.cpp!!!	prepare(inout sim : simulator) : void
+// Write out energy histogram data
+{
+  if( this->energy_.count() > 0 )
+  {
+    const std::size_t sz = this->energy_.size();
+
+    core::output_dataset dset { { sink.uuid() }, [sz]()
+      {
+        return sz;
+      }
+    };
+
+    dset.set_title( "Energy distribution histogram" );
+
+    dset.push_back_entry( core::output_field( "EMIN", "e^-E", [this]( std::ostream& os, std::size_t ii )
+    {
+      os << this->energy_.bin_minimum( ii );
+    } ) );
+
+    dset.push_back_entry( core::output_field( "EMAX", "e^-E", [this]( std::ostream& os, std::size_t ii )
+    {
+      os << this->energy_.bin_maximum( ii );
+    } ) );
+
+    dset.push_back_entry( core::output_field( "EMID", "e^-E", [this]( std::ostream& os, std::size_t ii )
+    {
+      os << this->energy_.bin_midpoint( ii );
+    } ) );
+
+    dset.push_back_entry( core::output_field( "PMEAN", "COUNT", [this]( std::ostream& os, std::size_t ii )
+    {
+      os << this->energy_.bin_mean( ii );
+    } ) );
+
+    dset.push_back_entry( core::output_field( "PVAR", "COUNT**2", [this]( std::ostream& os, std::size_t ii )
+    {
+      os << this->energy_.bin_variance( ii );
+    } ) );
+
+    dset.write( "energy.dat", sink );
+  }
+}
+
+!!!174641.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in sman : report_manager) : void
 this->boltzmann_factor_.reset();
 this->energy_change_.reset();
+this->energy_.reset();
 !!!217136.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
 wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );

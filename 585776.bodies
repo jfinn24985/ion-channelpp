@@ -4,19 +4,29 @@ class histogram
 , data_( converter_.size() )
 , sample_()
 , extendable_( extendable )
+, sampling_( false )
 {}
 !!!1459760.cpp!!!	histogram(in minval : double, in maxval : double, in bincount : size_t, in extendable : bool = false)
 : converter_( minval, maxval, bincount )
 , data_( converter_.size() )
 , sample_()
 , extendable_( extendable )
+, sampling_( false )
 {}
 !!!1435824.cpp!!!	histogram(in minval : double, in maxval : double, in bincount : int, in extendable : bool = false)
 : converter_( minval, maxval, bincount )
 , data_( converter_.size() )
 , sample_()
 , extendable_( extendable )
+, sampling_( false )
 {}
+!!!1436208.cpp!!!	begin_sample() : void
+if( this->sample_.size() != this->data_.size() )
+{
+  this->sample_.resize( this->data_.size() );
+}
+std::fill( this->sample_.begin(), this->sample_.end(), std::size_t( 0ul ) );
+this->sampling_ = true;
 !!!1436080.cpp!!!	extend(in val : double) : void
 // Two options val > max or val < min
 if( val > this->maximum() )
@@ -118,16 +128,14 @@ if( not this->converter_.equivalent( source_ptr->converter_ ) )
 // should now be equivalent
 this->data_.merge( source_ptr->data_ );
 return true;
-!!!1438256.cpp!!!	sample(in val : double) : void
+!!!1556912.cpp!!!	reset() : void
+this->sampling_ = false;
+this->sample_.clear();
+this->data_.reset();
+!!!1438256.cpp!!!	sample_datum(in val : double) : void
 if( not this->converter_.in_range( val ) )
 {
   UTILITY_REQUIRE( this->extendable_, "Sampled value out of expected range." );
   this->extend( val );
 }
 ++this->sample_[ this->converter_.convert( val ) ];
-!!!1436208.cpp!!!	reset_sampler() : void
-if( this->sample_.size() != this->data_.size() )
-{
-  this->sample_.resize( this->data_.size() );
-}
-std::fill( this->sample_.begin(), this->sample_.end(), std::size_t( 0ul ) );
