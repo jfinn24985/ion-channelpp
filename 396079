@@ -1,6 +1,6 @@
 format 75
 "observable" // observable
-  revision 199
+  revision 200
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -1808,7 +1808,7 @@ no parameters"
 	nparams 2
 	  param inout name "out" explicit_type "ostream"
 	  param inout name "sink" type class_ref 313520 // base_sink
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
 {
@@ -1829,7 +1829,7 @@ ${docstring}${body}
 	nparams 2
 	  param in name "pman" type class_ref 446128 // particle_manager
 	  param in name "gman" type class_ref 452656 // geometry_manager
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}${)}${const}${volatile}${throw}
 {
@@ -1910,7 +1910,7 @@ ${docstring}${body}
 	nparams 2
 	  param inout name "wr" type class_ref 163632 // input_document
 	  param in name "ix" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
 {
@@ -2058,13 +2058,13 @@ ${docstring}${members}
       
       comment " sample a density distribution along the z axis (axis of rotation)
 "
-      classrelation 432304 // <generalisation>
-	relation 431664 ---|>
+      classrelation 931504 // <generalisation>
+	relation 930608 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 432304 // <generalisation>
-	  b parent class_ref 360496 // sampled_observable
+	    classrelation_ref 931504 // <generalisation>
+	  b parent class_ref 1144367 // base_observable
       end
 
       classrelation 319920 // <dependency>
@@ -2085,30 +2085,31 @@ ${docstring}${members}
 	  b parent class_ref 278960 // output_dataset
       end
 
-      classrelation 320176 // data_sets_ (<directional composition>)
-	relation 319792 *-->
+      classrelation 931376 // data_sets_ (<directional composition>)
+	relation 930480 *-->
 	  stereotype "vector"
 	  a role_name "data_sets_" multiplicity "*" private
-	    comment "Specie/Specie RDF histograms."
+	    comment " Per-specie 1D population histograms."
 	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
 "
 	    python "${comment}${self}${name} = ${stereotype}()
 "
-	    classrelation_ref 320176 // data_sets_ (<directional composition>)
-	  b parent class_ref 175665 // estimate_array
+	    classrelation_ref 931376 // data_sets_ (<directional composition>)
+	  b parent class_ref 585776 // histogram
       end
 
-      classrelation 320304 // samplers_ (<directional composition>)
-	relation 319920 *-->
-	  stereotype "vector"
-	  a role_name "samplers_" multiplicity "*" private
-	    comment "The objects that convert rij data into the histogram 'data_sets_'."
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+      attribute 671280 "filenames_"
+	private explicit_type "string"
+	multiplicity "*"
+	stereotype "vector"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
 "
-	    python "${comment}${self}${name} = ${stereotype}()
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${stereotype}()
 "
-	    classrelation_ref 320304 // samplers_ (<directional composition>)
-	  b parent class_ref 174897 // digital_sampler
+	idl_decl ""
+	comment " The names of the output data. Indexing is the same as for data_sets_"
       end
 
       attribute 334256 "stepsize_"
@@ -2125,145 +2126,28 @@ ${docstring}${members}
 gives better detail but requires longer runs."
       end
 
-      operation 498608 "description"
-	const public explicit_return_type "void"
-	nparams 1
-	  param inout name "out" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
+      extra_member 625712 "LIFETIME"
 	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Log message descibing the observable and its parameters"
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
       end
 
-      operation 499632 "get_label"
-	const public explicit_return_type "string"
+      operation 1549232 "density_zaxis"
+	private explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return density_zaxis::type_label_();
-}
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
 "
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment "Type label to access an object of this type in a report_manager and use in 
-input file for this observable"
-      end
-
-      operation 672560 "get_value"
-	const public explicit_return_type "boost::any"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} = default;"
 	
 	
 	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
 ${docstring}${body}
 "
 	
-	comment "Retrieve the current z-axis density profiles.
-
-return value is of type const*const vector< estimate_array >"
-      end
-
-      operation 498864 "make_sampler"
-	class_operation public explicit_return_type "void"
-	nparams 2
-	  param in name "param_set" explicit_type "string"
-	  param inout name "rep" type class_ref 340656 // report_manager
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::map< ${t0}, ${t0} > const& ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::map< ${t0}, ${t0} > const& ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment "Make an rdf_observable (independent of type) from input file
-
-parameters : \"width\" \"stepsize\""
-      end
-
-      operation 498992 "on_report"
-	public explicit_return_type "void"
-	nparams 3
-	  param in name "sim" type class_ref 1129135 // simulator
-	  param inout name "out" explicit_type "ostream"
-	  param inout name "reporter" type class_ref 340656 // report_manager
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment "Report RDFs"
-      end
-
-      operation 305329 "on_sample"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
-      operation 499248 "prepare"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	
-	
-	comment "Prepare the evaluator for use with the given simulator and
-stepper."
+	comment " For serialization and factory only"
       end
 
       operation 499376 "~density_zaxis"
@@ -2300,10 +2184,10 @@ ${docstring}${body}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< sampled_observable >(*this);
-  ar & data_sets_;
-  ar & samplers_;
-  ar & stepsize_;
+  ${p0} & boost::serialization::base_object< base_observable >(*this);
+  ar & this->data_sets_;
+  ar & this->filenames_;
+  ar & this->stepsize_;
 }
 "
 	
@@ -2312,6 +2196,195 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+      end
+
+      extra_member 625584 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1548848 "add_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 1144111 // sampler_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add definition for generating objects of this 
+ class to the meta object."
+      end
+
+      operation 498608 "description"
+	const public explicit_return_type "void"
+	nparams 1
+	  param inout name "out" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Log message descibing the observable and its parameters"
+      end
+
+      operation 1548336 "default_stepsize"
+	class_operation public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return 0.2;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The default step size in the digitizers"
+      end
+
+      operation 499632 "get_label"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override
+{
+  return density_zaxis::type_label_();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "Type label to access an object of this type in a report_manager and use in 
+input file for this observable"
+      end
+
+      operation 672560 "get_value"
+	const public explicit_return_type "boost::any"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Retrieve the current z-axis density profiles.
+
+return value is of type const*const vector< estimate_array >"
+      end
+
+      operation 498864 "make_sampler"
+	class_operation public return_type class_ref 1144367 // base_observable
+	nparams 1
+	  param in name "param_set" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}std::map< ${t0}, ${t0} > const& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}std::map< ${t0}, ${t0} > const& ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Make a z-axis population sampler
+
+ Allowed parameters : \"stepsize\""
+      end
+
+      operation 498992 "on_report"
+	public explicit_return_type "void"
+	nparams 2
+	  param inout name "out" explicit_type "ostream"
+	  param inout name "sink" type class_ref 313520 // base_sink
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Report 1D population histograms"
+      end
+
+      operation 305329 "on_sample"
+	public explicit_return_type "void"
+	nparams 2
+	  param in name "pman" type class_ref 446128 // particle_manager
+	  param in name "gman" type class_ref 452656 // geometry_manager
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 499248 "prepare"
+	public explicit_return_type "void"
+	nparams 3
+	  param in name "pman" type class_ref 446128 // particle_manager
+	  param in name "gman" type class_ref 452656 // geometry_manager
+	  param in name "sman" type class_ref 340656 // report_manager
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, const ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, const ${t2} & ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Prepare the observer for a simulation. Reset any existing data."
       end
 
       operation 499760 "type_label_"
@@ -2321,7 +2394,7 @@ ${docstring}${body}
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}
 {
-  return ${type}(\"gz-specie\");
+  return ${type}(\"population-zaxis\");
 }
 "
 	
@@ -2330,7 +2403,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment "Type label is \"rdf-specie\""
+	comment "Type label is \"population-zaxis\""
       end
 
       operation 499888 "do_write_document"
@@ -2338,7 +2411,7 @@ ${docstring}${body}
 	nparams 2
 	  param inout name "wr" type class_ref 163632 // input_document
 	  param in name "ix" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
 {
@@ -2352,6 +2425,76 @@ ${docstring}${body}
 "
 	
 	comment " Add sampler type, width and stepsize to wr[ix]"
+      end
+
+      extra_member 625840 "LOCAL METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1548592 "filename"
+	const public explicit_return_type "string"
+	nparams 1
+	  param in name "ispec" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->filenames_.at( ispec );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The output filename for specie ispec
+
+ \\pre ispec < size"
+      end
+
+      operation 1548464 "size"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  return this->data_sets_.size();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The number of data sets."
+      end
+
+      operation 1548720 "data_set"
+	const public return_type class_ref 585776 // histogram
+	nparams 1
+	  param in name "ispec" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  return this->data_sets_.at( ispec );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Data set for specie ispec
+
+ \\pre ispec < size"
       end
     end
 
@@ -3198,7 +3341,7 @@ ${docstring}${body}
       operation 304433 "get_label"
 	const public explicit_return_type "string"
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override
 {
   return ${class}::type_label_();
 }
@@ -3257,7 +3400,7 @@ ${docstring}${body}
 	nparams 2
 	  param inout name "out" explicit_type "ostream"
 	  param inout name "sink" type class_ref 313520 // base_sink
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
 {
@@ -3336,7 +3479,7 @@ ${docstring}${body}
 	nparams 2
 	  param inout name "wr" type class_ref 163632 // input_document
 	  param in name "ix" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
 {
@@ -3679,7 +3822,7 @@ ${docstring}${body}
       operation 1533488 "get_label"
 	const public explicit_return_type "string"
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override
 {
   return ${class}::type_label_();
 }
@@ -3738,7 +3881,7 @@ ${docstring}${body}
 	nparams 2
 	  param inout name "out" explicit_type "ostream"
 	  param inout name "sink" type class_ref 313520 // base_sink
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
 {
@@ -3817,7 +3960,7 @@ ${docstring}${body}
 	nparams 2
 	  param inout name "wr" type class_ref 163632 // input_document
 	  param in name "ix" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
 {
@@ -7546,6 +7689,9 @@ ${declarations}
 ${namespace_start}
 ${definition}
 ${namespace_end}
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_KEY( observable::density_zaxis );
 #endif
 "
       cpp_src "${comment}
@@ -7556,7 +7702,7 @@ ${namespace_end}
 
 ${includes}
 // Manuals
-#include <boost/bind.hpp>
+#include \"core/input_base_reader.hpp\"
 #include \"core/strngs.hpp\"
 #include \"particle/ensemble.hpp\"
 // - 
@@ -7564,8 +7710,7 @@ ${namespace_start}
 ${members}
 ${namespace_end}
 
-#include <boost/serialization/export.hpp>
-BOOST_CLASS_EXPORT_GUID(observable::density_zaxis, \"observable::density_zaxis\");"
+BOOST_CLASS_EXPORT_IMPLEMENT( observable::density_zaxis );"
       python_src "${comment}
 ${import}
 ${definition}"
@@ -7967,6 +8112,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
       stereotype "library"
       associated_artifacts
 	artifact_ref 181041 // specie_count
+	artifact_ref 275248 // density_zaxis
 	artifact_ref 351792 // report_manager
 	artifact_ref 377904 // acceptance_observable
 	artifact_ref 563632 // specie_region_count
