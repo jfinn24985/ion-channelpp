@@ -941,3 +941,156 @@ const std::string filename = "metropolis.dat";
 }
 
 
+!!!1570864.cpp!!!	rdf_lifetime_test() : void
+{
+  // Static Lifetime method tests: virtual pattern
+
+  BOOST_CHECK( not std::is_default_constructible< observable::rdf_sampler >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< observable::rdf_sampler >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< observable::rdf_sampler >::type{} );
+  BOOST_CHECK( ( not std::is_assignable< observable::rdf_sampler, observable::rdf_sampler >::type{} ) );
+  BOOST_CHECK( std::has_virtual_destructor< observable::rdf_sampler >::type{} );
+}
+{
+  // factory ctor
+  std::map< std::string, std::string > params;
+  boost::shared_ptr< observable::base_observable > var( observable::rdf_sampler::make_sampler( params ) );
+
+  observable_test_suite::base_observable_method_test( var, "rdf-specie" );
+}
+{
+  // static methods
+  BOOST_CHECK_EQUAL( observable::rdf_sampler::default_bin_width(), 0.2 );
+  BOOST_CHECK_EQUAL( observable::rdf_sampler::default_width(), 20.0 );
+  BOOST_CHECK_EQUAL( observable::rdf_sampler::type_label_(), "rdf-specie" );
+}
+!!!1571120.cpp!!!	rdf_method_test() : void
+const std::vector< std::string > labels { "CA", "CO", "OX", "Na", "Cl" };
+const std::vector< std::string > filenames { "rdf-CA-CA.dat", "rdf-CA-CO.dat", "rdf-CA-OX.dat", "rdf-CA-Na.dat", "rdf-CA-Cl.dat", "rdf-CO-CO.dat", "rdf-CO-OX.dat", "rdf-CO-Na.dat", "rdf-CO-Cl.dat", "rdf-OX-OX.dat", "rdf-OX-Na.dat", "rdf-OX-Cl.dat", "rdf-Na-Na.dat", "rdf-Na-Cl.dat", "rdf-Cl-Cl.dat" };
+{
+  boost::shared_ptr< particle::particle_manager > pman = observable_test_suite::mockup_particle_manager();
+  boost::shared_ptr< geometry::geometry_manager > gman = observable_test_suite::mockup_geometry_manager();
+  boost::shared_ptr< observable::report_manager > rman( new observable::report_manager );
+  utility::memory_sink sink;
+  // factory ctor
+  std::map< std::string, std::string > params;
+  params.insert( std::make_pair( "stepsize", "0.5" ) );
+  params.insert( std::make_pair( "width", "10.5" ) );
+  boost::shared_ptr< observable::base_observable > var( observable::rdf_sampler::make_sampler( params ) );
+
+  observable::rdf_sampler *pvar = dynamic_cast< observable::rdf_sampler* >( var.get() );
+
+  BOOST_REQUIRE( pvar != nullptr );
+  BOOST_REQUIRE_EQUAL( pvar->stepsize(), 0.5 );
+  BOOST_REQUIRE_EQUAL( pvar->width(), 10.5 );
+
+  var->prepare( *pman, *gman, *rman );
+  BOOST_REQUIRE_EQUAL( pvar->size(), (pman->specie_count() * (pman->specie_count() + 1))/2 );
+
+  // first sample and report
+  var->on_sample( *pman, *gman );
+  {
+    for( auto filename : filenames )
+    {
+      BOOST_REQUIRE( not sink.exists( filename ) );
+    }
+    std::stringstream out;
+    var->on_report( out, sink );
+    // nothing written to output
+    BOOST_REQUIRE_EQUAL( out.str().size(), 0 );
+    for( auto filename : filenames )
+    {
+      BOOST_REQUIRE( sink.exists( filename ) );
+    }
+    //std::string buf;
+    //sink.read( "specie-count.dat", buf );
+    //std::cout << buf << "\n";
+  }
+  // second sample and report
+  var->on_sample( *pman, *gman );
+  {
+    std::stringstream out;
+    var->on_report( out, sink );
+  }
+  // need to add/convert a particle
+  {
+    BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 3 ), 2 );
+    BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 4 ), 1 );
+    // convert a 3 to a 4
+    const std::size_t idx = pman->get_ensemble().nth_specie_index( 3, 0 );
+    particle::change_set exc;
+    particle::change_atom a1, a2;
+    a1.key = 3;
+    a2.key = 4;
+    a1.index = idx;
+    a2.index = pman->get_ensemble().size();
+    a1.old_position = pman->get_ensemble().position( idx );
+    a1.do_old = true;
+    a1.do_new = false;
+    a2.new_position = pman->get_ensemble().position( idx );
+    a2.do_new = true;
+    a2.do_old = false;
+    exc.add_atom( a1 );
+    exc.add_atom( a2 );
+    pman->commit( exc );
+    BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 3 ), 1 );
+    BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 4 ), 2 );
+
+    var->on_sample( *pman, *gman );
+  }
+  {
+    std::stringstream out;
+    const std::string uuid_head { "# UUID:" };
+    const std::string label_head { "# FIELDS: RMIN RMAX RMID PMEAN PVAR \n# UNITS: ANGSTROM ANGSTROM ANGSTROM COUNT COUNT**2" };
+
+    std::vector< std::string > canon_titles { 
+        "# TITLE: \"Radial distribution histogram for species CA and CA\"",
+        "# TITLE: \"Radial distribution histogram for species CA and CO\"",
+        "# TITLE: \"Radial distribution histogram for species CA and OX\"",
+        "# TITLE: \"Radial distribution histogram for species CA and Na\"",
+        "# TITLE: \"Radial distribution histogram for species CA and Cl\"",
+        "# TITLE: \"Radial distribution histogram for species CO and CO\"",
+        "# TITLE: \"Radial distribution histogram for species CO and OX\"",
+        "# TITLE: \"Radial distribution histogram for species CO and Na\"",
+        "# TITLE: \"Radial distribution histogram for species CO and Cl\"",
+        "# TITLE: \"Radial distribution histogram for species OX and OX\"",
+        "# TITLE: \"Radial distribution histogram for species OX and Na\"",
+        "# TITLE: \"Radial distribution histogram for species OX and Cl\"",
+        "# TITLE: \"Radial distribution histogram for species Na and Na\"",
+        "# TITLE: \"Radial distribution histogram for species Na and Cl\"",
+        "# TITLE: \"Radial distribution histogram for species Cl and Cl\""
+    };
+    std::vector< std::string > interesting_rows { 
+        "0.22 0.72 0.47 0 0",
+        "3.23 3.73 3.48 1 0",
+        "2.73 3.23 2.98 1 0",
+        "2.73 3.23 2.98 0.666667 0.333333",
+        "2.81 3.31 3.06 0.333333 0.333333",
+        "0.24 0.74 0.49 0 0",
+        "1.74 2.24 1.99 1 0",
+        "1.74 2.24 1.99 0.666667 0.333333",
+        "1.82 2.32 2.07 0.333333 0.333333",
+        "0.24 0.74 0.49 0 0",
+        "2.74 3.24 2.99 0.666667 0.333333",
+        "2.82 3.32 3.07 0.333333 0.333333 \n3.32 3.82 3.57 1 0",
+        "1.74 2.24 1.99 0.666667 0.333333",
+        "1.82 2.32 2.07 1 0 \n2.32 2.82 2.57 0 0 \n2.82 3.32 3.07 1 0",
+        "1.9 2.4 2.15 0.333333 0.333333"
+    };
+    BOOST_CHECK_EQUAL( filenames.size(), canon_titles.size() );
+    BOOST_CHECK_EQUAL( filenames.size(), interesting_rows.size() );
+
+    var->on_report( out, sink );
+    // should be no output on "out"
+    std::string buf;
+    for( std::size_t idx = 0; idx != canon_titles.size(); ++idx )
+    {
+      sink.read( filenames[ idx ], buf );
+      // std::cout << buf << "\n";
+      BOOST_CHECK_LT( buf.find( uuid_head ), buf.size() );
+      BOOST_CHECK_LT( buf.find( label_head ), buf.size() );
+      BOOST_CHECK_LT( buf.find( canon_titles[ idx ] ), buf.size() );
+      BOOST_CHECK_LT( buf.find( interesting_rows[ idx ] ), buf.size() );
+    }
+  }
+}
