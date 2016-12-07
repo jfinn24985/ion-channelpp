@@ -797,3 +797,147 @@ const std::vector< std::string > filenames { { "gz-CA.dat", "gz-CO.dat", "gz-OX.
 
   observable_test_suite::base_observable_method_test( var, "metropolis" );
 }
+!!!1563568.cpp!!!	metropolis_method_test() : void
+const std::string filename = "metropolis.dat";
+{
+  boost::shared_ptr< particle::particle_manager > pman = observable_test_suite::mockup_particle_manager();
+  boost::shared_ptr< geometry::geometry_manager > gman = observable_test_suite::mockup_geometry_manager();
+  boost::shared_ptr< observable::report_manager > rman( new observable::report_manager );
+  utility::memory_sink sink;
+  // factory ctor
+  std::map< std::string, std::string > params;
+  boost::shared_ptr< observable::tracked_observable > var( observable::metropolis_sampler::make_sampler( params ) );
+
+  observable::metropolis_sampler *pvar = dynamic_cast< observable::metropolis_sampler* >( var.get() );
+
+  BOOST_REQUIRE( pvar != nullptr );
+
+  var->prepare( *pman, *gman, *rman );
+  BOOST_CHECK_EQUAL( pvar->boltzmann_factor().count(), 0ul );
+  BOOST_CHECK_EQUAL( pvar->energy_change().count(), 0ul );
+  BOOST_CHECK_EQUAL( pvar->energy().count(), 0ul );
+  BOOST_CHECK_EQUAL( pvar->energy().size(), 100ul );
+
+  // Energy of dummy trials
+  std::vector< double > dummy_trials { 0.9, 1.3, 0.1, 2., 0.0, 4.2, 0.6  };
+  // Out first set of dummy trials
+  {
+    for( auto energy : dummy_trials )
+    {
+      particle::change_set tmp;
+      tmp.id( { 0ul, 1ul, 1ul, 0ul } );
+      particle::change_atom at;
+      at.energy_new = energy;
+      tmp.add_atom( at );
+      var->on_trial_end( tmp );
+    }
+    // first sample and report
+    var->on_sample( *pman, *gman );
+    BOOST_REQUIRE( not sink.exists( filename ) );
+    std::stringstream out;
+    var->on_report( out, sink );
+    //std::cout << out.str() << "\n";
+    BOOST_REQUIRE( sink.exists( filename ) );
+    //std::string buf;
+    //sink.read( filename, buf );
+    //std::cout << buf << "\n";
+  }
+  // second sample and report
+  {
+    for( auto energy : dummy_trials )
+    {
+      particle::change_set tmp;
+      tmp.id( { 0ul, 1ul, 1ul, 0ul } );
+      particle::change_atom at;
+      at.energy_new = energy * 1.1;
+      tmp.add_atom( at );
+      var->on_trial_end( tmp );
+    }
+    var->on_sample( *pman, *gman );
+    {
+      std::stringstream out;
+      var->on_report( out, sink );
+      //std::cout << out.str() << "\n";
+      //std::string buf;
+      //sink.read( "specie-count.dat", buf );
+      //std::cout << buf << "\n";
+    }
+  }
+  // need to add/convert a particle
+  {
+    // convert a 3 to a 4
+    const std::size_t idx = pman->get_ensemble().nth_specie_index( 3, 0 );
+    particle::change_set exc;
+    particle::change_atom a1, a2;
+    a1.key = 3;
+    a2.key = 4;
+    a1.index = idx;
+    a2.index = pman->get_ensemble().size();
+    a1.old_position = pman->get_ensemble().position( idx );
+    a1.do_old = true;
+    a1.energy_old = 4.5;
+    a1.do_new = false;
+    a2.new_position = pman->get_ensemble().position( idx );
+    a2.do_new = true;
+    a1.energy_new = 4.5;
+    a2.do_old = false;
+    exc.add_atom( a1 );
+    exc.add_atom( a2 );
+    var->on_trial_end( exc );
+    for( auto energy : dummy_trials )
+    {
+      particle::change_set tmp;
+      tmp.id( { 0ul, 1ul, 1ul, 0ul } );
+      particle::change_atom at;
+      at.energy_new = energy * 0.9;
+      tmp.add_atom( at );
+      var->on_trial_end( tmp );
+    }
+
+    var->on_sample( *pman, *gman );
+
+    std::stringstream out;
+    const std::string canon_out { "metropolis : P_mean       = 0.49397 var = 0.132581\n           : -log(P_mean) = 0.705281 var = -2.02056\n----------------------------------------------------------------------" };
+    const std::string uuid_head { "# UUID:" };
+    const std::string label_head { "# FIELDS: EMIN EMAX EMID PMEAN PVAR" };
+
+    std::string canon_title { "# TITLE: \"Energy distribution histogram\"" };
+    std::vector< std::string > interesting_rows {
+      "0 0.01 0.005 0.333333 0.333333",
+      "0.01 0.02 0.015 0.333333 0.333333",
+      "0.02 0.03 0.025 0.333333 0.333333",
+      "0.11 0.12 0.115 0.333333 0.333333",
+      "0.13 0.14 0.135 0.333333 0.333333",
+      "0.16 0.17 0.165 0.333333 0.333333",
+      "0.23 0.24 0.235 0.333333 0.333333",
+      "0.27 0.28 0.275 0.333333 0.333333",
+      "0.31 0.32 0.315 0.333333 0.333333",
+      "0.37 0.38 0.375 0.333333 0.333333",
+      "0.4 0.41 0.405 0.333333 0.333333",
+      "0.44 0.45 0.445 0.333333 0.333333",
+      "0.51 0.52 0.515 0.333333 0.333333",
+      "0.54 0.55 0.545 0.333333 0.333333",
+      "0.58 0.59 0.585 0.333333 0.333333",
+      "0.89 0.9 0.895 0.333333 0.333333",
+      "0.9 0.91 0.905 0.333333 0.333333",
+      "0.91 0.92 0.915 0.333333 0.333333",
+      "1 1.01 1.005 1.33333 0.333333"
+    };
+    var->on_report( out, sink );
+    //std::cout << out.str() << "\n";
+    // should be no output on "out"
+    BOOST_CHECK_LT( out.str().find( canon_out ), out.str().size() );
+    std::string buf; 
+    sink.read( filename, buf );
+    BOOST_CHECK_LT( buf.find( uuid_head ), buf.size() );
+    BOOST_CHECK_LT( buf.find( label_head ), buf.size() );
+    BOOST_CHECK_LT( buf.find( canon_title ), buf.size() );
+    for( auto interesting_row : interesting_rows )
+    {
+      BOOST_CHECK_LT( buf.find( interesting_row ), buf.size() );
+    }
+    //std::cout << buf << "\n";
+  }
+}
+
+
