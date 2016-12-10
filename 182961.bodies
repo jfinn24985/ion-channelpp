@@ -1235,6 +1235,329 @@ estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
     BOOST_CHECK_CLOSE( var.bin_variance( ith ), ( ith == 2 or ith == 7 or ith == 12 ? (10000.0/3.0) : 0.0 ), 0.000001 );
   }
 }
+!!!1603120.cpp!!!	basic_histogram_lifetime() : void
+{
+  // Canonical pattern
+  BOOST_CHECK( std::is_default_constructible< utility::basic_histogram >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< utility::basic_histogram >::type{} );
+  BOOST_CHECK( std::is_move_constructible< utility::basic_histogram >::type{} );
+  BOOST_CHECK( ( std::is_assignable< utility::basic_histogram, utility::basic_histogram >::type{} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< utility::basic_histogram >::type{} );
+}
+{
+  // Default ctor
+  utility::basic_histogram var;
+  BOOST_CHECK_EQUAL( var.count(), 0ul );
+  BOOST_CHECK_EQUAL( var.size(), 0ul );
+  BOOST_CHECK_EQUAL( var.is_sampling(), false );
+}
+{
+  // Size ctor
+  utility::basic_histogram var( 5ul );
+  BOOST_CHECK_EQUAL( var.count(), 0ul );
+  BOOST_CHECK_EQUAL( var.size(), 5ul );
+  BOOST_CHECK_EQUAL( var.is_sampling(), false );
+}
+!!!1602864.cpp!!!	basic_histogram_data_collection() : void
+estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
+{
+  // TESTS FOR CORRECTNESS
+  utility::basic_histogram var( 10 );
+
+  // Insure start from zero
+  BOOST_CHECK_EQUAL( var.count(), 0ul );
+  BOOST_CHECK_EQUAL( var.size(), 10ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
+  {
+    BOOST_CHECK_EQUAL( var.bin_mean( ith ), 0.0 );
+    BOOST_CHECK_EQUAL( var.bin_variance( ith ), 0.0 );
+  }
+
+  // Add first data points
+  BOOST_CHECK( not var.is_sampling() );
+  var.begin_sample();
+  BOOST_CHECK( var.is_sampling() );
+  {
+    // digitizer function
+    auto digtr = []( double val )
+    {
+      return std::size_t( std::floor( val/3.0 ) );
+    };
+    for( auto val : exemplar.var )
+    {
+      BOOST_CHECK_NO_THROW( var.increment_bin_safe( digtr( val ) ) );
+    }
+  }
+  BOOST_CHECK( var.is_sampling() );
+  var.end_sample();
+  BOOST_CHECK( not var.is_sampling() );
+
+  BOOST_CHECK_EQUAL( var.count(), 1ul );
+  BOOST_CHECK_EQUAL( var.size(), 10ul );
+  {
+    std::vector< double > means { 17.0, 3.0, 5.0, 1.0, 2.0, 0.0, 1.0, 1.0, 1.0, 0.0 };
+    for( std::size_t ith = 0; ith != var.size(); ++ith )
+    {
+      //std::cout << "[" << ith << "]: " << var.bin_mean( ith ) << "\n";
+      BOOST_CHECK_EQUAL( var.bin_mean( ith ), means.at( ith ) );
+      BOOST_CHECK_EQUAL( var.bin_variance( ith ), 0.0 );
+    }
+  }
+  // Add second data points
+  BOOST_CHECK( not var.is_sampling() );
+  var.begin_sample();
+  BOOST_CHECK( var.is_sampling() );
+  {
+    // digitizer function
+    auto digtr = []( double val )
+    {
+      return std::size_t( std::ceil( val/3.0 ) );
+    };
+    for( auto val : exemplar.var )
+    {
+      BOOST_CHECK_NO_THROW( var.increment_bin_safe( digtr( val ) ) );
+    }
+  }
+  BOOST_CHECK( var.is_sampling() );
+  var.end_sample();
+  BOOST_CHECK( not var.is_sampling() );
+
+  BOOST_CHECK_EQUAL( var.count(), 2ul );
+  BOOST_REQUIRE_EQUAL( var.size(), 10ul );
+  {
+    std::vector< double > means { 9.0, 9.5, 4.0, 3.0, 1.5, 1.0, 0.5, 1.0, 1.0,  0.5 };
+    std::vector< double > vars { 128.0, 84.5, 2.0, 8.0, 0.5, 2.0, 0.5, 0.0, 0.0, 0.5 };
+    for( std::size_t ith = 0; ith != var.size(); ++ith )
+    {
+      //std::cout << "[" << ith << "]: " << var.bin_mean( ith ) << "\n";
+      BOOST_CHECK_EQUAL( var.bin_mean( ith ), means.at( ith ) );
+      BOOST_CHECK_EQUAL( var.bin_variance( ith ), vars.at( ith ) );
+    }
+  }
+
+  // Add third data points
+  BOOST_CHECK( not var.is_sampling() );
+  var.begin_sample();
+  BOOST_CHECK( var.is_sampling() );
+  {
+    // digitizer function
+    auto digtr = []( double val )
+    {
+      return std::size_t( std::ceil( std::sqrt( val + 0.01 ) ) );
+    };
+    for( auto val : exemplar.var )
+    {
+      BOOST_CHECK_NO_THROW( var.increment_bin_safe( digtr( val ) ) );
+    }
+  }
+  BOOST_CHECK( var.is_sampling() );
+  var.end_sample();
+  BOOST_CHECK( not var.is_sampling() );
+
+  BOOST_CHECK_EQUAL( var.count(), 3ul );
+  BOOST_REQUIRE_EQUAL( var.size(), 10ul );
+  {
+    std::vector< double > means { 6.0, 11.666666666666667, 3.0, 4.66666666666666, 2.0, 1.3333333333333333, 0.6666666666666666, 0.6666666666666666, 0.6666666666666666,  0.3333333333333333 };
+    std::vector< double > vars { 91.0, 56.33333333333333, 4.0, 12.33333333333333, 1.0, 1.3333333333333333, 0.3333333333333333, 0.3333333333333333, 0.3333333333333333, 0.3333333333333333 };
+    for( std::size_t ith = 0; ith != var.size(); ++ith )
+    {
+      //std::cout << "[" << ith << "]: " << var.bin_mean( ith ) << "\n";
+      BOOST_CHECK_CLOSE( var.bin_mean( ith ), means.at( ith ), 0.0000001 );
+      BOOST_CHECK_CLOSE( var.bin_variance( ith ), vars.at( ith ), 0.0000001 );
+    }
+  }
+}
+
+
+!!!1604656.cpp!!!	fixed_1d_histogram_lifetime() : void
+{
+  // Canonical pattern
+  BOOST_CHECK( std::is_default_constructible< utility::fixed_size_histogram< utility::digitizer > >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< utility::fixed_size_histogram< utility::digitizer > >::type{} );
+  BOOST_CHECK( std::is_move_constructible< utility::fixed_size_histogram< utility::digitizer > >::type{} );
+  BOOST_CHECK( ( std::is_assignable< utility::fixed_size_histogram< utility::digitizer >, utility::fixed_size_histogram< utility::digitizer > >::type{} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< utility::fixed_size_histogram< utility::digitizer > >::type{} );
+}
+
+{
+  // Default ctor
+  utility::fixed_size_histogram< utility::digitizer > var;
+  BOOST_CHECK_EQUAL( var.minimum(), 0.0 );
+  BOOST_CHECK_EQUAL( var.maximum(), 0.0 );
+  BOOST_CHECK_EQUAL( var.size(), 0ul );
+  for( int x = -10; x != 11; ++x )
+  {
+    BOOST_REQUIRE( not var.in_range( double( x )/5.0 ) );
+  }
+}
+std::stringstream store;
+{
+  // Min/Max/Count ctor
+  utility::fixed_size_histogram< utility::digitizer > var( { -1.0, 1.0, 21ul } );
+  BOOST_CHECK_EQUAL( var.minimum(), -1.0 );
+  BOOST_CHECK_EQUAL( var.maximum(), 1.0 );
+  BOOST_CHECK_EQUAL( var.size(), 21ul );
+  BOOST_CHECK( utility::feq( var.bin_width(), 0.095238095238095233 ) );
+
+  boost::archive::text_oarchive oa(store);
+  // write class instances to archive
+  oa << var;
+
+  {
+    // copy
+    utility::fixed_size_histogram< utility::digitizer > var2( var );
+    BOOST_CHECK_EQUAL( var2.minimum(), -1.0 );
+    BOOST_CHECK_EQUAL( var2.maximum(), 1.0 );
+    BOOST_CHECK_EQUAL( var2.size(), 21ul );
+    BOOST_CHECK( utility::feq( var2.bin_width(), 0.095238095238095233 ) );
+    // BOOST_CHECK( var == var2 );
+  }
+  {
+    // assign
+    utility::fixed_size_histogram< utility::digitizer > var2;
+    BOOST_CHECK_EQUAL( var2.minimum(), 0.0 );
+    BOOST_CHECK_EQUAL( var2.maximum(), 0.0 );
+    var2 = var;
+    BOOST_CHECK_EQUAL( var2.minimum(), -1.0 );
+    BOOST_CHECK_EQUAL( var2.maximum(), 1.0 );
+    BOOST_CHECK_EQUAL( var2.size(), 21ul );
+    BOOST_CHECK( utility::feq( var2.bin_width(), 0.095238095238095233 ) );
+    // BOOST_CHECK( var == var2 );
+  }
+  {
+    // move
+    utility::fixed_size_histogram< utility::digitizer > var1( var );
+    BOOST_CHECK_EQUAL( var1.minimum(), -1.0 );
+    BOOST_CHECK_EQUAL( var1.maximum(), 1.0 );
+    utility::fixed_size_histogram< utility::digitizer > var2( std::move( var1 ) );
+    BOOST_CHECK_EQUAL( var2.minimum(), -1.0 );
+    BOOST_CHECK_EQUAL( var2.maximum(), 1.0 );
+    BOOST_CHECK_EQUAL( var2.size(), 21ul );
+    BOOST_CHECK( utility::feq( var2.bin_width(), 0.095238095238095233 ) );
+    // BOOST_CHECK( var == var2 );
+  }
+}
+{
+  // Min/Max/Step
+  utility::fixed_size_histogram< utility::digitizer > var( { -1.0, 1.0, 0.1 } );
+  BOOST_CHECK_EQUAL( var.minimum(), -1.0 );
+  BOOST_CHECK_EQUAL( var.maximum(), 1.0 );
+  BOOST_CHECK_EQUAL( var.bin_width(), 0.1 );
+  BOOST_CHECK_EQUAL( var.size(), 20ul );
+}
+{
+  utility::fixed_size_histogram< utility::digitizer > var;
+ 
+  boost::archive::text_iarchive ia(store);
+  // read class instances from archive
+  ia >> var;
+  BOOST_CHECK_EQUAL( var.minimum(), -1.0 );
+  BOOST_CHECK_EQUAL( var.maximum(), 1.0 );
+  BOOST_CHECK_EQUAL( var.size(), 21ul );
+  BOOST_CHECK( utility::feq( var.bin_width(), 0.095238095238095233 ) );
+} 
+!!!1604528.cpp!!!	fixed_1d_histogram_iterator_lifetime() : void
+{
+  // Canonical pattern
+  BOOST_CHECK( std::is_default_constructible< utility::fixed_size_histogram< utility::digitizer >::bin_iterator >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< utility::fixed_size_histogram< utility::digitizer >::bin_iterator >::type{} );
+  BOOST_CHECK( std::is_move_constructible< utility::fixed_size_histogram< utility::digitizer >::bin_iterator >::type{} );
+  BOOST_CHECK( ( std::is_assignable< utility::fixed_size_histogram< utility::digitizer >::bin_iterator, utility::fixed_size_histogram< utility::digitizer >::bin_iterator >::type{} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< utility::fixed_size_histogram< utility::digitizer >::bin_iterator >::type{} );
+}
+{
+  // Default ctor
+  utility::fixed_size_histogram< utility::digitizer >::bin_iterator iter1;
+  utility::fixed_size_histogram< utility::digitizer >::bin_iterator iter2;
+  BOOST_CHECK( iter1 == iter2 );
+  BOOST_CHECK( not ( iter1 != iter2 ) );
+  BOOST_CHECK( not ( iter1 < iter2 ) );
+  BOOST_CHECK( iter1 <= iter2 );
+  BOOST_CHECK( not ( iter1 > iter2 ) );
+  BOOST_CHECK( iter1 >= iter2 );
+  BOOST_CHECK_EQUAL( iter1 - iter2, 0L );
+
+  // Min/Max/Count ctor
+  utility::fixed_size_histogram< utility::digitizer > var( { -1.0, 1.0, 21ul } );
+  BOOST_CHECK_EQUAL( std::distance( var.begin(), var.end() ), 21L );
+  {
+    // copy
+    utility::fixed_size_histogram< utility::digitizer >::bin_iterator iter3( var.begin() );
+    BOOST_CHECK( iter3 == var.begin() );
+    BOOST_CHECK( iter3 != var.end() );
+    BOOST_CHECK( iter3 < var.end() );
+    BOOST_CHECK( iter3 <= var.end() );
+    BOOST_CHECK( iter3 <= var.begin() );
+    BOOST_CHECK( not( iter3 > var.begin() ) );
+    BOOST_CHECK( iter3 >= var.begin() );
+    ++iter3;
+    BOOST_CHECK( iter3 > var.begin() );
+    BOOST_CHECK( iter3 >= var.begin() );
+    BOOST_CHECK( not( iter3 <= var.begin() ) );
+    BOOST_CHECK( iter3 != var.begin() );
+    BOOST_CHECK( iter3 != var.end() );
+    BOOST_CHECK( utility::feq( iter3.width(), 0.095238095238095233 ) );
+    BOOST_CHECK_CLOSE( iter3.width(), 0.095238095238095233, 0.000000000001 );
+    BOOST_CHECK( utility::feq( iter3.minimum(), -1.0 + 0.095238095238095233 ) );
+    BOOST_CHECK_CLOSE( iter3.minimum(), -1.0 + 0.095238095238095233, 0.000000000001 );
+    BOOST_CHECK( utility::feq( iter3.maximum(), -1.0 + 2*0.095238095238095233 ) );
+    BOOST_CHECK_CLOSE( iter3.maximum(), -1.0 + 2*0.095238095238095233, 0.000000000001 );
+    BOOST_CHECK( utility::feq( iter3.midpoint(), -1.0 + 1.5*0.095238095238095233 ) );
+    BOOST_CHECK_CLOSE( iter3.midpoint(), -1.0 + 1.5*0.095238095238095233, 0.000000000001 );
+    BOOST_CHECK( utility::feq( iter3.mean(), 0.0 ) );
+    BOOST_CHECK( utility::feq( iter3.variance(), 0.0 ) );
+  }
+  {
+    // assign
+    utility::fixed_size_histogram< utility::digitizer >::bin_iterator iter3;
+    BOOST_CHECK( iter3 == iter1 );
+    iter3 = var.begin();
+    BOOST_CHECK( iter3 == var.begin() );
+  }
+  {
+    // move
+    utility::fixed_size_histogram< utility::digitizer >::bin_iterator iter3( var.begin() );
+    BOOST_CHECK( iter3 == var.begin() );
+    utility::fixed_size_histogram< utility::digitizer >::bin_iterator iter4( std::move( iter3 ) );
+    BOOST_CHECK( iter4 == var.begin() );
+  }
+  for( auto iter = var.begin(); iter != var.end(); ++iter )
+  {
+    BOOST_CHECK_EQUAL( iter.mean(), 0.0 );
+    BOOST_CHECK_EQUAL( (*iter).mean(), 0.0 );
+    BOOST_CHECK_EQUAL( iter->mean(), 0.0 );
+  }
+  for( auto val : var )
+  {
+    BOOST_CHECK_EQUAL( val.mean(), 0.0 );
+  }
+}
+!!!1604400.cpp!!!	fixed_1d_histogram_data_collection() : void
+estimater_test_fw const& exemplar( estimater_test_fw::exmplr );
+{
+  // TESTS FOR CORRECTNESS
+  utility::fixed_size_histogram< utility::digitizer > var( { 3.5, 4.5, 5 } );
+
+  // Insure start from zero
+  BOOST_CHECK_EQUAL( var.count(), 0ul );
+  BOOST_CHECK_EQUAL( var.size(), 5ul );
+  BOOST_CHECK_EQUAL( var.bin_width(), 0.2 );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
+  {
+    BOOST_CHECK_EQUAL( var.bin_mean( ith ), 0.0 );
+    BOOST_CHECK_EQUAL( var.bin_variance( ith ), 0.0 );
+  }
+
+  // Add first data points (all 4.0)
+  var.sample( exemplar.data4.begin(), exemplar.data4.end() );
+  BOOST_CHECK_EQUAL( var.count(), 1ul );
+  BOOST_CHECK_EQUAL( var.size(), 5ul );
+  for( std::size_t ith = 0; ith != var.size(); ++ith )
+  {
+    BOOST_CHECK_EQUAL( var.bin_mean( ith ), ( ith == 2 ? 100.0 : 0.0 ) );
+    BOOST_CHECK_EQUAL( var.bin_variance( ith ), 0.0 );
+  }
+}
 !!!776880.cpp!!!	pattern_test_test() : void
 // test match to canonical pattern
 pattern_test::canonical< int, true, true >( 1, 2 );

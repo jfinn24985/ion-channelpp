@@ -1,0 +1,102 @@
+class histograph
+!!!1582896.cpp!!!	histograph(in minval : histograph::data_type, in maxval : histograph::data_type, in binwidth : histograph::data_type)
+: converter_( minval, maxval, binwidth )
+, data_( converter_.size() )
+, sample_()
+, sampling_( false )
+{}
+!!!1583024.cpp!!!	histograph(in minval : histograph::data_type, in maxval : histograph::data_type, in bincount : size_t)
+: converter_( minval, maxval, bincount )
+, data_( converter_.size() )
+, sample_()
+, sampling_( false )
+{}
+!!!1583152.cpp!!!	histograph(in minval : histograph::data_type, in maxval : histograph::data_type, in bincount : int)
+: converter_( minval, maxval, bincount )
+, data_( converter_.size() )
+, sample_()
+, sampling_( false )
+{}
+!!!1584816.cpp!!!	merge(in source : histograph) : bool
+// use ref to source so we can switch to copy if needed
+histogram const* source_ptr = &source;
+// optional editable copy of source if needed
+std::unique_ptr< histogram > copy;
+
+if( not this->converter_.equivalent( source_ptr->converter_ ) )
+{
+  if( this->bin_width() != source_ptr->bin_width() )
+  {
+    return false;
+  }
+  if( not utility::feq( this->minimum(), source_ptr->minimum() ) )
+  {
+    // if this has smaller range, adjust this object.
+    if( this->minimum() > source_ptr->minimum() )
+    {
+      const double diff = this->minimum() - source_ptr->minimum();
+      if( not utility::feq( diff/this->bin_width(), std::nearbyint( diff/this->bin_width() ) ) )
+      {
+        return false;
+      }
+      this->extend( source_ptr->minimum() + this->bin_width() / 2.0 );
+      UTILITY_CHECK( utility::feq( this->minimum(), source_ptr->minimum() ), "Should have the same minima" );
+    }
+    else
+    {
+      // need to alter source
+      if( not copy )
+      {
+        copy.reset( new histogram( source ) );
+        source_ptr = copy.get();
+      }
+      const double diff = source_ptr->minimum() - this->minimum();
+      if( not utility::feq( diff/this->bin_width(), std::nearbyint( diff/this->bin_width() ) ) )
+      {
+        return false;
+      }
+      copy->extend( this->minimum() + this->bin_width() / 2.0 );
+      UTILITY_CHECK( utility::feq( this->minimum(), source_ptr->minimum() ), "Should have the same minima" );
+    }
+  }
+  if( not utility::feq( this->maximum(), source_ptr->maximum() ) )
+  {
+    // if this has smaller range, adjust this object.
+    if( this->maximum() < source_ptr->maximum() )
+    {
+      const double diff = source_ptr->maximum() - this->maximum();
+      if( not utility::feq( diff/this->bin_width(), std::nearbyint( diff/this->bin_width() ) ) )
+      {
+        return false;
+      }
+      this->extend( source_ptr->maximum() - this->bin_width() / 2.0 );
+      UTILITY_CHECK( utility::feq( this->maximum(), source_ptr->maximum() ), "Should have the same maxima" );
+    }
+    else
+    {
+      // need to alter source
+      if( not copy )
+      {
+        copy.reset( new histogram( source ) );
+        source_ptr = copy.get();
+      }
+      const double diff = this->maximum() - source_ptr->maximum();
+      if( not utility::feq( diff/this->bin_width(), std::nearbyint( diff/this->bin_width() ) ) )
+      {
+        return false;
+      }
+      copy->extend( this->maximum() - this->bin_width() / 2.0 );
+      UTILITY_CHECK( utility::feq( this->maximum(), source_ptr->maximum() ), "Should have the same maxima" );
+    }
+  }
+}
+// should now be equivalent
+this->data_.merge( source_ptr->data_ );
+return true;
+!!!1585200.cpp!!!	sample_datum(in val : histograph::data_type) : void
+if( not this->converter_.in_range( val ) )
+{
+  UTILITY_REQUIRE( this->extendable_, "Sampled value out of expected range." );
+  this->extend( val );
+}
+++this->sample_[ this->converter_.convert( val ) ];
