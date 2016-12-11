@@ -1,187 +1,180 @@
 class d3_distribution
-!!!487985.cpp!!!	description(inout os : ostream) : void
-os << "SAMPLER [" << this->type_label_() << "]\n";
-os << " Collect sample 3D density distribution of each specie.\n";
-for (auto const& val : this->parameters_)
-{
-  os << " - " << val.first << "  : " << val.second << "\n";
-}
-!!!365617.cpp!!!	make_sampler(in paramset : string, in simtype : string) : void
-std::unique_ptr<d3_distribution> result (new d3_distribution);
-result->parameters_ = paramset;
-return result.release();
-!!!365873.cpp!!!	on_checkpoint(in sim : simulator) : void
-// Write out 3D data
-for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
-{
-  if (this->distributions_[ispec].count() > 0)
-  {
-    // TODO sim.checkpoint_directory()
-    std::stringstream ofs;
-    ofs << core::strngs::comment_begin();
-    ofs << " TITLE \"3D density distribution histogram for specie ";
-    ofs << sim.get_specie(ispec).label() << "\"\n";
-    //ofs << core::strngs::comment_begin() << " UUID ";
-    //ofs << sim.uuid() << "\n";
-    ofs << core::strngs::comment_begin();
-    ofs << " LABELS X(Y,Z)*(MEAN)\n";
-    ofs << core::strngs::comment_begin();
-    ofs << " UNITS *ATOMS\n";
-    ofs << std::fixed;
-    ofs.precision(6);
-    for (auto XYZ: this->distributions_[ispec])
-    {
-      for (auto YZ: XYZ)
-      {
-        for (auto Z: YZ)
-        {
-          ofs << " " << std::setw(10) << Z.mean();
-        }
-        ofs << "\n";
-      }
-      ofs << "\n";
-    }
-    sim.get_sink().write( "d3df-"+sim.get_specie(ispec).label()+".dat", ofs.str() );
-  }
-}
+!!!1607472.cpp!!!	add_definition(inout meta : sampler_meta) : void
+std::unique_ptr< sampler_definition > result( new sampler_definition( type_label_(), &d3_distribution::make_sampler ) );
+// two extra parameters
+result->add_definition( "stepsize", "[optional, number, default(0.2)] Subsampling cube width of population histogram." );
+result->add_definition( core::strngs::fsregn(), "[optional, list] Specie label : region label pairs. Use to restrict sampling of a specie to a specific region of the simulation cell. Default is to use the whole cell." );
+meta.add_sampler_type( result );
 
-!!!366001.cpp!!!	on_sample(in sys : simulator, inout log : ostream) : void
-const particle::conf &ens(sys.get_ensemble());
-for (std::size_t ith = 0; ith != ens.size(); ++ith)
+!!!487985.cpp!!!	description(inout os : ostream) : void
+os << "[sampler] " << this->type_label_() << "\n";
+os << " Collect 3D density distributions for each specie.\n";
+os << " - Region-specific distributions per-specie.\n";
+for( auto const& val : this->regions_ )
 {
-  const std::size_t ispec (ens.key(ith));
-  if (ispec != particle::specie_key::nkey)
+  os << "   - " << val.first << "  : " << val.second << "\n";
+}
+os << " - sample bin width : " << this->stepsize_ << " (default ";
+os << d3_distribution::default_bin_width() << ")\n";
+!!!1607728.cpp!!!	get_value() : boost::any
+boost::any result = &this->distributions_;
+return result;
+!!!365617.cpp!!!	make_sampler(in paramset : string) : base_observable
+std::string region_list;
+double stepsize = d3_distribution::default_bin_width();
+if (paramset.count( core::strngs::fsregn() ) != 0)
+{
+  region_list = paramset.at( core::strngs::fsregn() );
+}
+if (0 != paramset.count("stepsize"))
+{
+  core::input_base_reader::float_input( "stepsize", paramset.at( "stepsize" ), d3_distribution::type_label_(), core::strngs::sampler_label(), stepsize, true, false );
+}
+std::unique_ptr<d3_distribution> result( new d3_distribution );
+if( not region_list.empty() )
+{
+  result->process_region_list( region_list );
+}
+result->stepsize_ = stepsize;
+boost::shared_ptr< base_observable > tmp(result.release());
+return tmp;
+!!!365745.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in sman : report_manager) : void
+if( not this->distributions_.empty() )
+{
+  this->distributions_.clear();
+}
+this->specie_labels_.clear();
+// regions_ is a map of specie label to region. It is
+// optional in that species not in the map will use the
+// system region. It is an error for a named region not to
+// exist.
+if( not this->regions_.empty() )
+{
+  for( auto const& entry : this->regions_ )
   {
-    this->samplers_[ispec].insert(ens.x(ith),ens.y(ith),ens.z(ith));
+    UTILITY_INPUT( gman.region_key( entry.second ) != gman.region_count(), "Expected a region with name ["+entry.second+"] when generating sampler type "+type_label_(), core::strngs::sampler_label() );
   }
 }
-// Move data from samplers to histogram
-for (std::size_t ispec = 0; ispec != sys.specie_count(); ++ispec)
+this->specie_labels_.resize( pman.specie_count() );
+for( std::size_t ispec = 0; ispec != pman.specie_count(); ++ispec )
 {
-  auto &smplr = this->samplers_[ispec];
-  this->distributions_[ispec].append (smplr.begin(), smplr.end());
-  smplr.reset();
-}
-!!!365745.cpp!!!	prepare(in sim : simulator, inout trans : stepper) : void
-const static std::string bin_label ("bins");
-const static std::string min_label ("min");
-const static std::string max_label ("max");
-const static std::string step_label ("step");
-if (not this->distributions_.empty())
-{
-  this->distributions_.clear ();
-}
-if (not this->samplers_.empty())
-{
-  this->samplers_.clear ();
-}
-size_t bin_count (0ul);
-double minimum (0.0);
-double maximum (0.0);
-double stepsize (0.0);
-if ("bulk" == sim.type_label())
-{
-  // Build axis and 3d_sampler.
-  // MIN = 0
-  // MAX = box
-  // STEP = box/100
-  bin_count = 20ul;
-  // minimum = 0.0;
-  maximum = std::cbrt(sim.volume());
-  // stepsize = 0.0;
-  if (0 != this->parameters_.count(bin_label))
+  const std::string label = pman.get_specie( ispec ).label();
+  this->specie_labels_[ ispec ] = label;
+  if( this->regions_.count( label ) == 1 )
   {
-    bin_count = boost::lexical_cast< std::size_t >(this->parameters_[bin_label]);
-  }
-  if (0 != this->parameters_.count(min_label))
-  {
-    minimum = boost::lexical_cast< double >(this->parameters_[min_label]);
-  }
-  if (0 != this->parameters_.count(max_label))
-  {
-    maximum = boost::lexical_cast< std::size_t >(this->parameters_[max_label]);
-  }
-  if (0 != this->parameters_.count(step_label))
-  {
-    stepsize = boost::lexical_cast< std::size_t >(this->parameters_[step_label]);
-    bin_count = 0ul;
-  }
-  utility::digitizer axis;
-  if (0 != bin_count)
-  {
-    axis = {minimum, maximum, bin_count};
+    // specie has specific region target
+    particle::coordinate bbmin, bbmax;
+    gman.get_region( gman.region_key( this->regions_[ label ] ) ).extent( bbmin, bbmax, pman.get_specie( ispec ).radius() );
+    this->distributions_.push_back( { { bbmin, bbmax, this->stepsize_ } } );
   }
   else
   {
-    axis = {minimum, maximum, stepsize};
+    // specie uses global region
+    particle::coordinate bbmin, bbmax;
+    gman.system_region().extent( bbmin, bbmax, pman.get_specie( ispec ).radius() );
+    this->distributions_.push_back( { { bbmin, bbmax, this->stepsize_ } } );
   }
-
-  utility::digital_3d_sampler smplr({axis,axis,axis});
-  this->samplers_.resize (sim.specie_count(), smplr);
-
-  utility::estimate_3d data({axis.size(),axis.size(),axis.size()});
-  this->distributions_.resize (sim.specie_count(), data);
 }
-
-// Look for per-specie definitions thar over-ride any default
-// definitions
-for (std::size_t ispec = 0; ispec != sim.specie_count(); ++ispec)
+!!!365873.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
+// Write out 3D data
+for (std::size_t ispec = 0; ispec != this->specie_labels_.size(); ++ispec)
 {
-  if (0 != this->parameters_.count(sim.get_specie(ispec).label()))
+  if (this->distributions_[ ispec ].count() > 0)
   {
-    double smin (minimum);
-    double smax (maximum);
-    double step (0.0);
-    std::size_t scount (0ul);
-    std::stringstream ss (this->parameters_[sim.get_specie(ispec).label()]);
-    while (ss)
+    // TODO sim.checkpoint_directory()
+    std::stringstream ofs;
+    ofs << core::strngs::comment_begin() << " UUID: ";
+    ofs << sink.uuid() << "\n";
+    ofs << core::strngs::comment_begin();
+    ofs << " TITLE: \"3D density distribution histogram for specie ";
+    ofs << this->specie_labels_[ ispec ] << "\"\n";
+    ofs << core::strngs::comment_begin();
+    ofs << " FIELDS: X_MID Y_MID Z_MID PMEAN PVAR\n";
+    ofs << core::strngs::comment_begin();
+    ofs << " UNITS: ANGSTROM ANGSTROM ANGSTROM COUNT COUNT**2\n";
+    ofs << std::fixed;
+    ofs.precision(6);
+    for( auto datum : this->distributions_[ispec] )
     {
-      std::string name;
-      ss >> name;
-      if (name.empty()) break;
-      if (bin_label == name)
-      {
-        ss >> scount;
-      }
-      else if (min_label == name)
-      {
-        ss >> smin;
-      }
-      else if (max_label == name)
-      {
-        ss >> smax;
-      }
-      else if (step_label == name)
-      {
-        ss >> step;
-      }
-      else
-      {
-        std::string known_value(bin_label);
-        UTILITY_INPUT(name == known_value, "keyword \""+name+"\" from \""+this->parameters_[sim.get_specie(ispec).label()]+"\" is not recognised by the "+d3_distribution::type_label()+" sampler.", core::strngs::sampler_label());
-      }
+      ofs << datum.midpoint() << " " << std::setw(10) << datum.mean() << " " << std::setw(10) << datum.variance() << "\n";
     }
-    utility::digitizer saxis;
-    if (0 != scount)
-    {
-      saxis = {smin, smax, scount};
-    }
-    else
-    {
-      saxis = {smin, smax, step};
-    }
-
-    utility::digital_3d_sampler ssmplr({saxis,saxis,saxis});
-    this->samplers_[ispec].swap(ssmplr);
-
-    this->distributions_[ispec].resize({saxis.size(),saxis.size(),saxis.size()});
+    sink.write( "d3df-"+this->specie_labels_[ ispec ]+".dat", ofs.str() );
   }
 }
 
-// Add sampler only to outer observables.
-trans.add_outer_observable(boost::bind (&d3_distribution::on_sample, this, _1, _2), true);
-trans.add_check_observable(boost::bind (&d3_distribution::on_checkpoint, this, _1), true);
-trans.add_reset_observable(boost::bind (&d3_distribution::on_reset, this));
+!!!366001.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+for( auto & histo : this->distributions_ )
+{
+  histo.begin_sample();
+}
+auto const& ens = pman.get_ensemble();
+for( std::size_t ith = 0; ith != ens.size(); ++ith )
+{
+  const std::size_t ispec( ens.key( ith ) );
+  if( ispec != particle::specie_key::nkey )
+  {
+    particle::coordinate pos = ens.position( ith );
+    if( this->distributions_[ ispec ].in_range( pos ) )
+    {
+      this->distributions_[ispec].sample_datum( pos );
+    }
+  }
+}
+for( auto & histo : this->distributions_ )
+{
+  histo.end_sample();
+}
+!!!1608112.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
+if( not this->regions_.empty() )
+{
+  std::stringstream os;
+  for( auto const& entry : this->regions_ )
+  {
+    if( os.str().size() != 0 )
+    {
+      os << " ";
+    }
+    os << entry.first << ":" << entry.second;
+  }
+  wr[ ix ].add_entry( core::strngs::fsregn(), os.str() );
+}
+wr[ ix ].add_entry( "stepsize", this->stepsize_ );
 
-
-
+!!!1607856.cpp!!!	process_region_list(in list : string) : void
+std::map< std::string, std::string > regions;
+std::stringstream is( list );
+std::vector< std::string > pairs;
+while( is )
+{
+  std::string word;
+  is >> word;
+  pairs.push_back( word );
+}
+std::size_t idx = 0;
+while( idx < pairs.size() )
+{
+  std::string const& word = pairs[ idx ];
+  std::size_t sep = word.find( ':' );
+  if( sep < word.size() )
+  {
+    UTILITY_INPUT( (2 == sep) or (1 == sep), "Invalid specie label in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
+    std::string name, value;
+    name = word.substr( 0, sep );
+    value = word.substr( sep + 1 );
+    UTILITY_INPUT( not value.empty(), "Invalid region label in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
+    regions.insert( { name, value } );
+  }
+  else
+  {
+    // assume space separated entry
+    UTILITY_INPUT( (2 == word.size()) or (1 == word.size()), "Invalid specie label in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
+    UTILITY_INPUT( idx + 1 < pairs.size(), "Missing region in specie/region pair in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
+    ++idx;
+    std::string value = pairs[ idx ];
+    UTILITY_INPUT( not value.empty(), "Invalid region label in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
+    regions.insert( { word, value } );
+  }
+  ++idx;
+}
+std::swap( this->regions_, regions );
