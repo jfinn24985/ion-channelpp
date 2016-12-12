@@ -72,6 +72,11 @@ boost::shared_ptr< geometry::geometry_manager > gman( new geometry::geometry_man
   gman->add_region( bulk );
 }
 return gman;
+!!!1622192.cpp!!!	mockup_evaluator_manager() : evaluator_manager
+boost::shared_ptr< evaluator::evaluator_manager > eman( new evaluator::evaluator_manager );
+std::map< std::string, std::string > param;
+eman->add_evaluator( evaluator::coulomb::make_evaluator( param ) );
+return eman;
 !!!1484848.cpp!!!	base_observable_method_test(inout obs : base_observable, in label : string) : void
 std::stringstream store;
 std::string description;
@@ -207,6 +212,7 @@ std::string document;
 !!!1525680.cpp!!!	acceptance_observable_method_test() : void
 {
   boost::shared_ptr< particle::particle_manager > pman = observable_test_suite::mockup_particle_manager();
+  boost::shared_ptr< evaluator::evaluator_manager > eman = observable_test_suite::mockup_evaluator_manager();
   boost::shared_ptr< geometry::geometry_manager > gman = observable_test_suite::mockup_geometry_manager();
   utility::memory_sink sink;
   // factory ctor
@@ -254,7 +260,7 @@ std::string document;
       BOOST_CHECK_EQUAL( pvar->get_sample( boost::tuples::get< 0 >( res ) ).first, boost::tuples::get< 1 >( res ) );
       BOOST_CHECK_EQUAL( pvar->get_sample( boost::tuples::get< 0 >( res ) ).second, boost::tuples::get< 2 >( res ) );
     }
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
     for( auto const& res : dummy_results )
     {
       BOOST_REQUIRE( pvar->has_datum( boost::tuples::get< 0 >( res ) ) );
@@ -299,7 +305,7 @@ std::string document;
       BOOST_CHECK_EQUAL( pvar->get_sample( boost::tuples::get< 0 >( res ) ).first, boost::tuples::get< 1 >( res ) );
       BOOST_CHECK_EQUAL( pvar->get_sample( boost::tuples::get< 0 >( res ) ).second, boost::tuples::get< 2 >( res ) );
     }
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
     for( auto const& res : dummy_results )
     {
       BOOST_REQUIRE( pvar->has_datum( boost::tuples::get< 0 >( res ) ) );
@@ -358,7 +364,7 @@ std::string document;
       BOOST_CHECK_EQUAL( pvar->get_sample( boost::tuples::get< 0 >( res ) ).first, boost::tuples::get< 1 >( res ) );
       BOOST_CHECK_EQUAL( pvar->get_sample( boost::tuples::get< 0 >( res ) ).second, boost::tuples::get< 2 >( res ) );
     }
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
     for( auto const& res : dummy_results )
     {
       BOOST_REQUIRE( pvar->has_datum( boost::tuples::get< 0 >( res ) ) );
@@ -406,6 +412,7 @@ std::string document;
 !!!1541680.cpp!!!	specie_count_method_test() : void
 {
   boost::shared_ptr< particle::particle_manager > pman = observable_test_suite::mockup_particle_manager();
+  boost::shared_ptr< evaluator::evaluator_manager > eman = observable_test_suite::mockup_evaluator_manager();
   boost::shared_ptr< geometry::geometry_manager > gman = observable_test_suite::mockup_geometry_manager();
   boost::shared_ptr< observable::report_manager > rman( new observable::report_manager );
   utility::memory_sink sink;
@@ -422,11 +429,11 @@ std::string document;
 
   BOOST_REQUIRE( pvar != nullptr );
   
-  var->prepare( *pman, *gman, *rman );
+  var->prepare( *pman, *gman, *eman, *rman );
 
   // first sample and report
   {
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
     BOOST_REQUIRE_LE( pvar->size(), pman->specie_count() );
     for( std::size_t idx = 0; idx != pvar->size(); ++idx )
     {
@@ -447,7 +454,7 @@ std::string document;
   }
   // second sample and report
   {
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
     for( std::size_t idx = 0; idx != pvar->size(); ++idx )
     {
       const std::size_t ispec = pvar->specie_key( idx );
@@ -487,7 +494,7 @@ std::string document;
     BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 3 ), 1 );
     BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 4 ), 2 );
 
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
 
     means[ 3 ] = 1.6666666666666667;
     means[ 4 ] = 1.3333333333333333;
@@ -532,6 +539,7 @@ std::string document;
 const std::string filename( "specie-region-count.dat" );
 {
   boost::shared_ptr< particle::particle_manager > pman = observable_test_suite::mockup_particle_manager();
+  boost::shared_ptr< evaluator::evaluator_manager > eman = observable_test_suite::mockup_evaluator_manager();
   boost::shared_ptr< geometry::geometry_manager > gman = observable_test_suite::mockup_geometry_manager();
   boost::shared_ptr< observable::report_manager > rman( new observable::report_manager );
   utility::memory_sink sink;
@@ -549,12 +557,12 @@ const std::string filename( "specie-region-count.dat" );
 
   BOOST_REQUIRE( pvar != nullptr );
 
-  var->prepare( *pman, *gman, *rman );
+  var->prepare( *pman, *gman, *eman, *rman );
   BOOST_REQUIRE_EQUAL( pvar->size(), pman->specie_count() * gman->region_count() );
 
   // first sample and report
   {
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
     for( std::size_t ireg = 0; ireg != gman->region_count(); ++ireg )
     {
       const std::size_t offset = ireg * pman->specie_count();
@@ -577,7 +585,7 @@ const std::string filename( "specie-region-count.dat" );
   }
   // second sample and report
   {
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
     for( std::size_t ireg = 0; ireg != gman->region_count(); ++ireg )
     {
       const std::size_t offset = ireg * pman->specie_count();
@@ -620,7 +628,7 @@ const std::string filename( "specie-region-count.dat" );
     BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 3 ), 1 );
     BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 4 ), 2 );
 
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
 
     means[ 3 ] = 1.6666666666666667;
     means[ 4 ] = 1.3333333333333333;
@@ -673,6 +681,7 @@ const std::string filename( "specie-region-count.dat" );
 const std::vector< std::string > filenames { { "gz-CA.dat", "gz-CO.dat", "gz-OX.dat", "gz-Na.dat", "gz-Cl.dat" } };
 {
   boost::shared_ptr< particle::particle_manager > pman = observable_test_suite::mockup_particle_manager();
+  boost::shared_ptr< evaluator::evaluator_manager > eman = observable_test_suite::mockup_evaluator_manager();
   boost::shared_ptr< geometry::geometry_manager > gman = observable_test_suite::mockup_geometry_manager();
   boost::shared_ptr< observable::report_manager > rman( new observable::report_manager );
   utility::memory_sink sink;
@@ -685,11 +694,11 @@ const std::vector< std::string > filenames { { "gz-CA.dat", "gz-CO.dat", "gz-OX.
 
   BOOST_REQUIRE( pvar != nullptr );
 
-  var->prepare( *pman, *gman, *rman );
+  var->prepare( *pman, *gman, *eman, *rman );
   BOOST_REQUIRE_EQUAL( pvar->size(), pman->specie_count() );
 
   // first sample and report
-  var->on_sample( *pman, *gman );
+  var->on_sample( *pman, *gman, *eman );
   {
     for( auto filename : filenames )
     {
@@ -707,7 +716,7 @@ const std::vector< std::string > filenames { { "gz-CA.dat", "gz-CO.dat", "gz-OX.
     //std::cout << buf << "\n";
   }
   // second sample and report
-  var->on_sample( *pman, *gman );
+  var->on_sample( *pman, *gman, *eman );
   {
     std::stringstream out;
     var->on_report( out, sink );
@@ -740,7 +749,7 @@ const std::vector< std::string > filenames { { "gz-CA.dat", "gz-CO.dat", "gz-OX.
     BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 3 ), 1 );
     BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 4 ), 2 );
 
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
   }
   {
     std::stringstream out;
@@ -801,6 +810,7 @@ const std::vector< std::string > filenames { { "gz-CA.dat", "gz-CO.dat", "gz-OX.
 const std::string filename = "metropolis.dat";
 {
   boost::shared_ptr< particle::particle_manager > pman = observable_test_suite::mockup_particle_manager();
+  boost::shared_ptr< evaluator::evaluator_manager > eman = observable_test_suite::mockup_evaluator_manager();
   boost::shared_ptr< geometry::geometry_manager > gman = observable_test_suite::mockup_geometry_manager();
   boost::shared_ptr< observable::report_manager > rman( new observable::report_manager );
   utility::memory_sink sink;
@@ -812,7 +822,7 @@ const std::string filename = "metropolis.dat";
 
   BOOST_REQUIRE( pvar != nullptr );
 
-  var->prepare( *pman, *gman, *rman );
+  var->prepare( *pman, *gman, *eman, *rman );
   BOOST_CHECK_EQUAL( pvar->boltzmann_factor().count(), 0ul );
   BOOST_CHECK_EQUAL( pvar->energy_change().count(), 0ul );
   BOOST_CHECK_EQUAL( pvar->energy().count(), 0ul );
@@ -832,7 +842,7 @@ const std::string filename = "metropolis.dat";
       var->on_trial_end( tmp );
     }
     // first sample and report
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
     BOOST_REQUIRE( not sink.exists( filename ) );
     std::stringstream out;
     var->on_report( out, sink );
@@ -853,7 +863,7 @@ const std::string filename = "metropolis.dat";
       tmp.add_atom( at );
       var->on_trial_end( tmp );
     }
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
     {
       std::stringstream out;
       var->on_report( out, sink );
@@ -894,7 +904,7 @@ const std::string filename = "metropolis.dat";
       var->on_trial_end( tmp );
     }
 
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
 
     std::stringstream out;
     const std::string canon_out { "metropolis : P_mean       = 0.49397 var = 0.132581\n           : -log(P_mean) = 0.705281 var = -2.02056\n----------------------------------------------------------------------" };
@@ -969,6 +979,7 @@ const std::vector< std::string > labels { "CA", "CO", "OX", "Na", "Cl" };
 const std::vector< std::string > filenames { "rdf-CA-CA.dat", "rdf-CA-CO.dat", "rdf-CA-OX.dat", "rdf-CA-Na.dat", "rdf-CA-Cl.dat", "rdf-CO-CO.dat", "rdf-CO-OX.dat", "rdf-CO-Na.dat", "rdf-CO-Cl.dat", "rdf-OX-OX.dat", "rdf-OX-Na.dat", "rdf-OX-Cl.dat", "rdf-Na-Na.dat", "rdf-Na-Cl.dat", "rdf-Cl-Cl.dat" };
 {
   boost::shared_ptr< particle::particle_manager > pman = observable_test_suite::mockup_particle_manager();
+  boost::shared_ptr< evaluator::evaluator_manager > eman = observable_test_suite::mockup_evaluator_manager();
   boost::shared_ptr< geometry::geometry_manager > gman = observable_test_suite::mockup_geometry_manager();
   boost::shared_ptr< observable::report_manager > rman( new observable::report_manager );
   utility::memory_sink sink;
@@ -984,11 +995,11 @@ const std::vector< std::string > filenames { "rdf-CA-CA.dat", "rdf-CA-CO.dat", "
   BOOST_REQUIRE_EQUAL( pvar->stepsize(), 0.5 );
   BOOST_REQUIRE_EQUAL( pvar->width(), 10.5 );
 
-  var->prepare( *pman, *gman, *rman );
+  var->prepare( *pman, *gman, *eman, *rman );
   BOOST_REQUIRE_EQUAL( pvar->size(), (pman->specie_count() * (pman->specie_count() + 1))/2 );
 
   // first sample and report
-  var->on_sample( *pman, *gman );
+  var->on_sample( *pman, *gman, *eman );
   {
     for( auto filename : filenames )
     {
@@ -1007,7 +1018,7 @@ const std::vector< std::string > filenames { "rdf-CA-CA.dat", "rdf-CA-CO.dat", "
     //std::cout << buf << "\n";
   }
   // second sample and report
-  var->on_sample( *pman, *gman );
+  var->on_sample( *pman, *gman, *eman );
   {
     std::stringstream out;
     var->on_report( out, sink );
@@ -1036,7 +1047,7 @@ const std::vector< std::string > filenames { "rdf-CA-CA.dat", "rdf-CA-CO.dat", "
     BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 3 ), 1 );
     BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 4 ), 2 );
 
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
   }
   {
     std::stringstream out;
@@ -1306,6 +1317,7 @@ std::stringstream store;
 const std::vector< std::string > filenames { { "d3df-CA.dat", "d3df-CO.dat", "d3df-OX.dat", "d3df-Na.dat", "d3df-Cl.dat" } };
 {
   boost::shared_ptr< particle::particle_manager > pman = observable_test_suite::mockup_particle_manager();
+  boost::shared_ptr< evaluator::evaluator_manager > eman = observable_test_suite::mockup_evaluator_manager();
   boost::shared_ptr< geometry::geometry_manager > gman = observable_test_suite::mockup_geometry_manager();
   boost::shared_ptr< observable::report_manager > rman( new observable::report_manager );
   utility::memory_sink sink;
@@ -1318,11 +1330,11 @@ const std::vector< std::string > filenames { { "d3df-CA.dat", "d3df-CO.dat", "d3
 
   BOOST_REQUIRE( pvar != nullptr );
 
-  var->prepare( *pman, *gman, *rman );
+  var->prepare( *pman, *gman, *eman, *rman );
   BOOST_REQUIRE_EQUAL( pvar->size(), pman->specie_count() );
 
   // first sample and report
-  var->on_sample( *pman, *gman );
+  var->on_sample( *pman, *gman, *eman );
   {
     for( auto filename : filenames )
     {
@@ -1340,7 +1352,7 @@ const std::vector< std::string > filenames { { "d3df-CA.dat", "d3df-CO.dat", "d3
     //std::cout << buf << "\n";
   }
   // second sample and report
-  var->on_sample( *pman, *gman );
+  var->on_sample( *pman, *gman, *eman );
   {
     std::stringstream out;
     var->on_report( out, sink );
@@ -1373,7 +1385,7 @@ const std::vector< std::string > filenames { { "d3df-CA.dat", "d3df-CO.dat", "d3
     BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 3 ), 1 );
     BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 4 ), 2 );
 
-    var->on_sample( *pman, *gman );
+    var->on_sample( *pman, *gman, *eman );
   }
   {
     std::stringstream out;

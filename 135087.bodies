@@ -4,19 +4,10 @@ out << "[sampler] " << this->get_label() << "\n";
 out << " Sample the free energy distribution of the ensemble\n";
 out << " - Trials per sampling loop : " << this->trials_ << "\n";
 
-!!!222128.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
-wr[ix].add_entry(core::strngs::fstype(), this->get_label());
-wr[ix].add_entry(core::strngs::fsiwid(), this->trials());
-const bool use_main = (this->monitor_.lock() ? true : false);
-wr[ix].add_entry(core::strngs::fswidm(), use_main);
-if (not this->key_labels_.empty())
-{
-  wr[ix].add_entry(core::strngs::fsspec(), this->key_labels_);
-}
 !!!695984.cpp!!!	get_value() : boost::any
 boost::any result = this->data_;
 return result;
-!!!1747631.cpp!!!	on_report(in sim : simulator, inout out : ostream, inout reporter : report_manager) : void
+!!!1747631.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
 // write report to log
 {
    out << " Results widom test particle method : \n";
@@ -54,7 +45,7 @@ return result;
 
    const std::size_t loopindex { sim.get_outer_loop_index() };
 
-   core::output_series dset { sim.run_uuid() };
+   core::output_series dset { sink.uuid() };
    dset.set_title( "Series of Widom method chemical potential estimates" );
 
    dset.push_back_entry( core::output_field( "INDEX", "ORDINAL", [loopindex](std::ostream& os, std::size_t)
@@ -98,7 +89,7 @@ for (widom_datum & datum : this->data_)
    // counter to zero.
    datum.count_ = 0ul;
 }
-!!!688048.cpp!!!	on_sample(in sim : simulator) : void
+!!!688048.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
 utility::fp_env &env(utility::fp_env::env_);
 // Perform insertion trials until minimum number of trials
 // has been reached.
@@ -156,67 +147,86 @@ for (widom_datum & datum : this->data_)
     datum.count_ -= this->trials();
   }
 }
-!!!2167599.cpp!!!	prepare(inout sim : simulator) : void
-this->data_.clear();
-if (this->key_labels_.empty())
+!!!1622064.cpp!!!	on_trial_end(in trial : change_set) : void
+// We cannot use "failed" trials but we
+// can use all other trials.
+if( not trial.fail() )
 {
-  // Use all solute species if none specified in the input file.
-  for (std::size_t key = 0; key != sim.specie_count(); ++key)
+  for( auto const& atom : trial )
   {
-    if (sim.get_specie(key).is_solute())
+    if( atom.do_new and not atom.do_old )
     {
-      this->data_.push_back(widom_datum(key));
-      this->key_labels_ += sim.get_specie(key).label() + " ";
+      this->update_data( atom );
     }
   }
-  if (not this->key_labels_.empty())
+}
+!!!2167599.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
+this->data_.clear();
+if( this->key_labels_.empty() )
+{
+  // Use all solute species if none specified in the input file.
+  for( std::size_t key = 0; key != pman.specie_count(); ++key )
   {
-     this->key_labels_.pop_back();
+    if( pman.get_specie( key ).is_solute() )
+    {
+      this->data_.push_back( widom_datum( key ) );
+      this->data_.back() = pman.get_specie( key ).label();
+    }
   }
 }
 else
 {
   // Use species specified in the input file.
-  boost::tokenizer<> tok{ this->key_labels_ };
+  boost::tokenizer<> tok { this->key_labels_ };
   // construct a new label list with no duplicate labels
-  std::string used_labels{};
-  for (auto beg = tok.begin(); beg != tok.end(); ++beg)
+  std::string used_labels;
+  for( std::string lbl : tok )
   {
-    std::string lbl{ *beg };
-    UTILITY_INPUT(sim.has_specie(lbl),
-                  "Specie label ["+lbl+"] not found",
-                  core::strngs::sampler_label());
-    std::size_t key = sim.get_specie_key(lbl);
-    UTILITY_INPUT(sim.get_specie(key).is_solute(),
-                  "Specie labelled ["+lbl+"] is not a solute",
-                  core::strngs::sampler_label());
+    UTILITY_INPUT( pman.has_specie( lbl ),
+                   "Specie label ["+lbl+"] not found",
+                   core::strngs::sampler_label() );
+    std::size_t key = pman.get_specie_key( lbl );
+    UTILITY_INPUT( pman.get_specie( key ).is_solute(),
+                   "Specie labelled ["+lbl+"] is not a solute",
+                   core::strngs::sampler_label() );
     // Ignore duplicate indices
-    if (this->data_.end() == std::find_if(this->data_.begin(), this->data_.end(), [key](const widom_datum& dat){ return dat.specie_key_ == key; }))
+    if( this->data_.end() == std::find_if( this->data_.begin(), this->data_.end(), [key]( const widom_datum& dat )
+  {
+    return dat.specie_key_ == key;
+  } ) )
     {
-      this->data_.push_back(widom_datum(key));
+      this->data_.push_back( widom_datum( key ) );
       used_labels += lbl + " ";
     }
   }
-  if (not used_labels.empty())
+  if( not used_labels.empty() )
   {
-     used_labels.pop_back();
+    used_labels.pop_back();
   }
-  std::swap(this->key_labels_, used_labels);
+  std::swap( this->key_labels_, used_labels );
+}
+!!!222128.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ix].add_entry(core::strngs::fstype(), this->get_label());
+wr[ix].add_entry(core::strngs::fsiwid(), this->trials());
+if (not this->key_labels_.empty())
+{
+  wr[ix].add_entry(core::strngs::fsspec(), this->key_labels_);
 }
 !!!686512.cpp!!!	specie_of_interest(in idx : size_t) : bool
 return this->data_.end() != std::find_if(this->data_.begin(), this->data_.end(), [idx](widom_datum const& dat){ return dat.specie_key_ == idx; });
 
 !!!434481.cpp!!!	update_data(in atom : change_atom) : void
-for (widom_datum &datum : this->data_)
+for( widom_datum &datum : this->data_ )
 {
-  if (datum.specie_key_ == atom.key)
+  if( datum.specie_key_ == atom.key )
   {
     ++datum.count_;
-    datum.chem_potential_.append(atom.energy_new);
-    datum.exp_chem_potential_.append(std::exp(-atom.energy_new));
+    datum.chem_potential_.append( atom.energy_new );
+    datum.exp_chem_potential_.append( std::exp( -atom.energy_new ) );
     break;
   }
 }
+
 !!!2175279.cpp!!!	make_sampler(in params : string, inout sim : simulator) : void
 boost::shared_ptr< widom > smplr(new widom);
 // Check parameters for usable values

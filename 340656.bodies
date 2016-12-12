@@ -4,7 +4,7 @@ class report_manager
 , samples_()
 , sink_()
 {}
-!!!672176.cpp!!!	add_sample(in var : sampled_observable) : void
+!!!672176.cpp!!!	add_sample(in var : base_observable) : void
 UTILITY_REQUIRE(this->samples_.empty() or not this->has_sample(var->get_label()), "Attempt to add two variables with the same name");
 this->samples_.push_back(var);
 
@@ -18,10 +18,10 @@ for (auto & obs : this->variables_)
   obs->on_trial_end(trial);
 }
 
-!!!605360.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+!!!605360.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
 for (auto & obs : this->samples_)
 {
-  obs->on_sample( pman, gman );
+  obs->on_sample( pman, gman, eman );
 }
 !!!607024.cpp!!!	on_report(inout out : ostream) : void
 for (auto & obs : this->variables_)
@@ -33,16 +33,16 @@ for (auto & obs : this->samples_)
   obs->on_report( out, *(this->sink_) );
 }
 
-!!!606000.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager) : void
+!!!606000.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
 for (auto & obs : this->variables_)
 {
-  obs->prepare( pman, gman, *this );
+  obs->prepare( pman, gman, eman, *this );
 }
 for (auto & obs : this->samples_)
 {
-  obs->prepare( pman, gman, *this );
+  obs->prepare( pman, gman, eman, *this );
 }
-!!!679472.cpp!!!	remove_sample(inout var : sampled_observable) : void
+!!!679472.cpp!!!	remove_sample(inout var : base_observable) : void
 auto itr = this->get_sample_(var->get_label());
 UTILITY_REQUIRE(this->samples_.end() != itr, "Attempt to remove sample variable that is not in the report manager.");
 UTILITY_REQUIRE(itr->get() == var.get(), "Variable in report manager with matching name does not have the same pointer.");
@@ -62,11 +62,11 @@ for (auto & obs : this->samples_)
   obs->description(out);
 }
 
-!!!672304.cpp!!!	get_sample(in name : string) : sampled_observable
+!!!672304.cpp!!!	get_sample(in name : string) : base_observable
 auto result = this->get_sample_(name);
 UTILITY_REQUIRE(this->samples_.end() != result, "Attempt to retrieve non-existent variable.");
 return *result;
-!!!732464.cpp!!!	get_sample(in name : string) : sampled_observable
+!!!732464.cpp!!!	get_sample(in name : string) : base_observable
 auto result = this->get_sample_(name);
 UTILITY_REQUIRE(this->samples_.end() != result, "Attempt to retrieve non-existent variable.");
 return *result;
@@ -94,13 +94,13 @@ for (auto const& obsr : this->samples_)
   obsr->write_document( wr );
 }
 
-!!!679600.cpp!!!	get_sample_(in name : string) : sampled_observable
+!!!679600.cpp!!!	get_sample_(in name : string) : base_observable
 return std::find_if(this->samples_.begin(),
         this->samples_.end(), [&name](decltype(*(this->samples_.begin()))& item)->bool
         {
           return item->get_label() == name;
         });
-!!!679856.cpp!!!	get_sample_(in name : string) : sampled_observable
+!!!679856.cpp!!!	get_sample_(in name : string) : base_observable
 return std::find_if(this->samples_.begin(),
         this->samples_.end(), [&name](decltype(*(this->samples_.begin()))& item)->bool
         {
