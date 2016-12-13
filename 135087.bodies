@@ -1,4 +1,10 @@
 class widom
+!!!1628976.cpp!!!	add_definition(inout meta : sampler_meta) : void
+std::unique_ptr< tracked_definition > result( new tracked_definition( type_label_(), &widom::make_sampler ) );
+// two extra parameters
+result->add_definition( "width", "[optional, number, default(0)] Minimum number of insertion attempts per sampling period." );
+result->add_definition( core::strngs::fsspec(), "[optional, list] List of specie labels to use. Species must be solute type. Default is to use all solute species." );
+meta.add_tracked_type( result );
 !!!488113.cpp!!!	description(inout out : ostream) : void
 out << "[sampler] " << this->get_label() << "\n";
 out << " Sample the free energy distribution of the ensemble\n";
@@ -7,134 +13,159 @@ out << " - Trials per sampling loop : " << this->trials_ << "\n";
 !!!695984.cpp!!!	get_value() : boost::any
 boost::any result = this->data_;
 return result;
+!!!2175279.cpp!!!	make_sampler(in params : string) : tracked_observable
+std::unique_ptr< widom > smplr( new widom );
+// Check parameters for usable values
+for( auto const& item : params )
+{
+  if( item.first == core::strngs::fsiwid() )
+  {
+    core::input_base_reader::ordinal_input( item.first, item.second, type_label_(), core::strngs::sampler_label(), smplr->trials_ );
+  }
+  else if( item.first == core::strngs::fsspec() )
+  {
+    smplr->key_labels_ = item.second;
+  }
+  else
+  {
+    const std::string known_key;
+    UTILITY_INPUT( item.first==known_key,
+                   "Parameter ["+item.first+"] unknown for sampler type ["+widom::type_label_()+"]",
+                   core::strngs::sampler_label() );
+  }
+}
+boost::shared_ptr< tracked_observable > result;
+result.reset( smplr.release() );
+return result;
+
 !!!1747631.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
 // write report to log
 {
-   out << " Results widom test particle method : \n";
-   out << " " << std::string(56+5,'-') << "\n";
-   out << " " << std::setw(6) << "SPECIE";
-   out << " " << std::setw(10) << "SAMPLES";
-   out << " " << std::setw(10) << "-ln<e-E>";
-   out << " " << std::setw(10) << "V(e-E)";
-   out << " " << std::setw(10) << "<E>";
-   out << " " << std::setw(10) << "V(E)";
-   out << "\n";
-   for (widom_datum const& datum : this->data_)
-   {
-      if (datum.chem_potential_.count() > 0)
-      {
-         out << " CP " << std::setw(3) << sim.get_specie(datum.specie_key_).label();
-         out << " " << std::setw(10) << datum.chem_potential_.count();
-         out << " " << std::setw(10) << -std::log(datum.exp_chem_potential_.mean());
-         out << " " << std::setw(10) << datum.exp_chem_potential_.variance();
-         out << " " << std::setw(10) << datum.chem_potential_.mean();
-         out << " " << std::setw(10) << datum.chem_potential_.variance();
-         out << "\n";
-      }
-      else
-      {
-         out << "CP " << std::setw(8) << sim.get_specie(datum.specie_key_).label();
-         out << " No results as no samples taken.\n";
-      }
-   }
+  out << " Results widom test particle method : \n";
+  out << " " << std::string( 56+5,'-' ) << "\n";
+  out << " " << std::setw( 6 ) << "SPECIE";
+  out << " " << std::setw( 10 ) << "SAMPLES";
+  out << " " << std::setw( 10 ) << "-ln<e-E>";
+  out << " " << std::setw( 10 ) << "V(e-E)";
+  out << " " << std::setw( 10 ) << "<E>";
+  out << " " << std::setw( 10 ) << "V(E)";
+  out << "\n";
+  for( widom_datum const& datum : this->data_ )
+  {
+    if( datum.chem_potential_.count() > 0 )
+    {
+      out << " CP " << std::setw( 3 ) << datum.specie_label_;
+      out << " " << std::setw( 10 ) << datum.chem_potential_.count();
+      out << " " << std::setw( 10 ) << -std::log( datum.exp_chem_potential_.mean() );
+      out << " " << std::setw( 10 ) << datum.exp_chem_potential_.variance();
+      out << " " << std::setw( 10 ) << datum.chem_potential_.mean();
+      out << " " << std::setw( 10 ) << datum.chem_potential_.variance();
+      out << "\n";
+    }
+    else
+    {
+      out << "CP " << std::setw( 8 ) << datum.specie_label_;
+      out << " No results as no samples taken.\n";
+    }
+  }
   out << core::strngs::horizontal_bar() << "\n";
 }
 // write data to output
 {
-   const std::string filename { "widom.dat" };
+  const std::string filename { "widom.dat" };
 
-   const std::size_t loopindex { sim.get_outer_loop_index() };
+  core::output_series dset { sink.uuid() };
+  dset.set_title( "Series of Widom method chemical potential estimates" );
+  const std::size_t loopindex = this->loop_count_;
 
-   core::output_series dset { sink.uuid() };
-   dset.set_title( "Series of Widom method chemical potential estimates" );
+  dset.push_back_entry( core::output_field( "INDEX", "ORDINAL", [loopindex]( std::ostream& os, std::size_t )
+  {
+    os << loopindex;
+  } ) );
 
-   dset.push_back_entry( core::output_field( "INDEX", "ORDINAL", [loopindex](std::ostream& os, std::size_t)
-   {
-      os << loopindex;
-   } ) );
+  for( widom_datum const& datum : this->data_ )
+  {
+    dset.push_back_entry( core::output_field( datum.specie_label_ + "_CURRENT" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
+    {
+      os << datum.specie_ecp_;
+    } ) );
+    dset.push_back_entry( core::output_field( datum.specie_label_ + "_E_MEAN" , "LN(-ENERGY)", [&datum]( std::ostream& os, std::size_t )
+    {
+      os << -std::log( datum.exp_chem_potential_.mean() );
+    } ) );
+    dset.push_back_entry( core::output_field( datum.specie_label_ + "_MEAN" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
+    {
+      os << datum.chem_potential_.mean();
+    } ) );
+    dset.push_back_entry( core::output_field( datum.specie_label_ + "_COUNT" , "COUNT", [&datum]( std::ostream& os, std::size_t )
+    {
+      os << datum.exp_chem_potential_.count();
+    } ) );
+  }
 
-   for (widom_datum const& datum : this->data_)
-   {
-      auto const& spc = sim.get_specie(datum.specie_key_);
-      dset.push_back_entry( core::output_field( spc.label() + "_CURRENT" , "COUNT", [&spc](std::ostream& os, std::size_t)
-      {
-         os << spc.excess_potential();
-      } ) );
-      dset.push_back_entry( core::output_field( spc.label() + "_E_MEAN" , "COUNT", [&datum](std::ostream& os, std::size_t)
-      {
-         os << -std::log(datum.exp_chem_potential_.mean());
-      } ) );
-      dset.push_back_entry( core::output_field( spc.label() + "_MEAN" , "COUNT", [&datum](std::ostream& os, std::size_t)
-      {
-         os << datum.chem_potential_.mean();
-      } ) );
-      dset.push_back_entry( core::output_field( spc.label() + "_COUNT" , "COUNT", [&datum](std::ostream& os, std::size_t)
-      {
-         os << datum.exp_chem_potential_.count();
-      } ) );
-   }
-
-   dset.write( filename, reporter.get_sink(), 1 == loopindex );
+  dset.write( filename, sink, not sink.exists( filename ) );
 
 }
 // reset accumulators
-for (widom_datum & datum : this->data_)
+for( widom_datum & datum : this->data_ )
 {
-   if (datum.chem_potential_.count() > 0)
-   {
-      datum.chem_potential_.reset();
-      datum.exp_chem_potential_.reset();
-   }
-   // reset the per-cycle iteration
-   // counter to zero.
-   datum.count_ = 0ul;
+  if( datum.chem_potential_.count() > 0 )
+  {
+    datum.chem_potential_.reset();
+    datum.exp_chem_potential_.reset();
+  }
+  // reset the per-cycle iteration
+  // counter to zero.
+  datum.count_ = 0ul;
 }
 !!!688048.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
-utility::fp_env &env(utility::fp_env::env_);
+++this->loop_count_;
+utility::fp_env &env( utility::fp_env::env_ );
 // Perform insertion trials until minimum number of trials
 // has been reached.
-for (widom_datum & datum : this->data_)
+auto const& ens = pman.get_ensemble();
+for( widom_datum & datum : this->data_ )
 {
-  if (datum.count_ < this->trials())
+  if( datum.count_ < this->trials() )
   {
-    periodic_cube::add_specie_pbc adder(datum.specie_key_, nullptr);
+    trial::add_specie adder( datum.specie_key_ );
     std::size_t imove = datum.count_;
     std::size_t fail_safe = 0;
-    while(imove != this->trials())
+    while( imove != this->trials() )
     {
       ++fail_safe;
-      if (fail_safe > (this->trials() * 100))
+      if( fail_safe > ( this->trials() * 100 ) )
       {
-        std::cerr << "WARNING: Widom sampler's add attempts are below 1\% for specie " << sim.get_specie(datum.specie_key_).label() << ".\n";
+        std::cerr << "WARNING: Widom sampler's add attempts are below 1\% for specie " << pman.get_specie( datum.specie_key_ ).label() << ".\n";
         break;
-      } 
-      std::unique_ptr< trial::change_set > move_(adder.generate(sim, this->ranf_));
+      }
+      std::unique_ptr< particle::change_set > move_( adder.generate( pman, gman, this->ranf_ ) );
       // Calculate distance vectors.
-      for (auto & atom : *move_)
+      for( auto & atom : *move_ )
       {
-        sim.compute_distances( atom.new_position, sim.get_ensemble().get_coordinates(), atom.new_rij, sim.get_ensemble().size(), 0 );
+        gman.calculate_distances( atom.new_position, ens.get_coordinates(), atom.new_rij, 0, ens.size() );
       }
       // Calculate energy
-      for (auto const& evaluator : sim.get_evaluators())
+      for( auto const& evaluator : eman.get_evaluators() )
       {
-        evaluator.compute_potential( sim.get_species(), sim.get_ensemble(), *move_, 0 );
-        if (move_->fail()) break;
+        evaluator.compute_potential( pman, gman, *move_ );
+        if( move_->fail() ) break;
       }
-      if ( not env.no_except() )
+      if( not env.no_except() )
       {
-        UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
-          , " Floating point exception : "+ env.error_message ());
+        UTILITY_ALWAYS( 0 == ( ( ~env.Inexact ) & env.except() )
+                        , " Floating point exception : "+ env.error_message() );
         env.reset();
       }
-      if (not move_->fail()) // **
-      { 
+      if( not move_->fail() ) // **
+      {
         // ** We skip failed attempts as we assume
         // these are particle-particle overlaps which
-        // have infinite/undefined energy. 
+        // have infinite/undefined energy.
 
         // Update data
         ++imove;
-        this->update_data((*move_)[0]);
+        this->update_data( ( *move_ )[0] );
       }
     }
     // reset counter.
@@ -144,9 +175,10 @@ for (widom_datum & datum : this->data_)
   {
     // reset counter.
     // ** if test assures this->count_[key] >= this->trials() **
-    datum.count_ -= this->trials();
+    datum.count_ = 0ul;
   }
 }
+
 !!!1622064.cpp!!!	on_trial_end(in trial : change_set) : void
 // We cannot use "failed" trials but we
 // can use all other trials.
@@ -161,6 +193,7 @@ if( not trial.fail() )
   }
 }
 !!!2167599.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
+this->loop_count_ = 0ul;
 this->data_.clear();
 if( this->key_labels_.empty() )
 {
@@ -170,7 +203,8 @@ if( this->key_labels_.empty() )
     if( pman.get_specie( key ).is_solute() )
     {
       this->data_.push_back( widom_datum( key ) );
-      this->data_.back() = pman.get_specie( key ).label();
+      this->data_.back().specie_label_ = pman.get_specie( key ).label();
+      this->data_.back().specie_ecp_ = pman.get_specie( key ).excess_potential();
     }
   }
 }
@@ -196,6 +230,8 @@ else
   } ) )
     {
       this->data_.push_back( widom_datum( key ) );
+      this->data_.back().specie_label_ = pman.get_specie( key ).label();
+      this->data_.back().specie_ecp_ = pman.get_specie( key ).excess_potential();
       used_labels += lbl + " ";
     }
   }
@@ -227,37 +263,3 @@ for( widom_datum &datum : this->data_ )
   }
 }
 
-!!!2175279.cpp!!!	make_sampler(in params : string, inout sim : simulator) : void
-boost::shared_ptr< widom > smplr(new widom);
-// Check parameters for usable values
-bool use_main = true;
-for (auto const& item : params)
-{
-  if (item.first == core::strngs::fsiwid())
-  {
-    smplr->trials_ = boost::lexical_cast< std::size_t >(item.second);
-  }
-  else if (item.first == core::strngs::fswidm())
-  {
-    use_main = core::input_reader::read_as_bool(item.second);
-  }
-  else if (item.first == core::strngs::fsspec())
-  {
-    smplr->key_labels_ = item.second;
-  }
-  else
-  {
-    const std::string known_key;
-    UTILITY_INPUT(item.first==known_key,
-      "Parameter ["+item.first+"] unknown for sampler type ["+widom::type_label_()+"]",
-      core::strngs::sampler_label ());
-  }
-}
-if (use_main)
-{
-  boost::shared_ptr< widom_monitor > monitor(new widom_monitor(smplr));
-  smplr->monitor_ = monitor;
-  sim.get_reporter().add_tracked(monitor);
-}
-// boost::shared_ptr< observable::base_observable > result(smplr.release());
-sim.get_reporter().add_sample(smplr);

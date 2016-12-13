@@ -1,6 +1,6 @@
 format 75
 "observable" // observable
-  revision 208
+  revision 211
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -5690,7 +5690,7 @@ ${docstring}${body}
     end
 
     classdiagram 193841 "Widom sampler"
-      draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
+      draw_all_relations default hide_attributes default hide_operations yes hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
       size A4
     end
 
@@ -5720,6 +5720,15 @@ ${members}};
 	  b parent class_ref 353840 // tracked_observable
       end
 
+      classrelation 985648 // <dependency>
+	relation 984752 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 985648 // <dependency>
+	  b parent class_ref 513200 // add_specie
+      end
+
       classrelation 1243439 // <dependency>
 	relation 1205679 -_->
 	  a default
@@ -5727,15 +5736,6 @@ ${members}};
 	    python "${type}"
 	    classrelation_ref 1243439 // <dependency>
 	  b parent class_ref 1026095 // base_choice
-      end
-
-      classrelation 1330735 // <dependency>
-	relation 1292207 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 1330735 // <dependency>
-	  b parent class_ref 912175 // base_evaluator
       end
 
       classrelation 1155375 // <dependency>
@@ -5855,6 +5855,19 @@ ${docstring}${members}
 one sampling cycle."
 	end
 
+	attribute 704944 "specie_ecp_"
+	  public explicit_type "double"
+	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	  java_decl ""
+	  php_decl ""
+	  python_decl "${comment}${self}${name} = ${value}
+"
+	  idl_decl ""
+	  comment " The excess chemical potential of the specie at the start of the
+ simulation."
+	end
+
 	attribute 407472 "specie_key_"
 	  public explicit_type "size_t"
 	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -5901,7 +5914,9 @@ ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, cons
   ${p0} & chem_potential_;
   ${p0} & exp_chem_potential_;
   ${p0} & count_;
+  ${p0} & specie_ecp_;
   ${p0} & specie_key_;
+  ${p0} & specie_label_;
 }
 "
 	  
@@ -5919,7 +5934,9 @@ ${docstring}${body}
 : chem_potential_()
 , exp_chem_potential_()
 , count_()
+, specie_ecp_()
 , specie_key_()
+, specie_label_()
 {}
 "
 	  
@@ -5938,7 +5955,9 @@ ${docstring}${body}
 : chem_potential_()
 , exp_chem_potential_()
 , count_()
+, specie_ecp_()
 , specie_key_(${p0})
+, specie_label_()
 {}
 "
 	  
@@ -5973,7 +5992,9 @@ ${docstring}${body}
 : chem_potential_(std::move(source.chem_potential_))
 , exp_chem_potential_(std::move(source.exp_chem_potential_))
 , count_(std::move(source.count_))
+, specie_ecp_(std::move(source.specie_ecp_))
 , specie_key_(std::move(source.specie_key_))
+, specie_label_(std::move(source.specie_label_))
 {}
 "
 	  
@@ -5993,7 +6014,9 @@ ${docstring}${body}
 : chem_potential_(source.chem_potential_)
 , exp_chem_potential_(source.exp_chem_potential_)
 , count_(source.count_)
+, specie_ecp_(source.specie_ecp_)
 , specie_key_(source.specie_key_)
+, specie_label_(source.specie_label_)
 {}
 "
 	  
@@ -6031,7 +6054,9 @@ ${docstring}${body}
    std::swap(this->chem_potential_, source.chem_potential_);
    std::swap(this->exp_chem_potential_, source.exp_chem_potential_);
    std::swap(this->count_, source.count_);
+   std::swap(this->specie_ecp_, source.specie_ecp_);
    std::swap(this->specie_key_, source.specie_key_);
+   std::swap(this->specie_label_, source.specie_label_);
 }
 "
 	  
@@ -6068,17 +6093,6 @@ ${docstring}${body}
  all SOLUTE species."
       end
 
-      attribute 1422127 "trials_"
-	private explicit_type "size_t"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl ""
-	idl_decl ""
-	comment "Number of trials to make per sample cycle"
-      end
-
       attribute 282417 "ranf_"
 	private type class_ref 463407 // random_distribution
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -6091,6 +6105,29 @@ ${docstring}${body}
 generator for the widom sampler so that runs of 
 the main simulation should be identical regardless
 of whether the Widom sampler is used or not. "
+      end
+
+      attribute 1422127 "trials_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl ""
+	idl_decl ""
+	comment " Number of trials to make per sample cycle, default is 0"
+      end
+
+      attribute 711472 "loop_count_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " How many times have samples been taken?"
       end
 
       extra_member 661680 "LIFETIME"
@@ -6130,22 +6167,12 @@ of whether the Widom sampler is used or not. "
 	cpp_decl "    ${comment}template<class Archive>
 ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< sampled_observable >(*this);
+  ${p0} & boost::serialization::base_object< tracked_observable >(*this);
   ar & data_;
   ar & key_labels_;
-  if (Archive::is_saving::value)
-  {
-    boost::shared_ptr< widom_monitor > p = monitor_.lock();
-    ar & p;
-  }
-  else
-  {
-    boost::shared_ptr< widom_monitor > p;
-    ar & p;
-    monitor_ = p;
-  }
-  ar & trials_;
   ar & ranf_;
+  ar & trials_;
+  ar & loop_count_;
 }
 "
 	
@@ -6157,22 +6184,24 @@ ${docstring}${body}
       end
 
       operation 2037679 "widom"
-	public explicit_return_type ""
+	private explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
 "
 	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} 
-: data_()
+: tracked_observable()
+, data_()
 , key_labels_()
-, trials_ (0)
-, ranf_ (boost::shared_ptr< boost::mt19937 >(new boost::mt19937))
+, ranf_( boost::shared_ptr< boost::mt19937 >( new boost::mt19937 ) )
+, trials_( 0 )
+, loop_count_( 0 )
 {}
 "
 	
 	
 	
 	
-	comment "default ctor (for serialize only)"
+	comment " default ctor (for serialize and factory only)"
       end
 
       operation 2102575 "~widom"
@@ -6197,6 +6226,27 @@ ${docstring}${body}
 	php ""
 	python ""
 	idl ""
+      end
+
+      operation 1628976 "add_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 1144111 // sampler_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add definition for generating objects of this 
+ class to the meta object."
       end
 
       operation 488113 "description"
@@ -6254,6 +6304,26 @@ ${docstring}${body}
 "
 	
 	comment "value object is of type vector< widom_datum >"
+      end
+
+      operation 2175279 "make_sampler"
+	class_operation public return_type class_ref 353840 // tracked_observable
+	nparams 1
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}std::map< ${t0}, ${t0} > const& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}std::map< ${t0}, ${t0} > const& ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Create a new widom sampler using the given parameter set."
       end
 
       operation 1747631 "on_report"
@@ -6390,6 +6460,40 @@ ${docstring}${body}
 	idl ""
       end
 
+      operation 1628720 "loop_count"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->${name}_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment "The number of trials to make per sampling cycle."
+      end
+
+      operation 1629360 "size"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->data_.${name}();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The number of species to be sampled."
+      end
+
       operation 686512 "specie_of_interest"
 	const public explicit_return_type "bool"
 	nparams 1
@@ -6431,7 +6535,7 @@ ${docstring}${body}
       end
 
       operation 434481 "update_data"
-	public explicit_return_type "void"
+	private explicit_return_type "void"
 	nparams 1
 	  param in name "atom" type class_ref 986415 // change_atom
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
@@ -6458,28 +6562,6 @@ ${docstring}${body}
 	python ""
 	idl ""
       end
-
-      operation 2175279 "make_sampler"
-	class_operation public explicit_return_type "void"
-	nparams 2
-	  param in name "params" explicit_type "string"
-	  param inout name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::map< ${t0}, ${t0} > const& ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::map< ${t0}, ${t0} > const& ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment "Create a new widom sampler using the given parameter set."
-      end
-
     end
 
     class 367024 "widom_monitor"
@@ -8193,41 +8275,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
-    artifact 769583 "libionch_observable"
-      stereotype "library"
-      associated_artifacts
-	artifact_ref 135345 // metropolis_sampler
-	artifact_ref 181041 // specie_count
-	artifact_ref 200881 // rdf_sampler
-	artifact_ref 213937 // d3_distribution
-	artifact_ref 275248 // density_zaxis
-	artifact_ref 351792 // report_manager
-	artifact_ref 377904 // acceptance_observable
-	artifact_ref 504112 // digitizer_3d
-	artifact_ref 563632 // specie_region_count
-	artifact_ref 631215 // base_observable
-	artifact_ref 789807 // sampler_meta
-      end
-    end
-
     artifact 651823 "widom"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
 #define @{PROJECT}${NAMESPACE}_${NAME}_HPP
 
 ${comment}
-// Default inc
-#include \"utility/config.hpp\"
-#include <boost/weak_ptr.hpp>
-// End
 ${includes}
 ${declarations}
 ${namespace_start}
-// fwd decl.
-class widom;
-
 ${definition}
 ${namespace_end}
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_KEY( observable::widom );
 #endif
 "
       cpp_src "${comment}
@@ -8245,12 +8306,9 @@ ${namespace_start}
 ${members}
 ${namespace_end}
 
-#include <boost/serialization/export.hpp>
-BOOST_CLASS_EXPORT_GUID(periodic_cube::widom, \"periodic_cube::widom\");
-BOOST_CLASS_EXPORT_GUID(periodic_cube::widom_monitor, \"periodic_cube::widom_monitor\");
+BOOST_CLASS_EXPORT_IMPLEMENT( observable::widom );
 "
       associated_classes
-	class_ref 367024 // widom_monitor
 	class_ref 135087 // widom
       end
       comment "----------------------------------------------------------------------
@@ -8268,6 +8326,24 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----------------------------------------------------------------------
 "
+    end
+
+    artifact 769583 "libionch_observable"
+      stereotype "library"
+      associated_artifacts
+	artifact_ref 135345 // metropolis_sampler
+	artifact_ref 181041 // specie_count
+	artifact_ref 200881 // rdf_sampler
+	artifact_ref 213937 // d3_distribution
+	artifact_ref 275248 // density_zaxis
+	artifact_ref 351792 // report_manager
+	artifact_ref 377904 // acceptance_observable
+	artifact_ref 504112 // digitizer_3d
+	artifact_ref 563632 // specie_region_count
+	artifact_ref 631215 // base_observable
+	artifact_ref 651823 // widom
+	artifact_ref 789807 // sampler_meta
+      end
     end
   end
 
