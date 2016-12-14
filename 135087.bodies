@@ -45,26 +45,26 @@ return result;
   out << " " << std::string( 56+5,'-' ) << "\n";
   out << " " << std::setw( 6 ) << "SPECIE";
   out << " " << std::setw( 10 ) << "SAMPLES";
-  out << " " << std::setw( 10 ) << "-ln<e-E>";
-  out << " " << std::setw( 10 ) << "V(e-E)";
-  out << " " << std::setw( 10 ) << "<E>";
-  out << " " << std::setw( 10 ) << "V(E)";
+  out << " " << std::setw( 10 ) << "<U> (E)";
+  out << " " << std::setw( 10 ) << "<U>VAR";
+  out << " " << std::setw( 10 ) << "EXCESS";
   out << "\n";
   for( widom_datum const& datum : this->data_ )
   {
-    if( datum.chem_potential_.count() > 0 )
+    if( datum.exp_potential_.count() > 0 )
     {
-      out << " CP " << std::setw( 3 ) << datum.specie_label_;
-      out << " " << std::setw( 10 ) << datum.chem_potential_.count();
-      out << " " << std::setw( 10 ) << -std::log( datum.exp_chem_potential_.mean() );
-      out << " " << std::setw( 10 ) << datum.exp_chem_potential_.variance();
-      out << " " << std::setw( 10 ) << datum.chem_potential_.mean();
-      out << " " << std::setw( 10 ) << datum.chem_potential_.variance();
+      out << " CP " << std::setw( 3 ) << datum.label_;
+      out << " " << std::setw( 10 ) << datum.exp_potential_.count();
+      const double mu = -std::log( datum.exp_potential_.mean() );
+      out << " " << std::setw( 10 ) << mu;
+      out << " " << std::setw( 10 ) << datum.exp_potential_.variance();
+      const double mu_ex = mu - std::log( core::constants::to_SI() * datum.specie_count_.mean() / datum.volume_ );
+      out << " " << std::setw( 10 ) << mu_ex;
       out << "\n";
     }
     else
     {
-      out << "CP " << std::setw( 8 ) << datum.specie_label_;
+      out << "CP " << std::setw( 8 ) << datum.label_;
       out << " No results as no samples taken.\n";
     }
   }
@@ -85,21 +85,21 @@ return result;
 
   for( widom_datum const& datum : this->data_ )
   {
-    dset.push_back_entry( core::output_field( datum.specie_label_ + "_CURRENT" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
+    dset.push_back_entry( core::output_field( datum.label_ + "_EXCESS0" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
     {
-      os << datum.specie_ecp_;
+      os << datum.excess_potential_;
     } ) );
-    dset.push_back_entry( core::output_field( datum.specie_label_ + "_E_MEAN" , "LN(-ENERGY)", [&datum]( std::ostream& os, std::size_t )
+    dset.push_back_entry( core::output_field( datum.label_ + "_POTENTIAL" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
     {
-      os << -std::log( datum.exp_chem_potential_.mean() );
+      os << -std::log( datum.exp_potential_.mean() );
     } ) );
-    dset.push_back_entry( core::output_field( datum.specie_label_ + "_MEAN" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
+    dset.push_back_entry( core::output_field( datum.label_ + "_EXCESS" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
     {
-      os << datum.chem_potential_.mean();
+      os << -std::log( datum.exp_potential_.mean() ) - std::log( core::constants::to_SI() * datum.specie_count_.mean() / datum.volume_ );
     } ) );
-    dset.push_back_entry( core::output_field( datum.specie_label_ + "_COUNT" , "COUNT", [&datum]( std::ostream& os, std::size_t )
+    dset.push_back_entry( core::output_field( datum.label_ + "_COUNT" , "COUNT", [&datum]( std::ostream& os, std::size_t )
     {
-      os << datum.exp_chem_potential_.count();
+      os << datum.exp_potential_.count();
     } ) );
   }
 
@@ -109,10 +109,10 @@ return result;
 // reset accumulators
 for( widom_datum & datum : this->data_ )
 {
-  if( datum.chem_potential_.count() > 0 )
+  if( datum.specie_count_.count() > 0 )
   {
-    datum.chem_potential_.reset();
-    datum.exp_chem_potential_.reset();
+    datum.specie_count_.reset();
+    datum.exp_potential_.reset();
   }
   // reset the per-cycle iteration
   // counter to zero.
@@ -126,9 +126,10 @@ utility::fp_env &env( utility::fp_env::env_ );
 auto const& ens = pman.get_ensemble();
 for( widom_datum & datum : this->data_ )
 {
+  datum.specie_count_.append( double( ens.specie_count( datum.key_ ) ) );
   if( datum.count_ < this->trials() )
   {
-    trial::add_specie adder( datum.specie_key_ );
+    trial::add_specie adder( datum.key_ );
     std::size_t imove = datum.count_;
     std::size_t fail_safe = 0;
     while( imove != this->trials() )
@@ -136,7 +137,7 @@ for( widom_datum & datum : this->data_ )
       ++fail_safe;
       if( fail_safe > ( this->trials() * 100 ) )
       {
-        std::cerr << "WARNING: Widom sampler's add attempts are below 1\% for specie " << pman.get_specie( datum.specie_key_ ).label() << ".\n";
+        std::cerr << "WARNING: Widom sampler's add attempts are below 1\% for specie " << datum.label_ << ".\n";
         break;
       }
       std::unique_ptr< particle::change_set > move_( adder.generate( pman, gman, this->ranf_ ) );
@@ -157,16 +158,9 @@ for( widom_datum & datum : this->data_ )
                         , " Floating point exception : "+ env.error_message() );
         env.reset();
       }
-      if( not move_->fail() ) // **
-      {
-        // ** We skip failed attempts as we assume
-        // these are particle-particle overlaps which
-        // have infinite/undefined energy.
-
-        // Update data
-        ++imove;
-        this->update_data( ( *move_ )[0] );
-      }
+      // Update data
+      ++imove;
+      this->update_data( ( *move_ )[0], move_->fail() );
     }
     // reset counter.
     datum.count_ = 0ul;
@@ -182,14 +176,11 @@ for( widom_datum & datum : this->data_ )
 !!!1622064.cpp!!!	on_trial_end(in trial : change_set) : void
 // We cannot use "failed" trials but we
 // can use all other trials.
-if( not trial.fail() )
+for( auto const& atom : trial )
 {
-  for( auto const& atom : trial )
+  if( atom.do_new and not atom.do_old )
   {
-    if( atom.do_new and not atom.do_old )
-    {
-      this->update_data( atom );
-    }
+    this->update_data( atom, trial.fail() );
   }
 }
 !!!2167599.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
@@ -200,11 +191,15 @@ if( this->key_labels_.empty() )
   // Use all solute species if none specified in the input file.
   for( std::size_t key = 0; key != pman.specie_count(); ++key )
   {
-    if( pman.get_specie( key ).is_solute() )
+    auto const& spc = pman.get_specie( key );
+    if( spc.is_solute() )
     {
-      this->data_.push_back( widom_datum( key ) );
-      this->data_.back().specie_label_ = pman.get_specie( key ).label();
-      this->data_.back().specie_ecp_ = pman.get_specie( key ).excess_potential();
+      widom_datum datum( key );
+      datum.label_ = spc.label();
+      datum.excess_potential_ = spc.excess_potential();
+      datum.conc_ = spc.concentration();
+      datum.volume_ = gman.system_region().volume( spc.radius() );
+      this->data_.push_back( datum );
     }
   }
 }
@@ -223,15 +218,19 @@ else
     UTILITY_INPUT( pman.get_specie( key ).is_solute(),
                    "Specie labelled ["+lbl+"] is not a solute",
                    core::strngs::sampler_label() );
+    auto const& spc = pman.get_specie( key );
     // Ignore duplicate indices
     if( this->data_.end() == std::find_if( this->data_.begin(), this->data_.end(), [key]( const widom_datum& dat )
   {
-    return dat.specie_key_ == key;
+    return dat.key_ == key;
   } ) )
     {
-      this->data_.push_back( widom_datum( key ) );
-      this->data_.back().specie_label_ = pman.get_specie( key ).label();
-      this->data_.back().specie_ecp_ = pman.get_specie( key ).excess_potential();
+      widom_datum datum( key );
+      datum.label_ = spc.label();
+      datum.excess_potential_ = spc.excess_potential();
+      datum.conc_ = spc.concentration();
+      datum.volume_ = gman.system_region().volume( spc.radius() );
+      this->data_.push_back( datum );
       used_labels += lbl + " ";
     }
   }
@@ -249,16 +248,23 @@ if (not this->key_labels_.empty())
   wr[ix].add_entry(core::strngs::fsspec(), this->key_labels_);
 }
 !!!686512.cpp!!!	specie_of_interest(in idx : size_t) : bool
-return this->data_.end() != std::find_if(this->data_.begin(), this->data_.end(), [idx](widom_datum const& dat){ return dat.specie_key_ == idx; });
+return this->data_.end() != std::find_if(this->data_.begin(), this->data_.end(), [idx](widom_datum const& dat){ return dat.key_ == idx; });
 
-!!!434481.cpp!!!	update_data(in atom : change_atom) : void
+!!!434481.cpp!!!	update_data(in atom : change_atom, in not_fail : bool) : void
 for( widom_datum &datum : this->data_ )
 {
-  if( datum.specie_key_ == atom.key )
+  if( datum.key_ == atom.key )
   {
     ++datum.count_;
-    datum.chem_potential_.append( atom.energy_new );
-    datum.exp_chem_potential_.append( std::exp( -atom.energy_new ) );
+    if( not_fail )
+    {
+      datum.exp_potential_.append( std::exp( -atom.energy_new ) );
+    }
+    else
+    {
+      // failed test has failure probability of 1
+      datum.exp_potential_.append( 1.0 );
+    }
     break;
   }
 }

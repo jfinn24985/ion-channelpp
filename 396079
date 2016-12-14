@@ -1,6 +1,6 @@
 format 75
 "observable" // observable
-  revision 211
+  revision 212
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -5710,7 +5710,8 @@ ${members}};
 "
       explicit_switch_type ""
       
-      comment " Widom observable class. (1D)"
+      comment " Widom observable, calculate the excess chemical potential from insertion
+ trials. This class calculates an average global value."
       classrelation 979120 // <generalisation>
 	relation 978224 ---|>
 	  a public
@@ -5818,27 +5819,27 @@ ${docstring}${members}
 	explicit_switch_type ""
 	
 	comment "Widom based free energy estimate for one specie."
-	classrelation 446128 // chem_potential_ (<directional composition>)
+	classrelation 446128 // specie_count_ (<directional composition>)
 	  relation 445232 *-->
-	    a role_name "chem_potential_" multiplicity "1" public
-	      comment "The energy based chemical potential estimate"
+	    a role_name "specie_count_" multiplicity "1" public
+	      comment " The average number of particles of this specie"
 	      cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
 	      python "${comment}${self}${name} = ${type}()
 "
-	      classrelation_ref 446128 // chem_potential_ (<directional composition>)
+	      classrelation_ref 446128 // specie_count_ (<directional composition>)
 	    b parent class_ref 176049 // estimater
 	end
 
-	classrelation 446256 // exp_chem_potential_ (<directional composition>)
+	classrelation 446256 // exp_potential_ (<directional composition>)
 	  relation 445360 *-->
-	    a role_name "exp_chem_potential_" public
+	    a role_name "exp_potential_" public
 	      comment "The probability {exp(-energy)} based chemical potential estimate"
 	      cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
 	      python "${comment}${self}${name} = ${type}()
 "
-	      classrelation_ref 446256 // exp_chem_potential_ (<directional composition>)
+	      classrelation_ref 446256 // exp_potential_ (<directional composition>)
 	    b parent class_ref 176049 // estimater
 	end
 
@@ -5855,7 +5856,19 @@ ${docstring}${members}
 one sampling cycle."
 	end
 
-	attribute 704944 "specie_ecp_"
+	attribute 718000 "conc_"
+	  public explicit_type "double"
+	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	  java_decl ""
+	  php_decl ""
+	  python_decl "${comment}${self}${name} = ${value}
+"
+	  idl_decl ""
+	  comment " Species target concentration."
+	end
+
+	attribute 704944 "excess_potential_"
 	  public explicit_type "double"
 	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
@@ -5868,7 +5881,7 @@ one sampling cycle."
  simulation."
 	end
 
-	attribute 407472 "specie_key_"
+	attribute 407472 "key_"
 	  public explicit_type "size_t"
 	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
@@ -5880,7 +5893,7 @@ one sampling cycle."
 	  comment "The specie index of this datum."
 	end
 
-	attribute 698416 "specie_label_"
+	attribute 698416 "label_"
 	  public explicit_type "string"
 	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
@@ -5890,6 +5903,18 @@ one sampling cycle."
 "
 	  idl_decl ""
 	  comment " The label of the specie."
+	end
+
+	attribute 718128 "volume_"
+	  public explicit_type "double"
+	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	  java_decl ""
+	  php_decl ""
+	  python_decl "${comment}${self}${name} = ${value}
+"
+	  idl_decl ""
+	  comment " Volume of simulation for this specie"
 	end
 
 	extra_member 336816 "friend"
@@ -5911,12 +5936,14 @@ one sampling cycle."
 	  cpp_decl "    ${comment}template<class Archive>
 ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & chem_potential_;
-  ${p0} & exp_chem_potential_;
+  ${p0} & specie_count_;
+  ${p0} & exp_potential_;
   ${p0} & count_;
-  ${p0} & specie_ecp_;
-  ${p0} & specie_key_;
-  ${p0} & specie_label_;
+  ${p0} & conc_;
+  ${p0} & excess_potential_;
+  ${p0} & key_;
+  ${p0} & label_;
+  ${p0} & volume_;
 }
 "
 	  
@@ -5931,12 +5958,14 @@ ${docstring}${body}
 	  public explicit_return_type ""
 	  nparams 0
 	  cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
-: chem_potential_()
-, exp_chem_potential_()
+: specie_count_()
+, exp_potential_()
 , count_()
-, specie_ecp_()
-, specie_key_()
-, specie_label_()
+, conc_()
+, excess_potential_()
+, key_()
+, label_()
+, volume_()
 {}
 "
 	  
@@ -5952,12 +5981,14 @@ ${docstring}${body}
 	  nparams 1
 	    param in name "key" explicit_type "size_t"
 	  cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
-: chem_potential_()
-, exp_chem_potential_()
+: specie_count_()
+, exp_potential_()
 , count_()
-, specie_ecp_()
-, specie_key_(${p0})
-, specie_label_()
+, conc_()
+, excess_potential_()
+, key_( ${p0} )
+, label_()
+, volume_()
 {}
 "
 	  
@@ -5989,12 +6020,14 @@ ${docstring}${body}
 	  nparams 1
 	    param inout name "source" type class_ref 367152 // widom_datum
 	  cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
-: chem_potential_(std::move(source.chem_potential_))
-, exp_chem_potential_(std::move(source.exp_chem_potential_))
-, count_(std::move(source.count_))
-, specie_ecp_(std::move(source.specie_ecp_))
-, specie_key_(std::move(source.specie_key_))
-, specie_label_(std::move(source.specie_label_))
+: specie_count_( std::move( source.specie_count_ ) )
+, exp_potential_( std::move( source.exp_potential_ ) )
+, count_( std::move( source.count_ ) )
+, conc_( std::move( source.conc_ ) )
+, excess_potential_( std::move( source.excess_potential_ ) )
+, key_( std::move( source.key_ ) )
+, label_( std::move( source.label_ ) )
+, volume_( std::move( source.volume_ ) )
 {}
 "
 	  
@@ -6011,12 +6044,14 @@ ${docstring}${body}
 	  nparams 1
 	    param in name "source" type class_ref 367152 // widom_datum
 	  cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
-: chem_potential_(source.chem_potential_)
-, exp_chem_potential_(source.exp_chem_potential_)
-, count_(source.count_)
-, specie_ecp_(source.specie_ecp_)
-, specie_key_(source.specie_key_)
-, specie_label_(source.specie_label_)
+: specie_count_( source.specie_count_ )
+, exp_potential_( source.exp_potential_ )
+, count_( source.count_ )
+, conc_( source.conc_ )
+, excess_potential_( source.excess_potential_ )
+, key_( source.key_ )
+, label_( source.label_ )
+, volume_( source.volume_ )
 {}
 "
 	  
@@ -6051,12 +6086,14 @@ ${docstring}${body}
 	    param inout name "source" type class_ref 367152 // widom_datum
 	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${abstract}
 {
-   std::swap(this->chem_potential_, source.chem_potential_);
-   std::swap(this->exp_chem_potential_, source.exp_chem_potential_);
-   std::swap(this->count_, source.count_);
-   std::swap(this->specie_ecp_, source.specie_ecp_);
-   std::swap(this->specie_key_, source.specie_key_);
-   std::swap(this->specie_label_, source.specie_label_);
+   std::swap( this->specie_count_, source.specie_count_ );
+   std::swap( this->exp_potential_, source.exp_potential_ );
+   std::swap( this->count_, source.count_ );
+   std::swap( this->conc_, source.conc_ );
+   std::swap( this->excess_potential_, source.excess_potential_ );
+   std::swap( this->key_, source.key_ );
+   std::swap( this->label_, source.label_ );
+   std::swap( this->volume_, source.volume_ );
 }
 "
 	  
@@ -6536,11 +6573,12 @@ ${docstring}${body}
 
       operation 434481 "update_data"
 	private explicit_return_type "void"
-	nparams 1
+	nparams 2
 	  param in name "atom" type class_ref 986415 // change_atom
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	  param in name "not_fail" explicit_type "bool"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -6551,17 +6589,9 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment "Collect a sample from a trial"
+	comment " Collect a sample from a trial"
       end
 
-      extra_member 278577 "TODO"
-	
-	cpp "" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
     end
 
     class 367024 "widom_monitor"
