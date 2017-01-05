@@ -1,26 +1,33 @@
 class sampler_meta
 !!!833584.cpp!!!	add_sampler_type(inout defn : sampler_definition) : void
-UTILITY_REQUIRE( this->has_type( defn->label() ), ("Attempt to add more than one chooser factory for type \""+defn->label()+"\".") );
+UTILITY_REQUIRE( not this->has_type( defn->label() ), ("Attempt to add more than one chooser factory for type \""+defn->label()+"\".") );
 this->type_to_sample_.push_back( defn.release() );
 !!!1326000.cpp!!!	add_tracked_type(inout defn : tracked_definition) : void
-UTILITY_REQUIRE( this->has_type( defn->label() ), ("Attempt to add more than one chooser factory for type \""+defn->label()+"\".") );
+UTILITY_REQUIRE( not this->has_type( defn->label() ), ("Attempt to add more than one chooser factory for type \""+defn->label()+"\".") );
 this->type_to_tracked_.push_back( defn.release() );
 !!!833456.cpp!!!	has_type(in label : string) : bool
-for( auto const& defn : this->type_to_sample_ )
+if( not this->type_to_sample_.empty() )
 {
-  if( defn.label() == label )
+  for( auto const& defn : this->type_to_sample_ )
   {
-    return true;
+    if( defn.label() == label )
+    {
+      return true;
+    }
   }
 }
-for( auto const& defn : this->type_to_tracked_ )
+if( not this->type_to_tracked_.empty() )
 {
-  if( defn.label() == label )
+  for( auto const& defn : this->type_to_tracked_ )
   {
-    return true;
+    if( defn.label() == label )
+    {
+      return true;
+    }
   }
 }
 return false;
+
 !!!833328.cpp!!!	publish_help(inout helper : input_help) : void
 const std::string seclabel( core::strngs::sampler_label() );
 // ----------------------------------------
@@ -83,6 +90,11 @@ for( const auto& defn : this->type_to_sample_ )
 {
   if( defn.label() == this->type_ )
   { 
+    // check parameters.
+    for( auto const& entry : this->parameter_set_ )
+    {
+      UTILITY_INPUT( defn.has_definition( entry.first ), str( core::input_error_messages::invalid_parameter_subtype() % entry.first % this->section_label() % this->type_ ), this->section_label() );
+    }
     this->manager_->add_sample( defn( this->parameter_set_ ) );
     return;
   }
@@ -91,6 +103,11 @@ for( const auto& defn : this->type_to_tracked_ )
 {
   if( defn.label() == this->type_ )
   { 
+    // check parameters.
+    for( auto const& entry : this->parameter_set_ )
+    {
+      UTILITY_INPUT( defn.has_definition( entry.first ), str( core::input_error_messages::invalid_parameter_subtype() % entry.first % this->section_label() % this->type_ ), this->section_label() );
+    }
     this->manager_->add_tracked( defn( this->parameter_set_ ) );
     return;
   }

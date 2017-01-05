@@ -2,7 +2,7 @@ class widom
 !!!1628976.cpp!!!	add_definition(inout meta : sampler_meta) : void
 std::unique_ptr< tracked_definition > result( new tracked_definition( type_label_(), &widom::make_sampler ) );
 // two extra parameters
-result->add_definition( "width", "[optional, number, default(0)] Minimum number of insertion attempts per sampling period." );
+result->add_definition( core::strngs::fsiwid(), "[optional, number, default(0)] Minimum number of insertion attempts per sampling period." );
 result->add_definition( core::strngs::fsspec(), "[optional, list] List of specie labels to use. Species must be solute type. Default is to use all solute species." );
 meta.add_tracked_type( result );
 !!!488113.cpp!!!	description(inout out : ostream) : void
@@ -24,6 +24,9 @@ for( auto const& item : params )
   }
   else if( item.first == core::strngs::fsspec() )
   {
+    UTILITY_INPUT( not item.second.empty(),
+                   "widom \""+item.first+"\" parameter requires a value",
+                   core::strngs::sampler_label() );
     smplr->key_labels_ = item.second;
   }
   else
@@ -212,11 +215,11 @@ else
   for( std::string lbl : tok )
   {
     UTILITY_INPUT( pman.has_specie( lbl ),
-                   "Specie label ["+lbl+"] not found",
+                   "widom \"specie\" parameter value ("+ this->key_labels_ +") has unknown specie label ["+ lbl +"]",
                    core::strngs::sampler_label() );
     std::size_t key = pman.get_specie_key( lbl );
     UTILITY_INPUT( pman.get_specie( key ).is_solute(),
-                   "Specie labelled ["+lbl+"] is not a solute",
+                   "widom \"specie\" parameter value ("+ this->key_labels_ +") has specie ["+ lbl +"] that is not a solute",
                    core::strngs::sampler_label() );
     auto const& spc = pman.get_specie( key );
     // Ignore duplicate indices

@@ -25,6 +25,7 @@ double stepsize = d3_distribution::default_bin_width();
 if (paramset.count( core::strngs::fsregn() ) != 0)
 {
   region_list = paramset.at( core::strngs::fsregn() );
+  UTILITY_INPUT( not region_list.empty(), d3_distribution::type_label_() + " paramter \"" + core::strngs::fsregn() + "\" requires a value.", core::strngs::sampler_label() );
 }
 if (0 != paramset.count("stepsize"))
 {
@@ -33,12 +34,13 @@ if (0 != paramset.count("stepsize"))
 std::unique_ptr<d3_distribution> result( new d3_distribution );
 if( not region_list.empty() )
 {
-  result->process_region_list( region_list );
+  result->regions_ = d3_distribution::process_region_list( region_list );
+  UTILITY_INPUT( not result->regions_.empty(), d3_distribution::type_label_() + " parameter \"" + core::strngs::fsregn() + "\" value ["+region_list+"] is invalid.", core::strngs::sampler_label() );
 }
 result->stepsize_ = stepsize;
 boost::shared_ptr< base_observable > tmp(result.release());
 return tmp;
-!!!365745.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in sman : report_manager) : void
+!!!365745.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
 if( not this->distributions_.empty() )
 {
   this->distributions_.clear();
@@ -102,7 +104,7 @@ for (std::size_t ispec = 0; ispec != this->specie_labels_.size(); ++ispec)
   }
 }
 
-!!!366001.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+!!!366001.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
 for( auto & histo : this->distributions_ )
 {
   histo.begin_sample();
@@ -141,40 +143,26 @@ if( not this->regions_.empty() )
 }
 wr[ ix ].add_entry( "stepsize", this->stepsize_ );
 
-!!!1607856.cpp!!!	process_region_list(in list : string) : void
+!!!1607856.cpp!!!	process_region_list(in list : string) : string
 std::map< std::string, std::string > regions;
-std::stringstream is( list );
-std::vector< std::string > pairs;
-while( is )
+boost::tokenizer<> tok { list };
+std::string label;
+for( std::string word_or_pair : tok )
 {
-  std::string word;
-  is >> word;
-  pairs.push_back( word );
-}
-std::size_t idx = 0;
-while( idx < pairs.size() )
-{
-  std::string const& word = pairs[ idx ];
-  std::size_t sep = word.find( ':' );
-  if( sep < word.size() )
+  if( label.empty() )
   {
-    UTILITY_INPUT( (2 == sep) or (1 == sep), "Invalid specie label in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
-    std::string name, value;
-    name = word.substr( 0, sep );
-    value = word.substr( sep + 1 );
-    UTILITY_INPUT( not value.empty(), "Invalid region label in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
-    regions.insert( { name, value } );
+    // specie label part of pair
+    UTILITY_INPUT( ( 2 == word_or_pair.size() ) or ( 1 == word_or_pair.size() ), "Invalid specie label ["+ word_or_pair +"] in list ["+list+"] in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
+    label = word_or_pair;
   }
   else
   {
-    // assume space separated entry
-    UTILITY_INPUT( (2 == word.size()) or (1 == word.size()), "Invalid specie label in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
-    UTILITY_INPUT( idx + 1 < pairs.size(), "Missing region in specie/region pair in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
-    ++idx;
-    std::string value = pairs[ idx ];
-    UTILITY_INPUT( not value.empty(), "Invalid region label in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
-    regions.insert( { word, value } );
+    // region part of pair
+    auto check_unique = regions.insert( { label, word_or_pair } );
+    UTILITY_INPUT( check_unique.second, "Duplicate specie label ["+ label +"] in list ["+list+"] in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
+    label.clear();
   }
-  ++idx;
 }
-std::swap( this->regions_, regions );
+UTILITY_INPUT( label.empty(), "Have unmatched specie label ["+label+"] in list ["+list+"] in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
+return regions;
+

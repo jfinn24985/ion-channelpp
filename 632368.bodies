@@ -1,0 +1,115 @@
+class simulation
+!!!1635888.cpp!!!	build_input_delegater(inout delegate : input_delegater) : void
+{
+  //////////////////
+  // Evaluator types
+  std::unique_ptr< evaluator::evaluator_meta > emeta{ new evaluator::evaluator_meta( this->eman_ ) };
+  {
+    // Lennard Jones
+    auto edefn = evaluator::lennard_jones::make_definition();
+    emeta->add_definition( edefn );
+  }
+  {
+    // Coulomb electrostatics
+    auto edefn = evaluator::coulomb::make_definition();
+    emeta->add_definition( edefn );
+  }
+  {
+    // Particle harmonic localization
+    auto edefn = evaluator::localizer::make_definition();
+    emeta->add_definition( edefn );
+  }
+  boost::shared_ptr< core::input_base_meta > etmp;
+  etmp.reset( emeta.release() );
+  delegate.add_input_delegate( etmp );
+}
+{
+  //////////
+  // Species
+  boost::shared_ptr< core::input_base_meta > smeta{ new particle::specie_meta( this->pman_ ) };
+  delegate.add_input_delegate( smeta );
+}
+{
+  ///////////////
+  // Region types
+  std::unique_ptr< geometry::region_meta > gmeta{ new geometry::region_meta( this->gman_ ) };
+
+  // Cube
+  geometry::cube_region::add_region_definition( *gmeta );
+
+  // Cylinder (basic)
+  geometry::cylinder_region::add_region_definition( *gmeta );
+
+  // Open cylinder
+  geometry::open_cylinder_region::add_region_definition( *gmeta );
+
+  // Open+Split cylinder
+  geometry::open_split_cylinder_region::add_region_definition( *gmeta );
+
+  // Periodic Cube
+  geometry::periodic_cube_region::add_region_definition( *gmeta );
+
+  boost::shared_ptr< core::input_base_meta > gtmp;
+  gtmp.reset( gmeta.release() );
+  delegate.add_input_delegate( gtmp );
+}
+{
+  ///////////////
+  // Choice types
+  std::unique_ptr< trial::choice_meta > cmeta{ new trial::choice_meta( this->cman_ ) };
+
+  // Small displacement in a sphere
+  trial::move_choice::add_definition( *cmeta );
+
+  // Jump anywhere in simulation
+  trial::jump_choice::add_definition( *cmeta );
+
+  // Jump into a region
+  trial::jump_in::add_definition( *cmeta );
+
+  // Jump out of a region
+  trial::jump_out::add_definition( *cmeta );
+
+  // Jump anywhere in a region
+  trial::jump_around::add_definition( *cmeta );
+
+  // Individual grand canonical
+  trial::add_specie::add_definition( *cmeta );
+
+  boost::shared_ptr< core::input_base_meta > ctmp;
+  ctmp.reset( cmeta.release() );
+  delegate.add_input_delegate( ctmp );
+}
+{
+  ///////////////////
+  // Observable types
+  std::unique_ptr< observable::sampler_meta > ometa{ new observable::sampler_meta( this->rman_ ) };
+
+  // Monitor trial occurence and success
+  observable::acceptance_observable::add_definition( *ometa );
+
+  // Density histogram in zaxis
+  observable::density_zaxis::add_definition( *ometa );
+
+  // 3D density histogram
+  observable::d3_distribution::add_definition( *ometa );
+
+  // Monitor trial acceptance and energy.
+  observable::metropolis_sampler::add_definition( *ometa );
+
+  // Radial distribution histograms
+  observable::rdf_sampler::add_definition( *ometa );
+
+  // Specie particle count average
+  observable::specie_count::add_definition( *ometa );
+
+  // Specie particle count per region average
+  observable::specie_region_count::add_definition( *ometa );
+
+  // Whole-cell potential energy average using Widom method 
+  observable::widom::add_definition( *ometa );
+
+  boost::shared_ptr< core::input_base_meta > otmp;
+  otmp.reset( ometa.release() );
+  delegate.add_input_delegate( otmp );
+}

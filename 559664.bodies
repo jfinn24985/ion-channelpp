@@ -129,8 +129,8 @@ std::string document;
 }
 {
   // default ctor
-  observable::sampler_definition tmp( "acceptance", []( std::map< std::string, std::string >const& a )->boost::shared_ptr< observable::sampled_observable >{
-    return boost::shared_ptr< observable::sampled_observable >{};
+  observable::sampler_definition tmp( "acceptance", []( std::map< std::string, std::string >const& a )->boost::shared_ptr< observable::base_observable >{
+    return boost::shared_ptr< observable::base_observable >{};
   } );
 
   BOOST_CHECK( tmp.empty() );
@@ -174,6 +174,29 @@ std::string document;
 
   //BOOST_CHECK( tmp.empty() );
   //BOOST_CHECK_EQUAL( tmp.size(), 0ul );
+}
+!!!1642800.cpp!!!	sampler_meta_double_definition_insertion_test() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::acceptance_observable::add_definition( *m );
+  BOOST_CHECK( not m->empty() );
+  BOOST_CHECK( m->has_type( "trial-rate" ) );
+
+try
+{
+  observable::acceptance_observable::add_definition( *m );
+  BOOST_ERROR( "expected exception from adding the same definition twice" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Attempt to add more than one chooser factory for type \"trial-rate\"." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
 }
 !!!1348400.cpp!!!	report_manager_lifetime_test() : void
 //XX{
@@ -1313,6 +1336,148 @@ std::stringstream store;
 
   observable_test_suite::base_observable_method_test( var, "3d-distribution" );
 }
+!!!1650480.cpp!!!	d3_distribution_region_list_test() : void
+{
+  std::map< std::string, std::string > canon;
+  canon[ "Ca" ] = "bulk";
+  std::map< std::string, std::string > result{ observable::d3_distribution::process_region_list( " Ca : bulk" ) };
+
+  BOOST_CHECK( canon == result );
+}
+{
+  std::map< std::string, std::string > canon;
+  canon[ "Ca" ] = "bulk";
+  std::map< std::string, std::string > result{ observable::d3_distribution::process_region_list( "Ca:bulk" ) };
+
+  BOOST_CHECK( canon == result );
+}
+{
+  std::map< std::string, std::string > canon;
+  canon[ "Ca" ] = "bulk";
+  std::map< std::string, std::string > result{ observable::d3_distribution::process_region_list( "Ca bulk" ) };
+
+  BOOST_CHECK( canon == result );
+}
+{
+  std::map< std::string, std::string > canon;
+  canon[ "Ca" ] = "bulk";
+  std::map< std::string, std::string > result{ observable::d3_distribution::process_region_list( "Ca,bulk" ) };
+
+  BOOST_CHECK( canon == result );
+}
+{
+  std::map< std::string, std::string > canon;
+  canon[ "Ca" ] = "bulk";
+  canon[ "Na" ] = "cell";
+  std::map< std::string, std::string > result{ observable::d3_distribution::process_region_list( "Ca:bulk \"Na\" \"cell\"" ) };
+
+  BOOST_CHECK( canon == result );
+}
+{
+  // Invalid specie
+  std::map< std::string, std::string > canon;
+  canon[ "Ca1" ] = "bulk";
+  std::map< std::string, std::string > result;
+  try
+  {
+    result = observable::d3_distribution::process_region_list( "Ca1,bulk" );
+    BOOST_CHECK( canon == result );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Invalid specie label [Ca1] in list [Ca1,bulk] in parameter \"region\" of sampler 3d-distribution" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+}
+{
+  // Odd number of entries with bad specie name
+  std::map< std::string, std::string > canon;
+  canon[ "Ca" ] = "bulk";
+  std::map< std::string, std::string > result;
+  try
+  {
+    result = observable::d3_distribution::process_region_list( "Ca,bulk,cell" );
+    BOOST_CHECK( canon == result );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Invalid specie label [cell] in list [Ca,bulk,cell] in parameter \"region\" of sampler 3d-distribution" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+}
+{
+  // Odd number of entries
+  std::map< std::string, std::string > canon;
+  canon[ "Ca" ] = "bulk";
+  std::map< std::string, std::string > result;
+  try
+  {
+    result = observable::d3_distribution::process_region_list( "Ca,bulk,Na" );
+    BOOST_CHECK( canon == result );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Have unmatched specie label [Na] in list [Ca,bulk,Na] in parameter \"region\" of sampler 3d-distribution" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+}
+{
+  // Duplicate specie
+  std::map< std::string, std::string > canon;
+  canon[ "Ca" ] = "cell";
+  std::map< std::string, std::string > result;
+  try
+  {
+    result = observable::d3_distribution::process_region_list( "Ca,bulk,Ca,cell" );
+    BOOST_CHECK( canon == result );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Duplicate specie label [Ca] in list [Ca,bulk,Ca,cell] in parameter \"region\" of sampler 3d-distribution" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+}
+{
+  // Missing specie
+  std::map< std::string, std::string > canon;
+  canon[ "Ca" ] = "cell";
+  std::map< std::string, std::string > result;
+  try
+  {
+    result = observable::d3_distribution::process_region_list( " , bulk" );
+    BOOST_CHECK( canon == result );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Invalid specie label [bulk] in list [ , bulk] in parameter \"region\" of sampler 3d-distribution" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+}
 !!!1615280.cpp!!!	d3_distribution_method_test() : void
 const std::vector< std::string > filenames { { "d3df-CA.dat", "d3df-CO.dat", "d3df-OX.dat", "d3df-Na.dat", "d3df-Cl.dat" } };
 {
@@ -1449,7 +1614,7 @@ const std::vector< std::string > filenames { { "d3df-CA.dat", "d3df-CO.dat", "d3
 }
 !!!1629104.cpp!!!	widom_method_test() : void
 const std::vector< std::string > labels { "CA", "CO", "OX", "Na", "Cl" };
-const std::string filename{ "widom.dat" };
+const std::string filename { "widom.dat" };
 {
   boost::shared_ptr< particle::particle_manager > pman = observable_test_suite::mockup_particle_manager();
   boost::shared_ptr< evaluator::evaluator_manager > eman = observable_test_suite::mockup_evaluator_manager();
@@ -1517,23 +1682,1144 @@ const std::string filename{ "widom.dat" };
   }
   {
     std::stringstream out;
+    const std::string out_title { " Results widom test particle method :" };
+    const std::string out_head { "SPECIE    SAMPLES    <U> (E)     <U>VAR     EXCESS" };
+    const std::string out_row1 { "CP  Na      10000" };
+    const std::string out_row2 { "CP  Cl      10000" };
     const std::string uuid_head { "# UUID:" };
     const std::string label_head { "# FIELDS: INDEX Na_EXCESS0 Na_POTENTIAL Na_EXCESS Na_COUNT Cl_EXCESS0 Cl_POTENTIAL Cl_EXCESS Cl_COUNT" };
     const std::string units_head { "# UNITS: ORDINAL ENERGY ENERGY ENERGY COUNT ENERGY ENERGY ENERGY COUNT" };
 
-    std::string canon_title { "# TITLE: \"Series of Widom method chemical potential estimates\"" };
-    std::string interesting_row { "3 0.123 -25.3801 -27.9667 10000 0.3123 -6.95822 -10.2379 10000" };
+    const std::string canon_title { "# TITLE: \"Series of Widom method chemical potential estimates\"" };
+    const std::string interesting_row { "3 0.123 -25.3801 -27.9667 10000 0.3123 -6.95822 -10.2379 10000" };
 
     var->on_report( out, sink );
     // should be output on "out"
-      std::cout << out.str() << "\n";
+    {
+      const std::string outstr { out.str() };
+      BOOST_CHECK_LT( outstr.find( out_title ), outstr.size() );
+      BOOST_CHECK_LT( outstr.find( out_head ), outstr.size() );
+      BOOST_CHECK_LT( outstr.find( out_row1 ), outstr.size() );
+      BOOST_CHECK_LT( outstr.find( out_row2 ), outstr.size() );
+    }
     std::string buf;
-      sink.read( filename, buf );
-      std::cout << buf << "\n";
-      BOOST_CHECK_LT( buf.find( uuid_head ), buf.size() );
-      BOOST_CHECK_LT( buf.find( label_head ), buf.size() );
-      BOOST_CHECK_LT( buf.find( units_head ), buf.size() );
-      BOOST_CHECK_LT( buf.find( canon_title ), buf.size() );
-      BOOST_CHECK_LT( buf.find( interesting_row ), buf.size() );
+    sink.read( filename, buf );
+    //td::cout << buf << "\n";
+    BOOST_CHECK_LT( buf.find( uuid_head ), buf.size() );
+    BOOST_CHECK_LT( buf.find( label_head ), buf.size() );
+    BOOST_CHECK_LT( buf.find( units_head ), buf.size() );
+    BOOST_CHECK_LT( buf.find( canon_title ), buf.size() );
+    BOOST_CHECK_LT( buf.find( interesting_row ), buf.size() );
   }
+}
+!!!1679664.cpp!!!	widom_specie_list_test() : void
+const std::vector< std::string > labels { "CA", "CO", "OX", "Na", "Cl" };
+const std::string filename { "widom.dat" };
+{
+  boost::shared_ptr< particle::particle_manager > pman = observable_test_suite::mockup_particle_manager();
+  boost::shared_ptr< evaluator::evaluator_manager > eman = observable_test_suite::mockup_evaluator_manager();
+  boost::shared_ptr< geometry::geometry_manager > gman = observable_test_suite::mockup_geometry_manager();
+  boost::shared_ptr< observable::report_manager > rman( new observable::report_manager );
+  utility::memory_sink sink;
+  // factory ctor
+  std::map< std::string, std::string > params;
+  params.insert( std::make_pair( "iwidom", "10000" ) );
+  params.insert( std::make_pair( "specie", "Na" ) );
+  boost::shared_ptr< observable::base_observable > var( observable::widom::make_sampler( params ) );
+
+  observable::widom *pvar = dynamic_cast< observable::widom* >( var.get() );
+
+  BOOST_REQUIRE( pvar != nullptr );
+  BOOST_REQUIRE_EQUAL( pvar->loop_count(), 0ul );
+  BOOST_REQUIRE_EQUAL( pvar->trials(), 10000ul );
+  BOOST_REQUIRE_EQUAL( pvar->specie_list(), "Na" );
+
+  var->prepare( *pman, *gman, *eman, *rman );
+  eman->prepare( *pman, *gman );
+  BOOST_REQUIRE_EQUAL( pvar->size(), 1ul );
+
+  // first sample and report
+  var->on_sample( *pman, *gman, *eman );
+  {
+    BOOST_REQUIRE( not sink.exists( filename ) );
+    std::stringstream out;
+    var->on_report( out, sink );
+    //std::cout << out.str() << "\n";
+    BOOST_REQUIRE( sink.exists( filename ) );
+    //std::string buf;
+    //sink.read( "specie-count.dat", buf );
+    //std::cout << buf << "\n";
+  }
+  // second sample and report
+  var->on_sample( *pman, *gman, *eman );
+  {
+    std::stringstream out;
+    var->on_report( out, sink );
+  }
+  // need to add/convert a particle
+  {
+    BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 3 ), 2 );
+    BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 4 ), 1 );
+    // convert a 3 to a 4
+    const std::size_t idx = pman->get_ensemble().nth_specie_index( 3, 0 );
+    particle::change_set exc;
+    particle::change_atom a1, a2;
+    a1.key = 3;
+    a2.key = 4;
+    a1.index = idx;
+    a2.index = pman->get_ensemble().size();
+    a1.old_position = pman->get_ensemble().position( idx );
+    a1.do_old = true;
+    a1.do_new = false;
+    a2.new_position = pman->get_ensemble().position( idx );
+    a2.do_new = true;
+    a2.do_old = false;
+    exc.add_atom( a1 );
+    exc.add_atom( a2 );
+    pman->commit( exc );
+    BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 3 ), 1 );
+    BOOST_REQUIRE_EQUAL( pman->get_ensemble().specie_count( 4 ), 2 );
+
+    var->on_sample( *pman, *gman, *eman );
+  }
+  {
+    std::stringstream out;
+    const std::string uuid_head { "# UUID:" };
+    const std::string label_head { "# FIELDS: INDEX Na_EXCESS0 Na_POTENTIAL Na_EXCESS Na_COUNT" };
+    const std::string units_head { "# UNITS: ORDINAL ENERGY ENERGY ENERGY COUNT" };
+
+    const std::string canon_title { "# TITLE: \"Series of Widom method chemical potential estimates\"" };
+    const std::string interesting_row { "3 0.123 -24.1507 -26.7372 10000" };
+
+    var->on_report( out, sink );
+    // should be no output on "out"
+    //std::cout << out.str() << "\n";
+    std::string buf;
+    sink.read( filename, buf );
+    //std::cout << buf << "\n";
+    BOOST_CHECK_LT( buf.find( uuid_head ), buf.size() );
+    BOOST_CHECK_LT( buf.find( label_head ), buf.size() );
+    BOOST_CHECK_LT( buf.find( units_head ), buf.size() );
+    BOOST_CHECK_LT( buf.find( canon_title ), buf.size() );
+    BOOST_CHECK_LT( buf.find( interesting_row ), buf.size() );
+  }
+}
+!!!1679792.cpp!!!	widom_specie_list_unknown_specie_value_test() : void
+const std::vector< std::string > labels { "CA", "CO", "OX", "Na", "Cl" };
+const std::string filename { "widom.dat" };
+{
+  boost::shared_ptr< particle::particle_manager > pman = observable_test_suite::mockup_particle_manager();
+  boost::shared_ptr< evaluator::evaluator_manager > eman = observable_test_suite::mockup_evaluator_manager();
+  boost::shared_ptr< geometry::geometry_manager > gman = observable_test_suite::mockup_geometry_manager();
+  boost::shared_ptr< observable::report_manager > rman( new observable::report_manager );
+  utility::memory_sink sink;
+  // factory ctor
+  std::map< std::string, std::string > params;
+  params.insert( std::make_pair( "iwidom", "10000" ) );
+  params.insert( std::make_pair( "specie", "Ca:bulk" ) );
+  boost::shared_ptr< observable::base_observable > var( observable::widom::make_sampler( params ) );
+
+  observable::widom *pvar = dynamic_cast< observable::widom* >( var.get() );
+
+  BOOST_REQUIRE( pvar != nullptr );
+  BOOST_REQUIRE_EQUAL( pvar->loop_count(), 0ul );
+  BOOST_REQUIRE_EQUAL( pvar->trials(), 10000ul );
+  BOOST_REQUIRE_EQUAL( pvar->specie_list(), "Ca:bulk" );
+
+  try
+  {
+    var->prepare( *pman, *gman, *eman, *rman );
+    BOOST_ERROR( "expected \"var->prepare(...)\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "widom \"specie\" parameter value (Ca:bulk) has unknown specie label [Ca]" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"var->prepare(...)\" was not expected type: " ) + err.what() );
+  }
+}
+!!!1679408.cpp!!!	widom_specie_list_bad_specie_value_test() : void
+const std::vector< std::string > labels { "CA", "CO", "OX", "Na", "Cl" };
+const std::string filename { "widom.dat" };
+{
+  boost::shared_ptr< particle::particle_manager > pman = observable_test_suite::mockup_particle_manager();
+  boost::shared_ptr< evaluator::evaluator_manager > eman = observable_test_suite::mockup_evaluator_manager();
+  boost::shared_ptr< geometry::geometry_manager > gman = observable_test_suite::mockup_geometry_manager();
+  boost::shared_ptr< observable::report_manager > rman( new observable::report_manager );
+  utility::memory_sink sink;
+  // factory ctor
+  std::map< std::string, std::string > params;
+  params.insert( std::make_pair( "iwidom", "10000" ) );
+  params.insert( std::make_pair( "specie", "CA" ) );
+  boost::shared_ptr< observable::base_observable > var( observable::widom::make_sampler( params ) );
+
+  observable::widom *pvar = dynamic_cast< observable::widom* >( var.get() );
+
+  BOOST_REQUIRE( pvar != nullptr );
+  BOOST_REQUIRE_EQUAL( pvar->loop_count(), 0ul );
+  BOOST_REQUIRE_EQUAL( pvar->trials(), 10000ul );
+  BOOST_REQUIRE_EQUAL( pvar->specie_list(), "CA" );
+
+  try
+  {
+    var->prepare( *pman, *gman, *eman, *rman );
+    BOOST_ERROR( "expected \"var->prepare(...)\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "widom \"specie\" parameter value (CA) has specie [CA] that is not a solute" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"var->prepare(...)\" was not expected type: " ) + err.what() );
+  }
+}
+!!!1642928.cpp!!!	sampler_input_unknown_sampler_test() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< core::input_base_meta > m( new observable::sampler_meta( oman ) );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\ntype freeze\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Sampler \"type\" parameter value (freeze) does not name a valid sampler for this application (see documentation)." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1643056.cpp!!!	sampler_input_acceptance_test() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::acceptance_observable::add_definition( *m );
+  BOOST_CHECK( not m->empty() );
+  BOOST_CHECK( m->has_type( "trial-rate" ) );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\ntype trial-rate\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_CHECK( oman->has_tracked( "trial-rate" ) );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( "expected no exception from \"dg.read_input( reader )\"" );
+}
+!!!1642672.cpp!!!	sampler_input_acceptance_with_param_test() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::acceptance_observable::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\ntype trial-rate\nwidth 0.5\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"width\" is not valid in a sampler \"trial-rate\" type section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1657136.cpp!!!	sampler_input_acceptance_duplicate_type() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::acceptance_observable::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\ntype trial-rate\ntype trial-rate\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Sampler \"type\" parameter appears more than once in a single in section" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1657008.cpp!!!	sampler_input_acceptance_duplicate_invalid_type() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::acceptance_observable::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\ntype trial-rate\ntype accept\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Sampler \"type\" parameter appears more than once in a single in section" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1643440.cpp!!!	sampler_input_density_zaxis_test() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::density_zaxis::add_definition( *m );
+  BOOST_CHECK( not m->empty() );
+  BOOST_CHECK( m->has_type( "population-zaxis" ) );
+  dg.add_input_delegate( m );
+}
+// valid
+////////
+std::string canon_input( "sampler\ntype population-zaxis\nstepsize 0.5\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_CHECK( oman->has_sample( "population-zaxis" ) );
+  auto obs = oman->get_sample( "population-zaxis" );
+  BOOST_CHECK( obs );
+  observable::density_zaxis *pobs = dynamic_cast< observable::density_zaxis* >( obs.get() );
+  BOOST_REQUIRE( pobs != nullptr );
+  BOOST_CHECK_CLOSE( pobs->stepsize(), 0.5, 0.00000000001 );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( "expected no exception from \"dg.read_input( reader )\"" );
+}
+!!!1643184.cpp!!!	sampler_input_density_zaxis_default_stepsize_test() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::density_zaxis::add_definition( *m );
+  BOOST_CHECK( not m->empty() );
+  BOOST_CHECK( m->has_type( "population-zaxis" ) );
+  dg.add_input_delegate( m );
+}
+// valid
+////////
+std::string canon_input( "sampler\ntype population-zaxis\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_CHECK( oman->has_sample( "population-zaxis" ) );
+  auto obs = oman->get_sample( "population-zaxis" );
+  BOOST_CHECK( obs );
+  observable::density_zaxis *pobs = dynamic_cast< observable::density_zaxis* >( obs.get() );
+  BOOST_REQUIRE( pobs != nullptr );
+  BOOST_CHECK_CLOSE( pobs->stepsize(), observable::density_zaxis::default_stepsize(), 0.00000000001 );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( "expected no exception from \"dg.read_input( reader )\"" );
+}
+!!!1643568.cpp!!!	sampler_input_density_zaxis_bad_param_test() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::density_zaxis::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown parameter
+//////////////////////////////
+std::string canon_input( "sampler\ntype population-zaxis\nstep-size 0.5\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"step-size\" is not valid in a sampler \"population-zaxis\" type section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1643696.cpp!!!	sampler_input_density_zaxis_param_no_value_test() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::density_zaxis::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown parameter
+//////////////////////////////
+std::string canon_input( "sampler\ntype population-zaxis\nstepsize# 0.5\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "population-zaxis \"stepsize\" parameter requires a value." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1642544.cpp!!!	sampler_input_density_zaxis_param_bad_value_test() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::density_zaxis::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown parameter
+//////////////////////////////
+std::string canon_input( "sampler\ntype population-zaxis\nstepsize half\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "population-zaxis \"stepsize\" parameter value (half) is not a number" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1643824.cpp!!!	sampler_input_d3_distribution_test() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::d3_distribution::add_definition( *m );
+  BOOST_CHECK( not m->empty() );
+  BOOST_CHECK( m->has_type( "3d-distribution" ) );
+  dg.add_input_delegate( m );
+}
+// valid
+////////
+std::string canon_input( "sampler\nregion Ca:bulk\ntype 3d-distribution\nstepsize 0.5\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_CHECK( oman->has_sample( "3d-distribution" ) );
+  auto obs = oman->get_sample( "3d-distribution" );
+  BOOST_CHECK( obs );
+  observable::d3_distribution *pobs = dynamic_cast< observable::d3_distribution* >( obs.get() );
+  BOOST_REQUIRE( pobs != nullptr );
+  BOOST_CHECK_CLOSE( pobs->stepsize(), 0.5, 0.00000000001 );
+  BOOST_CHECK_EQUAL( pobs->region_map().size(), 1ul );
+  BOOST_CHECK( pobs->region_map().find( "Ca" ) != pobs->region_map().end() );
+  BOOST_CHECK_EQUAL( pobs->region_map().find( "Ca" )->second, "bulk" );
+}
+catch( std::exception const& err )
+{
+  const std::string msg( err.what() );
+  std::cout << msg << "\n";
+  BOOST_ERROR( "expected no exception from \"dg.read_input( reader )\"" );
+}
+!!!1657392.cpp!!!	sampler_input_d3_bad_param() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::d3_distribution::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nregion Ca:bulk\ntype 3d-distribution\nstepsize 0.5\nwave 0.4\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"wave\" is not valid in a sampler \"3d-distribution\" type section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1657520.cpp!!!	sampler_input_d3_stepsize_no_value() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::d3_distribution::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nregion Ca:bulk\ntype 3d-distribution\nstepsize #0.5\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "3d-distribution \"stepsize\" parameter requires a value." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1664304.cpp!!!	sampler_input_d3_stepsize_bad_value() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::d3_distribution::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nregion Ca:bulk\ntype 3d-distribution\nstepsize half\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "3d-distribution \"stepsize\" parameter value (half) is not a number" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1657648.cpp!!!	sampler_input_d3_stepsize_duplicate() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::d3_distribution::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nregion Ca:bulk\ntype 3d-distribution\nstepsize 0.5\nstepsize 1.5\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Sampler \"stepsize\" parameter appears more than once in a single in section" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1657776.cpp!!!	sampler_input_d3_region_no_value() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::d3_distribution::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nregion \ntype 3d-distribution\nstepsize 0.5\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "3d-distribution paramter \"region\" requires a value." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1642416.cpp!!!	sampler_input_d3_region_bad_value() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::d3_distribution::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nregion \" : \"\ntype 3d-distribution\nstepsize 0.5\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "3d-distribution parameter \"region\" value [\" : \"] is invalid." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1664432.cpp!!!	sampler_input_d3_region_duplicate() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::d3_distribution::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nregion Ca:bulk\ntype 3d-distribution\nstepsize 0.5\nregion Na cell\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Sampler \"region\" parameter appears more than once in a single in section" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1664688.cpp!!!	sampler_input_metropolis_test() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::metropolis_sampler::add_definition( *m );
+  BOOST_CHECK( not m->empty() );
+  BOOST_CHECK( m->has_type( "metropolis" ) );
+  dg.add_input_delegate( m );
+}
+// valid
+////////
+std::string canon_input( "sampler\ntype metropolis\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_REQUIRE_EQUAL( oman->size(), 1ul );
+  BOOST_REQUIRE( oman->has_tracked( "metropolis" ) );
+  auto obs = oman->get_tracked( "metropolis" );
+  BOOST_CHECK( obs );
+  observable::metropolis_sampler *pobs = dynamic_cast< observable::metropolis_sampler* >( obs.get() );
+  BOOST_REQUIRE( pobs != nullptr );
+  BOOST_CHECK_EQUAL( pobs->boltzmann_factor().count(), 0ul );
+  BOOST_CHECK_EQUAL( pobs->energy_change().count(), 0ul );
+  BOOST_CHECK_EQUAL( pobs->energy().count(), 0ul );
+}
+catch( std::exception const& err )
+{
+  const std::string msg( err.what() );
+  std::cout << msg << "\n";
+  BOOST_ERROR( "expected no exception from \"dg.read_input( reader )\"" );
+}
+!!!1664560.cpp!!!	sampler_input_metropolis_bad_param() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::metropolis_sampler::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nregion Ca:bulk\ntype metropolis\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"region\" is not valid in a sampler \"metropolis\" type section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1671216.cpp!!!	sampler_input_rdf_sampler_test() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::rdf_sampler::add_definition( *m );
+  BOOST_CHECK( not m->empty() );
+  BOOST_CHECK( m->has_type( "rdf-specie" ) );
+  dg.add_input_delegate( m );
+}
+// valid
+////////
+std::string canon_input( "sampler\nwidth 6.0\ntype rdf-specie\nstepsize 0.5\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_CHECK( oman->has_sample( "rdf-specie" ) );
+  auto obs = oman->get_sample( "rdf-specie" );
+  BOOST_CHECK( obs );
+  observable::rdf_sampler *pobs = dynamic_cast< observable::rdf_sampler* >( obs.get() );
+  BOOST_REQUIRE( pobs != nullptr );
+  BOOST_CHECK_CLOSE( pobs->stepsize(), 0.5, 0.00000000001 );
+  BOOST_CHECK_CLOSE( pobs->width(), 6.0, 0.0000000001 );
+}
+catch( std::exception const& err )
+{
+  const std::string msg( err.what() );
+  std::cout << msg << "\n";
+  BOOST_ERROR( "expected no exception from \"dg.read_input( reader )\"" );
+}
+!!!1671600.cpp!!!	sampler_input_rdf_sampler_bad_param() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::rdf_sampler::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nregion Ca:bulk\ntype rdf-specie\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"region\" is not valid in a sampler \"rdf-specie\" type section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1671472.cpp!!!	sampler_input_rdf_sampler_width_no_value() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::rdf_sampler::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nwidth #Ca:bulk\ntype rdf-specie\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "rdf-specie \"width\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1671344.cpp!!!	sampler_input_rdf_sampler_width_bad_value() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::rdf_sampler::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nwidth Ca:bulk\ntype rdf-specie\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "rdf-specie \"width\" parameter value (Ca:bulk) is not a number" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1671856.cpp!!!	sampler_input_rdf_sampler_stepsize_no_value() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::rdf_sampler::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nstepsize #Ca:bulk\ntype rdf-specie\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "rdf-specie \"stepsize\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1671728.cpp!!!	sampler_input_rdf_sampler_stepsize_bad_value() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::rdf_sampler::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nstepsize Ca:bulk\ntype rdf-specie\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "rdf-specie \"stepsize\" parameter value (Ca:bulk) is not a number" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1672112.cpp!!!	sampler_input_specie_count_test() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::specie_count::add_definition( *m );
+  BOOST_CHECK( not m->empty() );
+  BOOST_CHECK( m->has_type( "specie-count" ) );
+  dg.add_input_delegate( m );
+}
+// valid
+////////
+std::string canon_input( "sampler\ntype specie-count\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_CHECK( oman->has_sample( "specie-count" ) );
+  auto obs = oman->get_sample( "specie-count" );
+  BOOST_CHECK( obs );
+  observable::specie_count *pobs = dynamic_cast< observable::specie_count* >( obs.get() );
+  BOOST_REQUIRE( pobs != nullptr );
+}
+catch( std::exception const& err )
+{
+  const std::string msg( err.what() );
+  std::cout << msg << "\n";
+  BOOST_ERROR( "expected no exception from \"dg.read_input( reader )\"" );
+}
+!!!1671984.cpp!!!	sampler_input_specie_count_bad_param() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::specie_count::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nregion Ca:bulk\ntype specie-count\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"region\" is not valid in a sampler \"specie-count\" type section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1672240.cpp!!!	sampler_input_widom_test() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::widom::add_definition( *m );
+  BOOST_CHECK( not m->empty() );
+  BOOST_CHECK( m->has_type( "widom" ) );
+  dg.add_input_delegate( m );
+}
+// valid
+////////
+std::string canon_input( "sampler\niwidom 100\ntype widom\nspecie Na Cl\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_REQUIRE( oman->has_tracked( "widom" ) );
+  auto obs = oman->get_tracked( "widom" );
+  BOOST_REQUIRE( obs );
+  observable::widom *pobs = dynamic_cast< observable::widom* >( obs.get() );
+  BOOST_REQUIRE( pobs != nullptr );
+  BOOST_CHECK_EQUAL( pobs->trials(), 100ul );
+  //BOOST_CHECK_CLOSE( pobs->width(), 6.0, 0.0000000001 );
+}
+catch( std::exception const& err )
+{
+  const std::string msg( err.what() );
+  std::cout << msg << "\n";
+  BOOST_ERROR( "expected no exception from \"dg.read_input( reader )\"" );
+}
+!!!1672496.cpp!!!	sampler_input_widom_bad_param() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::widom::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nregion Ca:bulk\ntype widom\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"region\" is not valid in a sampler \"widom\" type section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1672880.cpp!!!	sampler_input_widom_iwidom_no_value() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::widom::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\niwidom #Ca:bulk\ntype widom\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "widom \"iwidom\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1672752.cpp!!!	sampler_input_widom_iwidom_bad_value() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::widom::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\niwidom Ca:bulk\ntype widom\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "widom \"iwidom\" parameter value (Ca:bulk) is not a number" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1672624.cpp!!!	sampler_input_widom_specie_no_value() : void
+boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::widom::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+// Invalid : unknown sub-type
+/////////////////////////////
+std::string canon_input( "sampler\nspecie #Ca:bulk\ntype widom\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "widom \"specie\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
 }
