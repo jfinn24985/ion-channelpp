@@ -93,10 +93,10 @@ const std::string defn_label( "coulomb" );
   BOOST_CHECK_EQUAL( eval_ptr->type_label(), defn_label );
   BOOST_CHECK_EQUAL( clmb_ptr->factor(), 0.0 );
 
-  std::unique_ptr< evaluator::evaluator_definition > defn_ptr;
-  BOOST_REQUIRE_NO_THROW( defn_ptr = evaluator::coulomb::make_definition() );
-  BOOST_REQUIRE( defn_ptr );
-  BOOST_CHECK_EQUAL( defn_ptr->label(), defn_label );
+  boost::shared_ptr< evaluator::evaluator_manager > eman;
+  evaluator::evaluator_meta m( eman );
+  BOOST_REQUIRE_NO_THROW( evaluator::coulomb::add_definition( m ) );
+  BOOST_CHECK( m.has_definition( defn_label ) );
 }
 
 !!!1380528.cpp!!!	coulomb_evaluator_r1_test() : void
@@ -378,10 +378,11 @@ const std::string defn_label( core::strngs::localizer_label() );
   BOOST_CHECK_EQUAL( eval_ptr->type_label(), defn_label );
   BOOST_CHECK_EQUAL( clmb_ptr->spring_factor(), 4.5 );
 
-  std::unique_ptr< evaluator::evaluator_definition > defn_ptr;
-  BOOST_REQUIRE_NO_THROW( defn_ptr = evaluator::localizer::make_definition() );
-  BOOST_REQUIRE( defn_ptr );
-  BOOST_CHECK_EQUAL( defn_ptr->label(), defn_label );
+  boost::shared_ptr< evaluator::evaluator_manager > eman;
+  evaluator::evaluator_meta m( eman );
+  BOOST_REQUIRE_NO_THROW( evaluator::localizer::add_definition( m ) );
+  BOOST_REQUIRE( m.has_definition( defn_label ) );
+  BOOST_CHECK( m.get_definition( defn_label ).has_definition( core::strngs::fskmob() ) );
 }
 
 !!!1401008.cpp!!!	localizer_methods_test() : void
@@ -670,12 +671,13 @@ const std::string defn_label( "lennard-jones" );
   BOOST_REQUIRE( lj_ptr != nullptr );
   BOOST_CHECK_EQUAL( eval_ptr->type_label(), defn_label );
 
-  std::unique_ptr< evaluator::evaluator_definition > defn_ptr;
-  BOOST_REQUIRE_NO_THROW( defn_ptr = evaluator::lennard_jones::make_definition() );
-  BOOST_REQUIRE( defn_ptr );
-  BOOST_CHECK_EQUAL( defn_ptr->label(), defn_label );
-  BOOST_CHECK( defn_ptr->has_definition( "epsilon" ) );
-  BOOST_CHECK( defn_ptr->has_definition( "sigma" ) );
+  boost::shared_ptr< evaluator::evaluator_manager > eman;
+  evaluator::evaluator_meta m( eman );
+  BOOST_REQUIRE_NO_THROW( evaluator::lennard_jones::add_definition( m ) );
+  BOOST_REQUIRE( m.has_definition( defn_label ) );
+  auto const& defn = m.get_definition( defn_label );
+  BOOST_CHECK( defn.has_definition( "epsilon" ) );
+  BOOST_CHECK( defn.has_definition( "sigma" ) );
 }
 
 !!!1425072.cpp!!!	lennard_jones_param_different_size_list_test() : void
@@ -2477,7 +2479,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::coulomb::make_definition() );
+  evaluator::coulomb::add_definition( *m );
 
   core::input_help hlpr;
   m->publish_help( hlpr );
@@ -2512,7 +2514,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::coulomb::make_definition() );
+  evaluator::coulomb::add_definition( *m );
 
   dg.add_input_delegate( m );
 }
@@ -2542,7 +2544,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::coulomb::make_definition() );
+  evaluator::coulomb::add_definition( *m );
 
   dg.add_input_delegate( m );
 }
@@ -2572,7 +2574,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::coulomb::make_definition() );
+  evaluator::coulomb::add_definition( *m );
 
   dg.add_input_delegate( m );
 }
@@ -2602,7 +2604,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::coulomb::make_definition() );
+  evaluator::coulomb::add_definition( *m );
 
   dg.add_input_delegate( m );
 }
@@ -2632,7 +2634,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::localizer::make_definition() );
+  evaluator::localizer::add_definition( *m );
 
   core::input_help hlpr;
   m->publish_help( hlpr );
@@ -2669,7 +2671,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::localizer::make_definition() );
+  evaluator::localizer::add_definition( *m );
 
   core::input_help hlpr;
   m->publish_help( hlpr );
@@ -2707,7 +2709,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::localizer::make_definition() );
+  evaluator::localizer::add_definition( *m );
 
   core::input_help hlpr;
   m->publish_help( hlpr );
@@ -2745,7 +2747,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::lennard_jones::make_definition() );
+  evaluator::lennard_jones::add_definition( *m );
 
   core::input_help hlpr;
   m->publish_help( hlpr );
@@ -2784,7 +2786,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::lennard_jones::make_definition() );
+  evaluator::lennard_jones::add_definition( *m );
 
   dg.add_input_delegate( m );
 }
@@ -2814,7 +2816,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::lennard_jones::make_definition() );
+  evaluator::lennard_jones::add_definition( *m );
 
   dg.add_input_delegate( m );
 }
@@ -2844,7 +2846,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::lennard_jones::make_definition() );
+  evaluator::lennard_jones::add_definition( *m );
 
   dg.add_input_delegate( m );
 }
@@ -2874,7 +2876,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::lennard_jones::make_definition() );
+  evaluator::lennard_jones::add_definition( *m );
 
   dg.add_input_delegate( m );
 }
@@ -2904,7 +2906,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::lennard_jones::make_definition() );
+  evaluator::lennard_jones::add_definition( *m );
 
   dg.add_input_delegate( m );
 }
@@ -2973,7 +2975,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::lennard_jones::make_definition() );
+  evaluator::lennard_jones::add_definition( *m );
 
   dg.add_input_delegate( m );
 }
@@ -3043,7 +3045,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::lennard_jones::make_definition() );
+  evaluator::lennard_jones::add_definition( *m );
 
   dg.add_input_delegate( m );
 }
@@ -3113,7 +3115,7 @@ boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator
 core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  m->add_definition( evaluator::lennard_jones::make_definition() );
+  evaluator::lennard_jones::add_definition( *m );
 
   dg.add_input_delegate( m );
 }
