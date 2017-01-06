@@ -626,74 +626,78 @@ const std::string content( "a1b2c3d4e5" );
 const std::string content2( "a5b4c3d2e1" );
 // BASIC OPERATION
 {
-   // write to file
-   BOOST_CHECK_NO_THROW( sink.write( path, content ) );
-   // check path now exists
-   BOOST_CHECK_EQUAL( sink.exists( path ), true );
-   // read from file
-   std::string buffer;
-   bool success;
-   BOOST_CHECK_NO_THROW( success = sink.read( path, buffer ) );
-   BOOST_CHECK_MESSAGE( success, "read after write failed" );
-   BOOST_CHECK_EQUAL( content, buffer );
+  // UUID is non-empty string with 32 characters.
+  BOOST_CHECK( not sink.uuid().empty() );
+  BOOST_CHECK_EQUAL( sink.uuid().size(), 32ul );
+  // write to file
+  BOOST_CHECK_NO_THROW( sink.write( path, content ) );
+  // check path now exists
+  BOOST_CHECK_EQUAL( sink.exists( path ), true );
+  // read from file
+  std::string buffer;
+  bool success;
+  BOOST_CHECK_NO_THROW( success = sink.read( path, buffer ) );
+  BOOST_CHECK_MESSAGE( success, "read after write failed" );
+  BOOST_CHECK_EQUAL( content, buffer );
 
-   // test of write twice to same path in file then read
-   BOOST_CHECK_NO_THROW( sink.write( path, content ) );
-   BOOST_CHECK_NO_THROW( sink.write( path, content2 ) );
-   BOOST_CHECK_NO_THROW( success = sink.read( path, buffer ) );
-   BOOST_CHECK_MESSAGE( success, "read after write failed" );
-   BOOST_CHECK_EQUAL( content2, buffer );
+  // test of write twice to same path in file then read
+  BOOST_CHECK_NO_THROW( sink.write( path, content ) );
+  BOOST_CHECK_NO_THROW( sink.write( path, content2 ) );
+  BOOST_CHECK_NO_THROW( success = sink.read( path, buffer ) );
+  BOOST_CHECK_MESSAGE( success, "read after write failed" );
+  BOOST_CHECK_EQUAL( content2, buffer );
 
-   // test of append then read
-   BOOST_CHECK_NO_THROW( sink.write( path, content ) );
-   BOOST_CHECK_NO_THROW( sink.append( path, content2 ) );
-   BOOST_CHECK_NO_THROW( success = sink.read( path, buffer ) );
-   BOOST_CHECK_MESSAGE( success, "read failed" );
-   BOOST_CHECK_EQUAL( content + content2, buffer );
+  // test of append then read
+  BOOST_CHECK_NO_THROW( sink.write( path, content ) );
+  BOOST_CHECK_NO_THROW( sink.append( path, content2 ) );
+  BOOST_CHECK_NO_THROW( success = sink.read( path, buffer ) );
+  BOOST_CHECK_MESSAGE( success, "read failed" );
+  BOOST_CHECK_EQUAL( content + content2, buffer );
 }
-// ERROR CONDITIONS
+// ERROR CONDITIONS that should have strong exception guarrantee
 {
-   // OPERATIONS WITH EMPTY PATH
-   const std::string emptypath;
-   std::string buffer;
-   BOOST_CHECK_THROW( sink.write( emptypath, content ), std::runtime_error );
-   BOOST_CHECK_THROW( sink.append( emptypath, content ), std::runtime_error );
-   BOOST_CHECK_THROW( sink.exists( emptypath ), std::runtime_error );
-   BOOST_CHECK_THROW( sink.read( emptypath, buffer ), std::runtime_error );
+  // OPERATIONS WITH EMPTY PATH
+  const std::string emptypath;
+  std::string buffer;
+  BOOST_CHECK_THROW( sink.write( emptypath, content ), std::runtime_error );
+  BOOST_CHECK_THROW( sink.append( emptypath, content ), std::runtime_error );
+  BOOST_CHECK_THROW( sink.exists( emptypath ), std::runtime_error );
+  BOOST_CHECK_THROW( sink.read( emptypath, buffer ), std::runtime_error );
 
-   // OPERATIONS WITH EMPTY WRITE BUFFER
-   BOOST_CHECK_THROW( sink.write( path, emptypath ), std::runtime_error );
+  // OPERATIONS WITH EMPTY WRITE BUFFER
+  BOOST_CHECK_THROW( sink.write( path, emptypath ), std::runtime_error );
 }
 // TEST OF SERIALIZATION
 std::stringstream store;
 {
-   // serialize
-   boost::archive::text_oarchive oa( store );
-   oa << sink;
-   BOOST_CHECK_EQUAL( sink.exists( path ), true );
-   std::string buffer;
-   bool success;
-   BOOST_CHECK_NO_THROW( success = sink.read( path, buffer ) );
-   BOOST_CHECK_MESSAGE( success, "read failed" );
-   BOOST_CHECK_EQUAL( content + content2, buffer );
-   // Changes to sink made after serialization may or may not
-   // be available after deserialization.
-   BOOST_CHECK_NO_THROW( sink.write( path, content2 ) );
-   BOOST_CHECK_NO_THROW( success = sink.read( path, buffer ) );
-   BOOST_CHECK_MESSAGE( success, "read after write failed" );
-   BOOST_CHECK_EQUAL( content2, buffer );
+  // serialize
+  boost::archive::text_oarchive oa( store );
+  oa << sink;
+  BOOST_CHECK_EQUAL( sink.exists( path ), true );
+  std::string buffer;
+  bool success;
+  BOOST_CHECK_NO_THROW( success = sink.read( path, buffer ) );
+  BOOST_CHECK_MESSAGE( success, "read failed" );
+  BOOST_CHECK_EQUAL( content + content2, buffer );
+  // Changes to sink made after serialization may or may not
+  // be available after deserialization.
+  BOOST_CHECK_NO_THROW( sink.write( path, content2 ) );
+  BOOST_CHECK_NO_THROW( success = sink.read( path, buffer ) );
+  BOOST_CHECK_MESSAGE( success, "read after write failed" );
+  BOOST_CHECK_EQUAL( content2, buffer );
 }
 {
-   boost::archive::text_iarchive ia( store );
-   ia >> sink;
-   BOOST_CHECK_EQUAL( sink.exists( path ), true );
-   std::string buffer;
-   bool success;
-   BOOST_CHECK_NO_THROW( success = sink.read( path, buffer ) );
-   BOOST_CHECK_MESSAGE( success, "read failed" );
-   // Change made after serialization may or may not be
-   // available. However, content should be one of two
-   // well-defined values
-   BOOST_CHECK( content + content2 == buffer or content2 == buffer );
+  boost::archive::text_iarchive ia( store );
+  ia >> sink;
+  BOOST_CHECK_EQUAL( sink.exists( path ), true );
+  std::string buffer;
+  bool success;
+  BOOST_CHECK_NO_THROW( success = sink.read( path, buffer ) );
+  BOOST_CHECK_MESSAGE( success, "read failed" );
+  // Change made after serialization may or may not be
+  // available. However, content should be one of two
+  // well-defined values
+  BOOST_CHECK( content + content2 == buffer or content2 == buffer );
 }
+
 
