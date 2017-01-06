@@ -56,16 +56,84 @@ if( bigradius > 0.0 )
 {
   BOOST_CHECK( not regn.is_inside( outside, bigradius ) );
   BOOST_CHECK( not regn.is_inside( inside, bigradius ) );
-  particle::coordinate pos;
-  BOOST_CHECK_THROW( pos = regn.new_position( rand, bigradius ), std::runtime_error );
-  pos = inside;
-  BOOST_CHECK_THROW( regn.new_position_offset( rand, pos, offset, bigradius ), std::runtime_error );
-  pos = outside;
-  BOOST_CHECK_THROW( regn.new_position_offset( rand, pos, offset, bigradius ), std::runtime_error );
+  try
+  {
+    particle::coordinate pos;
+    // new_position is constant so should have strong exception
+    // guarantee for regn. If rand is changed is undefined but should
+    // be in well-defined state. Value of pos is undefined.
+    pos = regn.new_position( rand, bigradius );
+    BOOST_ERROR( ("expected \"regn.new_position( rand, bigradius )\" exception not thrown") );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Particle can not fit in region" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( ("exception thrown by \"regn.new_position( rand, bigradius )\" was not expected type: ") ) + err.what() );
+  }
+  try
+  {
+    particle::coordinate pos = inside;
+    // new_position_offset is constant so should have strong exception
+    // guarantee for regn. If rand is changed is undefined but should
+    // be in well-defined state. Value of pos is undefined.
+    regn.new_position_offset( rand, pos, offset, bigradius );
+    BOOST_ERROR( ("expected \"regn.new_position_offset( rand, pos, offset, bigradius )\" exception not thrown") );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Particle can not fit in region" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( ("exception thrown by \"regn.new_position_offset( rand, pos, offset, bigradius )\" was not expected type: ") ) + err.what() );
+  }
+  try
+  {
+    particle::coordinate pos = outside;
+    // new_position is constant so should have strong exception exception
+    // guarantee for regn. If rand is changed is undefined but should be
+    // in well-defined state. Value of pos is undefined.
+    regn.new_position_offset( rand, pos, offset, bigradius );
+    BOOST_ERROR( ("expected \"regn.new_position_offset( rand, pos, offset, bigradius )\" exception not thrown") );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Particle can not fit in region" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( ("exception thrown by \"regn.new_position_offset( rand, pos, offset, bigradius )\" was not expected type: ") ) + err.what() );
+  }
 }
 {
-  particle::coordinate pos( outside );
-  BOOST_CHECK_THROW( regn.new_position_offset( rand, pos, offset, okradius ), std::runtime_error );
+  try
+  {
+    particle::coordinate pos = outside;
+    // new_position is constant so should have strong exception exception
+    // guarantee for regn. If rand is changed is undefined but should be
+    // in well-defined state. Value of pos is undefined.
+    regn.new_position_offset( rand, pos, offset, okradius );
+    BOOST_ERROR( ("expected \"regn.new_position_offset( rand, pos, offset, okradius )\" exception not thrown") );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Particle must start inside region" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( ("exception thrown by \"regn.new_position_offset( rand, pos, offset, okradius )\" was not expected type: ") ) + err.what() );
+  }
 }
 for( std::size_t count = 0; count != 1000; ++count )
 {
@@ -81,6 +149,7 @@ for( std::size_t count = 0; count != 1000; ++count )
     BOOST_CHECK_EQUAL( result, regn.is_inside( pos, okradius ) );
   }
 }
+
 
 !!!1047472.cpp!!!	region_make_gridder_test(in regn : base_region, in min_count : size_t, in max_count : size_t, in min_space : double, in max_space : double) : void
 boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
@@ -122,12 +191,24 @@ utility::random_distribution rand( generator );
     }
     else
     {
-      BOOST_CHECK_THROW( regn.make_gridder( space, rand ), std::runtime_error );
+      try
+      {
+        regn.make_gridder( space, rand );
+        BOOST_ERROR( ( "expected \"regn.make_gridder( space, rand )\" exception not thrown" ) );
+      }
+      catch( std::runtime_error const& err )
+      {
+        const std::string msg( err.what() );
+        //std::cout << msg << "\n";
+        BOOST_CHECK( msg.find( "Requested inter-node spacing is too large for region" ) < msg.size() );
+      }
+      catch( std::exception const& err )
+      {
+        BOOST_ERROR( std::string( ( "exception thrown by \"regn.make_gridder( space, rand )\" was not expected type: " ) ) + err.what() );
+      }
     }
   }
 }
-
-
 !!!262320.cpp!!!	test_grid_generator(inout gridder : grid_generator) : void
 // Store generated coordinates
 std::vector< particle::coordinate > postns;
@@ -218,128 +299,156 @@ BOOST_CHECK_EQUAL(0, gridder->size());
 }
 std::stringstream log;
 {
-   // Circle grid default ctor
-   geometry::circle_grid var1;
-   // Default should have no size
-   BOOST_REQUIRE_EQUAL( var1.size(), 0 );
-   // Should throw error
-   particle::coordinate pnt;
-   BOOST_REQUIRE_THROW( var1.set_xy( pnt, 0 ), std::runtime_error );
+  // Circle grid default ctor
+  geometry::circle_grid var1;
+  // Default should have no size
+  BOOST_REQUIRE_EQUAL( var1.size(), 0 );
+  // Should throw error
+  particle::coordinate pnt;
+  try
+  {
+    var1.set_xy( pnt, 0 );
+    BOOST_ERROR( ( "expected \"var1.set_xy( pnt, 0 )\" exception not thrown" ) );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Index out of range" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( ( "exception thrown by \"var1.set_xy( pnt, 0 )\" was not expected type: " ) ) + err.what() );
+  }
 }
 {
-   // Circle grid copy and serialization test
-   const double radius{ 3.0 };
-   const double space{ 1.0 };
-   std::stringstream ss;
-   {
-      geometry::circle_grid var1( radius, space );
-      BOOST_CHECK_EQUAL( var1.size(), 21 );
-      {
+  // Circle grid copy and serialization test
+  const double radius{ 3.0 };
+  const double space{ 1.0 };
+  std::stringstream ss;
+  {
+    geometry::circle_grid var1( radius, space );
+    BOOST_CHECK_EQUAL( var1.size(), 21 );
+    {
       geometry::circle_grid var2( var1 );
       BOOST_CHECK_EQUAL( var2.size(), 21 );
       BOOST_CHECK_EQUAL( var1.size(), 21 );
-      }
-      {
+    }
+    {
       geometry::circle_grid var3;
       BOOST_CHECK_EQUAL( var3.size(), 0 );
       var3 = var1;
       BOOST_CHECK_EQUAL( var3.size(), 21 );
       BOOST_CHECK_EQUAL( var1.size(), 21 );
-      }
-      {
-        geometry::circle_grid var4( var1 );
-        geometry::circle_grid var5( std::move( var4 ) );
-        BOOST_CHECK_EQUAL( var5.size(), 21 );
-      }
+    }
+    {
+      geometry::circle_grid var4( var1 );
+      geometry::circle_grid var5( std::move( var4 ) );
+      BOOST_CHECK_EQUAL( var5.size(), 21 );
+    }
 
-      boost::archive::text_oarchive oa(ss);
-      // write class instance to archive
-      oa << var1;
-      BOOST_CHECK_EQUAL( var1.size(), 21 );
-   }
-   {
-      geometry::circle_grid var1;
-      BOOST_CHECK_EQUAL( var1.size(), 0 );
-      boost::archive::text_iarchive ia(ss);
-      // read class instance from archive
-      ia >> var1;
-      BOOST_CHECK_EQUAL( var1.size(), 21 );
-   }
+    boost::archive::text_oarchive oa( ss );
+    // write class instance to archive
+    oa << var1;
+    BOOST_CHECK_EQUAL( var1.size(), 21 );
+  }
+  {
+    geometry::circle_grid var1;
+    BOOST_CHECK_EQUAL( var1.size(), 0 );
+    boost::archive::text_iarchive ia( ss );
+    // read class instance from archive
+    ia >> var1;
+    BOOST_CHECK_EQUAL( var1.size(), 21 );
+  }
 }
 !!!1014960.cpp!!!	circle_grid_methods_test() : void
 {
-   // Circle grid real ctor
-   const double radius{ 3.0 };
-   const double space{ 1.0 };
-   geometry::circle_grid var1( radius, space );
-   BOOST_CHECK_EQUAL( var1.size(), 21 );
+  // Circle grid real ctor
+  const double radius{ 3.0 };
+  const double space{ 1.0 };
+  geometry::circle_grid var1( radius, space );
+  BOOST_CHECK_EQUAL( var1.size(), 21 );
 
-   const double r_edge( std::pow( radius - space, 2 ) );
-   const double r_max( std::pow( radius - ( space/2 ), 2 ) );
-   const std::size_t size( var1.size() );
-   std::size_t countr1 = 0; // count of elements near r
-   for (std::size_t idx = 0; idx != size; ++idx)
-   {
-      BOOST_CHECK_LT(0, var1.size());
-      particle::coordinate pnt;
-      var1.set_xy( pnt, idx );
-      const double r(pnt.x*pnt.x + pnt.y*pnt.y);
-      BOOST_CHECK_LE( r, r_max );
-      if (r >= r_edge) ++countr1;
-   }
-   BOOST_CHECK_EQUAL( size, var1.size() );
-   // Should throw error
-   particle::coordinate pnt;
-   BOOST_REQUIRE_THROW( var1.set_xy( pnt, size ), std::runtime_error );
-   BOOST_CHECK_LT( 0, countr1 );
-   const std::size_t mod4{ countr1 % 4 };
-   const std::size_t mod8{ countr1 % 8 };
-   BOOST_CHECK_MESSAGE( mod4 == 0, "4 fold symmetry error: 0 != countr1 % 4" );
-   BOOST_WARN_MESSAGE( mod8 == 0, "8 fold symmetry error: 0 != countr1 % 8" );
+  const double r_edge( std::pow( radius - space, 2 ) );
+  const double r_max( std::pow( radius - ( space/2 ), 2 ) );
+  const std::size_t size( var1.size() );
+  std::size_t countr1 = 0; // count of elements near r
+  for( std::size_t idx = 0; idx != size; ++idx )
+  {
+    BOOST_CHECK_LT( 0, var1.size() );
+    particle::coordinate pnt;
+    var1.set_xy( pnt, idx );
+    const double r( pnt.x*pnt.x + pnt.y*pnt.y );
+    BOOST_CHECK_LE( r, r_max );
+    if( r >= r_edge ) ++countr1;
+  }
+  BOOST_CHECK_EQUAL( size, var1.size() );
+  // Should throw error
+  try
+  {
+    particle::coordinate pnt;
+    var1.set_xy( pnt, size );
+    BOOST_ERROR( ( "expected \"var1.set_xy( pnt, size )\" exception not thrown" ) );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Index out of range" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( ( "exception thrown by \"var1.set_xy( pnt, size )\" was not expected type: " ) ) + err.what() );
+  }
+  BOOST_CHECK_LT( 0, countr1 );
+  const std::size_t mod4{ countr1 % 4 };
+  const std::size_t mod8{ countr1 % 8 };
+  BOOST_CHECK_MESSAGE( mod4 == 0, "4 fold symmetry error: 0 != countr1 % 4" );
+  BOOST_WARN_MESSAGE( mod8 == 0, "8 fold symmetry error: 0 != countr1 % 8" );
 }
 {
-   std::vector< particle::coordinate > canon;
-   // Circle grid copy and serialization test
-   const double radius{ 3.0 };
-   const double space{ 1.0 };
-   std::stringstream ss;
-   {
-      geometry::circle_grid var1 = geometry::circle_grid( radius, space );
-      BOOST_CHECK_EQUAL( var1.size(), 21 );
+  std::vector< particle::coordinate > canon;
+  // Circle grid copy and serialization test
+  const double radius{ 3.0 };
+  const double space{ 1.0 };
+  std::stringstream ss;
+  {
+    geometry::circle_grid var1 = geometry::circle_grid( radius, space );
+    BOOST_CHECK_EQUAL( var1.size(), 21 );
 
-      boost::archive::text_oarchive oa(ss);
-      // write class instance to archive
-      oa << var1;
+    boost::archive::text_oarchive oa( ss );
+    // write class instance to archive
+    oa << var1;
 
-      const std::size_t size( var1.size() );
-      canon.resize( size );
-      for (std::size_t idx = 0; idx != size; ++idx)
-      {
-         var1.set_xy( canon[ idx ], idx );
-         BOOST_CHECK_LT(0, var1.size());
-      }
-   }
-   {
-      geometry::circle_grid var3;
-      BOOST_CHECK_EQUAL( var3.size(), 0 );
-      boost::archive::text_iarchive ia(ss);
-      // read class instance from archive
-      ia >> var3;
-      BOOST_CHECK_EQUAL( var3.size(), 21 );
-      BOOST_REQUIRE_EQUAL( var3.size(), canon.size() );
-      for (std::size_t idx = 0; idx != var3.size(); ++idx)
-      {
-         particle::coordinate pnt;
-         var3.set_xy( pnt, idx );
-         BOOST_CHECK_EQUAL( pnt, canon[idx] );
-      }
+    const std::size_t size( var1.size() );
+    canon.resize( size );
+    for( std::size_t idx = 0; idx != size; ++idx )
+    {
+      var1.set_xy( canon[ idx ], idx );
+      BOOST_CHECK_LT( 0, var1.size() );
+    }
+  }
+  {
+    geometry::circle_grid var3;
+    BOOST_CHECK_EQUAL( var3.size(), 0 );
+    boost::archive::text_iarchive ia( ss );
+    // read class instance from archive
+    ia >> var3;
+    BOOST_CHECK_EQUAL( var3.size(), 21 );
+    BOOST_REQUIRE_EQUAL( var3.size(), canon.size() );
+    for( std::size_t idx = 0; idx != var3.size(); ++idx )
+    {
+      particle::coordinate pnt;
+      var3.set_xy( pnt, idx );
+      BOOST_CHECK_EQUAL( pnt, canon[idx] );
+    }
 
-   }
-   {
-      // circle grid that should be used in tubular grid
-      geometry::circle_grid var1( 8.5, 0.5 );
-      BOOST_CHECK_EQUAL( var1.size(), 861 );
-   }
+  }
+  {
+    // circle grid that should be used in tubular grid
+    geometry::circle_grid var1( 8.5, 0.5 );
+    BOOST_CHECK_EQUAL( var1.size(), 861 );
+  }
 }
 !!!1015088.cpp!!!	cubic_grid_lifetime_test() : void
 {
@@ -923,7 +1032,22 @@ BOOST_CHECK_EQUAL( var1->length(), 10.0 );
   BOOST_CHECK_EQUAL( var1->volume( 1.0 ), 1000.0 );
   BOOST_CHECK_EQUAL( var1->volume( 0.0 ), 1000.0 );
   // should throw on non-fitting radius
-  BOOST_CHECK_THROW( var1->volume( 100.0 ), std::runtime_error );
+  const std::string fncall{ "var1->volume( 100.0 )" };
+  try
+  {
+    var1->volume( 100.0 );
+    BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Sphere must fit in space to be able to calculate the volume" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+  }
 }
 // label / set_label
 {
@@ -1005,7 +1129,22 @@ BOOST_CHECK_EQUAL( var1->length(), 10.0 );
   BOOST_CHECK( utility::feq( var1->volume( 3.0 ), 900.0 ) );
   BOOST_CHECK_EQUAL( var1->volume( 3.0 ), 900.0 );
 
-  BOOST_REQUIRE_THROW( man.change_volume( 729.0, 5.0 ), std::runtime_error  );
+  const std::string fncall{ "man.change_volume( 729.0, 5.0 )" };
+  try
+  {
+    man.change_volume( 729.0, 5.0 );
+    BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Object can not fit in volume after volume change" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+  }
 }
 // make_gridder
 {
@@ -1177,7 +1316,24 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
     BOOST_CHECK_EQUAL( var1->volume( 1.0 ), std::pow( 8, 3 ) );
     BOOST_CHECK_EQUAL( var1->volume( 0.0 ), 1000.0 );
     // should throw on non-fitting radius
-    BOOST_CHECK_THROW( var1->volume( 10.1 ), std::runtime_error );
+    const std::string fncall
+    { "var1->volume( 10.1 )"
+    };
+    try
+    {
+      var1->volume( 10.1 );
+      BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Sphere must fit in space to be able to calculate the volume" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+    }
   }
   // label / set_label
   {
@@ -1259,9 +1415,6 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
 }
 // make_gridder: see cube_region_method_open_test as gridder generation is
 // always independent of open/closedness.
-
-
-
 !!!1199792.cpp!!!	cylinder_region_test() : void
 {
   // Test is virtual object pattern

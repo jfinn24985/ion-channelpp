@@ -1515,8 +1515,23 @@ const std::string desc2 { "desc2" };
   BOOST_CHECK_LT( msg.find( desc2 ), msg.size() );
 
   // Attempt to add definition with existing name.
-  BOOST_CHECK_THROW( idoc.add_definition( name1, desc1 ), std::runtime_error );
+  try
+  {
+    idoc.add_definition( name1, desc1 );
+    BOOST_ERROR( "expected \"idoc.add_definition( name1, desc1 )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Can not overwrite existing definitions" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
 }
+
 
 !!!899120.cpp!!!	test_meta_lifetime_test() : void
 // CTOR TESTS
@@ -1750,7 +1765,21 @@ const std::string label( "name" );
   core::input_delegater dlgater( 1 );
   dlgater.add_input_delegate( sobj1 );
   dlgater.add_input_delegate( sobj2 );
-  BOOST_CHECK_THROW( dlgater.add_input_delegate( sobj3 ), std::runtime_error );
+  try
+  {
+    dlgater.add_input_delegate( sobj3 );
+    BOOST_ERROR( "expected \"dlgater.add_input_delegate( sobj3 )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Can not add two meta objects for the same input section.\"label_two\"" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
 }
 !!!898736.cpp!!!	input_delegater_input_file_versioning_test() : void
 {
@@ -1778,7 +1807,21 @@ const std::string label( "name" );
 
   var1.add_input_delegate( dobj );
 
-  BOOST_CHECK_THROW( var1.read_input( dummy ), std::runtime_error );
+  try
+  {
+    var1.read_input( dummy );
+    BOOST_ERROR( "expected \"var1.read_input( dummy )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "File version 2 is too recent for this program" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
 }
 {
   // Test invalid file version (non-number) processed
@@ -1790,7 +1833,21 @@ const std::string label( "name" );
 
   var1.add_input_delegate( dobj );
 
-  BOOST_CHECK_THROW( var1.read_input( dummy ), std::runtime_error );
+  try
+  {
+    var1.read_input( dummy );
+    BOOST_ERROR( "expected \"var1.read_input( dummy )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Non-numeric or negative file version (A2016) is invalid" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
 }
 {
   // Test invalid file version (negative number) processed
@@ -1802,7 +1859,21 @@ const std::string label( "name" );
 
   var1.add_input_delegate( dobj );
 
-  BOOST_CHECK_THROW( var1.read_input( dummy ), std::runtime_error );
+  try
+  {
+    var1.read_input( dummy );
+    BOOST_ERROR( "expected \"var1.read_input( dummy )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Non-numeric or negative file version (-1) is invalid" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
 }
 !!!898864.cpp!!!	input_delegater_input_sections_test() : void
 {
@@ -1829,74 +1900,125 @@ const std::string label( "name" );
 }
 {
   // Test invalid input (unknown section)
-  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test_one"));
-  boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test_two"));
-  boost::shared_ptr< core::input_base_meta > dobj3 (new test_meta("test_three"));
+  boost::shared_ptr< core::input_base_meta > dobj1( new test_meta( "test_one" ) );
+  boost::shared_ptr< core::input_base_meta > dobj2( new test_meta( "test_two" ) );
+  boost::shared_ptr< core::input_base_meta > dobj3( new test_meta( "test_three" ) );
 
-  const std::string canon_input ("fileversion 1\ntest_one\nend\ntest4\n\nend\n");
+  const std::string canon_input( "fileversion 1\ntest_one\nend\ntest4\n\nend\n" );
   core::input_reader dummy;
   dummy.add_buffer( "test_filename", canon_input );
 
-  core::input_delegater var1(1ul);
+  core::input_delegater var1( 1ul );
 
-  var1.add_input_delegate (dobj1);
-  var1.add_input_delegate (dobj2);
-  var1.add_input_delegate (dobj3);
+  var1.add_input_delegate( dobj1 );
+  var1.add_input_delegate( dobj2 );
+  var1.add_input_delegate( dobj3 );
 
-  BOOST_CHECK_THROW( var1.read_input( dummy ), std::runtime_error );
+  try
+  {
+    var1.read_input( dummy );
+    BOOST_ERROR( "expected \"var1.read_input( dummy )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Name test4 is not a valid input section label" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
 }
 {
   // Test invalid input (missing required section)
-  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test_one"));
-  boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test_two"));
-  boost::shared_ptr< core::input_base_meta > dobj3 (new test_meta("test_three", false, true));
+  boost::shared_ptr< core::input_base_meta > dobj1( new test_meta( "test_one" ) );
+  boost::shared_ptr< core::input_base_meta > dobj2( new test_meta( "test_two" ) );
+  boost::shared_ptr< core::input_base_meta > dobj3( new test_meta( "test_three", false, true ) );
 
-  const std::string canon_input ("fileversion 1\ntest_one\nend\ntest_two\n\nend\n");
+  const std::string canon_input( "fileversion 1\ntest_one\nend\ntest_two\n\nend\n" );
   core::input_reader dummy;
   dummy.add_buffer( "test_filename", canon_input );
 
-  core::input_delegater var1(1ul);
+  core::input_delegater var1( 1ul );
 
-  var1.add_input_delegate (dobj1);
-  var1.add_input_delegate (dobj2);
-  var1.add_input_delegate (dobj3);
+  var1.add_input_delegate( dobj1 );
+  var1.add_input_delegate( dobj2 );
+  var1.add_input_delegate( dobj3 );
 
-  BOOST_CHECK_THROW( var1.read_input( dummy ), std::runtime_error );
+  try
+  {
+    var1.read_input( dummy );
+    BOOST_ERROR( "expected \"var1.read_input( dummy )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Missing input file section: test_three" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
 }
 {
   // Test valid input (repeated multiple section)
-  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test_one"));
-  boost::shared_ptr< test_meta > dobj2 (new test_meta("test_two", true, false));
+  boost::shared_ptr< core::input_base_meta > dobj1( new test_meta( "test_one" ) );
+  boost::shared_ptr< test_meta > dobj2( new test_meta( "test_two", true, false ) );
 
-  const std::string canon_input ("fileversion 1\ntest_one\nend\ntest_two\n\nend\ntest_two\n\nend\n");
+  const std::string canon_input( "fileversion 1\ntest_one\nend\ntest_two\n\nend\ntest_two\n\nend\n" );
   core::input_reader dummy;
   dummy.add_buffer( "test_filename", canon_input );
 
-  core::input_delegater var1(1ul);
+  core::input_delegater var1( 1ul );
 
-  var1.add_input_delegate (dobj1);
-  var1.add_input_delegate (dobj2);
+  var1.add_input_delegate( dobj1 );
+  var1.add_input_delegate( dobj2 );
 
   BOOST_CHECK_NO_THROW( var1.read_input( dummy ) );
   BOOST_CHECK_EQUAL( dobj2->get_read_end_count(), 2ul );
 }
 {
   // Test invalid input (repeated non-multiple section)
-  boost::shared_ptr< core::input_base_meta > dobj1 (new test_meta("test_one"));
-  boost::shared_ptr< core::input_base_meta > dobj2 (new test_meta("test_two"));
+  boost::shared_ptr< core::input_base_meta > dobj1( new test_meta( "test_one" ) );
+  boost::shared_ptr< core::input_base_meta > dobj2( new test_meta( "test_two" ) );
 
-  const std::string canon_input ("fileversion 1\ntest_one\nend\ntest_two\n\nend\ntest_two\n\nend\n");
+  const std::string canon_input( "fileversion 1\ntest_one\nend\ntest_two\n\nend\ntest_two\n\nend\n" );
   core::input_reader dummy;
   dummy.add_buffer( "test_filename", canon_input );
 
-  core::input_delegater var1(1ul);
+  core::input_delegater var1( 1ul );
 
-  var1.add_input_delegate (dobj1);
-  var1.add_input_delegate (dobj2);
+  var1.add_input_delegate( dobj1 );
+  var1.add_input_delegate( dobj2 );
 
-  BOOST_CHECK_THROW( var1.read_input( dummy ), std::runtime_error );
+  try
+  {
+    var1.read_input( dummy );
+    BOOST_ERROR( "expected \"var1.read_input( dummy )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Input file section test_two appears more than once" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+
 }
 !!!477616.cpp!!!	output_field_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( std::is_default_constructible< core::output_field >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< core::output_field >::type{} );
+  BOOST_CHECK( std::is_move_constructible< core::output_field >::type{} );
+  BOOST_CHECK( ( std::is_assignable< core::output_field, core::output_field >::type{} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< core::output_field >::type{} );
+}
 // CTOR TESTS
 // ----------
 std::string emptr_str;
@@ -1910,181 +2032,298 @@ const std::string unit3( "ordinal2" );
 const std::string unit4( "ordinal3" );
 
 {
-   core::output_field aset;
-   BOOST_CHECK_EQUAL( aset.label(), emptr_str );
-   BOOST_CHECK_EQUAL( aset.unit(), emptr_str );
-   BOOST_CHECK_EQUAL( aset.valid(), false );
-   // Output error if no entries
-   BOOST_CHECK_THROW( aset.write( std::cout, 0 ), std::runtime_error );
+  core::output_field aset;
+  BOOST_CHECK_EQUAL( aset.label(), emptr_str );
+  BOOST_CHECK_EQUAL( aset.unit(), emptr_str );
+  BOOST_CHECK_EQUAL( aset.valid(), false );
+  {
+    // Output error if no entries
+    core::output_field copy( aset );
+    try
+    {
+      copy.write( std::cout, 0 );
+      BOOST_ERROR( "expected \"copy.write( std::cout, 0 )\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Can not write incomplete field" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+    }
+  }
 
-   aset.set_label( label1 );
-   BOOST_CHECK_EQUAL( aset.label(), label1 );
-   BOOST_CHECK_EQUAL( aset.unit(), emptr_str );
-   BOOST_CHECK_EQUAL( aset.valid(), false );
+  aset.set_label( label1 );
+  BOOST_CHECK_EQUAL( aset.label(), label1 );
+  BOOST_CHECK_EQUAL( aset.unit(), emptr_str );
+  BOOST_CHECK_EQUAL( aset.valid(), false );
 
-   aset.set_unit( unit1 );
-   BOOST_CHECK_EQUAL( aset.unit(), unit1 );
-   BOOST_CHECK_EQUAL( aset.label(), label1 );
-   BOOST_CHECK_EQUAL( aset.valid(), false );
-   
-   aset.set_format_function( [](std::ostream& os, std::size_t i){ os << i; } );
-   BOOST_CHECK_EQUAL( aset.unit(), unit1 );
-   BOOST_CHECK_EQUAL( aset.label(), label1 );
-   BOOST_CHECK_EQUAL( aset.valid(), true );
-   {
-      // Output should work
-      std::stringstream store;
-      BOOST_CHECK_NO_THROW( aset.write( store, 0 ) );
-      const std::string output( store.str() );
-      BOOST_CHECK( not output.empty() );
-      BOOST_CHECK_EQUAL( output.size(), 1 );
-      BOOST_CHECK_EQUAL( output, "0" );
-   }
-   {
-      // Output should work
-      std::stringstream store;
-      BOOST_CHECK_NO_THROW( aset.write( store, 101 ) );
-      const std::string output( store.str() );
-      BOOST_CHECK( not output.empty() );
-      BOOST_CHECK_EQUAL( output.size(), 3 );
-      BOOST_CHECK_EQUAL( output, "101" );
-   }
-    core::output_field bset;
-   BOOST_CHECK_EQUAL( bset.label(), emptr_str );
-   BOOST_CHECK_EQUAL( bset.unit(), emptr_str );
-   BOOST_CHECK_EQUAL( bset.valid(), false );
+  aset.set_unit( unit1 );
+  BOOST_CHECK_EQUAL( aset.unit(), unit1 );
+  BOOST_CHECK_EQUAL( aset.label(), label1 );
+  BOOST_CHECK_EQUAL( aset.valid(), false );
 
-   bset = aset;
-   BOOST_CHECK_EQUAL( bset.unit(), unit1 );
-   BOOST_CHECK_EQUAL( bset.label(), label1 );
-   BOOST_CHECK_EQUAL( bset.valid(), true );
+  aset.set_format_function( []( std::ostream& os, std::size_t i )
+  {
+    os << i;
+  } );
+  BOOST_CHECK_EQUAL( aset.unit(), unit1 );
+  BOOST_CHECK_EQUAL( aset.label(), label1 );
+  BOOST_CHECK_EQUAL( aset.valid(), true );
+  {
+    // Output should work
+    std::stringstream store;
+    BOOST_CHECK_NO_THROW( aset.write( store, 0 ) );
+    const std::string output( store.str() );
+    BOOST_CHECK( not output.empty() );
+    BOOST_CHECK_EQUAL( output.size(), 1 );
+    BOOST_CHECK_EQUAL( output, "0" );
+  }
+  {
+    // Output should work
+    std::stringstream store;
+    BOOST_CHECK_NO_THROW( aset.write( store, 101 ) );
+    const std::string output( store.str() );
+    BOOST_CHECK( not output.empty() );
+    BOOST_CHECK_EQUAL( output.size(), 3 );
+    BOOST_CHECK_EQUAL( output, "101" );
+  }
+  core::output_field bset;
+  BOOST_CHECK_EQUAL( bset.label(), emptr_str );
+  BOOST_CHECK_EQUAL( bset.unit(), emptr_str );
+  BOOST_CHECK_EQUAL( bset.valid(), false );
 
-   BOOST_CHECK_EQUAL( aset.unit(), unit1 );
-   BOOST_CHECK_EQUAL( aset.label(), label1 );
-   BOOST_CHECK_EQUAL( aset.valid(), true );
+  bset = aset;
+  BOOST_CHECK_EQUAL( bset.unit(), unit1 );
+  BOOST_CHECK_EQUAL( bset.label(), label1 );
+  BOOST_CHECK_EQUAL( bset.valid(), true );
 
-   core::output_field cset( aset );
-   BOOST_CHECK_EQUAL( cset.unit(), unit1 );
-   BOOST_CHECK_EQUAL( cset.label(), label1 );
-   BOOST_CHECK_EQUAL( cset.valid(), true );
+  BOOST_CHECK_EQUAL( aset.unit(), unit1 );
+  BOOST_CHECK_EQUAL( aset.label(), label1 );
+  BOOST_CHECK_EQUAL( aset.valid(), true );
 
-   BOOST_CHECK_EQUAL( aset.unit(), unit1 );
-   BOOST_CHECK_EQUAL( aset.label(), label1 );
-   BOOST_CHECK_EQUAL( aset.valid(), true );
+  core::output_field cset( aset );
+  BOOST_CHECK_EQUAL( cset.unit(), unit1 );
+  BOOST_CHECK_EQUAL( cset.label(), label1 );
+  BOOST_CHECK_EQUAL( cset.valid(), true );
 
-   aset = aset;
-   BOOST_CHECK_EQUAL( aset.unit(), unit1 );
-   BOOST_CHECK_EQUAL( aset.label(), label1 );
-   BOOST_CHECK_EQUAL( aset.valid(), true );
+  BOOST_CHECK_EQUAL( aset.unit(), unit1 );
+  BOOST_CHECK_EQUAL( aset.label(), label1 );
+  BOOST_CHECK_EQUAL( aset.valid(), true );
 
-   core::output_field dset( std::move( aset ) );
-   BOOST_CHECK_EQUAL( dset.unit(), unit1 );
-   BOOST_CHECK_EQUAL( dset.label(), label1 );
-   BOOST_CHECK_EQUAL( dset.valid(), true );
+  aset = aset;
+  BOOST_CHECK_EQUAL( aset.unit(), unit1 );
+  BOOST_CHECK_EQUAL( aset.label(), label1 );
+  BOOST_CHECK_EQUAL( aset.valid(), true );
 
-   BOOST_CHECK_EQUAL( aset.unit(), emptr_str );
-   BOOST_CHECK_EQUAL( aset.label(), emptr_str );
-   BOOST_CHECK_EQUAL( aset.valid(), false );
+  core::output_field dset( std::move( aset ) );
+  BOOST_CHECK_EQUAL( dset.unit(), unit1 );
+  BOOST_CHECK_EQUAL( dset.label(), label1 );
+  BOOST_CHECK_EQUAL( dset.valid(), true );
 
-   core::output_field eset;
-   BOOST_CHECK_EQUAL( eset.label(), emptr_str );
-   BOOST_CHECK_EQUAL( eset.unit(), emptr_str );
-   BOOST_CHECK_EQUAL( eset.valid(), false );
+  BOOST_CHECK_EQUAL( aset.unit(), emptr_str );
+  BOOST_CHECK_EQUAL( aset.label(), emptr_str );
+  BOOST_CHECK_EQUAL( aset.valid(), false );
 
-   std::swap( eset, bset );
-   BOOST_CHECK_EQUAL( eset.unit(), unit1 );
-   BOOST_CHECK_EQUAL( eset.label(), label1 );
-   BOOST_CHECK_EQUAL( eset.valid(), true );
+  core::output_field eset;
+  BOOST_CHECK_EQUAL( eset.label(), emptr_str );
+  BOOST_CHECK_EQUAL( eset.unit(), emptr_str );
+  BOOST_CHECK_EQUAL( eset.valid(), false );
 
-   BOOST_CHECK_EQUAL( bset.unit(), emptr_str );
-   BOOST_CHECK_EQUAL( bset.label(), emptr_str );
-   BOOST_CHECK_EQUAL( bset.valid(), false );
+  std::swap( eset, bset );
+  BOOST_CHECK_EQUAL( eset.unit(), unit1 );
+  BOOST_CHECK_EQUAL( eset.label(), label1 );
+  BOOST_CHECK_EQUAL( eset.valid(), true );
 
-}   
+  BOOST_CHECK_EQUAL( bset.unit(), emptr_str );
+  BOOST_CHECK_EQUAL( bset.label(), emptr_str );
+  BOOST_CHECK_EQUAL( bset.valid(), false );
+}
 !!!484912.cpp!!!	output_series_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( std::is_default_constructible< core::output_series >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< core::output_series >::type{} );
+  BOOST_CHECK( std::is_move_constructible< core::output_series >::type{} );
+  BOOST_CHECK( ( std::is_assignable< core::output_series, core::output_series >::type{} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< core::output_series >::type{} );
+}
 // CTOR TESTS
 // ----------
 std::string emptr_str;
-const std::string test_fname{ "result.dat" };
-const std::string test_uuid{ "1a2b3c4d" };
-const std::string test_title{ "Something or other." };
+const std::string test_fname
+{ "result.dat"
+};
+const std::string test_uuid
+{ "1a2b3c4d"
+};
+const std::string test_title
+{ "Something or other."
+};
 {
-   core::output_series aset;
-   BOOST_CHECK_EQUAL( aset.title(), emptr_str );
-   BOOST_CHECK_EQUAL( aset.uuid(), emptr_str );
-   BOOST_CHECK_EQUAL( aset.size(), 0 );
-   BOOST_CHECK_EQUAL( aset.empty(), true );
-   BOOST_CHECK( aset.begin() == aset.end() );
+  core::output_series aset;
+  BOOST_CHECK_EQUAL( aset.title(), emptr_str );
+  BOOST_CHECK_EQUAL( aset.uuid(), emptr_str );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
 
-   aset.set_uuid( test_uuid );
-   BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
-   BOOST_CHECK_EQUAL( aset.title(), emptr_str );
-   
-   aset.set_title( test_title );
-   BOOST_CHECK_EQUAL( aset.title(), test_title );
-   BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
-   BOOST_CHECK_EQUAL( aset.size(), 0 );
-   BOOST_CHECK_EQUAL( aset.empty(), true );
-   BOOST_CHECK( aset.begin() == aset.end() );
+  aset.set_uuid( test_uuid );
+  BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
+  BOOST_CHECK_EQUAL( aset.title(), emptr_str );
 
-   core::output_series bset;
-   BOOST_CHECK_EQUAL( bset.title(), emptr_str );
-   BOOST_CHECK_EQUAL( bset.uuid(), emptr_str );
-   BOOST_CHECK_EQUAL( aset.size(), 0 );
-   BOOST_CHECK_EQUAL( aset.empty(), true );
-   BOOST_CHECK( aset.begin() == aset.end() );
+  aset.set_title( test_title );
+  BOOST_CHECK_EQUAL( aset.title(), test_title );
+  BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
 
-   bset = aset;
-   BOOST_CHECK_EQUAL( bset.title(), test_title );
-   BOOST_CHECK_EQUAL( bset.uuid(), test_uuid );
-   BOOST_CHECK_EQUAL( aset.size(), 0 );
-   BOOST_CHECK_EQUAL( aset.empty(), true );
-   BOOST_CHECK( aset.begin() == aset.end() );
+  core::output_series bset;
+  BOOST_CHECK_EQUAL( bset.title(), emptr_str );
+  BOOST_CHECK_EQUAL( bset.uuid(), emptr_str );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
 
-   core::output_series cset( aset );
-   BOOST_CHECK_EQUAL( cset.title(), test_title );
-   BOOST_CHECK_EQUAL( cset.uuid(), test_uuid );
-   BOOST_CHECK_EQUAL( aset.size(), 0 );
-   BOOST_CHECK_EQUAL( aset.empty(), true );
-   BOOST_CHECK( aset.begin() == aset.end() );
+  bset = aset;
+  BOOST_CHECK_EQUAL( bset.title(), test_title );
+  BOOST_CHECK_EQUAL( bset.uuid(), test_uuid );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
 
-   aset = aset;
-   BOOST_CHECK_EQUAL( aset.title(), test_title );
-   BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
-   BOOST_CHECK_EQUAL( aset.size(), 0 );
-   BOOST_CHECK_EQUAL( aset.empty(), true );
-   BOOST_CHECK( aset.begin() == aset.end() );
+  core::output_series cset( aset );
+  BOOST_CHECK_EQUAL( cset.title(), test_title );
+  BOOST_CHECK_EQUAL( cset.uuid(), test_uuid );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
 
-   core::output_series dset( std::move( aset ) );
-   BOOST_CHECK_EQUAL( dset.title(), test_title );
-   BOOST_CHECK_EQUAL( dset.uuid(), test_uuid );
-   BOOST_CHECK_EQUAL( aset.size(), 0 );
-   BOOST_CHECK_EQUAL( aset.empty(), true );
-   BOOST_CHECK( aset.begin() == aset.end() );
+  aset = aset;
+  BOOST_CHECK_EQUAL( aset.title(), test_title );
+  BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
 
-   // Output error if no entries
-   BOOST_CHECK_THROW( dset.do_header( std::cout ), std::runtime_error );
-   BOOST_CHECK_THROW( dset.do_body( std::cout ), std::runtime_error );
-   utility::memory_sink sink;
-   BOOST_CHECK_THROW( dset.write( test_fname, sink, true ), std::runtime_error );
-   BOOST_CHECK_THROW( dset.write( test_fname, sink, false ), std::runtime_error );
-}   
-struct person                                                                                                    
-{                                                                                                                
-  std::string name;                                                                                              
-  std::size_t day_of_birth;                                                                                      
-  std::size_t month_of_birth;                                                                                    
-  std::size_t year_of_birth;                                                                                     
+  core::output_series dset( std::move( aset ) );
+  BOOST_CHECK_EQUAL( dset.title(), test_title );
+  BOOST_CHECK_EQUAL( dset.uuid(), test_uuid );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
+
+  // Output error if no entries
+  {
+    core::output_series dsetcp( dset );
+    try
+    {
+      dsetcp.do_header( std::cout );
+      BOOST_ERROR( "expected \"dsetcp.do_header( std::cout )\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+    }
+  }
+  {
+    core::output_series dsetcp( dset );
+    try
+    {
+      dsetcp.do_body( std::cout );
+      BOOST_ERROR( "expected \"dsetcp.do_body( std::cout )\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+    }
+  }
+  {
+    utility::memory_sink sink;
+    core::output_series dsetcp( dset );
+    try
+    {
+      dsetcp.write( test_fname, sink, true );
+      BOOST_ERROR( "expected \"dsetcp.write( test_fname, sink, true )\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+    }
+  }
+  {
+    utility::memory_sink sink;
+    core::output_series dsetcp( dset );
+    try
+    {
+      dsetcp.write( test_fname, sink, false );
+      BOOST_ERROR( "expected \"dsetcp.write( test_fname, sink, false )\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+    }
+  }
+}
+struct person
+{
+  std::string name;
+  std::size_t day_of_birth;
+  std::size_t month_of_birth;
+  std::size_t year_of_birth;
 };
 
 struct family
 {
-   std::vector< person > ppl;
-   std::size_t day( std::size_t i ) const { return ppl[ i ].day_of_birth; }
-   std::size_t month( std::size_t i ) const { return ppl[ i ].month_of_birth; }
-   std::size_t year( std::size_t i ) const { return ppl[ i ].year_of_birth; }
-   std::string name( std::size_t i ) const { return ppl[ i ].name; }
-   std::size_t size() const { return ppl.size(); }
+  std::vector< person > ppl;
+  std::size_t day( std::size_t i ) const
+  {
+    return ppl[ i ].day_of_birth;
+  }
+  std::size_t month( std::size_t i ) const
+  {
+    return ppl[ i ].month_of_birth;
+  }
+  std::size_t year( std::size_t i ) const
+  {
+    return ppl[ i ].year_of_birth;
+  }
+  std::string name( std::size_t i ) const
+  {
+    return ppl[ i ].name;
+  }
+  std::size_t size() const
+  {
+    return ppl.size();
+  }
 };
 
 const std::string label1( "name" );
@@ -2096,117 +2335,201 @@ const std::string unit2( "ordinal1" );
 const std::string unit3( "ordinal2" );
 const std::string unit4( "ordinal3" );
 {
-   person me{ "justin", 17, 4, 1965 };
+  person me { "justin", 17, 4, 1965 };
 
-   core::output_series dset( test_uuid );
-   dset.set_title( test_title );
-   dset.push_back_entry( core::output_field( label1, unit1, [&me](std::ostream& os, std::size_t){ os << me.name; } ) );
-   dset.push_back_entry( core::output_field( label2, unit2, [&me](std::ostream& os, std::size_t){ os << me.day_of_birth; } ) );
-   dset.push_back_entry( core::output_field( label3, unit3, [&me](std::ostream& os, std::size_t){ os << me.month_of_birth; } ) );
-   dset.push_back_entry( core::output_field( label4, unit4, [&me](std::ostream& os, std::size_t){ os << me.year_of_birth; } ) );
+  core::output_series dset( test_uuid );
+  dset.set_title( test_title );
+  dset.push_back_entry( core::output_field( label1, unit1, [&me]( std::ostream& os, std::size_t )
+  {
+    os << me.name;
+  } ) );
+  dset.push_back_entry( core::output_field( label2, unit2, [&me]( std::ostream& os, std::size_t )
+  {
+    os << me.day_of_birth;
+  } ) );
+  dset.push_back_entry( core::output_field( label3, unit3, [&me]( std::ostream& os, std::size_t )
+  {
+    os << me.month_of_birth;
+  } ) );
+  dset.push_back_entry( core::output_field( label4, unit4, [&me]( std::ostream& os, std::size_t )
+  {
+    os << me.year_of_birth;
+  } ) );
 
-   {
-      std::stringstream store;
-      dset.do_header( store );
-      const std::string output{ store.str() };
-      BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
-      BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
-      BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
-      BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
-   }
-   {
-      std::stringstream store;
-      dset.do_body( store );
-      const std::string output{ store.str() };
-      BOOST_CHECK_EQUAL( output.find( test_uuid ), std::string::npos );
-      BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
-      BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
-      BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
-   }
+  {
+    std::stringstream store;
+    dset.do_header( store );
+    const std::string output
+    {
+      store.str()
+    };
+    BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
+    BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
+    BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
+    BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
+  }
+  {
+    std::stringstream store;
+    dset.do_body( store );
+    const std::string output
+    {
+      store.str()
+    };
+    BOOST_CHECK_EQUAL( output.find( test_uuid ), std::string::npos );
+    BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
+    BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
+    BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
+  }
 }
 !!!471728.cpp!!!	output_dataset_test() : void
 // CTOR TESTS
 // ----------
 std::string emptr_str;
-const std::string test_fname{ "result.dat" };
-const std::string test_uuid{ "1a2b3c4d" };
-const std::string test_title{ "Something or other." };
+const std::string test_fname { "result.dat" };
+const std::string test_uuid { "1a2b3c4d" };
+const std::string test_title { "Something or other." };
 {
-   core::output_dataset aset;
-   BOOST_CHECK_EQUAL( aset.title(), emptr_str );
-   BOOST_CHECK_EQUAL( aset.uuid(), emptr_str );
-   BOOST_CHECK_EQUAL( aset.size(), 0 );
-   BOOST_CHECK_EQUAL( aset.empty(), true );
-   BOOST_CHECK( aset.begin() == aset.end() );
+  core::output_dataset aset;
+  BOOST_CHECK_EQUAL( aset.title(), emptr_str );
+  BOOST_CHECK_EQUAL( aset.uuid(), emptr_str );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
 
-   aset.set_uuid( test_uuid );
-   BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
-   BOOST_CHECK_EQUAL( aset.title(), emptr_str );
-   
-   aset.set_title( test_title );
-   BOOST_CHECK_EQUAL( aset.title(), test_title );
-   BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
-   BOOST_CHECK_EQUAL( aset.size(), 0 );
-   BOOST_CHECK_EQUAL( aset.empty(), true );
-   BOOST_CHECK( aset.begin() == aset.end() );
+  aset.set_uuid( test_uuid );
+  BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
+  BOOST_CHECK_EQUAL( aset.title(), emptr_str );
 
-   core::output_dataset bset;
-   BOOST_CHECK_EQUAL( bset.title(), emptr_str );
-   BOOST_CHECK_EQUAL( bset.uuid(), emptr_str );
-   BOOST_CHECK_EQUAL( aset.size(), 0 );
-   BOOST_CHECK_EQUAL( aset.empty(), true );
-   BOOST_CHECK( aset.begin() == aset.end() );
+  aset.set_title( test_title );
+  BOOST_CHECK_EQUAL( aset.title(), test_title );
+  BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
 
-   bset = aset;
-   BOOST_CHECK_EQUAL( bset.title(), test_title );
-   BOOST_CHECK_EQUAL( bset.uuid(), test_uuid );
-   BOOST_CHECK_EQUAL( aset.size(), 0 );
-   BOOST_CHECK_EQUAL( aset.empty(), true );
-   BOOST_CHECK( aset.begin() == aset.end() );
+  core::output_dataset bset;
+  BOOST_CHECK_EQUAL( bset.title(), emptr_str );
+  BOOST_CHECK_EQUAL( bset.uuid(), emptr_str );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
 
-   core::output_dataset cset( aset );
-   BOOST_CHECK_EQUAL( cset.title(), test_title );
-   BOOST_CHECK_EQUAL( cset.uuid(), test_uuid );
-   BOOST_CHECK_EQUAL( aset.size(), 0 );
-   BOOST_CHECK_EQUAL( aset.empty(), true );
-   BOOST_CHECK( aset.begin() == aset.end() );
+  bset = aset;
+  BOOST_CHECK_EQUAL( bset.title(), test_title );
+  BOOST_CHECK_EQUAL( bset.uuid(), test_uuid );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
 
-   aset = aset;
-   BOOST_CHECK_EQUAL( aset.title(), test_title );
-   BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
-   BOOST_CHECK_EQUAL( aset.size(), 0 );
-   BOOST_CHECK_EQUAL( aset.empty(), true );
-   BOOST_CHECK( aset.begin() == aset.end() );
+  core::output_dataset cset( aset );
+  BOOST_CHECK_EQUAL( cset.title(), test_title );
+  BOOST_CHECK_EQUAL( cset.uuid(), test_uuid );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
 
-   core::output_dataset dset( std::move( aset ) );
-   BOOST_CHECK_EQUAL( dset.title(), test_title );
-   BOOST_CHECK_EQUAL( dset.uuid(), test_uuid );
-   BOOST_CHECK_EQUAL( aset.size(), 0 );
-   BOOST_CHECK_EQUAL( aset.empty(), true );
-   BOOST_CHECK( aset.begin() == aset.end() );
+  aset = aset;
+  BOOST_CHECK_EQUAL( aset.title(), test_title );
+  BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
 
-   // Output error if no entries
-   BOOST_CHECK_THROW( dset.do_header( std::cout ), std::runtime_error );
-   BOOST_CHECK_THROW( dset.do_body( std::cout ), std::runtime_error );
-   utility::memory_sink sink;
-   BOOST_CHECK_THROW( dset.write( test_fname, sink ), std::runtime_error );
-}   
-struct person                                                                                                    
-{                                                                                                                
-  std::string name;                                                                                              
-  std::size_t day_of_birth;                                                                                      
-  std::size_t month_of_birth;                                                                                    
-  std::size_t year_of_birth;                                                                                     
+  core::output_dataset dset( std::move( aset ) );
+  BOOST_CHECK_EQUAL( dset.title(), test_title );
+  BOOST_CHECK_EQUAL( dset.uuid(), test_uuid );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
+
+  // Output error if no entries
+  {
+    core::output_dataset dsetcp( dset );
+    try
+    {
+      dsetcp.do_header( std::cout );
+      BOOST_ERROR( "expected \"dsetcp.do_header( std::cout )\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+    }
+  }
+  {
+    core::output_dataset dsetcp( dset );
+    try
+    {
+      dsetcp.do_body( std::cout );
+      BOOST_ERROR( "expected \"dsetcp.do_body( std::cout )\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Can not write data set without any fields" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+    }
+  }
+  {
+    utility::memory_sink sink;
+    core::output_dataset dsetcp( dset );
+    try
+    {
+      dsetcp.write( test_fname, sink );
+      BOOST_ERROR( "expected \"dsetcp.write( test_fname, sink )\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Can not write data set without any fields" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+    }
+  }
+}
+struct person
+{
+  std::string name;
+  std::size_t day_of_birth;
+  std::size_t month_of_birth;
+  std::size_t year_of_birth;
 };
 
 struct family
 {
-   std::vector< person > ppl;
-   std::size_t day( std::size_t i ) const { return ppl[ i ].day_of_birth; }
-   std::size_t month( std::size_t i ) const { return ppl[ i ].month_of_birth; }
-   std::size_t year( std::size_t i ) const { return ppl[ i ].year_of_birth; }
-   std::string name( std::size_t i ) const { return ppl[ i ].name; }
-   std::size_t size() const { return ppl.size(); }
+  std::vector< person > ppl;
+  std::size_t day( std::size_t i ) const
+  {
+    return ppl[ i ].day_of_birth;
+  }
+  std::size_t month( std::size_t i ) const
+  {
+    return ppl[ i ].month_of_birth;
+  }
+  std::size_t year( std::size_t i ) const
+  {
+    return ppl[ i ].year_of_birth;
+  }
+  std::string name( std::size_t i ) const
+  {
+    return ppl[ i ].name;
+  }
+  std::size_t size() const
+  {
+    return ppl.size();
+  }
 };
 
 const std::string label1( "name" );
@@ -2218,79 +2541,125 @@ const std::string unit2( "ordinal1" );
 const std::string unit3( "ordinal2" );
 const std::string unit4( "ordinal3" );
 {
-   person me{ "justin", 17, 4, 1965 };
+  person me { "justin", 17, 4, 1965 };
 
-   core::output_dataset dset( { test_uuid }, [](){ return 1; } );
-   dset.set_title( test_title );
-   dset.push_back_entry( core::output_field( label1, unit1, [&me](std::ostream& os, std::size_t){ os << me.name; } ) );
-   dset.push_back_entry( core::output_field( label2, unit2, [&me](std::ostream& os, std::size_t){ os << me.day_of_birth; } ) );
-   dset.push_back_entry( core::output_field( label3, unit3, [&me](std::ostream& os, std::size_t){ os << me.month_of_birth; } ) );
-   dset.push_back_entry( core::output_field( label4, unit4, [&me](std::ostream& os, std::size_t){ os << me.year_of_birth; } ) );
+  core::output_dataset dset( { test_uuid }, []()
+  {
+    return 1;
+  } );
+  dset.set_title( test_title );
+  dset.push_back_entry( core::output_field( label1, unit1, [&me]( std::ostream& os, std::size_t )
+  {
+    os << me.name;
+  } ) );
+  dset.push_back_entry( core::output_field( label2, unit2, [&me]( std::ostream& os, std::size_t )
+  {
+    os << me.day_of_birth;
+  } ) );
+  dset.push_back_entry( core::output_field( label3, unit3, [&me]( std::ostream& os, std::size_t )
+  {
+    os << me.month_of_birth;
+  } ) );
+  dset.push_back_entry( core::output_field( label4, unit4, [&me]( std::ostream& os, std::size_t )
+  {
+    os << me.year_of_birth;
+  } ) );
 
-   {
-      std::stringstream store;
-      dset.do_header( store );
-      const std::string output{ store.str() };
-      BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
-      BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
-      BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
-      BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
-   }
-   {
-      std::stringstream store;
-      dset.do_body( store );
-      const std::string output{ store.str() };
-      BOOST_CHECK_EQUAL( output.find( test_uuid ), std::string::npos );
-      BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
-      BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
-      BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
-   }
+  {
+    std::stringstream store;
+    dset.do_header( store );
+    const std::string output
+    {
+      store.str()
+    };
+    BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
+    BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
+    BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
+    BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
+  }
+  {
+    std::stringstream store;
+    dset.do_body( store );
+    const std::string output
+    {
+      store.str()
+    };
+    BOOST_CHECK_EQUAL( output.find( test_uuid ), std::string::npos );
+    BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
+    BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
+    BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
+  }
 }
 
 {
-   family myfamily;
-   myfamily.ppl.push_back( { "justin", 17, 4, 1965 } );
-   myfamily.ppl.push_back( { "sean", 15, 4, 1969 } );
-   myfamily.ppl.push_back( { "debi", 8, 2, 1963 } );
-   myfamily.ppl.push_back( { "susan", 19, 6, 1953 } );
-   myfamily.ppl.push_back( { "peabody", 1, 1, 2012 } );
-   core::output_dataset dset( { test_uuid }, [&myfamily](){ return myfamily.size(); } );
-   dset.push_back_entry( core::output_field( label1, unit1, [&myfamily](std::ostream& os, std::size_t i){ os << myfamily.name( i ); } ) );
-   dset.push_back_entry( core::output_field( label2, unit2, [&myfamily](std::ostream& os, std::size_t i){ os << myfamily.ppl[ i ].day_of_birth; } ) );
-   dset.push_back_entry( core::output_field( label3, unit3, [&myfamily](std::ostream& os, std::size_t i){ os << myfamily.month( i ); } ) );
-   dset.push_back_entry( core::output_field( label4, unit4, [&myfamily](std::ostream& os, std::size_t i){ os << myfamily.year( i ); } ) );
+  family myfamily;
+  myfamily.ppl.push_back( { "justin", 17, 4, 1965 } );
+  myfamily.ppl.push_back( { "sean", 15, 4, 1969 } );
+  myfamily.ppl.push_back( { "debi", 8, 2, 1963 } );
+  myfamily.ppl.push_back( { "susan", 19, 6, 1953 } );
+  myfamily.ppl.push_back( { "peabody", 1, 1, 2012 } );
+  core::output_dataset dset( { test_uuid }, [&myfamily]()
+  {
+    return myfamily.size();
+  } );
+  dset.push_back_entry( core::output_field( label1, unit1, [&myfamily]( std::ostream& os, std::size_t i )
+  {
+    os << myfamily.name( i );
+  } ) );
+  dset.push_back_entry( core::output_field( label2, unit2, [&myfamily]( std::ostream& os, std::size_t i )
+  {
+    os << myfamily.ppl[ i ].day_of_birth;
+  } ) );
+  dset.push_back_entry( core::output_field( label3, unit3, [&myfamily]( std::ostream& os, std::size_t i )
+  {
+    os << myfamily.month( i );
+  } ) );
+  dset.push_back_entry( core::output_field( label4, unit4, [&myfamily]( std::ostream& os, std::size_t i )
+  {
+    os << myfamily.year( i );
+  } ) );
 
-   {
-      std::stringstream store;
-      dset.do_header( store );
-      const std::string output{ store.str() };
-      BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
-      BOOST_CHECK_EQUAL( output.find( "TITLE" ), std::string::npos );
-      BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
-      BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
-      BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
-   }
-   dset.set_title( test_title );
-   {
-      std::stringstream store;
-      dset.do_header( store );
-      const std::string output{ store.str() };
-      BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
-      BOOST_CHECK_NE( output.find( "TITLE" ), std::string::npos );
-      BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
-      BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
-      BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
-   }
-   {
-      std::stringstream store;
-      dset.do_body( store );
-      const std::string output{ store.str() };
-      BOOST_CHECK_EQUAL( output.find( test_uuid ), std::string::npos );
-      BOOST_CHECK_EQUAL( output.find( "TITLE" ), std::string::npos );
-      BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
-      BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
-      BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
-      BOOST_CHECK_NE( output.find( "peabody" ), std::string::npos );
-      BOOST_CHECK_EQUAL( std::count( output.begin(), output.end(), '\n' ), 5 );
-   }
+  {
+    std::stringstream store;
+    dset.do_header( store );
+    const std::string output
+    {
+      store.str()
+    };
+    BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
+    BOOST_CHECK_EQUAL( output.find( "TITLE" ), std::string::npos );
+    BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
+    BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
+    BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
+  }
+  dset.set_title( test_title );
+  {
+    std::stringstream store;
+    dset.do_header( store );
+    const std::string output
+    {
+      store.str()
+    };
+    BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
+    BOOST_CHECK_NE( output.find( "TITLE" ), std::string::npos );
+    BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
+    BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
+    BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
+  }
+  {
+    std::stringstream store;
+    dset.do_body( store );
+    const std::string output
+    {
+      store.str()
+    };
+    BOOST_CHECK_EQUAL( output.find( test_uuid ), std::string::npos );
+    BOOST_CHECK_EQUAL( output.find( "TITLE" ), std::string::npos );
+    BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
+    BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
+    BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
+    BOOST_CHECK_NE( output.find( "peabody" ), std::string::npos );
+    BOOST_CHECK_EQUAL( std::count( output.begin(), output.end(), '\n' ), 5 );
+  }
 }
+

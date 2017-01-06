@@ -492,14 +492,49 @@ auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx,
   a.old_position = p1;
   a.new_position = p2;
 };
-
 {
   // Test attempt to set a bad probability value
   // Valid only if VALUE > 0.0
   particle::change_set var2;
   BOOST_CHECK_EQUAL( var2.probability_factor(), 1.0 );
-  BOOST_CHECK_THROW( var2.update_probability_factor( 0.0 ), std::runtime_error );
-  BOOST_CHECK_THROW( var2.update_probability_factor( -1.0 ), std::runtime_error );
+  {
+    particle::change_set var2cp( var2 );
+    const std::string fncall{ "var2cp.update_probability_factor( 0.0 )" };
+    try
+    {
+      var2cp.update_probability_factor( 0.0 );
+      BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Bad update value, factor should be greater than 0.0" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+    }
+  }
+  {
+    particle::change_set var2cp( var2 );
+    const std::string fncall{ "var2cp.update_probability_factor( -1.0 )" };
+    try
+    {
+      var2cp.update_probability_factor( -1.0 );
+      BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Bad update value, factor should be greater than 0.0" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+    }
+  }
 }
 {
   // Test add steps
@@ -552,7 +587,7 @@ auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx,
   BOOST_CHECK_EQUAL( var1.fail(), var2.fail() );
   BOOST_CHECK_EQUAL( var1.probability_factor(), var2.probability_factor() );
   BOOST_CHECK_EQUAL_COLLECTIONS( var1.begin(), var1.end()
-                                 , var2.begin(), var2.end() );
+  , var2.begin(), var2.end() );
   // before using class method.
   BOOST_CHECK_EQUAL( var1, var2 );
 
@@ -651,6 +686,7 @@ auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx,
     }
   }
 }
+
 
 !!!413489.cpp!!!	coordinate_test() : void
 auto test_coord = [](particle::coordinate const& p1, double x, double y, double z)
@@ -906,7 +942,8 @@ std::stringstream store;
 }
 
 !!!930608.cpp!!!	ensemble_methods_test() : void
-auto set_atom = [](particle::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2)->void{
+auto set_atom = []( particle::change_atom &a, bool b1, bool b2, std::size_t idx, particle::coordinate p1, particle::coordinate p2 )->void
+{
   a.do_old = b1;
   a.do_new = b2;
   a.index = idx;
@@ -917,235 +954,325 @@ auto set_atom = [](particle::change_atom &a, bool b1, bool b2, std::size_t idx, 
 // for testing serialization
 std::stringstream store;
 {
-   particle::ensemble ens;
-   BOOST_CHECK_EQUAL( ens.count (), 0 );
-   BOOST_CHECK_EQUAL( ens.max_size (), 0 );
-   BOOST_CHECK_EQUAL( ens.size (), 0 );
-   BOOST_CHECK_NO_THROW( ens.check_invariants() );
+  particle::ensemble ens;
+  BOOST_CHECK_EQUAL( ens.count(), 0 );
+  BOOST_CHECK_EQUAL( ens.max_size(), 0 );
+  BOOST_CHECK_EQUAL( ens.size(), 0 );
+  BOOST_CHECK_NO_THROW( ens.check_invariants() );
 
-   // Resize ensemble
-   ens.resize( 64 );
-   // Max size should be multiple of 64 larger than
-   // argument given to resize
-   BOOST_CHECK_EQUAL( ens.count(), 0 );
-   BOOST_CHECK_GE( ens.max_size(), 64 );
-   BOOST_CHECK_EQUAL( ( ens.max_size() % 64 ), 0 );
-   BOOST_CHECK_EQUAL( ens.size(), 0 );
+  // Resize ensemble
+  ens.resize( 64 );
+  // Max size should be multiple of 64 larger than
+  // argument given to resize
+  BOOST_CHECK_EQUAL( ens.count(), 0 );
+  BOOST_CHECK_GE( ens.max_size(), 64 );
+  BOOST_CHECK_EQUAL( ( ens.max_size() % 64 ), 0 );
+  BOOST_CHECK_EQUAL( ens.size(), 0 );
 
-   // Add a Na particle
-   std::size_t ispec( 0 );
-   {
-      const particle::coordinate pos { 1.62127193214, 9.29177995257, 5.25370757073 };
-      ens.append_position( ispec, pos );
-      // size should increase by one, specie count should be altered.
-      BOOST_CHECK_EQUAL( ens.count(), 1 );
-      BOOST_CHECK_GE( ens.max_size(), 64 );
-      BOOST_CHECK_EQUAL( ens.size(), 1 );
-      BOOST_CHECK_EQUAL( ens.specie_count( ispec ), 1 );
-      BOOST_CHECK_NO_THROW( ens.check_invariants() );
-      // Check set values
-      BOOST_CHECK_EQUAL( ens.key( 0 ), ispec );
-      BOOST_CHECK_EQUAL( ens.x( 0 ), pos.x );
-      BOOST_CHECK_EQUAL( ens.y( 0 ), pos.y );
-      BOOST_CHECK_EQUAL( ens.z( 0 ), pos.z );
-      BOOST_CHECK_EQUAL( ens.position( 0 ), pos );
-   }
+  // Add a Na particle
+  std::size_t ispec( 0 );
+  {
+    const particle::coordinate pos { 1.62127193214, 9.29177995257, 5.25370757073
+    };
+    ens.append_position( ispec, pos );
+    // size should increase by one, specie count should be altered.
+    BOOST_CHECK_EQUAL( ens.count(), 1 );
+    BOOST_CHECK_GE( ens.max_size(), 64 );
+    BOOST_CHECK_EQUAL( ens.size(), 1 );
+    BOOST_CHECK_EQUAL( ens.specie_count( ispec ), 1 );
+    BOOST_CHECK_NO_THROW( ens.check_invariants() );
+    // Check set values
+    BOOST_CHECK_EQUAL( ens.key( 0 ), ispec );
+    BOOST_CHECK_EQUAL( ens.x( 0 ), pos.x );
+    BOOST_CHECK_EQUAL( ens.y( 0 ), pos.y );
+    BOOST_CHECK_EQUAL( ens.z( 0 ), pos.z );
+    BOOST_CHECK_EQUAL( ens.position( 0 ), pos );
+  }
 
-   // Add some more particles
-   ispec = 1;
-   ens.append_position( 1, { 0.629669015988, 9.4781017778, 0.436567124972 } );
-   ispec = 2;
-   ens.append_position( 2, { 1.81235688249, 6.99878476378, 6.05346341778 } );
-   ens.append_position( 2, { 9.86409500135, 8.03444072878, 6.96346891359 } );
-   ens.append_position( 0, { 6.12488878987, 0.936444546808, 7.92035117147 } );
-   ens.append_position( 2, { 4.02705270915, 4.9878484368, 9.33967304135 } );
-   ens.append_position( 1, { 8.8153046596, 8.25296759285, 9.27222366556 } );
-   ens.append_position( 2, { 3.01632820001, 3.43431356454, 0.880214873216 } );
-   ispec = 0;
+  // Add some more particles
+  ispec = 1;
+  ens.append_position( 1, { 0.629669015988, 9.4781017778, 0.436567124972 } );
+  ispec = 2;
+  ens.append_position( 2, { 1.81235688249, 6.99878476378, 6.05346341778 } );
+  ens.append_position( 2, { 9.86409500135, 8.03444072878, 6.96346891359 } );
+  ens.append_position( 0, { 6.12488878987, 0.936444546808, 7.92035117147 } );
+  ens.append_position( 2, { 4.02705270915, 4.9878484368, 9.33967304135 } );
+  ens.append_position( 1, { 8.8153046596, 8.25296759285, 9.27222366556 } );
+  ens.append_position( 2, { 3.01632820001, 3.43431356454, 0.880214873216 } );
+  ispec = 0;
 
-   BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 2 );
-   BOOST_CHECK_EQUAL( ens.specie_count( 1 ), 2 );
-   BOOST_CHECK_EQUAL( ens.specie_count( 2 ), 4 );
+  BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 2 );
+  BOOST_CHECK_EQUAL( ens.specie_count( 1 ), 2 );
+  BOOST_CHECK_EQUAL( ens.specie_count( 2 ), 4 );
 
-   BOOST_CHECK_NO_THROW( ens.check_invariants() );
+  BOOST_CHECK_NO_THROW( ens.check_invariants() );
 
-   std::size_t gidx;
-   std::size_t lidx;
-   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 0, 0 ) );
-   BOOST_CHECK_EQUAL( gidx, 0 );
-   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
-   BOOST_CHECK_EQUAL( lidx, 0 );
-   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 0, 1 ) );
-   BOOST_CHECK_EQUAL( gidx, 4 );
-   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
-   BOOST_CHECK_EQUAL( lidx, 1 );
+  std::size_t gidx;
+  std::size_t lidx;
+  BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 0, 0 ) );
+  BOOST_CHECK_EQUAL( gidx, 0 );
+  BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) );
+  BOOST_CHECK_EQUAL( lidx, 0 );
+  BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 0, 1 ) );
+  BOOST_CHECK_EQUAL( gidx, 4 );
+  BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) );
+  BOOST_CHECK_EQUAL( lidx, 1 );
 
-   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 1, 0 ) );
-   BOOST_CHECK_EQUAL( gidx, 1 );
-   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
-   BOOST_CHECK_EQUAL( lidx, 0 );
-   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 1, 1 ) );
-   BOOST_CHECK_EQUAL( gidx, 6 );
-   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
-   BOOST_CHECK_EQUAL( lidx, 1 );
+  BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 1, 0 ) );
+  BOOST_CHECK_EQUAL( gidx, 1 );
+  BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) );
+  BOOST_CHECK_EQUAL( lidx, 0 );
+  BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 1, 1 ) );
+  BOOST_CHECK_EQUAL( gidx, 6 );
+  BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) );
+  BOOST_CHECK_EQUAL( lidx, 1 );
 
-   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 2, 0 ) );
-   BOOST_CHECK_EQUAL( gidx, 2 );
-   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
-   BOOST_CHECK_EQUAL( lidx, 0 );
-   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 2, 1 ) );
-   BOOST_CHECK_EQUAL( gidx, 3 );
-   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
-   BOOST_CHECK_EQUAL( lidx, 1 );
-   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 2, 2 ) );
-   BOOST_CHECK_EQUAL( gidx, 5 );
-   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
-   BOOST_CHECK_EQUAL( lidx, 2 );
-   BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 2, 3 ) );
-   BOOST_CHECK_EQUAL( gidx, 7 );
-   BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) ); 
-   BOOST_CHECK_EQUAL( lidx, 3 );
+  BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 2, 0 ) );
+  BOOST_CHECK_EQUAL( gidx, 2 );
+  BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) );
+  BOOST_CHECK_EQUAL( lidx, 0 );
+  BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 2, 1 ) );
+  BOOST_CHECK_EQUAL( gidx, 3 );
+  BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) );
+  BOOST_CHECK_EQUAL( lidx, 1 );
+  BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 2, 2 ) );
+  BOOST_CHECK_EQUAL( gidx, 5 );
+  BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) );
+  BOOST_CHECK_EQUAL( lidx, 2 );
+  BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 2, 3 ) );
+  BOOST_CHECK_EQUAL( gidx, 7 );
+  BOOST_CHECK_NO_THROW( lidx = ens.specie_index( gidx ) );
+  BOOST_CHECK_EQUAL( lidx, 3 );
 
-   BOOST_CHECK_THROW( gidx = ens.nth_specie_index( 0, 2 ), std::runtime_error );
-   BOOST_CHECK_THROW( gidx = ens.nth_specie_index( 1, 2 ), std::runtime_error );
-   BOOST_CHECK_THROW( gidx = ens.nth_specie_index( 2, 4 ), std::runtime_error );
-   BOOST_CHECK_THROW( lidx = ens.specie_index( 8 ), std::runtime_error ); 
-   // test nth_index
-   // ---------------
-   // NOTE: deletion list is empty so nth index will
-   // always be identical to n
-   BOOST_CHECK_EQUAL( ens.count(), ens.size() );
-   for (std::size_t itry = 0; itry != ens.count(); ++itry)
-   {
-      const std::size_t i1 = ens.nth_index(itry);
-      BOOST_CHECK_EQUAL(i1, itry);
-   }
+  {
+    // nth_specie_index is constant so ens should remain in well defined
+    // state. gidx is undefined.
+    const std::string fncall { "gidx = ens.nth_specie_index( 0, 2 )" };
+    try
+    {
+      ens.nth_specie_index( 0, 2 );
+      BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Fewer count of given key than requested" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+    }
+  }
+  {
+    // nth_specie_index is constant so ens should remain in well defined
+    // state. gidx is undefined.
+    const std::string fncall { "gidx = ens.nth_specie_index( 1, 2 )" };
+    try
+    {
+      ens.nth_specie_index( 1, 2 );
+      BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Fewer count of given key than requested" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+    }
+  }
+  {
+    // nth_specie_index is constant so ens should remain in well defined
+    // state. gidx is undefined.
+    const std::string fncall { "gidx = ens.nth_specie_index( 2, 4 )" };
+    try
+    {
+      ens.nth_specie_index( 2, 4 );
+      BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Fewer count of given key than requested" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+    }
+  }
+  {
+    // specie index is constant so ens should be well defined. lidx
+    // undefined.
+    const std::string fncall { "lidx = ens.specie_index( 8 )" };
+    try
+    {
+      ens.specie_index( 8 );
+      BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Index out of range" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+    }
+  }
+  // test nth_index
+  // ---------------
+  // NOTE: deletion list is empty so nth index will
+  // always be identical to n
+  BOOST_CHECK_EQUAL( ens.count(), ens.size() );
+  for( std::size_t itry = 0; itry != ens.count(); ++itry )
+  {
+    const std::size_t i1 = ens.nth_index( itry );
+    BOOST_CHECK_EQUAL( i1, itry );
+  }
 
-   // test commit
-   // Create changesets to (1) add, (2) move and (3) delete a particle
-   {
-      // ADD
-      particle::change_set trial;
-      const particle::coordinate pos { 7.45423699019, 5.14523134204, 2.44775178272 };
-      particle::change_atom at(0);
-      set_atom(at, false, true, ens.size(), {}, pos);
-      trial.add_atom(at);
+  // test commit
+  // Create changesets to (1) add, (2) move and (3) delete a particle
+  {
+    // ADD
+    particle::change_set trial;
+    const particle::coordinate pos
+    {
+      7.45423699019, 5.14523134204, 2.44775178272
+    };
+    particle::change_atom at( 0 );
+    set_atom( at, false, true, ens.size(), {}, pos );
+    trial.add_atom( at );
 
-      // Check system before change
-      BOOST_CHECK_EQUAL( ens.count(), 8 );
-      BOOST_CHECK_EQUAL( ens.size(), 8 );
-      BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 2 );
+    // Check system before change
+    BOOST_CHECK_EQUAL( ens.count(), 8 );
+    BOOST_CHECK_EQUAL( ens.size(), 8 );
+    BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 2 );
 
-      ens.commit( trial );
+    ens.commit( trial );
 
-      // Check for changes.
-      BOOST_CHECK_NO_THROW( ens.check_invariants() );
-      BOOST_CHECK_EQUAL( ens.count(), 9 );
-      BOOST_CHECK_EQUAL( ens.size(), 9 );
-      BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 3 );
-      BOOST_CHECK_EQUAL( ens.position( 8 ), pos );
-      BOOST_CHECK_EQUAL( ens.key( 8 ), 0 );
-      BOOST_CHECK_EQUAL( ens.count(), ens.size() );
-      BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 0, 2 ) );
-      BOOST_CHECK_EQUAL( gidx, 8 );
-   }
-   {
-      // MOVE
-      particle::change_set trial;
-      const std::size_t index { 4 };
-      const particle::coordinate pos { 3.51095035114, 1.08643570153, 0.603658014653 };
-      particle::change_atom at( ens.key( index ) );
-      set_atom( at, true, true, index, ens.position( index ), pos );
-      trial.add_atom(at);
+    // Check for changes.
+    BOOST_CHECK_NO_THROW( ens.check_invariants() );
+    BOOST_CHECK_EQUAL( ens.count(), 9 );
+    BOOST_CHECK_EQUAL( ens.size(), 9 );
+    BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 3 );
+    BOOST_CHECK_EQUAL( ens.position( 8 ), pos );
+    BOOST_CHECK_EQUAL( ens.key( 8 ), 0 );
+    BOOST_CHECK_EQUAL( ens.count(), ens.size() );
+    BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 0, 2 ) );
+    BOOST_CHECK_EQUAL( gidx, 8 );
+  }
+  {
+    // MOVE
+    particle::change_set trial;
+    const std::size_t index
+    {
+      4
+    };
+    const particle::coordinate pos
+    {
+      3.51095035114, 1.08643570153, 0.603658014653
+    };
+    particle::change_atom at( ens.key( index ) );
+    set_atom( at, true, true, index, ens.position( index ), pos );
+    trial.add_atom( at );
 
-      // Check system before change
-      BOOST_CHECK_EQUAL( ens.count(), 9 );
-      BOOST_CHECK_EQUAL( ens.size(), 9 );
-      BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 3 );
-      BOOST_CHECK_EQUAL( ens.key( index ), 0 );
+    // Check system before change
+    BOOST_CHECK_EQUAL( ens.count(), 9 );
+    BOOST_CHECK_EQUAL( ens.size(), 9 );
+    BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 3 );
+    BOOST_CHECK_EQUAL( ens.key( index ), 0 );
 
-      ens.commit( trial );
+    ens.commit( trial );
 
-      // Check there are no changes.
-      BOOST_CHECK_NO_THROW( ens.check_invariants() );
-      BOOST_CHECK_EQUAL( ens.count(), 9 );
-      BOOST_CHECK_EQUAL( ens.size(), 9 );
-      BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 3 );
-      BOOST_CHECK_EQUAL( ens.key( index ), 0 );
-      BOOST_CHECK_EQUAL( ens.position( index ), pos );
-      BOOST_CHECK_EQUAL( ens.count(), ens.size() );
-   }
-   {
-      // DELETE
-      particle::change_set trial;
-      const std::size_t index { 4 };
-      particle::change_atom at( 0 );
-      set_atom( at, true, false, index, ens.position( index ), {} );
-      trial.add_atom(at);
+    // Check there are no changes.
+    BOOST_CHECK_NO_THROW( ens.check_invariants() );
+    BOOST_CHECK_EQUAL( ens.count(), 9 );
+    BOOST_CHECK_EQUAL( ens.size(), 9 );
+    BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 3 );
+    BOOST_CHECK_EQUAL( ens.key( index ), 0 );
+    BOOST_CHECK_EQUAL( ens.position( index ), pos );
+    BOOST_CHECK_EQUAL( ens.count(), ens.size() );
+  }
+  {
+    // DELETE
+    particle::change_set trial;
+    const std::size_t index
+    {
+      4
+    };
+    particle::change_atom at( 0 );
+    set_atom( at, true, false, index, ens.position( index ), {} );
+    trial.add_atom( at );
 
-      // Check system before change
-      BOOST_CHECK_EQUAL( ens.count(), 9 );
-      BOOST_CHECK_EQUAL( ens.size(), 9 );
-      BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 3 );
+    // Check system before change
+    BOOST_CHECK_EQUAL( ens.count(), 9 );
+    BOOST_CHECK_EQUAL( ens.size(), 9 );
+    BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 3 );
 
-      ens.commit( trial );
+    ens.commit( trial );
 
-      // Check for changes.
-      BOOST_CHECK_NO_THROW( ens.check_invariants() );
-      BOOST_CHECK_EQUAL( ens.count(), 8 );
-      BOOST_CHECK_EQUAL( ens.size(), 9 );
-      BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 2 );
-      BOOST_CHECK_EQUAL( ens.key( index ), particle::specie_key::nkey );
-      BOOST_CHECK_NE( ens.count(), ens.size() );
-      BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 0, 1 ) );
-      BOOST_CHECK_EQUAL( gidx, 8 );
+    // Check for changes.
+    BOOST_CHECK_NO_THROW( ens.check_invariants() );
+    BOOST_CHECK_EQUAL( ens.count(), 8 );
+    BOOST_CHECK_EQUAL( ens.size(), 9 );
+    BOOST_CHECK_EQUAL( ens.specie_count( 0 ), 2 );
+    BOOST_CHECK_EQUAL( ens.key( index ), particle::specie_key::nkey );
+    BOOST_CHECK_NE( ens.count(), ens.size() );
+    BOOST_CHECK_NO_THROW( gidx = ens.nth_specie_index( 0, 1 ) );
+    BOOST_CHECK_EQUAL( gidx, 8 );
 
-      // test nth_index
-      // ---------------
-      // NOTE: deletion list is not empty so nth index will
-      // not always be identical to n
-      BOOST_CHECK_NE( ens.count(), ens.size() );
-      for (std::size_t itry = 0; itry != ens.count(); ++itry)
+    // test nth_index
+    // ---------------
+    // NOTE: deletion list is not empty so nth index will
+    // not always be identical to n
+    BOOST_CHECK_NE( ens.count(), ens.size() );
+    for( std::size_t itry = 0; itry != ens.count(); ++itry )
+    {
+      const std::size_t i1 = ens.nth_index( itry );
+      if( itry >= index )
       {
-         const std::size_t i1 = ens.nth_index(itry);
-         if ( itry >= index )
-         {
-            BOOST_CHECK_EQUAL(i1, itry + 1);
-         }
-         else
-         {
-            BOOST_CHECK_EQUAL(i1, itry);
-         }
-
+        BOOST_CHECK_EQUAL( i1, itry + 1 );
       }
-   }
-   // conf::serialize
-   // ---------------
-   boost::archive::text_oarchive oa(store);
-   // write class instance to archive
-   oa << ens;
+      else
+      {
+        BOOST_CHECK_EQUAL( i1, itry );
+      }
+
+    }
+  }
+  // conf::serialize
+  // ---------------
+  boost::archive::text_oarchive oa( store );
+  // write class instance to archive
+  oa << ens;
 }
 {
-   particle::ensemble ens2;
-   boost::archive::text_iarchive ia( store );
-   // get class instance from archive
-   ia >> ens2;
-   BOOST_CHECK_EQUAL( ens2.count (), 8 );
-   BOOST_CHECK_EQUAL( ens2.size(), 9 );
-   BOOST_CHECK_EQUAL( ens2.max_size (), 64*2 );
-   BOOST_CHECK_EQUAL( ens2.specie_count( 0 ), 2 );
-   BOOST_CHECK_EQUAL( ens2.specie_count( 1 ), 2 );
-   BOOST_CHECK_EQUAL( ens2.specie_count( 2 ), 4 );
-   BOOST_CHECK_NE( ens2.count(), ens2.size() );
+  particle::ensemble ens2;
+  boost::archive::text_iarchive ia( store );
+  // get class instance from archive
+  ia >> ens2;
+  BOOST_CHECK_EQUAL( ens2.count(), 8 );
+  BOOST_CHECK_EQUAL( ens2.size(), 9 );
+  BOOST_CHECK_EQUAL( ens2.max_size(), 64*2 );
+  BOOST_CHECK_EQUAL( ens2.specie_count( 0 ), 2 );
+  BOOST_CHECK_EQUAL( ens2.specie_count( 1 ), 2 );
+  BOOST_CHECK_EQUAL( ens2.specie_count( 2 ), 4 );
+  BOOST_CHECK_NE( ens2.count(), ens2.size() );
 
-   std::size_t gidx;
-   BOOST_CHECK_NO_THROW( gidx = ens2.nth_specie_index( 0, 1 ) );
-   BOOST_CHECK_EQUAL( gidx, 8 );
-   BOOST_CHECK_NO_THROW( gidx = ens2.nth_specie_index( 0, 0 ) );
-   BOOST_CHECK_EQUAL( gidx, 0 );
+  std::size_t gidx;
+  BOOST_CHECK_NO_THROW( gidx = ens2.nth_specie_index( 0, 1 ) );
+  BOOST_CHECK_EQUAL( gidx, 8 );
+  BOOST_CHECK_NO_THROW( gidx = ens2.nth_specie_index( 0, 0 ) );
+  BOOST_CHECK_EQUAL( gidx, 0 );
 
-   BOOST_CHECK_NO_THROW( ens2.check_invariants() );
+  BOOST_CHECK_NO_THROW( ens2.check_invariants() );
 }
+
 !!!975920.cpp!!!	particle_manager_lifetime_test() : void
 
 {
@@ -1376,14 +1503,33 @@ BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 6 );
   BOOST_CHECK( std::has_virtual_destructor< particle::specie_meta >::type {} );
 }
 // TEST management of keywords
-for( std::string kw : {
+for( std::string kw :
+     {
        core::strngs::fsname(), core::strngs::fstype(), core::strngs::fsrtsp(), core::strngs::fsd(), core::strngs::fsz(), core::strngs::fsctrg(), core::strngs::fschex(), core::strngs::fsn()
      } )
 {
   BOOST_CHECK( particle::specie_meta::is_standard_keyword( kw ) );
 }
-// Matches keyword so should throw an error
-BOOST_CHECK_THROW( particle::specie_meta::add_keyword( "ratspc" ), std::runtime_error );
+{
+  // Matches keyword so should throw an error. !!Assume string exception
+  // guarrantee.!!
+  const std::string fncall { "particle::specie_meta::add_keyword( \"ratspc\" )" };
+  try
+  {
+    particle::specie_meta::add_keyword( "ratspc" );
+    BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Attempt to register keyword \"ratspc\" that is the same as a standard keyword" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+  }
+}
 
 if( not particle::specie_meta::has_keyword( "ratexc" ) )
 {
@@ -1728,8 +1874,26 @@ BOOST_CHECK_EQUAL( particle::specie::string_to_specie_type( core::strngs::fsspec
 BOOST_CHECK( not ifset );
 
 BOOST_CHECK_EQUAL( particle::specie::type_label( particle::specie::INVALID ), "invalid" );
-BOOST_CHECK_THROW( particle::specie::type_label( particle::specie::INVALID + 1 ), std::runtime_error );
-
+// type_label should act like const method and give a strong exception
+// guarrantee.
+{
+  const std::string fncall{ "particle::specie::type_label( particle::specie::INVALID + 1 )" };
+  try
+  {
+    particle::specie::type_label( particle::specie::INVALID + 1 );
+    BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Attempt to get label for invalid specie type" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+  }
+}
 !!!968240.cpp!!!	specie_methods_test() : void
 //Lambda to test specie validity
 auto specie_validation = []( particle::specie const& aspec )
@@ -1912,7 +2076,22 @@ auto specie_validation = []( particle::specie const& aspec )
     {
       particle::specie var2( var );
       BOOST_CHECK( var2.has_parameter( k1 ) );
-      BOOST_CHECK_THROW( var2.set_parameter( k1, v2 ), std::runtime_error );
+      const std::string fncall { "var2.set_parameter( k1, v2 )" };
+      try
+      {
+        var2.set_parameter( k1, v2 );
+        BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+      }
+      catch( std::runtime_error const& err )
+      {
+        const std::string msg( err.what() );
+        //std::cout << msg << "\n";
+        BOOST_CHECK( msg.find( "Can not change value of an existing parameter" ) < msg.size() );
+      }
+      catch( std::exception const& err )
+      {
+        BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+      }
       BOOST_CHECK( var2.has_parameter( k1 ) );
       BOOST_CHECK_EQUAL( var2.parameter( k1 ), v1 );
     }
@@ -1922,21 +2101,69 @@ auto specie_validation = []( particle::specie const& aspec )
     {
       particle::specie var2( var );
       BOOST_CHECK_NO_THROW( var2.set_type( particle::specie::MOBILE ) );
-      BOOST_CHECK_THROW( var2.update_position( 3, pos4 ), std::runtime_error );
+      const std::string fncall { "var2.update_position( 3, pos4 )" };
+      try
+      {
+        var2.update_position( 3, pos4 );
+        BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+      }
+      catch( std::runtime_error const& err )
+      {
+        const std::string msg( err.what() );
+        //std::cout << msg << "\n";
+        BOOST_CHECK( msg.find( "Only solute particles can be added or removed" ) < msg.size() );
+      }
+      catch( std::exception const& err )
+      {
+        BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+      }
+
     }
     // Attempts to add particles using "update_position" to FLEXIBLE specie
     // fail
     {
       particle::specie var2( var );
       BOOST_CHECK_NO_THROW( var2.set_type( particle::specie::FLEXIBLE ) );
-      BOOST_CHECK_THROW( var2.update_position( 3, pos4 ), std::runtime_error );
+      const std::string fncall { "var2.update_position( 3, pos4 )" };
+      try
+      {
+        var2.update_position( 3, pos4 );
+        BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+      }
+      catch( std::runtime_error const& err )
+      {
+        const std::string msg( err.what() );
+        //std::cout << msg << "\n";
+        BOOST_CHECK( msg.find( "Only solute particles can be added or removed" ) < msg.size() );
+      }
+      catch( std::exception const& err )
+      {
+        BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+      }
+
     }
     // Attempts to add particles using "update_position" to CHANNEL_ONLY
     // specie fail
     {
       particle::specie var2( var );
       BOOST_CHECK_NO_THROW( var2.set_type( particle::specie::CHANNEL_ONLY ) );
-      BOOST_CHECK_THROW( var2.update_position( 3, pos4 ), std::runtime_error );
+      const std::string fncall { "var2.update_position( 3, pos4 )" };
+      try
+      {
+        var2.update_position( 3, pos4 );
+        BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+      }
+      catch( std::runtime_error const& err )
+      {
+        const std::string msg( err.what() );
+        //std::cout << msg << "\n";
+        BOOST_CHECK( msg.find( "Only solute particles can be added or removed" ) < msg.size() );
+      }
+      catch( std::exception const& err )
+      {
+        BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+      }
+
     }
     // Attempts to add particles using "update_position" to SOLUTE
     // specie work
@@ -1949,23 +2176,68 @@ auto specie_validation = []( particle::specie const& aspec )
       // Test invalid append_position (NOT MOBILE or FLEXIBLE)
       particle::specie var2( var );
       BOOST_CHECK_NO_THROW( var2.set_type( particle::specie::SOLUTE ) );
-      BOOST_CHECK_THROW( var2.append_position( pos1, ctr1 ), std::runtime_error );
+      const std::string fncall { "var2.append_position( pos1, ctr1 )" };
+      try
+      {
+        var2.append_position( pos1, ctr1 );
+        BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+      }
+      catch( std::runtime_error const& err )
+      {
+        const std::string msg( err.what() );
+        //std::cout << msg << "\n";
+        BOOST_CHECK( msg.find( "Only specie type MOBILE and FLEXIBLE require centre/localization information" ) < msg.size() );
+      }
+      catch( std::exception const& err )
+      {
+        BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+      }
+
     }
     {
       // Test invalid append_position to mobile specie without centroid
       particle::specie var2;
       BOOST_CHECK_NO_THROW( var2.set_type( particle::specie::MOBILE ) );
-      BOOST_CHECK_THROW( var2.append_position( pos2 ), std::runtime_error );
+      const std::string fncall { "var2.append_position( pos2 )" };
+      try
+      {
+        var2.append_position( pos2 );
+        BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+      }
+      catch( std::runtime_error const& err )
+      {
+        const std::string msg( err.what() );
+        //std::cout << msg << "\n";
+        BOOST_CHECK( msg.find( "Specie type MOBILE and FLEXIBLE require centre information" ) < msg.size() );
+      }
+      catch( std::exception const& err )
+      {
+        BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+      }
+
     }
     {
       // Test invalid append_position (already have locations without
       // local_data)
       particle::specie var2;
       BOOST_CHECK_NO_THROW( var2.append_position( pos2 ) );
-      BOOST_CHECK_THROW( var2.append_position( pos1, ctr1 ), std::runtime_error );
+      const std::string fncall { "var2.append_position( pos1, ctr1 )" };
+      try
+      {
+        var2.append_position( pos1, ctr1 );
+        BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
+      }
+      catch( std::runtime_error const& err )
+      {
+        const std::string msg( err.what() );
+        //std::cout << msg << "\n";
+        BOOST_CHECK( msg.find( "Error in location cache, different sizes for position and centre information" ) < msg.size() );
+      }
+      catch( std::exception const& err )
+      {
+        BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
+      }
     }
-
-
     {
       // Test write_document
       particle::specie var1( var4 );
@@ -2145,6 +2417,7 @@ auto specie_validation = []( particle::specie const& aspec )
     }
   }
 }
+
 
 !!!958000.cpp!!!	specie_input_bad_subtype_value_test() : void
 boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
