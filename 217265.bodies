@@ -2663,3 +2663,187 @@ const std::string unit4( "ordinal3" );
   }
 }
 
+!!!1694256.cpp!!!	output_filter_lifetime_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( not std::is_default_constructible< core::fixed_width_output_filter >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< core::fixed_width_output_filter >::type{} );
+  BOOST_CHECK( std::is_move_constructible< core::fixed_width_output_filter >::type{} );
+  BOOST_CHECK( ( std::is_assignable< core::fixed_width_output_filter, core::fixed_width_output_filter >::type{} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< core::fixed_width_output_filter >::type{} );
+}
+// CTOR TESTS
+// ----------
+{
+  core::fixed_width_output_filter aset( 0, 0, 0 );
+  BOOST_CHECK_EQUAL( aset.text_width(), 0ul );
+  BOOST_CHECK_EQUAL( aset.depth(), 0ul );
+  BOOST_CHECK_EQUAL( aset.indent_size(), 0ul );
+}
+{
+  core::fixed_width_output_filter aset( 2, 1, 40 );
+  BOOST_CHECK_EQUAL( aset.text_width(), 40ul );
+  BOOST_CHECK_EQUAL( aset.depth(), 1ul );
+  BOOST_CHECK_EQUAL( aset.indent_size(), 2ul );
+  {
+    core::fixed_width_output_filter aset1( aset );
+    BOOST_CHECK_EQUAL( aset1.text_width(), 40ul );
+    BOOST_CHECK_EQUAL( aset1.depth(), 1ul );
+    BOOST_CHECK_EQUAL( aset1.indent_size(), 2ul );
+  }
+  {
+    core::fixed_width_output_filter aset2( aset );
+    core::fixed_width_output_filter aset1( std::move( aset2 ) );
+    BOOST_CHECK_EQUAL( aset1.text_width(), 40ul );
+    BOOST_CHECK_EQUAL( aset1.depth(), 1ul );
+    BOOST_CHECK_EQUAL( aset1.indent_size(), 2ul );
+  }
+}
+!!!1694640.cpp!!!	output_filter_method_test() : void
+// USAGE TESTS
+// ----------
+{
+  core::fixed_width_output_filter aset( 2, 1, 10 );
+  namespace io = boost::iostreams;
+  {
+    std::stringstream result;
+    const std::string input( "This is some text that I want to format." );
+    const std::string output( "  This is \n  some \n  text \n  that I \n  want to \n  format." );
+    {
+      io::filtering_ostream out;
+      out.push( aset );
+      out.push( result );
+      io::write( out, input.data(), input.size() );
+    }
+    const std::string resultstr( result.str() );
+    std::cout << "\n--\n" << resultstr << "\n--\n";
+    std::cout << "\n**\n" << output << "\n**\n";
+    BOOST_CHECK_EQUAL( resultstr, output );
+    if( resultstr != output )
+    {
+      const std::size_t minsz = std::min( resultstr.size(), output.size() );
+      for( std::size_t ii = 0; ii != minsz; ++ii )
+      {
+        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
+      }
+    }
+  }
+  {
+    std::stringstream result;
+    const std::string input( "Now for some exceedingly elongated words." );
+    const std::string output( "  Now for \n  some \n  exceedin\n  gly \n  elongate\n  d words." );
+    {
+      io::filtering_ostream out;
+      out.push( aset );
+      out.push( result );
+      io::write( out, input.data(), input.size() );
+    }
+    const std::string resultstr( result.str() );
+    std::cout << "\n--\n" << resultstr << "\n--\n";
+    std::cout << "\n**\n" << output << "\n**\n";
+    BOOST_CHECK_EQUAL( resultstr, output );
+    if( resultstr != output )
+    {
+      const std::size_t minsz = std::min( resultstr.size(), output.size() );
+      for( std::size_t ii = 0; ii != minsz; ++ii )
+      {
+        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
+      }
+    }
+  }
+  {
+    std::stringstream result;
+    const std::string input( "Now to change the indenting." );
+    const std::string output( "    Now to\n    change\n    the \n    indent\n    ing." );
+    {
+      aset.increment_depth();
+      io::filtering_ostream out;
+      out.push( aset );
+      out.push( result );
+      io::write( out, input.data(), input.size() );
+    }
+    const std::string resultstr( result.str() );
+    std::cout << "\n--\n" << resultstr << "\n--\n";
+    std::cout << "\n**\n" << output << "\n**\n";
+    BOOST_CHECK_EQUAL( resultstr, output );
+    if( resultstr != output )
+    {
+      const std::size_t minsz = std::min( resultstr.size(), output.size() );
+      for( std::size_t ii = 0; ii != minsz; ++ii )
+      {
+        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
+      }
+    }
+  }
+  {
+    std::stringstream result;
+    const std::string input( " a b c  d e f g h i j k l m n o p" );
+    const std::string output( "  a b c  d\n  e f g h \n  i j k l \n  m n o p" );
+    {
+      aset.decrement_depth();
+      io::filtering_ostream out;
+      out.push( aset );
+      out.push( result );
+      io::write( out, input.data(), input.size() );
+    }
+    const std::string resultstr( result.str() );
+    std::cout << "\n--\n" << resultstr << "\n--\n";
+    std::cout << "\n**\n" << output << "\n**\n";
+    BOOST_CHECK_EQUAL( resultstr, output );
+    if( resultstr != output )
+    {
+      const std::size_t minsz = std::min( resultstr.size(), output.size() );
+      for( std::size_t ii = 0; ii != minsz; ++ii )
+      {
+        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
+      }
+    }
+  }
+  {
+    std::stringstream result;
+    const std::string input( " 1234567890 1234567890" );
+    const std::string output( "  12345678\n  90 12345\n  67890" );
+    {
+      io::filtering_ostream out;
+      out.push( aset );
+      out.push( result );
+      io::write( out, input.data(), input.size() );
+    }
+    const std::string resultstr( result.str() );
+    std::cout << "\n--\n" << resultstr << "\n--\n";
+    std::cout << "\n**\n" << output << "\n**\n";
+    BOOST_CHECK_EQUAL( resultstr, output );
+    if( resultstr != output )
+    {
+      const std::size_t minsz = std::min( resultstr.size(), output.size() );
+      for( std::size_t ii = 0; ii != minsz; ++ii )
+      {
+        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
+      }
+    }
+  }
+  {
+    std::stringstream result;
+    const std::string input( " 1234567890 1234567890" );
+    const std::string output( "1234567890\n1234567890" );
+    {
+      aset.decrement_depth();
+      io::filtering_ostream out;
+      out.push( aset );
+      out.push( result );
+      io::write( out, input.data(), input.size() );
+    }
+    const std::string resultstr( result.str() );
+    std::cout << "\n--\n" << resultstr << "\n--\n";
+    std::cout << "\n**\n" << output << "\n**\n";
+    BOOST_CHECK_EQUAL( resultstr, output );
+    if( resultstr != output )
+    {
+      const std::size_t minsz = std::min( resultstr.size(), output.size() );
+      for( std::size_t ii = 0; ii != minsz; ++ii )
+      {
+        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
+      }
+    }
+  }
+}
