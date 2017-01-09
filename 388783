@@ -1,6 +1,6 @@
 format 75
 "core" // core
-  revision 184
+  revision 185
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -2313,7 +2313,7 @@ Date 7.1.2017) using Boost iostreams Filter concept.
 	  param in name "max_width" explicit_type "size_t"
 	cpp_decl "    ${comment}${inline}explicit ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
 : current_word_(), col_no_(), depth_( ${p1} ), indent_size_( ${p0} )
-, off_( std::string::npos ), spaces_( ${p1} * ${p0} ), width_( ${p2} )
+, off_( std::string::npos ), spaces_( ${p1} * ${p0} ), width_( ${p2} ), state_(), word_state_()
 {}
 "
 	
@@ -2395,7 +2395,7 @@ ${docstring}${body}
 	python_decl "${comment}${self}${name} = ${value}
 "
 	idl_decl ""
-	comment " The current number of spaces to insert.  Guard value is string::npos."
+	comment " The current number of spaces to indent. (== indent_size_ * depth_)"
       end
 
       attribute 725040 "width_"
@@ -2408,6 +2408,30 @@ ${docstring}${body}
 "
 	idl_decl ""
 	comment " The target line width."
+      end
+
+      attribute 732336 "state_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Current state of the 'put' function."
+      end
+
+      attribute 732464 "word_state_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Current state of the 'write_word' function."
       end
 
       operation 1694000 "close"
@@ -2449,19 +2473,100 @@ ${docstring}${body}
 	  param in name "c" explicit_type "int"
 	cpp_decl "    ${comment}template< typename ${t0} > ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  // std::cout << \">PUT[\" << this->current_word_ << \"](\" << char(c) << \")#\" << this->col_no_ << \"S\" << this->spaces_ << \" F\" << this->off_ << \"\\n\";
-  if( not this->write_word( dest ) ) return false;
-  // state : collect
-  if( not std::isalpha( static_cast< unsigned char >( c ) ) )
-  { // end of word
-    this->off_ = 0ul;
-    if( this->col_no_ + this->current_word_.size() > this->width_ )
-    { // does not fit on current line
-      this->spaces_ = this->depth_ * this->indent_size_;
+  while( true ) {
+  // std::cout << \"DO[\" << this->current_word_ << \"](\" << char(c) << \")#\" << this->col_no_ << \"S\" << this->spaces_ << \" F\" << this->off_ << \"{\" << this->state_ <<\"}\\n\"; 
+  switch( this->state_ )
+  {
+     case 0: // beginning of line
+       if( '\\n' == c )
+          return this->put_char( dest, c );
+       this->state_ = 1; // fall through
+     case 1: // need indent
+       if( std::isspace( c ) ) return true; // ignore spaces at indent
+       if( '\\n' == c )
+       {
+          this->state_ = 0;
+          return this->put_char( dest, c );
+       }
+       while( this->col_no_ < this->spaces_ )
+       {
+         if( not this->put_char(dest, ' ') ) return false;
+       }
+       this->state_ = 2; // fall through
+     case 2: // begin entry
+       if( std::isalpha( c ) )
+         this->state_ = 3; // (in word)
+       else if( std::isdigit( c ) or '-' == c )
+         this->state_ = 4; // (start number)
+       else if( '.' == c )
+         this->state_ = 5; // (in number fraction (OR PUNCT))
+       else
+         {
+           if( this->col_no_ == this->width_ ) {
+             this->state_ = 8;
+             break;
+           }
+           return this->put_char( dest, c );
+         }
+       this->current_word_.append( 1ul, static_cast< unsigned char >( c ) );
+       return true;
+     case 3: // in word
+       if( not std::isalpha( c ) )
+       {
+          this->state_ = 9; // (end entry)
+          break;
+       }
+       this->current_word_.append( 1ul, static_cast< unsigned char >( c ) );
+       return true;
+     case 4: // start number
+       if( not std::isdigit( c ) ) {
+         if( '.' == c ) this->state_ = 5; // (in number fraction)
+         else if( 'd' == c or 'D' == c or 'e' == c or 'E' == c ) this->state_ = 6; // (in number start base)
+         else {
+           this->state_ = 9; // (end entry)
+           break;
+         }
+       }
+       this->current_word_.append( 1ul, static_cast< unsigned char >( c ) );
+       return true;
+     case 5: // number fraction
+       if( not std::isdigit( c ) ) {
+         if( 'd' == c or 'D' == c or 'e' == c or 'E' == c ) this->state_ = 6; // (in number start base)
+         else {
+           this->state_ = 9; // (end entry)
+           break;
+         }
+       }
+       this->current_word_.append( 1ul, static_cast< unsigned char >( c ) );
+       return true;
+     case 6: // number start base
+       this->state_ = 7; // (number base)
+       if( not std::isdigit( c ) or '-' != c ) {
+           this->state_ = 9; // (end entry)
+           break;
+         }
+       this->current_word_.append( 1ul, static_cast< unsigned char >( c ) );
+       return true;
+     case 7: // number start base
+       if( not std::isdigit( c ) ) {
+           this->state_ = 9; // (end entry)
+           break;
+         }
+       this->current_word_.append( 1ul, static_cast< unsigned char >( c ) );
+       return true;
+     case 8: // wait for new line
+       if( not this->put_char( dest, '\\n' ) ) return false;
+       this->state_ = 0; // (beginning of line)
+       break;
+     case 9: // end entry 
+       if( not this->write_word( dest ) ) return false;
+       // write word sets state.
+       break;
+     default: // ERROR
+       throw std::runtime_error( \"Should never get to default case\" );
     }
-  }
-  this->current_word_.append( 1ul, static_cast< unsigned char >( c ) );
-  // std::cout << \"<PUT[\" << this->current_word_ << \"](\" << char(c) << \")#\" << this->col_no_ << \"S\" << this->spaces_ << \" F\" << this->off_ << \"\\n\"; 
+  } while( true );
+  // never get here!
   return true;
 }"
 	
@@ -2480,38 +2585,44 @@ ${docstring}${body}
 	  param inout name "dest" explicit_type "Sink"
 	cpp_decl "    ${comment}template< typename ${t0} > ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  do { // state : spaces
-    if( this->spaces_ != std::string::npos )
+  if( this->off_ == std::string::npos ) this->off_ = 0;
+  const std::size_t left( this->current_word_.size() - this->off_ );
+  if( this->col_no_ != this->spaces_ and this->col_no_ + left > this->width_ ) this->word_state_ = 1;
+  while( this->off_ != std::string::npos )
+  {
+    switch( this->word_state_ )
     {
-      if( this->col_no_ != 0 and not this->put_char( dest, '\\n' ) ){ return false; }
-      for(; this->spaces_ > 0ul; --this->spaces_)
+    case 1: // need new line
+      if( not this->put_char( dest, '\\n' ) ) return false;
+      this->word_state_ = 2; // (fall through)
+    case 2:
+      while( this->col_no_ < this->spaces_ )
       {
         if( not this->put_char(dest, ' ') ) return false;
       }
-      this->spaces_ = std::string::npos;
-    }
-    if( this->off_ != std::string::npos ) { // state : word
-      // remove excess whitespace
-      if( (this->col_no_ == this->indent_size_ * this->depth_) and this->off_ < this->current_word_.size() and std::isspace( this->current_word_[ this->off_ ] ) ) {
-        this->current_word_.clear();
-        this->off_ = std::string::npos;
-      }
-      while(this->off_ < this->current_word_.size()) {
-        if( not this->put_char( dest, this->current_word_[ this->off_ ] ) )
-        { return false; }
-        ++this->off_;
-        // handle words too long for one line or end on the line boundary
-        if( this->col_no_ == this->width_ ) {
-          this->spaces_ = this->depth_ * this->indent_size_;
-          break;
+      this->word_state_ = 0; // (fall through)
+    case 0: // write word
+        while(this->off_ < this->current_word_.size()) {
+          // handle words too long for one line or end on the line boundary
+          if( this->col_no_ == this->width_ ) {
+            this->word_state_ = 1;
+            break;
+          }
+          if( not this->put_char( dest, this->current_word_[ this->off_ ] ) )
+          { return false; }
+          ++this->off_;
         }
-      }
-      if( this->current_word_.size() == this->off_ ) {
-        this->current_word_.clear();
-        this->off_ = std::string::npos;
-      }
+        if( this->current_word_.size() == this->off_ ) this->off_ = std::string::npos;
+      break;
+    default: // ERROR
+       throw std::runtime_error( \"Should never get to default case\" );
     }
-  } while( (this->spaces_ > 0) and (this->off_ != std::string::npos) );
+  }
+  if( this->off_ == std::string::npos )
+  {
+    this->current_word_.clear();
+    this->state_ = 2; // begin entry
+  }
   return true;
 }"
 	
@@ -2644,8 +2755,9 @@ ${docstring}${body}
 {
  if( not this->current_word_.empty() ) this->current_word_.clear();
  this->off_ = std::string::npos;
- this->spaces_ = this->depth_ * this->indent_size_;
  this->col_no_ = 0ul;
+ this->state_ = 0ul;
+ this->word_state_ = 0ul;
 }
 "
 	
@@ -2657,7 +2769,6 @@ ${docstring}${body}
 	comment " Return attributes ready for restarting formatting."
       end
     end
-
   end
 
   classview 441263 "input file management classes"

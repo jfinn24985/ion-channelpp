@@ -2802,7 +2802,7 @@ const std::string unit4( "ordinal3" );
   {
     std::stringstream result;
     const std::string input( " 1234567890 1234567890" );
-    const std::string output( "  12345678\n  90 12345\n  67890" );
+    const std::string output( "  12345678\n  90 \n  12345678\n  90" );
     {
       io::filtering_ostream out;
       out.push( aset );
@@ -2826,6 +2826,30 @@ const std::string unit4( "ordinal3" );
     std::stringstream result;
     const std::string input( " 1234567890 1234567890" );
     const std::string output( "1234567890\n1234567890" );
+    {
+      aset.decrement_depth();
+      io::filtering_ostream out;
+      out.push( aset );
+      out.push( result );
+      io::write( out, input.data(), input.size() );
+    }
+    const std::string resultstr( result.str() );
+    std::cout << "\n--\n" << resultstr << "\n--\n";
+    std::cout << "\n**\n" << output << "\n**\n";
+    BOOST_CHECK_EQUAL( resultstr, output );
+    if( resultstr != output )
+    {
+      const std::size_t minsz = std::min( resultstr.size(), output.size() );
+      for( std::size_t ii = 0; ii != minsz; ++ii )
+      {
+        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
+      }
+    }
+  }
+  {
+    std::stringstream result;
+    const std::string input( " -12.34567890 1234.567890" );
+    const std::string output( "-12.345678\n90 \n1234.56789\n0" );
     {
       aset.decrement_depth();
       io::filtering_ostream out;
