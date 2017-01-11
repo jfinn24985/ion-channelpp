@@ -1,8 +1,14 @@
 class help_entry
 !!!1710768.cpp!!!	write(inout filt : fixed_width_output_filter, inout dest : ostream) : void
-os << this->title_ << "\n";
-core::indent_guard grd( filt );
+namespace io = boost::iostreams;
 {
+  io::filtering_ostream os;
+  os.push( filt );
+  os.push( dest );
+  os << this->title_ << "\n";
+}
+{
+  core::indent_guard grd( filt );
   io::filtering_ostream out;
   out.push( filt );
   out.push( dest );
@@ -12,24 +18,24 @@ core::indent_guard grd( filt );
     if( not this->type_desc_.empty() )
     {
       out << this->type_desc_;
-      if( not ( this->range_.empty() and this->default_value_.empty()  )
+      if( not ( this->range_.empty() and this->default_value_.empty() ) )
       {
         out << ": ";
       }
     }
     if( not this->range_.empty() )
     {
-      out << "(" << this->range_ << ")";
+      out << "range(" << this->range_ << ")";
       if( not this->default_value_.empty() )
       {
-        out << ", "
+        out << ", ";
       }
     }
     if( not this->default_value_.empty() )
     {
-      out << "{" << this->default_value_ << "}";
+      out << "default{" << this->default_value_ << "}";
     }
-    out << "]\n"
+    out << "]\n";
   }
   if( not this->description_.empty() )
   {

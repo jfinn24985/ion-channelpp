@@ -1,16 +1,22 @@
-class help_stanza
+class help_section
 !!!1712688.cpp!!!	write(inout filt : fixed_width_output_filter, inout dest : ostream) : void
 this->help_subtype::write( filt, dest );
 {
+  namespace io = boost::iostreams;
   core::indent_guard grd( filt );
-  io::filtering_ostream out;
-  out.push( filt );
-  out.push( dest );
+  {
+    io::filtering_ostream out;
+    out.push( filt );
+    out.push( dest );
+    if( not this->subtypes_.empty() )
+    {
+      out << "type\n";
+    }
+  }
   if( not this->subtypes_.empty() )
   {
-    out << "type\n";
+    core::indent_guard grd1( filt );
     {
-      core::indent_guard grd1( filt );
       io::filtering_ostream out1;
       out1.push( filt );
       out1.push( dest );
@@ -28,11 +34,10 @@ this->help_subtype::write( filt, dest );
       out1 << "individual options. These options may only ";
       out1 << "be valid in combination with the specific type.\n\n";
       out1 << "Description of available types:\n";
-      for( auto const& entry : this->subtypes_ )
-      {
-        entry.second.write( filt, dest );
-      }
+    }
+    for( auto const& entry : this->subtypes_ )
+    {
+      entry.second.write( filt, dest );
     }
   }
 }
-

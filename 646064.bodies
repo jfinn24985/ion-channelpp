@@ -1,21 +1,33 @@
 class help_subtype
 !!!1711152.cpp!!!	write(inout filt : fixed_width_output_filter, inout dest : ostream) : void
-os << this->title_ << "\n";
+namespace io = boost::iostreams;
+{
+  io::filtering_ostream os;
+  os.push( filt );
+  os.push( dest );
+  os << this->title_ << "\n";
+}
 {
   core::indent_guard grd( filt );
-  io::filtering_ostream out;
-  out.push( filt );
-  out.push( dest );
-  if( not this->description_.empty() )
   {
-    out << this->description_ << "\n";
+    io::filtering_ostream out;
+    out.push( filt );
+    out.push( dest );
+    if( not this->description_.empty() )
+    {
+      out << this->description_ << "\n";
+    }
+    if( not this->children_.empty() )
+    {
+      out << "Options:\n";
+    }
   }
   if( not this->children_.empty() )
   {
-    out << "Options:\n"
     for( auto const& entry : this->children_ )
     {
       entry.second.write( filt, dest );
     }
   }
 }
+

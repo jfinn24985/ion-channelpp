@@ -1,6 +1,6 @@
 format 75
 "core" // core
-  revision 186
+  revision 188
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -2496,6 +2496,11 @@ ${docstring}${body}
          this->state_ = 4; // (start number)
        else if( '.' == c )
          this->state_ = 5; // (in number fraction (OR PUNCT))
+       else if( '\\n' == c )
+         {
+           this->state_ = 0; // (in number fraction (OR PUNCT))
+           return this->put_char( dest, c );
+         }
        else
          {
            if( this->col_no_ == this->width_ ) {
@@ -2677,7 +2682,7 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
   ++this->depth_;
-  this->spaces_ += ( this->spaces_ > 0 ? this->indent_size_ : 0ul );
+  this->spaces_ += this->indent_size_;
 }
 "
 	
@@ -2697,7 +2702,7 @@ ${docstring}${body}
   if( this->depth_ != 0ul )
   {
     --this->depth_;
-    this->spaces_ -= ( this->spaces_ > 0 ? this->indent_size_ : 0ul );
+    this->spaces_ -= this->indent_size_;
   }
 }
 "
@@ -3214,6 +3219,15 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
+      classrelation 1027376 // <dependency>
+	relation 1026480 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 1027376 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
       attribute 738992 "title_"
 	private explicit_type "string"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -3401,6 +3415,37 @@ ${docstring}${body}
 	
       end
 
+      classrelation 1026608 // <dependency>
+	relation 1025712 -_->
+	  stereotype "friend"
+	  a package
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 1026608 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      operation 1720496 "serialize"
+	stereotype "template"
+	private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+    ar & this->title_;
+    ar & this->type_desc_;
+    ar & this->range_;
+    ar & this->default_value_;
+    ar & this->description_;
+  }
+"
+	
+	
+	
+	
+      end
+
       extra_member 668464 "ACCESS"
 	
 	cpp "" ""
@@ -3464,6 +3509,42 @@ ${docstring}${body}
       end
 
       operation 1708720 "description"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "value" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->${name}_ = ${p0};
+}
+
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Set the corresponding attribute."
+      end
+
+      operation 1709232 "range"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->${name}_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the corresponding attribute."
+      end
+
+      operation 1709104 "range"
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "value" explicit_type "string"
@@ -3554,42 +3635,6 @@ ${docstring}${body}
 	comment " Set the corresponding attribute."
       end
 
-      operation 1709232 "range"
-	const public explicit_return_type "string"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->${name}_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Get the corresponding attribute."
-      end
-
-      operation 1709104 "range"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "value" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  this->${name}_ = ${p0};
-}
-
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Set the corresponding attribute."
-      end
-
       extra_member 668336 "METHODS"
 	
 	cpp "" ""
@@ -3637,6 +3682,41 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
+      classrelation 1027504 // <dependency>
+	relation 1026608 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 1027504 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      class 652720 "iterator"
+	visibility package stereotype "typedef" base_type class_ref 645808 // help_entry
+	cpp_decl "${comment}typedef std::map< std::string, ${type} >::${name} ${name};
+"
+	java_decl ""
+	php_decl ""
+	python_decl ""
+	idl_decl "${comment}typedef ${type} ${name};
+"
+	explicit_switch_type ""
+	
+      end
+
+      class 652848 "const_iterator"
+	visibility package stereotype "typedef" base_type class_ref 645808 // help_entry
+	cpp_decl "${comment}typedef std::map< std::string, ${type} >::${name} ${name};
+"
+	java_decl ""
+	php_decl ""
+	python_decl ""
+	idl_decl "${comment}typedef ${type} ${name};
+"
+	explicit_switch_type ""
+	
+      end
+
       classrelation 1019568 // children_ (<directional composition>)
 	relation 1018672 *-->
 	  stereotype "map"
@@ -3703,6 +3783,134 @@ ${docstring}${body}
 	
       end
 
+      operation 1720624 "help_subtype"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1720752 "~help_subtype"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1720880 "help_subtype"
+	stereotype "move"
+	public explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 646064 // help_subtype
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
+: children_( std::move( ${p0}.children_ ) )
+, title_( std::move( ${p0}.title_ ) )
+, description_( std::move( ${p0}.description_ ) )
+{}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1721008 "help_subtype"
+	stereotype "copy"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 646064 // help_subtype
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
+: children_( ${p0}.children_ )
+, title_( ${p0}.title_ )
+, description_( ${p0}.description_ )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1721136 "operator="
+	public return_type class_ref 646064 // help_subtype
+	nparams 1
+	  param in name "source" type class_ref 646064 // help_subtype
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->swap( ${p0} );
+  return *this;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1721264 "swap"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "other" type class_ref 646064 // help_subtype
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  std::swap( this->children_, ${p0}.children_ );
+  std::swap( this->title_, ${p0}.title_ );
+  std::swap( this->description_, ${p0}.description_ );
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      classrelation 1026736 // <dependency>
+	relation 1025840 -_->
+	  stereotype "friend"
+	  a package
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 1026736 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      operation 1720240 "serialize"
+	stereotype "template"
+	private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+    ar & this->children_;
+    ar & this->title_;
+    ar & this->description_;
+  }
+"
+	
+	
+	
+	
+      end
+
       extra_member 668976 "ACCESS"
 	
 	cpp "" ""
@@ -3710,6 +3918,39 @@ ${docstring}${body}
 	php ""
 	python ""
 	idl ""
+      end
+
+      operation 1729328 "begin"
+	public return_type class_ref 652720 // iterator
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->children_.${name}();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1729584 "begin"
+	stereotype "const"
+	const public return_type class_ref 652848 // const_iterator
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->children_.${name}();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
       end
 
       operation 1713200 "description"
@@ -3746,6 +3987,71 @@ ${docstring}${body}
 "
 	
 	comment " Set the corresponding attribute."
+      end
+
+      operation 1729456 "end"
+	public return_type class_ref 652720 // iterator
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->children_.${name}();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1729712 "end"
+	stereotype "const"
+	const public return_type class_ref 652848 // const_iterator
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->children_.${name}();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1729200 "empty"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->children_.${name}();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1729072 "size"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->children_.${name}();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
       end
 
       operation 1712944 "title"
@@ -3824,7 +4130,7 @@ ${docstring}${body}
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
   UTILITY_REQUIRE( not this->has_entry( entry.title() ), \"Can not add two entries with the same title.\" );
-  this->children_.insert( entry.title(), entry );
+  this->children_.insert( std::make_pair( entry.title(), entry ) );
   UTILITY_ENSURE( this->has_entry( entry.title() ), \"Failed to add entry with title [\"+entry.title()+\"].\" );
 }
 "
@@ -3868,7 +4174,7 @@ ${docstring}${body}
 {
   auto result = this->children_.find( ${p0} );
   UTILITY_REQUIRE( result != this->children_.end(), \"No entry with given title found.\" );
-  return result.second;
+  return result->second;
 }
 "
 	
@@ -3893,7 +4199,7 @@ ${docstring}${body}
 {
   auto result = this->children_.find( ${p0} );
   UTILITY_REQUIRE( result != this->children_.end(), \"No entry with given title found.\" );
-  return result.second;
+  return result->second;
 }
 "
 	
@@ -3924,6 +4230,15 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
+      classrelation 1027632 // <dependency>
+	relation 1026736 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 1027632 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
       classrelation 1020080 // <generalisation>
 	relation 1019184 ---|>
 	  a private
@@ -3933,17 +4248,44 @@ ${docstring}${members}
 	  b parent class_ref 646064 // help_subtype
       end
 
+      class 653104 "iterator"
+	visibility package stereotype "typedef" base_type class_ref 646064 // help_subtype
+	cpp_decl "${comment}typedef std::map< std::string, ${type} >::${name} ${name};
+"
+	java_decl ""
+	php_decl ""
+	python_decl ""
+	idl_decl "${comment}typedef ${type} ${name};
+"
+	explicit_switch_type ""
+	
+      end
+
+      class 652976 "const_iterator"
+	visibility package stereotype "typedef" base_type class_ref 646064 // help_subtype
+	cpp_decl "${comment}typedef std::map< std::string, ${type} >::${name} ${name};
+"
+	java_decl ""
+	php_decl ""
+	python_decl ""
+	idl_decl "${comment}typedef ${type} ${name};
+"
+	explicit_switch_type ""
+	
+      end
+
       classrelation 1019824 // subtypes_ (<directional composition>)
 	relation 1018928 *-->
 	  stereotype "map"
 	  a role_name "subtypes_" multiplicity "*" private
 	    comment " optional subtypes for this stanza type"
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${association}, ${type} > ${name}${value};
 "
 	    python "${comment}${self}${name} = ${stereotype}()
 "
 	    classrelation_ref 1019824 // subtypes_ (<directional composition>)
 	  b parent class_ref 646064 // help_subtype
+	  association_explicit_type "string"
       end
 
       extra_member 668848 "LIFETIME"
@@ -3973,15 +4315,140 @@ ${docstring}${body}
 	
       end
 
+      operation 1722032 "help_section"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1721904 "~help_section"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1721776 "help_section"
+	stereotype "move"
+	public explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 646192 // help_section
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
+: help_subtype( std::move( ${p0} ) )
+, subtypes_( std::move( ${p0}.subtypes_ ) )
+{}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1721648 "help_section"
+	stereotype "copy"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 646192 // help_section
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
+: help_subtype( ${p0} )
+, subtypes_( ${p0}.subtypes_ )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1721520 "operator="
+	public return_type class_ref 646192 // help_section
+	nparams 1
+	  param in name "source" type class_ref 646192 // help_section
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->swap( ${p0} );
+  return *this;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1721392 "swap"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "other" type class_ref 646192 // help_section
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->help_subtype::swap( ${p0} );
+  std::swap( this->subtypes_, ${p0}.subtypes_ );
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      classrelation 1026864 // <dependency>
+	relation 1025968 -_->
+	  stereotype "friend"
+	  a package
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 1026864 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      operation 1720368 "serialize"
+	stereotype "template"
+	private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+    ar & boost::serialization::base_object< help_subtype >(*this);
+    ar & this->subtypes_;
+  }
+"
+	
+	
+	
+	
+      end
+
       extra_member 669232 "USING"
 	
 	cpp "
-// Methods we want to make public from help_subtype
-using help_subtype::description;
-using help_subtype::title;
-using help_subtype::add_entry;
-using help_subtype::has_entry;
-using help_subtype::get_entry;
+public:
+  // Methods we want to make public from help_subtype
+  using help_subtype::description;
+  using help_subtype::title;
+  using help_subtype::add_entry;
+  using help_subtype::has_entry;
+  using help_subtype::get_entry;
 " ""
 	java ""
 	php ""
@@ -3990,6 +4457,211 @@ using help_subtype::get_entry;
       end
 
       extra_member 668720 "ACCESS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1731504 "entry_begin"
+	public return_type class_ref 652720 // iterator
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->help_subtype::begin();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1731376 "entry_begin"
+	stereotype "const"
+	const public return_type class_ref 652848 // const_iterator
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->help_subtype::begin();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1731248 "entry_end"
+	public return_type class_ref 652720 // iterator
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->help_subtype::end();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1731120 "entry_end"
+	stereotype "const"
+	const public return_type class_ref 652848 // const_iterator
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->help_subtype::end();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1730992 "entry_empty"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->help_subtype::empty();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1730864 "entry_size"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->help_subtype::size();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1730736 "subtype_begin"
+	public return_type class_ref 653104 // iterator
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->subtypes_.begin();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1730608 "subtype_begin"
+	stereotype "const"
+	const public return_type class_ref 652976 // const_iterator
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->subtypes_.begin();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1730480 "subtype_end"
+	public return_type class_ref 653104 // iterator
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->subtypes_.end();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1730352 "subtype_end"
+	stereotype "const"
+	const public return_type class_ref 652976 // const_iterator
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->subtypes_.end();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1730224 "subtype_empty"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->subtypes_.empty();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1730096 "subtype_size"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->subtypes_.size();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 675760 "METHODS"
 	
 	cpp "" ""
 	java ""
@@ -4029,7 +4701,7 @@ ${docstring}${body}
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
   UTILITY_REQUIRE( not this->has_subtype( entry.title() ), \"Can not add two subtypes with the same title.\" );
-  this->subtypes_.insert( entry.title(), entry );
+  this->subtypes_.insert( std::make_pair( entry.title(), entry ) );
   UTILITY_ENSURE( this->has_subtype( entry.title() ), \"Failed to add subtype with title [\"+entry.title()+\"].\" );
 }
 "
@@ -4051,7 +4723,7 @@ ${docstring}${body}
 	  param in name "title" explicit_type "string"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  return this->subtype_.find( ${p0} ) != this->subtype_.end();
+  return this->subtypes_.find( ${p0} ) != this->subtypes_.end();
 }
 "
 	
@@ -4073,7 +4745,7 @@ ${docstring}${body}
 {
   auto result = this->subtypes_.find( ${p0} );
   UTILITY_REQUIRE( result != this->subtypes_.end(), \"No subtype with given title found.\" );
-  return result.second;
+  return result->second;
 }
 "
 	
@@ -4098,7 +4770,7 @@ ${docstring}${body}
 {
   auto result = this->subtypes_.find( ${p0} );
   UTILITY_REQUIRE( result != this->subtypes_.end(), \"No subtype with given title found.\" );
-  return result.second;
+  return result->second;
 }
 "
 	
@@ -4111,7 +4783,6 @@ ${docstring}${body}
 
  \\pre has_subtype( title )"
       end
-
     end
 
     class 313392 "input_base_reader"
@@ -9437,6 +10108,159 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
+    artifact 583344 "help_entry"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// manual includes
+#include \"utility/utility.hpp\"
+// --
+#include <boost/iostreams/filtering_stream.hpp>
+// --
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 645808 // help_entry
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 583472 "help_subtype"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// manual includes
+#include \"utility/utility.hpp\"
+// --
+#include <boost/iostreams/filtering_stream.hpp>
+// --
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 646064 // help_subtype
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 583600 "help_section"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// manual includes
+#include \"utility/utility.hpp\"
+// --
+#include <boost/iostreams/filtering_stream.hpp>
+// --
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 646192 // help_section
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
     artifact 742959 "input_base_meta"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -10086,6 +10910,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 543664 // input_error_messages
 	artifact_ref 577711 // constants
 	artifact_ref 579119 // input_reader
+	artifact_ref 583344 // help_entry
+	artifact_ref 583472 // help_subtype
+	artifact_ref 583600 // help_section
 	artifact_ref 674607 // input_delegater
 	artifact_ref 674735 // input_help
 	artifact_ref 736175 // strngs
