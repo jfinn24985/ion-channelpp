@@ -58,10 +58,10 @@ if( reader.name().find( core::strngs::fstype() ) == 0 )
 {
   // --------------------
   // Evaluator type
-  UTILITY_INPUT_OLD( this->missing_required_tags_[ SAMPLER_TYPE ], ( "Sampler \"type\" parameter appears more than once in a single in section" ), this->section_label() );
-  UTILITY_INPUT_OLD( not reader.value().empty(), "Sampler \"type\" parameter must have a value.", this->section_label() );
+  UTILITY_INPUT( this->missing_required_tags_[ SAMPLER_TYPE ], ( "Sampler \"type\" parameter appears more than once in a single in section" ), this->section_label(), &reader );
+  UTILITY_INPUT( not reader.value().empty(), "Sampler \"type\" parameter must have a value.", this->section_label(), &reader );
   std::string val( reader.dequote( reader.value() ) );
-  UTILITY_INPUT_OLD( this->has_type( val ), "Sampler \"type\" parameter value (" + val + ") does not name a valid sampler for this application (see documentation).", this->section_label() );
+  UTILITY_INPUT( this->has_type( val ), "Sampler \"type\" parameter value (" + val + ") does not name a valid sampler for this application (see documentation).", this->section_label(), &reader );
   this->type_ = val;
   this->missing_required_tags_.reset( SAMPLER_TYPE );
 }
@@ -69,14 +69,14 @@ else
 {
   // --------------------
   // Choice specific parameters
-  UTILITY_INPUT_OLD( 0 == this->parameter_set_.count( reader.name() ), ( "Sampler \""+reader.name()+"\" parameter appears more than once in a single in section" ), this->section_label() );
+  UTILITY_INPUT( 0 == this->parameter_set_.count( reader.name() ), ( "Sampler \""+reader.name()+"\" parameter appears more than once in a single in section" ), this->section_label(), &reader );
   this->parameter_set_.insert( std::make_pair( reader.name(), reader.value() ) );
 }
 return true;
 
 !!!204336.cpp!!!	do_read_end() : void
-UTILITY_INPUT_OLD( not this->missing_required_tags_[ SAMPLER_TYPE ], ( "Sampler \"type\" parameter missing in input." ), this->section_label() );
-UTILITY_INPUT_OLD (not this->missing_required_tags_.any(), "Not all required tags were present.", this->section_label());
+UTILITY_INPUT( not this->missing_required_tags_[ SAMPLER_TYPE ], ( "Sampler \"type\" parameter missing in input." ), this->section_label(), nullptr );
+UTILITY_INPUT(not this->missing_required_tags_.any(), "Not all required tags were present.", this->section_label(), nullptr );
 
 // Call functor method to create sampler and add to simulator
 for( const auto& defn : this->type_to_sample_ )
@@ -86,7 +86,7 @@ for( const auto& defn : this->type_to_sample_ )
     // check parameters.
     for( auto const& entry : this->parameter_set_ )
     {
-      UTILITY_INPUT_OLD( defn.has_definition( entry.first ), str( core::input_error_messages::invalid_parameter_subtype() % entry.first % this->section_label() % this->type_ ), this->section_label() );
+      UTILITY_INPUT( defn.has_definition( entry.first ), str( core::input_error_messages::invalid_parameter_subtype() % entry.first % this->section_label() % this->type_ ), this->section_label(), nullptr );
     }
     this->manager_->add_sample( defn( this->parameter_set_ ) );
     return;
@@ -99,7 +99,7 @@ for( const auto& defn : this->type_to_tracked_ )
     // check parameters.
     for( auto const& entry : this->parameter_set_ )
     {
-      UTILITY_INPUT_OLD( defn.has_definition( entry.first ), str( core::input_error_messages::invalid_parameter_subtype() % entry.first % this->section_label() % this->type_ ), this->section_label() );
+      UTILITY_INPUT( defn.has_definition( entry.first ), str( core::input_error_messages::invalid_parameter_subtype() % entry.first % this->section_label() % this->type_ ), this->section_label(), nullptr );
     }
     this->manager_->add_tracked( defn( this->parameter_set_ ) );
     return;

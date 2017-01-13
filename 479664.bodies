@@ -42,18 +42,18 @@ if( reader.name() == core::strngs::fstype() )
 {
   // --------------------
   // Region type
-  UTILITY_INPUT_OLD( this->type_name_.empty(), str( core::input_error_messages::duplicate_parameter() % reader.name() % this->section_label() ), this->section_label() );
-  UTILITY_INPUT_OLD( not reader.value().empty(), str( core::input_error_messages::missing_value() % reader.name() % this->section_label() ), this->section_label() );
+  UTILITY_INPUT( this->type_name_.empty(), str( core::input_error_messages::duplicate_parameter() % reader.name() % this->section_label() ), this->section_label(), &reader );
+  UTILITY_INPUT( not reader.value().empty(), str( core::input_error_messages::missing_value() % reader.name() % this->section_label() ), this->section_label(), &reader );
   std::string val( reader.dequote( reader.value() ) );
-  UTILITY_INPUT_OLD( this->has_definition( val ) != 0,  str( core::input_error_messages::bad_subtype_value() % core::strngs::fstype() % val % this->section_label() ), this->section_label() );
+  UTILITY_INPUT( this->has_definition( val ) != 0,  str( core::input_error_messages::bad_subtype_value() % core::strngs::fstype() % val % this->section_label() ), this->section_label(), &reader );
   this->type_name_ = val;
 }
 else if( reader.name() == core::strngs::fsname() )
 {
   // --------------------
   // Region label
-  UTILITY_INPUT_OLD( this->label_.empty(), str( core::input_error_messages::duplicate_parameter() % reader.name() % this->section_label() ), this->section_label() );
-  UTILITY_INPUT_OLD( not reader.value().empty(), str( core::input_error_messages::missing_value() % reader.name() % this->section_label() ), this->section_label() );
+  UTILITY_INPUT( this->label_.empty(), str( core::input_error_messages::duplicate_parameter() % reader.name() % this->section_label() ), this->section_label(), &reader );
+  UTILITY_INPUT( not reader.value().empty(), str( core::input_error_messages::missing_value() % reader.name() % this->section_label() ), this->section_label(), &reader );
   std::string val( reader.dequote( reader.value() ) );
   this->label_ = val;
 }
@@ -61,14 +61,14 @@ else
 {
   // --------------------
   // Region subtype specific parameters
-  UTILITY_INPUT_OLD( 0 == this->parameter_set_.count( reader.name() ), str( core::input_error_messages::duplicate_parameter() % reader.name() % this->section_label() ), this->section_label() );
+  UTILITY_INPUT( 0 == this->parameter_set_.count( reader.name() ), str( core::input_error_messages::duplicate_parameter() % reader.name() % this->section_label() ), this->section_label(), &reader );
   this->parameter_set_.insert( std::make_pair( reader.name(), reader.value() ) );
 }
 return true;
 
 !!!1061936.cpp!!!	do_read_end() : void
-UTILITY_INPUT_OLD( not this->type_name_.empty(), str( core::input_error_messages::missing_parameter() % core::strngs::fstype() % this->section_label() ), this->section_label() );
-UTILITY_INPUT_OLD( not this->label_.empty(), str( core::input_error_messages::missing_parameter() % core::strngs::fsname() % this->section_label() ), this->section_label() );
+UTILITY_INPUT( not this->type_name_.empty(), str( core::input_error_messages::missing_parameter() % core::strngs::fstype() % this->section_label() ), this->section_label(), nullptr );
+UTILITY_INPUT( not this->label_.empty(), str( core::input_error_messages::missing_parameter() % core::strngs::fsname() % this->section_label() ), this->section_label(), nullptr );
 // We know from having a type name and do_read_entry that a
 // type object must exist.
 for( auto const& defn : this->type_to_object_ )
@@ -78,7 +78,7 @@ for( auto const& defn : this->type_to_object_ )
     // check parameters.
     for( auto const& entry : this->parameter_set_ )
     {
-      UTILITY_INPUT_OLD( defn.has_definition( entry.first ), str( core::input_error_messages::invalid_parameter_subtype() % entry.first % this->section_label() % this->type_name_ ), this->section_label() );
+      UTILITY_INPUT( defn.has_definition( entry.first ), str( core::input_error_messages::invalid_parameter_subtype() % entry.first % this->section_label() % this->type_name_ ), this->section_label(), nullptr );
     }
     // build object and add to manager.
     this->manager_->add_region( defn( this->label_, this->parameter_set_ ) );
