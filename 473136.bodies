@@ -79,8 +79,8 @@ const std::string origin_label { "origin" };
 const std::string isopen_label { "open" };
 
 // check for required parameters.
-UTILITY_INPUT( params.count( width_label ) == 1, "Cube region \""+width_label+"\" parameter missing in input.", core::strngs::fsregn() );
-UTILITY_INPUT( params.count( origin_label ) == 1, "Cube region \""+origin_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT_OLD( params.count( width_label ) == 1, "Cube region \""+width_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT_OLD( params.count( origin_label ) == 1, "Cube region \""+origin_label+"\" parameter missing in input.", core::strngs::fsregn() );
 
 core::input_base_reader::float_input( width_label, params.at( width_label ), "Cube region", core::strngs::fsregn(), width, true, false );
 
@@ -99,8 +99,9 @@ return current;
 
 
 !!!1069488.cpp!!!	add_definition(inout meta : region_meta) : void
-std::unique_ptr< region_definition > cube_defn( new region_definition( type_label(), &cube_region::region_factory ) );
-cube_defn->add_definition( "origin", "[required, values in Angstrom] The coordinate of the lowest (most negative) corner of the cubic region" );
-cube_defn->add_definition( "width", "[required, value in Angstrom] The width in each dimension of the cubic region" );
-cube_defn->add_definition( "open", "[true/false: default=true] Whether the cube walls are open or closed." );
+std::string desc( "A non-periodic cube region. The cube surfaces can be permeable (open=true) or impermeable (open=false) to simulation particles." );
+std::unique_ptr< region_definition > cube_defn( new region_definition( type_label(), desc, &cube_region::region_factory ) );
+cube_defn->add_definition( { "origin", "x,y,z coordinates in Angstrom", "", "required", "The coordinate of the lowest (most negative) corner of the cubic region" } );
+cube_defn->add_definition( { "width", "number in Angstrom", ">0", "required", "The width in each dimension of the cubic region"  } );
+cube_defn->add_definition( { "open", "boolean", "true|false", "true", "Whether the cube walls are open or closed to simulation particles." } );
 meta.add_definition( cube_defn );

@@ -1,22 +1,20 @@
 class acceptance_observable
+!!!1326128.cpp!!!	add_definition(inout meta : sampler_meta) : void
+std::string desc( "Monitor the trial acceptance rate for the different trial types. This is a metric to optimise the simulation and is not a result of the simulation." );
+std::unique_ptr< tracked_definition > result( new tracked_definition( type_label_(), desc, &acceptance_observable::make_sampler ) );
+// no extra parameters
+meta.add_tracked_type( result );
+
 !!!718128.cpp!!!	description(inout out : ostream) : void
 out << "[sampler] " << this->type_label_() << "\n";
 out << " Collect and report trial acceptance probabilities.\n";
-!!!719408.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
-wr[ix].add_entry(core::strngs::fstype(), this->type_label_());
-
 !!!718384.cpp!!!	get_value() : boost::any
 boost::any result = this->data_;
 return result;
 !!!719280.cpp!!!	make_sampler(in param_set : string) : tracked_observable
-UTILITY_INPUT(param_set.empty(), "Sampler type \""+acceptance_observable::type_label_()+"\" requires no parameters.", core::strngs::sampler_label());
+UTILITY_INPUT_OLD(param_set.empty(), "Sampler type \""+acceptance_observable::type_label_()+"\" requires no parameters.", core::strngs::sampler_label());
 boost::shared_ptr< tracked_observable > tmp(new acceptance_observable);
 return tmp;
-!!!1326128.cpp!!!	add_definition(inout meta : sampler_meta) : void
-std::unique_ptr< tracked_definition > result( new tracked_definition( type_label_(), &acceptance_observable::make_sampler ) );
-// no extra parameters
-meta.add_tracked_type( result );
-
 !!!718640.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
 // data is  [change_hash] : <<success/trial>> : <<attempts>>
 // (0, 1, 1, 0) 0.66666667          0 0.30000000 0.00000000
@@ -75,7 +73,7 @@ for( auto const& entry : this->data_ )
   dset.write( filename, sink );
 }
 }
-!!!1485104.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+!!!1485104.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
 // If we have a vary rare trial it might not appear in the
 // first sample window. Therefore we may need to add an
 // estimater after the first sample window. This would
@@ -134,7 +132,10 @@ if (trial.accept())
 {
   ++(iter->second.first);
 }
-!!!718512.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in sman : report_manager) : void
+!!!718512.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
 this->data_.clear();
 this->dictionary_.clear();
 this->total_ = 0ul;
+!!!719408.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ix].add_entry(core::strngs::fstype(), this->type_label_());
+

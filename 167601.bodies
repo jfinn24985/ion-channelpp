@@ -15,7 +15,8 @@ if self.mean_signal_ != None and len(self.mean_signal_) != 0:
 pass
 
 !!!1512112.cpp!!!	add_definition(inout meta : sampler_meta) : void
-std::unique_ptr< sampler_definition > result( new sampler_definition( type_label_(), &specie_count::make_sampler ) );
+std::string desc( "Observe and report the average number of particles from periodic sampling." );
+std::unique_ptr< sampler_definition > result( new sampler_definition( type_label_(), desc, &specie_count::make_sampler ) );
 // no extra parameters
 meta.add_sampler_type( result );
 
@@ -32,7 +33,7 @@ pass
 boost::any result = &this->count_;
 return result;
 !!!365361.cpp!!!	make_sampler(in paramset : string) : base_observable
-UTILITY_INPUT( paramset.empty(), "The "+specie_count::type_label_()+" sampler takes no parameters.", core::strngs::sampler_label() );
+UTILITY_INPUT_OLD( paramset.empty(), "The "+specie_count::type_label_()+" sampler takes no parameters.", core::strngs::sampler_label() );
 boost::shared_ptr< base_observable > smplr(new specie_count);
 return smplr;
 !!!594865.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
@@ -94,7 +95,7 @@ if self.count_ != None:
         print >>out," %3s %7d %8.4f %8.4f %8.4f %8.4f"% (spc.label(),spc.count(),(spc.count()*count_to_conc),runr.mean(),(runr.mean()*count_to_conc),runr.variance())
 pass
 
-!!!304177.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+!!!304177.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
 auto const& ens = pman.get_ensemble(); 
 std::vector< double > sample( this->specie_list_.size() );
 for( std::size_t idx = 0; idx != this->specie_list_.size(); ++idx )
@@ -103,14 +104,14 @@ for( std::size_t idx = 0; idx != this->specie_list_.size(); ++idx )
 }
 UTILITY_CHECK( sample.size() == this->count_.size(), "Mismatched array sizes" );
 this->count_.append( sample );
-!!!304177.python!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+!!!304177.python!!!	on_sample(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
 for m, s in zip( self.count_, sys.get_species() ):
   m.append( s.count() )
 # publish data
 if len( self.mean_signal_ ) != 0:
   self.mean_signal_( self.count_ )
 pass
-!!!304305.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in sman : report_manager) : void
+!!!304305.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
 this->specie_list_.clear();
 this->count_.clear();
 for( std::size_t ispec = 0; ispec != pman.specie_count(); ++ispec )
@@ -126,7 +127,7 @@ if( not this->specie_list_.empty() )
 {
   this->count_.resize( this->specie_list_.size() );
 }
-!!!304305.python!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in sman : report_manager) : void
+!!!304305.python!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
 if not self.count_ or len(self.count_) !=  sim.specie_count():
   self.count_ = []
   from estimater import estimater

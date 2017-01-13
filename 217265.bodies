@@ -97,76 +97,94 @@ const std::string label( "name" );
 
 
 !!!406193.cpp!!!	input_help_test() : void
-
 {
   // Static Lifetime method tests
 
   BOOST_CHECK( std::is_default_constructible< core::input_help >::type{} );
   BOOST_CHECK( not std::is_copy_constructible< core::input_help >::type{} );
   BOOST_CHECK( not std::is_move_constructible< core::input_help >::type{} );
-  BOOST_CHECK( (not std::is_assignable< core::input_help, core::input_help >::type{}) );
+  BOOST_CHECK( ( not std::is_assignable< core::input_help, core::input_help >::type{} ) );
   BOOST_CHECK( not std::has_virtual_destructor< core::input_help >::type{} );
 }
 
-std::string section1(core::strngs::fsspec());
-std::string section2(core::strngs::fssalt());
-std::string sectdesc1("Specie definition input section variables and expected values.");
-std::string sectdesc2("Salt definition input section variables and expected values.");
-std::string argname11(core::strngs::fsname());
-std::string argname12(core::strngs::fsrtgr());
-std::string argname21(core::strngs::fsname());
-std::string description11("[required, two letters] specie code name (quotes optional).");
-std::string description12("[\""+core::strngs::fsfree()+"\" type only, required, number > 0] Probability this specie is used in a individual ion grand-canonical trial compared to other species.");
-std::string description21("[required, four letters] salt code name (quotes optional).");
+std::string section1( core::strngs::fsspec() );
+std::string section2( core::strngs::fssalt() );
+std::string sectdesc1( "Specie definition input section variables and expected values." );
+std::string sectdesc2( "Salt definition input section variables and expected values." );
+core::help_entry entry1( core::strngs::fsname(), "two letters", "", "required", "Specie code name (quotes optional)." );
+core::help_entry entry2( core::strngs::fsrtgr(), "number", "[0,1)", "required", "\""+core::strngs::fsfree()+"\" type only, Relative probability this specie is used in an individual ion grand-canonical trial compared to other species." );
+core::help_entry entry3( core::strngs::fsname(), "four letters", "", "required", "Salt code name (quotes optional), letters should be code of the two species that make up the salt (e.g. NaCl, CaCl)." );
 
-{
-  // default ctor
-  core::input_help tmp;
-
-  BOOST_CHECK(tmp.empty());
-  BOOST_CHECK_EQUAL(tmp.size(), 0ul);
-  BOOST_CHECK(not tmp.has_section(section1));
-}
 {
   // test adding a section
   core::input_help tmp;
 
-  BOOST_CHECK(tmp.empty());
-  BOOST_CHECK_EQUAL(tmp.size(), 0ul);
-  BOOST_CHECK(not tmp.has_section(section1));
+  BOOST_CHECK( tmp.empty() );
+  BOOST_CHECK_EQUAL( tmp.size(), 0ul );
+  BOOST_CHECK( not tmp.has_section( section1 ) );
 
-  tmp.add_section(section1, sectdesc1);
+  tmp.add_section( { section1, sectdesc1 } );
 
-  BOOST_CHECK(not tmp.empty());
-  BOOST_CHECK_EQUAL(tmp.size(), 1ul);
-  BOOST_CHECK(tmp.has_section(section1));
+  BOOST_CHECK( not tmp.empty() );
+  BOOST_CHECK_EQUAL( tmp.size(), 1ul );
+  BOOST_CHECK( tmp.has_section( section1 ) );
 
   // test adding an option after adding section
-  tmp.add_option( section1, argname11, description11 );
+  tmp.get_section( section1 ).add_entry( entry1 );
 
-  // test adding an option without adding a section
-  BOOST_CHECK( not tmp.has_section( section2 ) );
-
-  tmp.add_option( section2, argname21, description21 );
-  BOOST_CHECK_EQUAL( tmp.size(), 2ul );
-  BOOST_CHECK( tmp.has_section( section2 ) );
-
+  {
   // test adding a section (with description) after section has been added.
   // This should simply add the description to the existing option.
-  BOOST_CHECK( tmp.has_section( section2 ));
-  tmp.add_section( section2, sectdesc2 );
+  try
+  {
+    tmp.add_section( { section1, sectdesc2 } );
+    BOOST_ERROR( "expected \"tmp.add_section\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Can not add two sections with the same name: specie" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"tmp.add_section\" was not expected type: " ) + err.what() );
+  }
+  }
+}
+{
+  // test adding two sections
+  core::input_help tmp;
 
-  BOOST_CHECK_EQUAL(tmp.size(), 2ul);
+  BOOST_CHECK( tmp.empty() );
+  BOOST_CHECK_EQUAL( tmp.size(), 0ul );
+  BOOST_CHECK( not tmp.has_section( section1 ) );
+
+  tmp.add_section( { section1, sectdesc1 } );
+
+  BOOST_CHECK( not tmp.empty() );
+  BOOST_CHECK_EQUAL( tmp.size(), 1ul );
+  BOOST_CHECK( tmp.has_section( section1 ) );
+
+  // test adding an option
+  tmp.get_section( section1 ).add_entry( entry1 );
+  tmp.get_section( section1 ).add_entry( entry2 );
+
+  BOOST_CHECK( not tmp.has_section( section2 ) );
+  tmp.add_section( { section2, sectdesc2 } );
+
+  BOOST_CHECK_EQUAL( tmp.size(), 2ul );
   BOOST_CHECK( tmp.has_section( section1 ) );
   BOOST_CHECK( tmp.has_section( section2 ) );
 
-  // test adding an option (1.2)
-  tmp.add_option( section1, argname12, description12 );
+  // test adding an option (note entry2 already on section1 )
+  tmp.get_section( section2 ).add_entry( entry2 );
+  tmp.get_section( section2 ).add_entry( entry3 );
 
   {
     // test of printing a section
     std::stringstream os;
-    tmp.print( os, section1 );
+    tmp.write( section1, os );
     const std::string output( os.str() );
     boost::tokenizer<> tok( output );
     boost::tokenizer<> toksearch1( sectdesc1 );
@@ -174,15 +192,15 @@ std::string description21("[required, four letters] salt code name (quotes optio
     // Check description of section 2 is not present
     boost::tokenizer<> toksearch2( sectdesc2 );
     BOOST_CHECK( tok.end() == std::search( tok.begin(), tok.end(), toksearch2.begin(), toksearch2.end() ) );
-    boost::tokenizer<> toksearch3( description12 );
+    boost::tokenizer<> toksearch3( entry1.description() );
     BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch3.begin(), toksearch3.end() ) );
-    boost::tokenizer<> toksearch4( description21 );
+    boost::tokenizer<> toksearch4( entry3.description() );
     BOOST_CHECK( tok.end() == std::search( tok.begin(), tok.end(), toksearch4.begin(), toksearch4.end() ) );
   }
   {
     // test printing everything
     std::stringstream os;
-    tmp.print( os );
+    tmp.write( os );
     const std::string output( os.str() );
     boost::tokenizer<> tok( output );
     boost::tokenizer<> toksearch1( sectdesc1 );
@@ -190,12 +208,13 @@ std::string description21("[required, four letters] salt code name (quotes optio
     // Check description of section 2 is present
     boost::tokenizer<> toksearch2( sectdesc2 );
     BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch2.begin(), toksearch2.end() ) );
-    boost::tokenizer<> toksearch3( description12 );
+    boost::tokenizer<> toksearch3( entry2.description() );
     BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch3.begin(), toksearch3.end() ) );
-    boost::tokenizer<> toksearch4( description21 );
+    boost::tokenizer<> toksearch4( entry3.description() );
     BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch4.begin(), toksearch4.end() ) );
   }
 }
+
 
 !!!405297.cpp!!!	dictionary_test() : void
 // A
@@ -1479,6 +1498,7 @@ const std::string label2 { "label2" };
 }
 // ----------
 const std::string label1 { "label1" };
+const std::string description1 { "blab blah belch" };
 const std::string seclabel { "label2" };
 const std::string name1 { "name1" };
 const std::string desc1 { "desc1" };
@@ -1486,17 +1506,18 @@ const std::string name2 { "name2" };
 const std::string desc2 { "desc2" };
 {
   // default
-  core::input_definition idoc( label1 );
+  core::input_definition idoc( label1, description1 );
   BOOST_CHECK_EQUAL( idoc.label(), label1 );
+  BOOST_CHECK_EQUAL( idoc.description(), description1 );
   BOOST_CHECK_EQUAL( idoc.size(), 0 );
   BOOST_CHECK_EQUAL( idoc.empty(), true );
 
-  BOOST_CHECK_NO_THROW( idoc.add_definition( name1, desc1 ) );
+  BOOST_CHECK_NO_THROW( idoc.add_definition( { name1, "", "", "", desc1 } ) );
   BOOST_CHECK( idoc.has_definition( name1 ) );
   BOOST_CHECK_EQUAL( idoc.size(), 1 );
   BOOST_CHECK_EQUAL( idoc.empty(), false );
 
-  BOOST_CHECK_NO_THROW( idoc.add_definition( name2, desc2 ) );
+  BOOST_CHECK_NO_THROW( idoc.add_definition( { name2, "", "", "", desc2 } ) );
   BOOST_CHECK( idoc.has_definition( name2 ) );
   BOOST_CHECK_EQUAL( idoc.size(), 2 );
 
@@ -1505,26 +1526,25 @@ const std::string desc2 { "desc2" };
   idoc.publish_help( helper, seclabel );
 
   std::stringstream store;
-  helper.print( store );
+  std::string nul_string;
+  helper.write( nul_string, store );
 
   const std::string msg( store.str() );
-
-  BOOST_CHECK_LT( msg.find( "--" + name1 + "(subtype " + label1 + ")" ), msg.size() );
-  BOOST_CHECK_LT( msg.find( "--" + name2 + "(subtype " + label1 + ")" ), msg.size() );
-  BOOST_CHECK_LT( msg.find( desc1 ), msg.size() );
-  BOOST_CHECK_LT( msg.find( desc2 ), msg.size() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK_LT( msg.find( name1 + "\n          " + desc1 ), msg.size() );
+  BOOST_CHECK_LT( msg.find( name2 + "\n          " + desc2 ), msg.size() );
 
   // Attempt to add definition with existing name.
   try
   {
-    idoc.add_definition( name1, desc1 );
+    idoc.add_definition( { name1, "", "", "", desc1 } );
     BOOST_ERROR( "expected \"idoc.add_definition( name1, desc1 )\" exception not thrown" );
   }
   catch( std::runtime_error const& err )
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Can not overwrite existing definitions" ) < msg.size() );
+    BOOST_CHECK( msg.find( "Can not overwrite existing definition" ) < msg.size() );
   }
   catch( std::exception const& err )
   {

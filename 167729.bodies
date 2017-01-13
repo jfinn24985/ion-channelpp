@@ -1,9 +1,10 @@
 class rdf_sampler
 !!!1570096.cpp!!!	add_definition(inout meta : sampler_meta) : void
-std::unique_ptr< sampler_definition > result( new sampler_definition( type_label_(), &rdf_sampler::make_sampler ) );
+std::string desc( "Sample the radial distribution function around each ion collated by ion specie." );
+std::unique_ptr< sampler_definition > result( new sampler_definition( type_label_(), desc, &rdf_sampler::make_sampler ) );
 // two extra parameters
-result->add_definition( "stepsize", "Bin width of pairwise radial population histogram." );
-result->add_definition( "width", "Range of population histogram (excludes particle radii)." );
+result->add_definition( { "stepsize", "distance in Angstrom", ">0", std::to_string( default_bin_width() ), "Bin width of pairwise radial population histogram." } );
+result->add_definition( { "width", "distance in Angstrom", ">0", std::to_string( default_width() ), "Range of population histogram (excludes particle radii)." } );
 meta.add_sampler_type( result );
 
 !!!487729.cpp!!!	description(inout out : ostream) : void
@@ -78,7 +79,7 @@ for( std::size_t ispec = 0; ispec != this->specie_count(); ++ispec )
     }
   }
 }
-!!!499120.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+!!!499120.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
 {
   for( auto & entry : this->data_sets_ )
   {
@@ -123,7 +124,7 @@ for( std::size_t ispec = 0; ispec != this->specie_count(); ++ispec )
     entry.end_sample();
   }
 }
-!!!304817.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in sman : report_manager) : void
+!!!304817.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
 this->specie_labels_.clear();
 this->specie_labels_.resize( pman.specie_count() );
 std::vector< double > radii( pman.specie_count() );

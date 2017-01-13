@@ -206,11 +206,11 @@ const std::string tube_radius_label { "channel-radius" };
 const std::string arc_label { "arc" };
 
 // check for required parameters.
-UTILITY_INPUT( params.count( half_length_label ) == 1, "Cell membrane region \""+half_length_label+"\" parameter missing in input.", core::strngs::fsregn() );
-UTILITY_INPUT( params.count( radius_label ) == 1, "Cell membrane region \""+radius_label+"\" parameter missing in input.", core::strngs::fsregn() );
-UTILITY_INPUT( params.count( offset_label ) == 1, "Cell membrane region \""+offset_label+"\" parameter missing in input.", core::strngs::fsregn() );
-UTILITY_INPUT( params.count( tube_radius_label ) == 1, "Cell membrane region \""+tube_radius_label+"\" parameter missing in input.", core::strngs::fsregn() );
-UTILITY_INPUT( params.count( arc_label ) == 1, "Cell membrane region \""+arc_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT_OLD( params.count( half_length_label ) == 1, "Cell membrane region \""+half_length_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT_OLD( params.count( radius_label ) == 1, "Cell membrane region \""+radius_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT_OLD( params.count( offset_label ) == 1, "Cell membrane region \""+offset_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT_OLD( params.count( tube_radius_label ) == 1, "Cell membrane region \""+tube_radius_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT_OLD( params.count( arc_label ) == 1, "Cell membrane region \""+arc_label+"\" parameter missing in input.", core::strngs::fsregn() );
 
 core::input_base_reader::float_input( half_length_label, params.at( half_length_label ), "Cell membrane region", core::strngs::fsregn(), half_length, true, false );
 
@@ -230,12 +230,13 @@ return current;
 
 
 !!!1107248.cpp!!!	add_definition(inout meta : region_meta) : void
-std::unique_ptr< region_definition > cylinder_defn( new region_definition( type_label(), &membrane_cylinder_region::region_factory ) );
-cylinder_defn->add_definition( "radius", "[required, values > 0 in Angstrom] The radius of the cylinder in the XY plane." );
-cylinder_defn->add_definition( "half-length", "[required, value in Angstrom] Half the length of the cylinder. The cylinder is centred on the origin so: offset <= |z| <= half-length + offset." );
-cylinder_defn->add_definition( "channel-length", "[required, value in Angstrom] Half the length of the channel between the two cell compartments." );
-cylinder_defn->add_definition( "channel-radius", "[required, value in Angstrom] The radius of the channel between the two cell compartments." );
-cylinder_defn->add_definition( "arc-radius", "[required, value in Angstrom] The radius of the arc that rounds the channel ends into the membrane." );
+std::string desc( "A Cylindrical region centred on the origin with the linear axis in z direction. All walls are considered hard. The cylinder has a membrane splitting the cell in the centre providing two compartments. A tube with rounded ends links these two compartments. This region may be used as a system region." );
+std::unique_ptr< region_definition > cylinder_defn( new region_definition( type_label(), desc, &membrane_cylinder_region::region_factory ) );
+cylinder_defn->add_definition( { "radius", "distance in Angstrom", ">0", "required", "The radius of the cylinder in the XY plane." } );
+cylinder_defn->add_definition( { "half-length", "distance in Angstrom", ">0", "required", "Half the length of the cylinder. The cylinder is centred on the origin so: offset <= |z| <= half-length + offset." } );
+cylinder_defn->add_definition( { "channel-length", "distance in Angstrom", ">0", "required", "Half the length of the channel between the two cell compartments." } );
+cylinder_defn->add_definition( { "channel-radius", "distance in Angstrom", ">0", "required", "The radius of the channel between the two cell compartments." } );
+cylinder_defn->add_definition( { "arc-radius", "distance in Angstrom", ">0", "required", "The radius of the arc that rounds the channel ends into the membrane." } );
 meta.add_definition( cylinder_defn );
 !!!1114416.cpp!!!	volume_of_rotation(in axial_disp : double, in radial_disp : double, in arc_radius : double, in z_0 : double, in z_1 : double) : double
 UTILITY_REQUIRE(arc_radius < radial_disp, "The arc radius must be smaller than the radial offset.");

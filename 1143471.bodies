@@ -4,41 +4,6 @@ UTILITY_REQUIRE( not this->has_trial_type( ctor->label() ), ("Attempt to add mor
 this->type_to_object_.push_back( ctor.release() );
 
 
-!!!833200.cpp!!!	publish_help(inout helper : input_help) : void
-const std::string seclabel( core::strngs::fstry() );
-// ----------------------------------------
-// add section
-// ----------------------------------------
-
-//   Specie input section definition
-helper.add_section( seclabel,
-    "Input section \"" + seclabel + "\" parameter definitions.");
-
-// ----------------------------------------
-// add parameters
-// ----------------------------------------
-
-//   rate : [required, number] trial rate
-{
-  const std::string description("[required, number] trial relative rate (not necessarily normalized).");
-  helper.add_option( seclabel, core::strngs::rate_label(), description );
-}
-//  type : [required] trial subtype
-{
-  const std::string description("[required, string] trial subtype (see documentation for valid subtypes).");
-  helper.add_option( seclabel, core::strngs::fstype(), description );
-}
-//  specie : [optional] include/exclude list
-{
-  const std::string description("[optional, list] Space separated list of specie labels to include or exclude. Exclude species by preceding the label with '-' (e.g. -Aa). All species are included by default, but you may also include only selected species by putting their label in the list without '-' (optionally preceded by '+'). NOTE: This should only be used in special cases, most standard exceptions are handled automatically. For example \"mobile\" type species are automatically excluded from \"jump\" or Grand Canonical trials.");
-  helper.add_option( seclabel, core::strngs::fsspec(), description );
-}
-// Subtype parameter documentation.
-for( auto iter = this->type_to_object_.begin(); iter != this->type_to_object_.end(); ++iter )
-{
-  iter->publish_help( helper, seclabel );
-}
-
 !!!826544.cpp!!!	has_trial_type(in trial_label : string) : bool
 for( auto const& defn : this->type_to_object_ )
 {
@@ -49,13 +14,43 @@ for( auto const& defn : this->type_to_object_ )
 }
 return false;
 
+!!!833200.cpp!!!	publish_help(inout helper : input_help) : void
+const std::string seclabel( core::strngs::fstry() );
+// ----------------------------------------
+// add section
+// ----------------------------------------
+
+//   Specie input section definition
+helper.add_section( { seclabel,
+    "Define which MC change trials are used in the simulation." } );
+auto &sect = helper.get_section( seclabel );
+// ----------------------------------------
+// add parameters
+// ----------------------------------------
+
+//   rate : [required, number] trial rate
+{
+  const std::string description("Trial type relative rate (not necessarily normalized).");
+  sect.add_entry( { core::strngs::rate_label(), "number", ">0", "required", description } );
+}
+//  specie : [optional] include/exclude list
+{
+  const std::string description("Space separated list of specie labels to include or exclude. Exclude species by preceding the label with '-' (e.g. -Aa). All species are included by default, but you may also include only selected species by putting their label in the list without '-' (optionally preceded by '+'). NOTE: This should only be used in special cases as most trials already restrict which specie types they are applied to. For example \"mobile\" type species are automatically excluded from \"jump\" or Grand Canonical trials. This list does not override these restrictions.");
+  sect.add_entry( { core::strngs::fsspec(), "list", "specie labels", "optional", description } );
+}
+// Subtype parameter documentation.
+for( auto iter = this->type_to_object_.begin(); iter != this->type_to_object_.end(); ++iter )
+{
+  iter->publish_help( helper, seclabel );
+}
+
 !!!204592.cpp!!!	do_read_entry(inout reader : input_base_reader) : bool
 if( reader.name().find( core::strngs::rate_label() ) == 0 )
 {
   // --------------------
   // Choice rate
   double rate = 0.0;
-  UTILITY_INPUT( this->missing_required_tags_[ CHOICE_RATE ], "Trial \"" + core::strngs::rate_label() + "\" parameter appears more than once in a single " + this->section_label() + " section.", this->section_label() );
+  UTILITY_INPUT_OLD( this->missing_required_tags_[ CHOICE_RATE ], "Trial \"" + core::strngs::rate_label() + "\" parameter appears more than once in a single " + this->section_label() + " section.", this->section_label() );
 
   core::input_base_reader::float_input( core::strngs::rate_label(), reader.value(), "Trial", core::strngs::rate_label(), rate, true, false );
   this->rate_ = rate;
@@ -65,10 +60,10 @@ else if( reader.name().find( core::strngs::fstype() ) == 0 )
 {
   // --------------------
   // Trial type
-  UTILITY_INPUT( this->missing_required_tags_[ CHOICE_TYPE ], "Trial \"" + core::strngs::fstype() + "\" parameter appears more than once in a single " + this->section_label() + " section.", this->section_label() );
-  UTILITY_INPUT( not reader.value().empty(), "Trial \"" + core::strngs::fstype() + "\" parameter requires a value.", this->section_label() );
+  UTILITY_INPUT_OLD( this->missing_required_tags_[ CHOICE_TYPE ], "Trial \"" + core::strngs::fstype() + "\" parameter appears more than once in a single " + this->section_label() + " section.", this->section_label() );
+  UTILITY_INPUT_OLD( not reader.value().empty(), "Trial \"" + core::strngs::fstype() + "\" parameter requires a value.", this->section_label() );
   std::string val( reader.dequote( reader.value() ) );
-  UTILITY_INPUT( this->has_trial_type( val ), "Trial \"" + core::strngs::fstype() + "\" parameter value (" + val + ") is not a valid " + this->section_label() + " type for this application (see documentation).", this->section_label() );
+  UTILITY_INPUT_OLD( this->has_trial_type( val ), "Trial \"" + core::strngs::fstype() + "\" parameter value (" + val + ") is not a valid " + this->section_label() + " type for this application (see documentation).", this->section_label() );
   this->type_ = val;
   this->missing_required_tags_.reset( CHOICE_TYPE );
 }
@@ -76,15 +71,15 @@ else if( reader.name().find( core::strngs::fsspec() ) == 0 )
 {
   // --------------------
   // Allowed/disallowed specie list
-  UTILITY_INPUT( this->specie_list_.empty(), "Trial \"" + core::strngs::fsspec() + "\" parameter appears more than once in a single " + this->section_label() + " section.", this->section_label() );
-  UTILITY_INPUT( not reader.value().empty(), "Trial \"" + core::strngs::fsspec() + "\" parameter requires a value.", this->section_label() );
+  UTILITY_INPUT_OLD( this->specie_list_.empty(), "Trial \"" + core::strngs::fsspec() + "\" parameter appears more than once in a single " + this->section_label() + " section.", this->section_label() );
+  UTILITY_INPUT_OLD( not reader.value().empty(), "Trial \"" + core::strngs::fsspec() + "\" parameter requires a value.", this->section_label() );
   this->specie_list_ = reader.dequote( reader.value() );
 }
 else
 {
   // --------------------
   // Assume choice specific parameters
-  UTILITY_INPUT( 0 == this->parameter_set_.count( reader.name() ), ( "Trial \""+reader.name()+"\" parameter appears more than once in a single \""+this->section_label()+"\" section" ), this->section_label() );
+  UTILITY_INPUT_OLD( 0 == this->parameter_set_.count( reader.name() ), ( "Trial \""+reader.name()+"\" parameter appears more than once in a single \""+this->section_label()+"\" section" ), this->section_label() );
   this->parameter_set_.insert( std::make_pair( reader.name(), reader.value() ) );
 }
 return true;
@@ -93,8 +88,8 @@ return true;
 if( this->missing_required_tags_.any() )
 {
   // Not all required tags were present.
-  UTILITY_INPUT( not this->missing_required_tags_[ CHOICE_RATE ], "Trial section requires \"" + core::strngs::rate_label() + "\" parameter.", this->section_label() );
-  UTILITY_INPUT( not this->missing_required_tags_[ CHOICE_TYPE ], "Trial section requires \"" + core::strngs::fstype() + "\" parameter.", this->section_label() );
+  UTILITY_INPUT_OLD( not this->missing_required_tags_[ CHOICE_RATE ], "Trial section requires \"" + core::strngs::rate_label() + "\" parameter.", this->section_label() );
+  UTILITY_INPUT_OLD( not this->missing_required_tags_[ CHOICE_TYPE ], "Trial section requires \"" + core::strngs::fstype() + "\" parameter.", this->section_label() );
 }
 // find definition
 std::size_t idx = 0;
@@ -112,7 +107,7 @@ if( not this->parameter_set_.empty() )
 {
   for( auto const& entry : this->parameter_set_ )
   {
-    UTILITY_INPUT( defn.has_definition( entry.first ) != 0, "Trial \"" + entry.first + "\" parameter with value (" + entry.second + ") is not understood by " + this->type_ + " " + this->section_label() + ".", this->section_label() );
+    UTILITY_INPUT_OLD( defn.has_definition( entry.first ) != 0, "Trial \"" + entry.first + "\" parameter with value (" + entry.second + ") is not understood by " + this->type_ + " " + this->section_label() + ".", this->section_label() );
   }
 }
 

@@ -1,44 +1,81 @@
 class input_help
 !!!1917999.cpp!!!	exemplar() : input_help
-    static std::unique_ptr< input_help > ex_;
-    if (NULL == ex_.get()) ex_.reset(new input_help);
-    return *ex_;
-!!!1918511.cpp!!!	add_section(in section_label : string, in section_desc : string) : void
-    if (this->contents_->sections_.end() == this->contents_->sections_.find(section_label))
-      {
-	// Not present, add description message.
-	this->contents_->sections_.insert(std::make_pair(section_label, boost::program_options::options_description(section_desc)));
-      }
-    else
-      {
-	boost::program_options::options_description newdesc(section_desc);
-	std::vector< boost::shared_ptr< boost::program_options::option_description > > const& options_set_ = this->contents_->sections_[section_label].options();
-	for (std::vector< boost::shared_ptr< boost::program_options::option_description > >::const_iterator it_ = options_set_.begin(); it_ != options_set_.end (); ++it_)
-	  {
-	    newdesc.add(*it_);
-	  }
-	// Erase old element
-	this->contents_->sections_.erase(this->contents_->sections_.find(section_label));
-	// Add new element
-	this->contents_->sections_.insert(std::make_pair(section_label, newdesc));
-      }
-    
-!!!1918639.cpp!!!	add_option(in section_label : string, in option : string, in desc : string) : void
-if (this->contents_->sections_.end() == this->contents_->sections_.find(section_label))
+static std::unique_ptr< input_help > ex_;
+if( NULL == ex_.get() ) ex_.reset( new input_help );
+return *ex_;
+!!!1918511.cpp!!!	add_section(in sect : help_section) : void
+UTILITY_REQUIRE( not this->has_section( sect.title() ), "Can not add two sections with the same name: " + sect.title() );
+this->sections_.insert( std::make_pair( sect.title(), sect ) );
+UTILITY_ENSURE( this->has_section( sect.title() ), "Failed to add section named " + sect.title() );
+!!!1738032.cpp!!!	do_assert(in test : char, in mesg : string, in section : string, in reader : input_base_reader, in func : char, in filename : char, in linenum : int, in backtrace : void, in backsz : int) : void
+std::string result;
 {
-   // Not present, add description message.
-   this->contents_->sections_.insert(std::make_pair(section_label, boost::program_options::options_description("Parameters of input section \"" + section_label + "\"")));
+  std::stringstream errlog;
+  errlog << "\nError in input file: \"";
+  errlog << mesg << "\"";
+  if( reader )
+  {
+    errlog << " Error in input file \"" << reader->current_filename()
+           << "\", line " << reader->current_line_number() << ".";
+  }
+  errlog << "\n\nUSAGE:\n\n";
+
+  // Print out any help text
+  this->write( section, errlog );
+
+  // --
+  errlog << "\n================== DETAILS ==================\n"
+         << "REASON: \"" << mesg << "\"\n"
+         << "FAILED TEST: (" << test << ")\n"
+         << "FILE: " << filename << ", LINE: " << linenum << ".\n";
+
+  if( NULL != func )
+  {
+    errlog << "FUNCTION: " << func << ".\n";
+  }
+
+  if( NULL != backtrace )
+  {
+    errlog << "BACKTRACE: \n";
+    boost::shared_ptr< char * > trace( core::backtrace_symbols( backtrace, backsz ), &std::free );
+
+    for( int ll = 0; ll < backsz; ++ll )
+    {
+      errlog << * ( trace.get() + ll ) << "\n";
+    }
+  }
+  errlog << "================== DETAILS ==================\n";
+  result = errlog.str();
 }
-this->contents_->sections_.at( section_label ).add_options()( option.c_str(), desc.c_str() );
-!!!1918767.cpp!!!	print(inout os : ostream) : void
-    for (std::map< std::string, boost::program_options::options_description >::iterator it_ = this->contents_->sections_.begin();
-	 it_ != this->contents_->sections_.end(); ++it_)
-      {
-	it_->second.print(os);
-      }
-!!!1919023.cpp!!!	empty() : bool
-    return this->contents_->sections_.empty ();
-!!!1919151.cpp!!!	size() : size_t
-    return this->contents_->sections_.size ();
-!!!1919279.cpp!!!	have_section(in label : string) : bool
-    return (this->contents_->sections_.end() != this->contents_->sections_.find(label));
+throw std::runtime_error( result );
+!!!1751344.cpp!!!	write(in section : string, inout errlog : ostream) : void
+// Print out any help text
+{
+  fixed_width_output_filter filt( 2, 1, 70 );
+  if( not section.empty() and this->has_section( section ) )
+  {
+    this->get_section( section ).write( filt, errlog );
+  }
+  else
+  {
+    for( auto const& sect : this->sections_ )
+    {
+      sect.second.write( filt, errlog );
+    }
+    if( not section.empty() )
+    {
+      errlog << "Error related to undocumented input section '" << section << "'\n";
+    }
+  }
+  errlog << "\n";
+}
+!!!1744688.cpp!!!	write(inout errlog : ostream) : void
+// Print out any help text
+{
+  fixed_width_output_filter filt( 2, 1, 70 );
+  for( auto const& sect : this->sections_ )
+  {
+    sect.second.write( filt, errlog );
+  }
+  errlog << "\n";
+}

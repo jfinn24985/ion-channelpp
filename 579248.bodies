@@ -173,8 +173,8 @@ pass
 !!!1416752.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
 // It is an error in the input for a species not to have a
 // matching entry in epsilon or sigma
-UTILITY_INPUT( not ( pman.specie_count() < this->epsilon_.size() ), "Less species than epsilon and sigma values in Lennard-Jones potential evaluator.", core::strngs::evaluator_label() );
-UTILITY_INPUT( not ( pman.specie_count() > this->epsilon_.size() ), "More species than epsilon and sigma values in Lennard-Jones potential evaluator.", core::strngs::evaluator_label() );
+UTILITY_INPUT_OLD( not ( pman.specie_count() < this->epsilon_.size() ), "Less species than epsilon and sigma values in Lennard-Jones potential evaluator.", core::strngs::evaluator_label() );
+UTILITY_INPUT_OLD( not ( pman.specie_count() > this->epsilon_.size() ), "More species than epsilon and sigma values in Lennard-Jones potential evaluator.", core::strngs::evaluator_label() );
 // Do not need to check sigma as we know its size matches epsilon
 
 // calculate "half" the epsilon and sigma value
@@ -183,7 +183,7 @@ std::vector< double > sig( pman.specie_count() );
 for (std::size_t ispec = 0; ispec != pman.specie_count(); ++ispec )
 {
   auto const& spc = pman.get_specie( ispec );
-  UTILITY_INPUT( this->epsilon_.count( spc.label() ), "Missing epsilon and sigma values for \"" + spc.label() + "\" specie in Lennard-Jones potential evaluator.", core::strngs::evaluator_label() );
+  UTILITY_INPUT_OLD( this->epsilon_.count( spc.label() ), "Missing epsilon and sigma values for \"" + spc.label() + "\" specie in Lennard-Jones potential evaluator.", core::strngs::evaluator_label() );
   // Do not need to check sigma as we know it has the same keys as epsilon
   eps[ ispec ] = std::sqrt( this->epsilon_.at( spc.label() ) );
   sig[ ispec ] = this->sigma_.at( spc.label() ) / 2;
@@ -226,19 +226,20 @@ std::swap( this->sigma_cache_, sigma );
   wr[ ix ].add_entry( "sigma", value );
 }
 !!!1417136.cpp!!!	add_definition(inout meta : evaluator_meta) : void
-std::unique_ptr< evaluator_definition > defn( new evaluator_definition( lennard_jones::type_label_(), &lennard_jones::make_evaluator ) );
+std::string desc( "Calculates the pairwise 6/12 Lennard-Jones potential between species, without cut-off." );
+std::unique_ptr< evaluator_definition > defn( new evaluator_definition( lennard_jones::type_label_(), desc, &lennard_jones::make_evaluator ) );
 // add parameter definitions.
-defn->add_definition( "epsilon", "[required, list(specie label,number)] A list of specie labels and energy minima between two ideal particles of the labelled type." );
-defn->add_definition( "sigma", "[required, list(specie label,number)] A list of specie labels and the distance at the energy minima between two ideal particles of the labelled type." );
+defn->add_definition( { "epsilon", "list(specie label,number)", "", "required", "A list of specie labels and energy minima between two ideal particles of the labelled type." } );
+defn->add_definition( { "sigma", "list(specie label,number)", "", "required", "A list of specie labels and the distance at the energy minima between two ideal particles of the labelled type." } );
 
 meta.add_definition( defn );
 !!!1417392.cpp!!!	make_evaluator(in param_set : string) : base_evaluator
 // Check no parameters have been set
 const std::string eps_label( "epsilon" );
 const std::string sig_label( "sigma" );
-UTILITY_INPUT( param_set.count( eps_label ) == 1, str( core::input_error_messages::missing_parameter() % eps_label % core::strngs::evaluator_label() ), core::strngs::evaluator_label() );
-UTILITY_INPUT( param_set.count( sig_label ) == 1, str( core::input_error_messages::missing_parameter() % sig_label % core::strngs::evaluator_label() ), core::strngs::evaluator_label() );
-UTILITY_INPUT( param_set.size() == 2, "LJ evaluator requires two input parameters.", core::strngs::evaluator_label() );
+UTILITY_INPUT_OLD( param_set.count( eps_label ) == 1, str( core::input_error_messages::missing_parameter() % eps_label % core::strngs::evaluator_label() ), core::strngs::evaluator_label() );
+UTILITY_INPUT_OLD( param_set.count( sig_label ) == 1, str( core::input_error_messages::missing_parameter() % sig_label % core::strngs::evaluator_label() ), core::strngs::evaluator_label() );
+UTILITY_INPUT_OLD( param_set.size() == 2, "LJ evaluator requires two input parameters.", core::strngs::evaluator_label() );
 
 std::unique_ptr< lennard_jones > cc( new lennard_jones );
 std::map< std::string, double > eps, sig;
@@ -253,10 +254,10 @@ std::map< std::string, double > eps, sig;
     if( not is ) break;
     label = core::input_base_reader::dequote( label );
     boost::algorithm::trim( label );
-    UTILITY_INPUT( label.size() == 2 or label.size() == 1, "Specie label (" + label + ") is invalid in parameter \"epsilon\" value (" + param_set.at( "epsilon" ) + ") in a evaluator section.", core::strngs::evaluator_label() );
+    UTILITY_INPUT_OLD( label.size() == 2 or label.size() == 1, "Specie label (" + label + ") is invalid in parameter \"epsilon\" value (" + param_set.at( "epsilon" ) + ") in a evaluator section.", core::strngs::evaluator_label() );
     eps.insert( std::make_pair( label, val ) );
   }
-  UTILITY_INPUT( is.eof(), "Parameter \"epsilon\" value (" + param_set.at( "epsilon" ) + ") not a list of (label value) pairs in evaluator section.", core::strngs::evaluator_label() );
+  UTILITY_INPUT_OLD( is.eof(), "Parameter \"epsilon\" value (" + param_set.at( "epsilon" ) + ") not a list of (label value) pairs in evaluator section.", core::strngs::evaluator_label() );
 }
 {
   std::stringstream is( param_set.at( sig_label ) );
@@ -269,16 +270,16 @@ std::map< std::string, double > eps, sig;
     if( not is ) break;
     label = core::input_base_reader::dequote( label );
     boost::algorithm::trim( label );
-    UTILITY_INPUT( label.size() == 2 or label.size() == 1, "Specie label (" + label + ") is invalid in parameter \"sigma\" value (" + param_set.at( "sigma" ) + ") in a evaluator section.", core::strngs::evaluator_label() );
+    UTILITY_INPUT_OLD( label.size() == 2 or label.size() == 1, "Specie label (" + label + ") is invalid in parameter \"sigma\" value (" + param_set.at( "sigma" ) + ") in a evaluator section.", core::strngs::evaluator_label() );
     sig.insert( std::make_pair( label, val ) );
   }
-  UTILITY_INPUT( is.eof(), "Parameter \"sigma\" value (" + param_set.at( "sigma" ) + ") not a list of (label value) pairs in evaluator section.", core::strngs::evaluator_label() );
+  UTILITY_INPUT_OLD( is.eof(), "Parameter \"sigma\" value (" + param_set.at( "sigma" ) + ") not a list of (label value) pairs in evaluator section.", core::strngs::evaluator_label() );
 }
-UTILITY_INPUT( eps.size() == sig.size(), "Parameter \"epsilon\" value (" + param_set.at( "epsilon" ) + ") has a different size list to parameter \"sigma\" value (" + param_set.at( "sigma" ) + ") in a evaluator section.", core::strngs::evaluator_label() );
+UTILITY_INPUT_OLD( eps.size() == sig.size(), "Parameter \"epsilon\" value (" + param_set.at( "epsilon" ) + ") has a different size list to parameter \"sigma\" value (" + param_set.at( "sigma" ) + ") in a evaluator section.", core::strngs::evaluator_label() );
 // Check that maps contain the same specie labels
 for( auto const& entry : eps )
 {
-  UTILITY_INPUT( sig.count( entry.first ) == 1, "Parameter \"epsilon\" value (" + param_set.at( "epsilon" ) + ") has a different specie labels in the list to parameter \"sigma\" value (" + param_set.at( "sigma" ) + ") in a evaluator section.", core::strngs::evaluator_label() );
+  UTILITY_INPUT_OLD( sig.count( entry.first ) == 1, "Parameter \"epsilon\" value (" + param_set.at( "epsilon" ) + ") has a different specie labels in the list to parameter \"sigma\" value (" + param_set.at( "sigma" ) + ") in a evaluator section.", core::strngs::evaluator_label() );
   
 }
 std::swap( cc->epsilon_, eps );

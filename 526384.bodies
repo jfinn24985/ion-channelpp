@@ -61,11 +61,12 @@ if not sys.get_cell_region().is_valid_position( result.new_position, result.key 
 return resultset
 
 !!!1211056.cpp!!!	add_definition(inout meta : choice_meta) : void
-std::unique_ptr< trial::choice_definition > defn( new trial::choice_definition( "jump-around", &trial::chooser< jump_around >::make_chooser ) );
+std::string desc( "MC move that involves a jump from anywhere to anywhere within a specific region. It is an exception if any particles of the given species are not all in the stated region. This trial is primarily for channel-only species." );
+std::unique_ptr< trial::choice_definition > defn( new trial::choice_definition( "jump-around", desc, &trial::chooser< jump_around >::make_chooser ) );
 
 {
-  std::string help = "[name, required] The name of one of the sub-regions defined in the simulation. It is an error to use the name of the whole simulation region.";
-  defn->add_definition( core::strngs::fsregn(), help );
+  std::string help = "The name of one of the sub-regions defined in the simulation. It is an error to use the name of the whole simulation region.";
+  defn->add_definition( { core::strngs::fsregn(), "label", "region label", "required", help } );
 }
 UTILITY_CHECK( not meta.has_trial_type( defn->label() ), "This type has already been added to this meta object." );
 meta.add_trial_type( defn );
@@ -79,13 +80,13 @@ const std::string region_name_label { core::strngs::fsregn() };
 // --------------------
 // region label (required)
 // check for required parameters.
-UTILITY_INPUT( params.count( region_name_label ) == 1, "Jump-around trial requires \"" + region_name_label + "\" parameter.", core::strngs::fstry() );
-UTILITY_INPUT( not params.at( region_name_label ).empty(), "Jump-around trial \"" + region_name_label + "\" parameter requires a value.", core::strngs::fstry() );
+UTILITY_INPUT_OLD( params.count( region_name_label ) == 1, "Jump-around trial requires \"" + region_name_label + "\" parameter.", core::strngs::fstry() );
+UTILITY_INPUT_OLD( not params.at( region_name_label ).empty(), "Jump-around trial \"" + region_name_label + "\" parameter requires a value.", core::strngs::fstry() );
 region_name = core::input_base_reader::dequote( params.at( region_name_label ) );
 boost::algorithm::trim( region_name );
 const std::size_t region_index = gman.region_key( region_name );
-UTILITY_INPUT( region_index != gman.region_count(), "Jump-around trial \"" + region_name_label + "\" parameter value (" + region_name + ") is not a known region label.", core::strngs::fstry() );
-UTILITY_INPUT( region_index != 0, "Jump-around trial \"" + region_name_label + "\" parameter value (" + region_name + ") should not be the entire system region.", core::strngs::fstry() );
+UTILITY_INPUT_OLD( region_index != gman.region_count(), "Jump-around trial \"" + region_name_label + "\" parameter value (" + region_name + ") is not a known region label.", core::strngs::fstry() );
+UTILITY_INPUT_OLD( region_index != 0, "Jump-around trial \"" + region_name_label + "\" parameter value (" + region_name + ") should not be the entire system region.", core::strngs::fstry() );
 
 // build region object.
 std::unique_ptr< jump_around > current( new jump_around( ispec, region_index ) );

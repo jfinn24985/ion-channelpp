@@ -1,9 +1,10 @@
 class widom
 !!!1628976.cpp!!!	add_definition(inout meta : sampler_meta) : void
-std::unique_ptr< tracked_definition > result( new tracked_definition( type_label_(), &widom::make_sampler ) );
+std::string desc( "Calculate the particle free energy using the Widom method. This calculates the excess chemical potential from insertion trials. This class calculates an average global value." );
+std::unique_ptr< tracked_definition > result( new tracked_definition( type_label_(), desc, &widom::make_sampler ) );
 // two extra parameters
-result->add_definition( core::strngs::fsiwid(), "[optional, number, default(0)] Minimum number of insertion attempts per sampling period." );
-result->add_definition( core::strngs::fsspec(), "[optional, list] List of specie labels to use. Species must be solute type. Default is to use all solute species." );
+result->add_definition( { core::strngs::fsiwid(), "number", ">=0", "0", "Minimum number of insertion attempts per sampling period." } );
+result->add_definition( { core::strngs::fsspec(), "list", "specie labels", "all \""+ core::strngs::fsfree()+"\" species", "List of labels of the species to sample. Each species must be of solute type ("+ core::strngs::fsfree()+"). Default is to use all solute species." } );
 meta.add_tracked_type( result );
 !!!488113.cpp!!!	description(inout out : ostream) : void
 out << "[sampler] " << this->get_label() << "\n";
@@ -24,7 +25,7 @@ for( auto const& item : params )
   }
   else if( item.first == core::strngs::fsspec() )
   {
-    UTILITY_INPUT( not item.second.empty(),
+    UTILITY_INPUT_OLD( not item.second.empty(),
                    "widom \""+item.first+"\" parameter requires a value",
                    core::strngs::sampler_label() );
     smplr->key_labels_ = item.second;
@@ -32,7 +33,7 @@ for( auto const& item : params )
   else
   {
     const std::string known_key;
-    UTILITY_INPUT( item.first==known_key,
+    UTILITY_INPUT_OLD( item.first==known_key,
                    "Parameter ["+item.first+"] unknown for sampler type ["+widom::type_label_()+"]",
                    core::strngs::sampler_label() );
   }
@@ -214,11 +215,11 @@ else
   std::string used_labels;
   for( std::string lbl : tok )
   {
-    UTILITY_INPUT( pman.has_specie( lbl ),
+    UTILITY_INPUT_OLD( pman.has_specie( lbl ),
                    "widom \"specie\" parameter value ("+ this->key_labels_ +") has unknown specie label ["+ lbl +"]",
                    core::strngs::sampler_label() );
     std::size_t key = pman.get_specie_key( lbl );
-    UTILITY_INPUT( pman.get_specie( key ).is_solute(),
+    UTILITY_INPUT_OLD( pman.get_specie( key ).is_solute(),
                    "widom \"specie\" parameter value ("+ this->key_labels_ +") has specie ["+ lbl +"] that is not a solute",
                    core::strngs::sampler_label() );
     auto const& spc = pman.get_specie( key );

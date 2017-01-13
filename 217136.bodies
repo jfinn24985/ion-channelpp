@@ -53,9 +53,11 @@ const double perm{ 42.0 };
   BOOST_CHECK( std::has_virtual_destructor< evaluator::evaluator_definition >::type {} );
 }
 const std::string defn_label( "evaluator" );
+const std::string defn_desc( "blah blech blab." );
 {
-  evaluator::evaluator_definition defn( defn_label, [](std::map<std::string, std::string>)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; });
+  evaluator::evaluator_definition defn( defn_label, defn_desc, [](std::map<std::string, std::string>)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; });
   BOOST_CHECK_EQUAL( defn.label(), defn_label );
+  BOOST_CHECK_EQUAL( defn.description(), defn_desc );
   BOOST_CHECK_EQUAL( defn.size(), 0 );
   BOOST_CHECK( defn.empty() );
 }
@@ -2465,7 +2467,7 @@ const std::string meta_label( "evaluator" );
   BOOST_CHECK_EQUAL( meta.size(), 0 );
   BOOST_CHECK( meta.empty() );
 
-  meta.add_definition( std::unique_ptr< evaluator::evaluator_definition >( new evaluator::evaluator_definition( "coloumb", [](std::map<std::string, std::string>)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; }) ) );
+  meta.add_definition( std::unique_ptr< evaluator::evaluator_definition >( new evaluator::evaluator_definition( "coloumb", "blah blab blech.", [](std::map<std::string, std::string>)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; }) ) );
   
   BOOST_CHECK_EQUAL( meta.size(), 1 );
   BOOST_CHECK( not meta.empty() );
@@ -2485,8 +2487,8 @@ core::input_delegater dg( 1 );
   m->publish_help( hlpr );
   {
     std::stringstream ss;
-    hlpr.print( ss );
-    BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
+    hlpr.write( ss );
+    BOOST_CHECK( ss.str().find( "coulomb" ) < ss.str().size() );
   }
   dg.add_input_delegate( m );
 }
@@ -2640,9 +2642,9 @@ core::input_delegater dg( 1 );
   m->publish_help( hlpr );
   {
     std::stringstream ss;
-    hlpr.print( ss );
-    BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
-    BOOST_CHECK( ss.str().find( "--mobk" ) < ss.str().size() );
+    hlpr.write( ss );
+    BOOST_CHECK( ss.str().find( "localize" ) < ss.str().size() );
+    BOOST_CHECK( ss.str().find( "mobk" ) < ss.str().size() );
   }
   dg.add_input_delegate( m );
 }
@@ -2672,15 +2674,6 @@ core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
   evaluator::localizer::add_definition( *m );
-
-  core::input_help hlpr;
-  m->publish_help( hlpr );
-  {
-    std::stringstream ss;
-    hlpr.print( ss );
-    BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
-    BOOST_CHECK( ss.str().find( "--mobk" ) < ss.str().size() );
-  }
   dg.add_input_delegate( m );
 }
 
@@ -2710,15 +2703,6 @@ core::input_delegater dg( 1 );
 {
   boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
   evaluator::localizer::add_definition( *m );
-
-  core::input_help hlpr;
-  m->publish_help( hlpr );
-  {
-    std::stringstream ss;
-    hlpr.print( ss );
-    BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
-    BOOST_CHECK( ss.str().find( "--mobk" ) < ss.str().size() );
-  }
   dg.add_input_delegate( m );
 }
 
@@ -2753,10 +2737,10 @@ core::input_delegater dg( 1 );
   m->publish_help( hlpr );
   {
     std::stringstream ss;
-    hlpr.print( ss );
-    BOOST_CHECK( ss.str().find( "--type" ) < ss.str().size() );
-    BOOST_CHECK( ss.str().find( "--epsilon" ) < ss.str().size() );
-    BOOST_CHECK( ss.str().find( "--sigma" ) < ss.str().size() );
+    hlpr.write( ss );
+    BOOST_CHECK( ss.str().find( "lennard-jones" ) < ss.str().size() );
+    BOOST_CHECK( ss.str().find( "epsilon" ) < ss.str().size() );
+    BOOST_CHECK( ss.str().find( "sigma" ) < ss.str().size() );
   }
   dg.add_input_delegate( m );
 }

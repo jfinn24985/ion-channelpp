@@ -1,6 +1,7 @@
 class metropolis_sampler
 !!!1556016.cpp!!!	add_definition(inout meta : sampler_meta) : void
-std::unique_ptr< tracked_definition > result( new tracked_definition( type_label_(), &metropolis_sampler::make_sampler ) );
+std::string desc( "Monitor the Metropolis factor generated for each trial. Failed trials have a factor of 0. This is used to monitor the simulation and is not an outcome of the simulation." );
+std::unique_ptr< tracked_definition > result( new tracked_definition( type_label_(), desc, &metropolis_sampler::make_sampler ) );
 // no extra parameters
 meta.add_tracked_type( result );
 
@@ -11,7 +12,7 @@ out << " Sample the metropolis factor of each trial\n";
 boost::any result = std::make_pair( this->boltzmann_factor_, this->energy_change_ );
 return result;
 !!!175025.cpp!!!	make_sampler(in param_set : string) : tracked_observable
-UTILITY_INPUT(param_set.empty(),"The "+type_label_()+" sampler requires no parameters.",core::strngs::sampler_label());
+UTILITY_INPUT_OLD(param_set.empty(),"The "+type_label_()+" sampler requires no parameters.",core::strngs::sampler_label());
 boost::shared_ptr< tracked_observable > smplr(new metropolis_sampler);
 return smplr;
 !!!1162543.cpp!!!	on_trial_end(in trial : change_set) : void
@@ -39,7 +40,7 @@ else
   this->energy_.sample_datum( 1.0 );
 }
 
-!!!1556144.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+!!!1556144.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
 this->energy_.end_sample();
 !!!174769.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
 out << this->get_label()
@@ -93,7 +94,7 @@ out << core::strngs::horizontal_bar() << "\n";
   }
 }
 
-!!!174641.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in sman : report_manager) : void
+!!!174641.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
 this->boltzmann_factor_.reset();
 this->energy_change_.reset();
 this->energy_.reset();

@@ -1,6 +1,6 @@
 format 75
 "utility" // utility
-  revision 231
+  revision 234
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -12469,7 +12469,7 @@ namespace utility
 
 #define UTILITY_ALWAYS(X,Y) do { if (!(X)) {				\\
       void * TRACE[20]; const int sz_ = utility::backtrace (&TRACE[0], 20); \\
-      utility::do_assert(#X,(Y),\"\",__func__,__FILE__, __LINE__, &TRACE[0], sz_); }} while (false)
+      utility::do_assert(#X,(Y),__func__,__FILE__, __LINE__, &TRACE[0], sz_); }} while( false )
 
 #if(DEBUG > 0)
 #define UTILITY_CHECK UTILITY_ALWAYS
@@ -12478,26 +12478,36 @@ namespace utility
 #define UTILITY_INDEX(X,Y,Z) UTILITY_ALWAYS(utility::mathutil::in_half_up_range(std::size_t(0),(Y),(X)),Z)
 #define UTILITY_RANGE(W,X,Y,Z) UTILITY_ALWAYS(utility::mathutil::in_closed_range((X),(Y),(W)),Z)
 #else
-#define UTILITY_CHECK(X,Y) while(false){}
-#define UTILITY_ENSURE(X,Y) while(false){}
-#define UTILITY_ENSURE_OLD(X)  while(false){}
-#define UTILITY_INDEX(X,Y,Z) while(false){}
-#define UTILITY_RANGE(W,X,Y,Z) while(false){}
+#define UTILITY_CHECK(X,Y) while( false ){}
+#define UTILITY_ENSURE(X,Y) while( false ){}
+#define UTILITY_ENSURE_OLD(X)  while( false ){}
+#define UTILITY_INDEX(X,Y,Z) while( false ){}
+#define UTILITY_RANGE(W,X,Y,Z) while( false ){}
 #endif
 #define UTILITY_REQUIRE UTILITY_ALWAYS
 
-#define UTILITY_INPUT(X,Y,S) do { if (!(X)) {				\\
+#define UTILITY_INPUT_OLD(X,Y,S) do { if (!(X)) {				\\
       void * TRACE[20];	const int sz_ = utility::backtrace (&TRACE[0], 20); \\
-      utility::do_assert(#X,(Y),(S),__func__,__FILE__, __LINE__, &TRACE[0], sz_); }} while (false)
+      utility::do_assert_input(#X,(Y),(S),NULL,__func__,__FILE__, __LINE__, &TRACE[0], sz_); }} while( false )
+
+#define UTILITY_INPUT(X,Y,S,R) do { if (!(X)) {				\\
+      void * TRACE[20];	const int sz_ = utility::backtrace (&TRACE[0], 20); \\
+      utility::do_assert_input(#X,(Y),(S),(R),__func__,__FILE__, __LINE__, &TRACE[0], sz_); }} while( false )
 
 #define UTILITY_STDC_ERROR(X, Y) do { if (!(X)) {			\\
       void * TRACE[20];	const int sz_ = utility::backtrace (&TRACE[0], 20); \\
       std::string msg_((Y)); msg_.append(\"\\n\"); msg_.append(strerror(errno)); \\
-      utility::do_assert(#X,msg_,\"\",__func__,__FILE__, __LINE__, &TRACE[0], sz_); }} while (false)
+      utility::do_assert(#X,msg_,__func__,__FILE__, __LINE__, &TRACE[0], sz_); }} while( false )
 
+namespace core
+{
+  class input_base_reader;
+};
 ${namespace_start}
   // Assert method behind UTILITY_... macros
-  void do_assert(const char * a_test, std::string a_msg, std::string a_section, const char * a_fn, const char * a_filename, int a_linenum, void * const* a_backtrace, int a_backsz);
+  void do_assert(const char * a_test, std::string a_msg, const char * a_fn, const char * a_filename, int a_linenum, void * const* a_backtrace, int a_backsz);
+
+  void do_assert_input(const char * a_test, std::string a_msg, std::string a_section, core::input_base_reader const*const reader, const char * a_fn, const char * a_filename, int a_linenum, void * const* a_backtrace, int a_backsz);
 
 ${definition}
 ${namespace_end}
@@ -12536,7 +12546,7 @@ static char** backtrace_symbols (void*const*, int)
 #endif
 
 //Assert method
-void do_assert(const char * a_test, std::string a_msg, std::string a_section, const char * a_fn, const char * a_filename, int a_linenum, void * const* a_backtrace, int a_backsz)
+void do_assert(const char * a_test, std::string a_msg, const char * a_fn, const char * a_filename, int a_linenum, void * const* a_backtrace, int a_backsz)
 {
    //    static const int s_size (4096);
    //    char what_buffer_[s_size];
@@ -12568,25 +12578,14 @@ void do_assert(const char * a_test, std::string a_msg, std::string a_section, co
       }
 
       errlog_ << \"================== CONTRACT FAILURE ==================\\n\";
-      // Print out any help text
-      if (not a_section.empty())
-      {
-         if ( core::input_help::exemplar().has_section( a_section ) )
-         {
-            core::input_help::exemplar().print (errlog_, a_section);
-         }
-         else
-         {
-            errlog_ << \"Error related to input section '\" << a_section << \"'\";
-         }
-         errlog_ << \"\\n\";
-      }
-
       result_ = errlog_.str ();
    }
-
    throw std::runtime_error (result_);
+}
 
+void do_assert_input(const char * a_test, std::string a_msg, std::string a_section, core::input_base_reader const*const a_reader, const char * a_fn, const char * a_filename, int a_linenum, void * const* a_backtrace, int a_backsz)
+{
+  core::input_help::exemplar().do_assert( a_test, a_msg, a_section, a_reader, a_fn, a_filename, a_linenum, a_backtrace, a_backsz );
 }
 
 ${members}

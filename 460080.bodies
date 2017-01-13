@@ -69,9 +69,9 @@ const std::string radius_label { "radius" };
 const std::string offset_label { "offset" };
 
 // check for required parameters.
-UTILITY_INPUT( params.count( half_length_label ) == 1, "Split cylinder region \""+half_length_label+"\" parameter missing in input.", core::strngs::fsregn() );
-UTILITY_INPUT( params.count( radius_label ) == 1, "Split cylinder region \""+radius_label+"\" parameter missing in input.", core::strngs::fsregn() );
-UTILITY_INPUT( params.count( offset_label ) == 1, "Split cylinder region \""+offset_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT_OLD( params.count( half_length_label ) == 1, "Split cylinder region \""+half_length_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT_OLD( params.count( radius_label ) == 1, "Split cylinder region \""+radius_label+"\" parameter missing in input.", core::strngs::fsregn() );
+UTILITY_INPUT_OLD( params.count( offset_label ) == 1, "Split cylinder region \""+offset_label+"\" parameter missing in input.", core::strngs::fsregn() );
 
 core::input_base_reader::float_input( half_length_label, params.at( half_length_label ), "Split cylinder region", core::strngs::fsregn(), half_length, true, false );
 
@@ -87,8 +87,9 @@ return current;
 
 
 !!!1093680.cpp!!!	add_definition(inout meta : region_meta) : void
-std::unique_ptr< region_definition > cylinder_defn( new region_definition( type_label(), &open_split_cylinder_region::region_factory ) );
-cylinder_defn->add_definition( "radius", "[required, values > 0 in Angstrom] The radius of the cylinder in the XY plane." );
-cylinder_defn->add_definition( "half-length", "[required, value in Angstrom] Half the length of the cylinder. The cylinder is centred on the origin so: offset <= |z| <= half-length + offset." );
-cylinder_defn->add_definition( "offset", "[required, value in Angstrom] Half the length of the gap between the two cylinder halves. The cylinder is centred on the origin so: offset <= |z| <= half-length + offset." );
+std::string desc( "A cylindrical region centred on the origin with linear axis in z direction. All walls are considered soft. Cylinder is cut in the centre and the two parts displaced \"offset\" from the origin along the z-axis." );
+std::unique_ptr< region_definition > cylinder_defn( new region_definition( type_label(), desc, &open_split_cylinder_region::region_factory ) );
+cylinder_defn->add_definition( { "radius", "distance in Angstrom", ">0", "required", "The radius of the cylinder in the XY plane." } );
+cylinder_defn->add_definition( { "half-length", "distance in Angstrom", ">0", "required", "Half the length of the cylinder. The cylinder is centred on the origin so: offset <= |z| <= half-length + offset." } );
+cylinder_defn->add_definition( { "offset", "distance in Angstrom", ">0", "required", "Half the length of the gap between the two cylinder halves. The cylinder is centred on the origin so: offset <= |z| <= half-length + offset." } );
 meta.add_definition( cylinder_defn );

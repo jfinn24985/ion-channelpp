@@ -1,8 +1,9 @@
 class density_zaxis
 !!!1548848.cpp!!!	add_definition(inout meta : sampler_meta) : void
-std::unique_ptr< sampler_definition > result( new sampler_definition( density_zaxis::type_label_(), &density_zaxis::make_sampler ) );
+std::string desc( "Sample particle density distributions along the z axis (=axis of rotation for cylinder regions)." );
+std::unique_ptr< sampler_definition > result( new sampler_definition( density_zaxis::type_label_(), desc, &density_zaxis::make_sampler ) );
 // extra parameters
-result->add_definition( "stepsize", "Bin width of the 1D population histogram." );
+result->add_definition( { "stepsize", "distance in Angstrom", ">0", std::to_string( default_stepsize() ), "Bin width of the 1D population histogram." } );
 meta.add_sampler_type( result );
 
 !!!498608.cpp!!!	description(inout out : ostream) : void
@@ -69,7 +70,7 @@ for( std::size_t ispec = 0; ispec != this->data_sets_.size(); ++ispec )
   }
 }
 
-!!!305329.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager) : void
+!!!305329.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
 // Sample the z axis
 const particle::ensemble &ens( pman.get_ensemble() );
 for( auto &histo : this->data_sets_ )
@@ -89,7 +90,7 @@ for( auto &histo : this->data_sets_ )
   histo.end_sample();
 }
 
-!!!499248.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in sman : report_manager) : void
+!!!499248.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
 // Reset all
 this->data_sets_.clear();
 this->filenames_.clear();

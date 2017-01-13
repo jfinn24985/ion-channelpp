@@ -1,9 +1,10 @@
 class d3_distribution
 !!!1607472.cpp!!!	add_definition(inout meta : sampler_meta) : void
-std::unique_ptr< sampler_definition > result( new sampler_definition( type_label_(), &d3_distribution::make_sampler ) );
+std::string desc( "Sample the 3D distribution of particles." );
+std::unique_ptr< sampler_definition > result( new sampler_definition( type_label_(), desc, &d3_distribution::make_sampler ) );
 // two extra parameters
-result->add_definition( "stepsize", "[optional, number, default(0.2)] Subsampling cube width of population histogram." );
-result->add_definition( core::strngs::fsregn(), "[optional, list] Specie label : region label pairs. Use to restrict sampling of a specie to a specific region of the simulation cell. Default is to use the whole cell." );
+result->add_definition( { "stepsize", "number in Angstrom", ">0", std::to_string( default_bin_width() ), "Subsampling cube width of population histogram." } );
+result->add_definition( { core::strngs::fsregn(), "list", "specie:region labels", "all species and whole cell", "List of specie label : region label pairs. Use to restrict sampling of a specie to a specific region of the simulation cell. Default is to use all species and the whole cell." } );
 meta.add_sampler_type( result );
 
 !!!487985.cpp!!!	description(inout os : ostream) : void
@@ -25,7 +26,7 @@ double stepsize = d3_distribution::default_bin_width();
 if (paramset.count( core::strngs::fsregn() ) != 0)
 {
   region_list = paramset.at( core::strngs::fsregn() );
-  UTILITY_INPUT( not region_list.empty(), d3_distribution::type_label_() + " paramter \"" + core::strngs::fsregn() + "\" requires a value.", core::strngs::sampler_label() );
+  UTILITY_INPUT_OLD( not region_list.empty(), d3_distribution::type_label_() + " paramter \"" + core::strngs::fsregn() + "\" requires a value.", core::strngs::sampler_label() );
 }
 if (0 != paramset.count("stepsize"))
 {
@@ -35,7 +36,7 @@ std::unique_ptr<d3_distribution> result( new d3_distribution );
 if( not region_list.empty() )
 {
   result->regions_ = d3_distribution::process_region_list( region_list );
-  UTILITY_INPUT( not result->regions_.empty(), d3_distribution::type_label_() + " parameter \"" + core::strngs::fsregn() + "\" value ["+region_list+"] is invalid.", core::strngs::sampler_label() );
+  UTILITY_INPUT_OLD( not result->regions_.empty(), d3_distribution::type_label_() + " parameter \"" + core::strngs::fsregn() + "\" value ["+region_list+"] is invalid.", core::strngs::sampler_label() );
 }
 result->stepsize_ = stepsize;
 boost::shared_ptr< base_observable > tmp(result.release());
@@ -54,7 +55,7 @@ if( not this->regions_.empty() )
 {
   for( auto const& entry : this->regions_ )
   {
-    UTILITY_INPUT( gman.region_key( entry.second ) != gman.region_count(), "Expected a region with name ["+entry.second+"] when generating sampler type "+type_label_(), core::strngs::sampler_label() );
+    UTILITY_INPUT_OLD( gman.region_key( entry.second ) != gman.region_count(), "Expected a region with name ["+entry.second+"] when generating sampler type "+type_label_(), core::strngs::sampler_label() );
   }
 }
 this->specie_labels_.resize( pman.specie_count() );
@@ -152,17 +153,17 @@ for( std::string word_or_pair : tok )
   if( label.empty() )
   {
     // specie label part of pair
-    UTILITY_INPUT( ( 2 == word_or_pair.size() ) or ( 1 == word_or_pair.size() ), "Invalid specie label ["+ word_or_pair +"] in list ["+list+"] in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
+    UTILITY_INPUT_OLD( ( 2 == word_or_pair.size() ) or ( 1 == word_or_pair.size() ), "Invalid specie label ["+ word_or_pair +"] in list ["+list+"] in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
     label = word_or_pair;
   }
   else
   {
     // region part of pair
     auto check_unique = regions.insert( { label, word_or_pair } );
-    UTILITY_INPUT( check_unique.second, "Duplicate specie label ["+ label +"] in list ["+list+"] in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
+    UTILITY_INPUT_OLD( check_unique.second, "Duplicate specie label ["+ label +"] in list ["+list+"] in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
     label.clear();
   }
 }
-UTILITY_INPUT( label.empty(), "Have unmatched specie label ["+label+"] in list ["+list+"] in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
+UTILITY_INPUT_OLD( label.empty(), "Have unmatched specie label ["+label+"] in list ["+list+"] in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label() );
 return regions;
 

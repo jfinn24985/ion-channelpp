@@ -15,83 +15,78 @@ return match_standard_keyword != 0;
 return 0 != specie_meta::known_keywords_.count( name );
 !!!915248.cpp!!!	publish_help(inout helper : input_help) : void
 const std::string seclabel( core::strngs::fsspec() );
+const std::string freeonly( "required: only valid for \"" + core::strngs::fsfree() + "\"" );
 // ----------------------------------------
 // add section
 // ----------------------------------------
 
 //   Specie input section definition
-helper.add_section( seclabel, "Specie input section definition" );
+helper.add_section( { seclabel, "Specie input section definition" } );
 
+core::help_section &sect = helper.get_section( seclabel );
 // ----------------------------------------
 // add parameters
 // ----------------------------------------
 
 //   z : [required, number] specie valency
 {
-  const std::string description( "[required, number] specie valency (atomic)." );
-  helper.add_option( seclabel, core::strngs::fsz(), description );
+  const std::string description( "specie valency (atomic)." );
+  sect.add_entry( { core::strngs::fsz(), "number", "", "required", description } );
 }
 //  d : [required, number] specie diameter
 {
-  const std::string description( "[required, number > 0] specie diameter (Angstrom)." );
-  helper.add_option( seclabel, core::strngs::fsd(), description );
+  const std::string description( "Specie diameter." );
+  sect.add_entry( { core::strngs::fsd(), "number in Angstrom", "> 0", "required", description } );
 }
 // name : [required, two letters] specie code name (quotes optional)
 {
-  const std::string description( "[required, two letters] specie code name (quotes optional)." );
-  helper.add_option( seclabel, core::strngs::fsname(), description );
+  const std::string description( "Specie code name (quotes optional)." );
+  sect.add_entry( { core::strngs::fsname(), "two letters", "unique", "required", description } );
 }
 //  type : [optional, default type is \"free\"] specie model
 //         type. value should be one of: fsmobl, fsflxd, fschon
 //         or fsfree (only first 3 letters required)
 {
-  std::stringstream description;
-  description << "[optional, default type is \"" << core::strngs::fsfree()
-              << "\"] specie model type. value should be one of: \""
-              << core::strngs::fsmobl() << "\", \"" << core::strngs::fsflxd() << "\", \""
-              << core::strngs::fschon() << "\" or \"" << core::strngs::fsfree()
-              << "\" (only first 3 letters required).";
-  helper.add_option( seclabel, core::strngs::fstype(), description.str() );
+  std::stringstream subtypes;
+  subtypes << core::strngs::fsmobl() << "|" << core::strngs::fsflxd() << "|"
+           << core::strngs::fschon() << "|" << core::strngs::fsfree();
+  std::string description( "Specie model type (only first 3 letters required)." );
+  sect.add_entry( { core::strngs::fstype(), "keyword", subtypes.str(), core::strngs::fsfree(), description } );
 }
 // chex : [required and valid for ",fsfree," type only, number] initial chemical excess
 {
-  const std::string description( "[required and valid for \"" + core::strngs::fsfree()
-                                 + "\" type only, number] initial chemical excess." );
-  helper.add_option( seclabel, core::strngs::fschex(), description );
+  const std::string description( "Initial chemical excess." );
+  sect.add_entry( { core::strngs::fschex(), "number", "", freeonly, description } );
 }
 // ratspec  : [optional for ",fsmobl,", ",fsflxd," and ",fschon,", required for ",fsfree,", number]
 //            Probability this specie is used in a move trial
 {
   std::stringstream description;
-  description << "[optional for  \"" << core::strngs::fsmobl()
+  description << "Probability this specie is used in a move trial. "
+              << "Optional for \"" << core::strngs::fsmobl()
               << "\", \"" << core::strngs::fsflxd() << "\" and \""
-              << core::strngs::fschon() << "\", required for \"" << core::strngs::fsfree()
-              << ", number > 0] Probability this specie is used in a move trial.";
-  helper.add_option( seclabel, core::strngs::fsrtsp(), description.str() );
+              << core::strngs::fschon() << "\", required for \""
+              << core::strngs::fsfree()
+              << " type species.";
+  sect.add_entry( { core::strngs::fsrtsp(), "number", ">0", "none", description.str() } );
 }
 // ratexchg : [",fsfree," type only, required, number] Once selected for a move, "
 //   write(unit=fid,fmt='(9X,A)')"probability of channel insertion (vs step) move"
 {
-  std::stringstream description;
-  description << "[\"" << core::strngs::fsfree()
-              << " type only, required, number > 0] Once selected for a move, probability of channel insertion (vs step) move.";
-  helper.add_option( seclabel, core::strngs::fsrtex(), description.str() );
+  std::string description( "Probability of channel insertion." );
+  sect.add_entry( { core::strngs::fsrtex(), "number", ">0", freeonly, description } );
 }
 //  ratmov : [",fsfree," type only, required, number] Once selected for a step move,
 //           probability of a gas phase or liquid phase move.
 {
-  std::stringstream description;
-  description << "[\"" << core::strngs::fsfree()
-              << " type only, required, number > 0] Once selected for a step move, probability  of a gas phase or liquid phase move.";
-  helper.add_option( seclabel, core::strngs::fsrtmv(), description.str() );
+  std::string description( "Probability of a gas phase or liquid phase move." );
+  sect.add_entry( { core::strngs::fsrtmv(), "number", ">0", freeonly, description } );
 }
 // ratgr  : [",fsfree," type only, optional, number] Probability this specie is
 //         used in a individual ion grand-canonical trial.
 {
-  std::stringstream description;
-  description << "[\"" << core::strngs::fsfree()
-              << " type only, required, number > 0] Probability this specie is used in a individual ion grand-canonical trial.";
-  helper.add_option( seclabel, core::strngs::fsrtgr(), description.str() );
+  std::string description( "Probability this specie is used in a individual ion grand-canonical trial." );
+  sect.add_entry( { core::strngs::fsrtgr(), "number", ">0", freeonly, description } );
 }
 //  ratreg : ["fsfree" type only, required*, four numbers] Per-region probability
 //          this specie is inserted into the particular region in a grand-
@@ -99,12 +94,11 @@ helper.add_section( seclabel, "Specie input section definition" );
 //          if "fsrtgr" is set
 {
   std::stringstream description;
-  description << "[\"" << core::strngs::fsfree()
-              << " type only, required*, number > 0 for each region] Per-region probabilities "
+  description << "Per-region probabilities "
               << "this specie is inserted into the particular region in a grand-"
               << "canonical trial. \n(*)Required if this specie is part of a salt or "
               << "if " << core::strngs::fsrtgr() << " is set.";
-  helper.add_option( seclabel, core::strngs::fsrtrg(), description.str() );
+  sect.add_entry( { core::strngs::fsrtrg(), "list(number for each region)", ">0", freeonly, description.str() } );
 }
 //   n : [required for "fsmobl" and "fsflxd", optional for other types, integer > 0]
 //       Initial position definition flag. The lines following "fsn" contain
@@ -118,15 +112,12 @@ helper.add_section( seclabel, "Specie input section definition" );
 //       position is used as the localisation centre-point.
 {
   std::stringstream description;
-  description << "[required for \"" << core::strngs::fsmobl()
-              << "\", \"" << core::strngs::fsflxd() << "\" and \""
-              << core::strngs::fschon() << "\", optional for \"" << core::strngs::fsfree()
-              << "\", integer number > 0] Number of initial position definitions.\n"
+  description << "Number of initial particle position definitions.\n"
               << "The lines following \"" << core::strngs::fsn() << "\" contain "
               << "X number of lines of x,y,z etc information, where X is the argument "
               << "to \"" << core::strngs::fsn() << "\". This tag must appear after the \""
               << core::strngs::fstype() << "\" tag for \"" << core::strngs::fsmobl()
-              << "\" and \"" << core::strngs::fsflxd() << "\" species.  \""
+              << "\" and \"" << core::strngs::fsflxd() << "\" species. \""
               << core::strngs::fschon() << "\" or \"" << core::strngs::fsfree()
               << "\" require three numbers defining the initial "
               << "x,y,z position of the particle. \"" << core::strngs::fsmobl()
@@ -134,10 +125,13 @@ helper.add_section( seclabel, "Specie input section definition" );
               << "a fourth number with the localisation radius, and an optional three "
               << "numbers defining the x,y,z position of the localisation centre-point. "
               << "If these last three numbers are not included then the initial x,y,z "
-              << "position is used as the localisation centre-point.";
-  helper.add_option( seclabel, core::strngs::fsn(), description.str() );
+              << "position is used as the localisation centre-point. This "
+              << "option is required for \"" << core::strngs::fsmobl()
+              << "\", \"" << core::strngs::fsflxd() << "\" and \""
+              << core::strngs::fschon() << "\", optional for \""
+              << core::strngs::fsfree() << "\".";
+  sect.add_entry( { core::strngs::fsn(), "number", ">0", "required", description.str() } );
 }
-
 !!!203312.cpp!!!	do_read_entry(inout reader : input_base_reader) : bool
 // process entries
 
@@ -145,10 +139,10 @@ if( reader.name() == core::strngs::fsname() )
 {
   // --------------------
   // Specie label (required)
-  UTILITY_INPUT( not reader.value().empty(), "Specie label must have a value.", this->section_label() );
+  UTILITY_INPUT_OLD( not reader.value().empty(), "Specie label must have a value.", this->section_label() );
   std::string label( reader.dequote( reader.value() ) );
   boost::algorithm::trim( label );
-  UTILITY_INPUT( label.size() == 2, "Specie label must have exactly two letters.", this->section_label() );
+  UTILITY_INPUT_OLD( label.size() == 2, "Specie label must have exactly two letters.", this->section_label() );
   this->specie_obj_.set_label( label );
   missing_required_tags_.reset( SPECIE_LABEL );
 }
@@ -156,12 +150,12 @@ else if( reader.name() == core::strngs::fstype() )
 {
   // --------------------
   // Specie type
-  UTILITY_INPUT( not reader.value().empty(), "Specie type must have a value.", this->section_label() );
+  UTILITY_INPUT_OLD( not reader.value().empty(), "Specie type must have a value.", this->section_label() );
   bool valid_type;
   std::string value( reader.dequote( reader.value() ) );
   boost::algorithm::trim( value );
   const std::size_t subtype = this->specie_obj_.string_to_specie_type( value, valid_type );
-  UTILITY_INPUT( valid_type, "Specie type must be one of allowed values.", this->section_label() );
+  UTILITY_INPUT_OLD( valid_type, "Specie type must be one of allowed values.", this->section_label() );
   if( valid_type )
   {
     this->specie_obj_.set_type( subtype );
@@ -172,7 +166,7 @@ else if( reader.name() == core::strngs::fsrtsp() )
 {
   // --------------------
   // Specie relative rate (optional)
-  UTILITY_INPUT( not reader.value().empty(), "Relative rate parameter for a specie must have a value.", this->section_label() );
+  UTILITY_INPUT_OLD( not reader.value().empty(), "Relative rate parameter for a specie must have a value.", this->section_label() );
   double rate = 0.0;
   try
   {
@@ -181,16 +175,16 @@ else if( reader.name() == core::strngs::fsrtsp() )
   catch( std::bad_cast const& err )
   {
     const bool value_is_a_number = false;
-    UTILITY_INPUT( value_is_a_number, std::string( "Specie rate parameter not a number: " ) + err.what(), this->section_label() );
+    UTILITY_INPUT_OLD( value_is_a_number, std::string( "Specie rate parameter not a number: " ) + err.what(), this->section_label() );
   }
-  UTILITY_INPUT( rate >= 0.0, "Specie rate parameter must be greater or equal to zero.", this->section_label() );
+  UTILITY_INPUT_OLD( rate >= 0.0, "Specie rate parameter must be greater or equal to zero.", this->section_label() );
   this->specie_obj_.set_rate( rate );
 }
 else if( reader.name() == core::strngs::fsd() )
 {
   // --------------------
   // Specie diameter
-  UTILITY_INPUT( not reader.value().empty(), "Specie diameter must have a value.", this->section_label() );
+  UTILITY_INPUT_OLD( not reader.value().empty(), "Specie diameter must have a value.", this->section_label() );
   double diameter = 0.0;
   try
   {
@@ -199,9 +193,9 @@ else if( reader.name() == core::strngs::fsd() )
   catch( std::bad_cast const& err )
   {
     const bool value_is_a_number = false;
-    UTILITY_INPUT( value_is_a_number, std::string( "Specie diameter parameter not a number: " ) + err.what(), this->section_label() );
+    UTILITY_INPUT_OLD( value_is_a_number, std::string( "Specie diameter parameter not a number: " ) + err.what(), this->section_label() );
   }
-  UTILITY_INPUT( diameter >= 0.0, "Specie diameter must be greater than (or in special cases equal to) zero.", this->section_label() );
+  UTILITY_INPUT_OLD( diameter >= 0.0, "Specie diameter must be greater than (or in special cases equal to) zero.", this->section_label() );
   this->specie_obj_.set_radius( diameter / 2 );
   missing_required_tags_.reset( SPECIE_DIAMETER );
 }
@@ -209,7 +203,7 @@ else if( reader.name() == core::strngs::fsz() )
 {
   // --------------------
   // Specie valency
-  UTILITY_INPUT( not reader.value().empty(), "Specie valency must have a value.", this->section_label() );
+  UTILITY_INPUT_OLD( not reader.value().empty(), "Specie valency must have a value.", this->section_label() );
   double valency = 0.0;
   try
   {
@@ -218,7 +212,7 @@ else if( reader.name() == core::strngs::fsz() )
   catch( std::bad_cast const& err )
   {
     const bool value_is_a_number = false;
-    UTILITY_INPUT( value_is_a_number, std::string( "Specie valency parameter not a number: " ) + err.what(), this->section_label() );
+    UTILITY_INPUT_OLD( value_is_a_number, std::string( "Specie valency parameter not a number: " ) + err.what(), this->section_label() );
   }
   this->specie_obj_.set_valency( valency );
   missing_required_tags_.reset( SPECIE_VALENCY );
@@ -227,7 +221,7 @@ else if( reader.name() == core::strngs::fsctrg() )
 {
   // --------------------
   // Specie concentration
-  UTILITY_INPUT( not reader.value().empty(), "Specie concentration must have a value.", this->section_label() );
+  UTILITY_INPUT_OLD( not reader.value().empty(), "Specie concentration must have a value.", this->section_label() );
   double conc = 0.0;
   try
   {
@@ -236,16 +230,16 @@ else if( reader.name() == core::strngs::fsctrg() )
   catch( std::bad_cast const& err )
   {
     const bool value_is_a_number = false;
-    UTILITY_INPUT( value_is_a_number, std::string( "Specie concentration parameter not a number: " ) + err.what(), this->section_label() );
+    UTILITY_INPUT_OLD( value_is_a_number, std::string( "Specie concentration parameter not a number: " ) + err.what(), this->section_label() );
   }
-  UTILITY_INPUT( conc > 0.0, "Target concentration must be greater than zero.", this->section_label() );
+  UTILITY_INPUT_OLD( conc > 0.0, "Target concentration must be greater than zero.", this->section_label() );
   this->specie_obj_.set_concentration( conc );
 }
 else if( reader.name() == core::strngs::fschex() )
 {
   // --------------------
   // Specie chemical excess
-  UTILITY_INPUT( not reader.value().empty(), "Specie excess chemical potential must have a value.", this->section_label() );
+  UTILITY_INPUT_OLD( not reader.value().empty(), "Specie excess chemical potential must have a value.", this->section_label() );
   double chex = 0.0;
   try
   {
@@ -254,7 +248,7 @@ else if( reader.name() == core::strngs::fschex() )
   catch( std::bad_cast const& err )
   {
     const bool value_is_a_number = false;
-    UTILITY_INPUT( value_is_a_number, std::string( "Specie excess chemical potential parameter not a number: " ) + err.what(), this->section_label() );
+    UTILITY_INPUT_OLD( value_is_a_number, std::string( "Specie excess chemical potential parameter not a number: " ) + err.what(), this->section_label() );
   }
   this->specie_obj_.set_excess_potential( chex );
 }
@@ -271,21 +265,21 @@ else if( reader.name() == core::strngs::fsn() )
   catch( std::bad_cast const& err )
   {
     const bool value_is_a_number = false;
-    UTILITY_INPUT( value_is_a_number, std::string( "Predefined particle \"n\" value not a number: " ) + err.what(), this->section_label() );
+    UTILITY_INPUT_OLD( value_is_a_number, std::string( "Predefined particle \"n\" value not a number: " ) + err.what(), this->section_label() );
   }
   for( std::size_t cursor_ = 0; cursor_ != initial_count; ++cursor_ )
   {
     reader.next();
     std::string line_( reader.line() );
     std::vector< double > values;
-    UTILITY_INPUT( reader.read_as_floats( line_, values ), "Bad values in position data line", this->section_label() );
+    UTILITY_INPUT_OLD( reader.read_as_floats( line_, values ), "Bad values in position data line", this->section_label() );
     // Non-position line data should begin with a keyword so should give no values
-    UTILITY_INPUT( not values.empty(), "Fewer position data lines than expected", this->section_label() );
-    UTILITY_INPUT( values.size() == 3 or values.size() == 4 or values.size() == 7, "Position data should have 3, 4 or 7 values", this->section_label() );
+    UTILITY_INPUT_OLD( not values.empty(), "Fewer position data lines than expected", this->section_label() );
+    UTILITY_INPUT_OLD( values.size() == 3 or values.size() == 4 or values.size() == 7, "Position data should have 3, 4 or 7 values", this->section_label() );
     particle::coordinate pos { values[0], values[1], values[2] };
     if( values.size() > 3 )
     {
-      UTILITY_INPUT( values[3] > 0.0, "Localization radius must be greater than zero", this->section_label() );
+      UTILITY_INPUT_OLD( values[3] > 0.0, "Localization radius must be greater than zero", this->section_label() );
       particle::centroid cntr;
       cntr.r = values[3]; // = update radius
       if( values.size() == 7 )
@@ -314,8 +308,8 @@ else
 {
   // --------------------
   // Other (usually) evaluator specific specie parameters
-  UTILITY_INPUT( 0 != this->known_keywords_.count( reader.name() ), ( "keyword \""+reader.name()+"\" is not valid in specie section" ), this->section_label() );
-  UTILITY_INPUT( not this->specie_obj_.has_parameter( reader.name() ), ( "keyword \""+reader.name()+"\" appears more than once in the same specie section" ), this->section_label() );
+  UTILITY_INPUT_OLD( 0 != this->known_keywords_.count( reader.name() ), ( "keyword \""+reader.name()+"\" is not valid in specie section" ), this->section_label() );
+  UTILITY_INPUT_OLD( not this->specie_obj_.has_parameter( reader.name() ), ( "keyword \""+reader.name()+"\" appears more than once in the same specie section" ), this->section_label() );
   this->specie_obj_.set_parameter( reader.name(), reader.value() );
   // We leave the user's of these parameters to check whether all the
   // required parameters are present
@@ -338,7 +332,7 @@ if ( this->missing_required_tags_[ SPECIE_TYPE ] )
   // We allow only free/SOLUTE subtype to be deduced
 }
 
-UTILITY_INPUT( this->missing_required_tags_.none(), "Not all required tags were present.", this->section_label());
+UTILITY_INPUT_OLD( this->missing_required_tags_.none(), "Not all required tags were present.", this->section_label());
 
 this->manager_->add_specie( this->specie_obj_ );
 !!!944688.cpp!!!	do_reset() : void
