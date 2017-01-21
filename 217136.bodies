@@ -1,8 +1,5 @@
 class evaluator_test
 !!!848944.cpp!!!	evaluator_manager_lifetime() : void
-//std::map< std::string, std::string > params;
-std::stringstream store;
-std::stringstream log;
 {
   //  Constructor tests
   BOOST_CHECK( std::is_default_constructible< evaluator::evaluator_manager >::type {} );
@@ -11,6 +8,8 @@ std::stringstream log;
   BOOST_CHECK( ( not std::is_assignable< evaluator::evaluator_manager, evaluator::evaluator_manager >::type {} ) );
   BOOST_CHECK( not std::has_virtual_destructor< evaluator::evaluator_manager >::type {} );
 }
+BOOST_CHECK_EQUAL( 80.0, evaluator::evaluator_manager::standard_aqueous_permittivity() );
+BOOST_CHECK_EQUAL( 298.15, evaluator::evaluator_manager::standard_room_temperature() );
 {
   evaluator::evaluator_manager mgr;
   BOOST_CHECK_EQUAL( mgr.size(), 0 );
@@ -18,30 +17,100 @@ std::stringstream log;
   BOOST_CHECK_EQUAL( mgr.temperature(), evaluator::evaluator_manager::standard_room_temperature() );
   BOOST_CHECK( mgr.empty() );
 }
+!!!1793200.cpp!!!	evaluator_manager_methods_test() : void
+// methods to test
+//  * serialize
+//  * description
+//  * empty
+//  * get_evaluators
+//  on_conclude_trial
+//  * permittivity
+//  prepare
+//  * size
+//  * temperature
+//  * write_document
+//  compute_potential
+//  * build_input_delegater
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
 // Constructor test method
-const double tmpt{ 300.0 };
-const double perm{ 42.0 };
+const double tmpt { 300.5 };
+const double perm { 42.5 };
+std::stringstream store;
 {
-  // default
-  evaluator::evaluator_manager mgr;
-  mgr.permittivity( perm );
-  BOOST_CHECK_EQUAL( mgr.permittivity(), perm );
-  mgr.temperature( tmpt );
-  BOOST_CHECK_EQUAL( mgr.temperature(), tmpt );
+  // Before adding any evaluators changes
+  BOOST_CHECK_EQUAL( mngr->size(), 0ul );
+  BOOST_CHECK( mngr->empty() );
+  BOOST_CHECK( mngr->get_evaluators().empty() );
+  BOOST_CHECK_EQUAL( mngr->get_evaluators().size(), 0ul );
 
+  // default permittivity and temperature
+  BOOST_CHECK_EQUAL( mngr->permittivity(), evaluator::evaluator_manager::standard_aqueous_permittivity() );
+  BOOST_CHECK_EQUAL( mngr->temperature(), evaluator::evaluator_manager::standard_room_temperature() );
+  mngr->permittivity( perm );
+  BOOST_CHECK_EQUAL( mngr->permittivity(), perm );
+  mngr->temperature( tmpt );
+  BOOST_CHECK_EQUAL( mngr->temperature(), tmpt );
+
+  core::input_delegater dg( 1 );
+  evaluator::evaluator_manager::build_input_delegater( mngr, dg );
+  BOOST_REQUIRE( dg.has_section( "evaluator" ) );
+  {
+    core::input_help hlpr;
+    dg.get_documentation( hlpr );
+    {
+      std::stringstream ss;
+      hlpr.write( ss );
+      const std::string hstr( ss.str() );
+      BOOST_CHECK( hstr.find( "coulomb" ) < hstr.size() );
+      BOOST_CHECK( hstr.find( "lennard-jones" ) < hstr.size() );
+      BOOST_CHECK( hstr.find( "localize" ) < hstr.size() );
+      //std::cout << hstr;
+    }
+  }
+  {
+    std::string canon_input( "evaluator\ntype \"coulomb\"\nend\n\n" );
+
+    core::input_preprocess reader;
+    reader.add_buffer( "dummy", canon_input );
+    BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+    BOOST_REQUIRE_EQUAL( mngr->size(), 1ul );
+    BOOST_CHECK_EQUAL( mngr->get_evaluators()[ 0 ].type_label(), "coulomb" );
+  }
+  {
+    std::stringstream ss;
+    mngr->description( ss );
+    const std::string dstr( ss.str() );
+    BOOST_CHECK( dstr.find( "coulomb" ) < dstr.size() );
+    BOOST_CHECK( dstr.find( "300.5" ) < dstr.size() );
+    BOOST_CHECK( dstr.find( "42.5" ) < dstr.size() );
+    //std::cout << dstr;
+  }
   boost::archive::text_oarchive oa( store );
-  oa << mgr;
+  oa << mngr;
 }
 // Serialization test method.
 {
-  evaluator::evaluator_manager mgr;
+  boost::shared_ptr< evaluator::evaluator_manager > mngr;
 
   boost::archive::text_iarchive ia( store );
-  ia >> mgr;
-  BOOST_CHECK_EQUAL( mgr.size(), 0 );
-  BOOST_CHECK( mgr.empty() );
-  BOOST_CHECK_EQUAL( mgr.permittivity(), perm );
-  BOOST_CHECK_EQUAL( mgr.temperature(), tmpt );
+  ia >> mngr;
+
+  BOOST_CHECK_EQUAL( mngr->size(), 1 );
+  BOOST_CHECK( not mngr->empty() );
+  BOOST_CHECK_EQUAL( mngr->permittivity(), perm );
+  BOOST_CHECK_EQUAL( mngr->temperature(), tmpt );
+  BOOST_CHECK_EQUAL( mngr->get_evaluators()[ 0 ].type_label(), "coulomb" );
+
+  std::string canon( "evaluator\ntype coulomb\nend\n" );
+
+  core::input_document wrtr( 1ul );
+  mngr->write_document( wrtr );
+  std::stringstream idoc;
+  wrtr.write( idoc );
+  const std::string sdoc( idoc.str() );
+  BOOST_CHECK_LE( sdoc.find( canon ), sdoc.size() );
 }
 !!!1370032.cpp!!!	evaluator_definition_lifetime() : void
 {

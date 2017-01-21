@@ -18,14 +18,20 @@ for (auto const& evltr : this->evaluators_)
 }
 return result;
 !!!841264.cpp!!!	description(inout os : ostream) : void
-if ( not this->evaluators_.empty() )
+os << core::strngs::horizontal_bar() << "\n";
+os << "ENERGY CALCULATIONS:\n";
+os << "--------------------\n";
+os << "           Temperature: " << this->temperature_ << " (Kelvin)\n";
+os << " Permittivity of media: " << this->permittivity_ << " (relative to vacuum)\n";
+if( not this->evaluators_.empty() )
 {
-   os << core::strngs::horizontal_bar () << "\n";
-   for (auto const& evltr : this->evaluators_)
-   {
-      evltr.description(os);
-   }
+  os << core::strngs::horizontal_bar() << "\n";
+  for( auto const& evltr : this->evaluators_ )
+  {
+    evltr.description( os );
+  }
 }
+
 !!!841264.python!!!	description(inout os : ostream) : void
 from constants import constants
 constants.description( os )
@@ -76,3 +82,14 @@ for(auto const& evltr : this->evaluators_)
 {
    evltr.write_document( wr );
 }
+!!!1793072.cpp!!!	build_input_delegater(inout eman : evaluator_manager, inout delegate : input_delegater) : void
+//////////////////
+// Evaluator types
+boost::shared_ptr< evaluator_meta > emeta { new evaluator_meta( eman ) };
+// Lennard Jones
+lennard_jones::add_definition( *emeta );
+// Coulomb electrostatics
+coulomb::add_definition( *emeta );
+// Harmonic localization
+localizer::add_definition( *emeta );
+delegate.add_input_delegate( emeta );

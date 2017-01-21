@@ -1,0 +1,34 @@
+class simulation_manager
+!!!1773104.cpp!!!	run(inout sim : simulation) : void
+UTILITY_REQUIRE( not this->species_.empty(), "Can not run simulation with no species" );
+UTILITY_REQUIRE( this->ensemble_, "Can not run simulation with particles" );
+UTILITY_REQUIRE( not this->choosers_.empty(), "Can not run simulation with no trials" );
+UTILITY_REQUIRE( not this->evaluators_.empty(), "Can not run simulation with no energy evaluators" );
+UTILITY_REQUIRE(not this->reporter_->empty(), "Can not run simulation with no observables" );
+
+this->do_run( oslog );
+!!!1773104.python!!!	run(inout sim : simulation) : void
+# do thermalization
+self.run_loop(self.equilibration_interval_, oslog)
+print >>oslog, "\nEND OF THERMALISATION\n"
+self.run_loop(self.production_interval_, oslog)
+print >>oslog, "\nEND OF PRODUCTION\n"
+!!!1772976.cpp!!!	do_run() : void
+// do thermalization
+this->run_loop(this->equilibration_interval_, oslog);
+oslog << "\nEND OF THERMALISATION\n\n";
+// do main simulation
+this->run_loop(this->production_interval_, oslog);
+oslog << "\nEND OF PRODUCTION\n\n";
+!!!1762864.python!!!	do_generate_simulation(inout oslog : ostream) : grid_generator
+from constants import constants
+## Generate a list of trial types
+self.update_choices()
+sumconc = self.ionic_strength()
+# Use a PBC system.
+from periodic_system import periodic_system
+self.cell_region_ = periodic_system(self.target_particles_ * constants.to_SI() / sumconc)
+# Generate initial ensemble on a grid
+gridder = self.cell_region_.make_grid_generator( self.target_particles_, self.get_random() ) 
+self.ensemble_.generate_ensemble( gridder, self.target_particles_, self.get_random() )
+pass

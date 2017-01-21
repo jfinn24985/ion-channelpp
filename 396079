@@ -1,6 +1,6 @@
 format 75
 "observable" // observable
-  revision 221
+  revision 222
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -416,7 +416,7 @@ ${docstring}${body}
       end
 
       operation 679472 "remove_sample"
-	public explicit_return_type "void"
+	private explicit_return_type "void"
 	nparams 1
 	  param inout name "var" type class_ref 1144367 // base_observable
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} > & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
@@ -439,7 +439,7 @@ ${docstring}${body}
       end
 
       operation 650672 "remove_tracked"
-	public explicit_return_type "void"
+	private explicit_return_type "void"
 	nparams 1
 	  param inout name "var" type class_ref 353840 // tracked_observable
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} > & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
@@ -534,8 +534,11 @@ ${docstring}${body}
       operation 606256 "get_sink"
 	const public return_type class_ref 313520 // base_sink
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} & ${class}::${name}${(}${)}${const}${volatile}${throw}
 {
+  UTILITY_REQUIRE( this->has_sink(), \"Cannot retrieve sink object before it has been set.\" );
   return *(this->sink_);
 }
 "
@@ -545,7 +548,9 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Get reference to the data output sink"
+	comment " Get reference to the data output sink
+
+ \\pre has_sink"
       end
 
       operation 672304 "get_sample"
@@ -636,6 +641,23 @@ ${docstring}${body}
 	comment "Attempt to retrieve a variable by label.
 
 /pre has_tracked"
+      end
+
+      operation 1793584 "has_sink"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return ( this->sink_.get() != nullptr );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Has the output sink been set?"
       end
 
       operation 672432 "has_sample"
@@ -815,6 +837,28 @@ with the given name or \"end\".
 
 /nothrow
 "
+      end
+
+      operation 1793328 "build_input_delegater"
+	class_operation public explicit_return_type "void"
+	nparams 2
+	  param inout name "rman" type class_ref 340656 // report_manager
+	  param inout name "delegate" type class_ref 1012655 // input_delegater
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}boost::shared_ptr< ${t0} > ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Adds factory methods and input parsers for all the types that can be instantiated from 
+ the input file."
       end
     end
 
@@ -1205,8 +1249,7 @@ ${docstring}${body}
 	nparams 0
 	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
 "
-	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
-{}
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} = default;
 "
 	
 	
@@ -7949,6 +7992,15 @@ ${namespace_end}
 ${includes}
 // Manual includes
 #include \"core/strngs.hpp\"
+#include \"observable/acceptance_observable.hpp\"
+#include \"observable/density_zaxis.hpp\"
+#include \"observable/d3_distribution.hpp\"
+#include \"observable/metropolis_sampler.hpp\"
+#include \"observable/rdf_sampler.hpp\"
+#include \"observable/sampler_meta.hpp\"
+#include \"observable/specie_count.hpp\"
+#include \"observable/specie_region_count.hpp\"
+#include \"observable/widom.hpp\"
 // -
 
 ${namespace_start}

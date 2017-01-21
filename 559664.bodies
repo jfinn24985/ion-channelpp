@@ -201,22 +201,136 @@ catch( std::exception const& err )
   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
 }
 !!!1348400.cpp!!!	report_manager_lifetime_test() : void
-//XX{
-//XX  // Static Lifetime method tests: virtual pattern
-//XX
-//XX  BOOST_CHECK( not std::is_default_constructible< observable::report_manager >::type{} );
-//XX  BOOST_CHECK( not std::is_copy_constructible< observable::report_manager >::type{} );
-//XX  BOOST_CHECK( not std::is_move_constructible< observable::report_manager >::type{} );
-//XX  BOOST_CHECK( ( not std::is_assignable< observable::report_manager, observable::report_manager >::type{} ) );
-//XX  BOOST_CHECK( not std::has_virtual_destructor< observable::report_manager >::type{} );
-//XX}
-//XX{
-//XX  // default ctor
-//XX  observable::report_manager tmp;
-//XX
-//XX  BOOST_CHECK( tmp.empty() );
-//XX  BOOST_CHECK_EQUAL( tmp.size(), 0ul );
-//XX}
+{
+  // Static Lifetime method tests: no copy / non-virtual
+  BOOST_CHECK( std::is_default_constructible< observable::report_manager >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< observable::report_manager >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< observable::report_manager >::type{} );
+  BOOST_CHECK( ( not std::is_assignable< observable::report_manager, observable::report_manager >::type{} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< observable::report_manager >::type{} );
+}
+{
+  // default ctor
+  observable::report_manager tmp;
+
+  BOOST_CHECK( tmp.empty() );
+  BOOST_CHECK( not tmp.has_sink() );
+  BOOST_CHECK_EQUAL( tmp.size(), 0ul );
+}
+!!!1793456.cpp!!!	report_manager_methods_test() : void
+// Methods tested
+//  * build_input_delegate
+//  * description
+//  * empty
+//  * get_sink
+//  * get_sample
+//  * get_tracked
+//  * has_sink
+//  * has_sample
+//  * has_tracked
+//  * set_sink
+//  * serialize
+//  * size
+//  * write_document
+// Untested
+//  remove_sample/remove_tracked
+// Methods not tested (all forwarding methods to sampler objects)
+//  on_trial_end
+//  on_sample
+//  on_report
+//  prepare
+std::stringstream store;
+{
+  boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
+  BOOST_CHECK( oman->empty() );
+  BOOST_CHECK_EQUAL( oman->size(), 0ul );
+
+  {
+    boost::shared_ptr< utility::base_sink > snk( new utility::memory_sink );
+    BOOST_CHECK( not oman->has_sink() );
+    oman->set_sink( snk );
+    BOOST_CHECK( oman->has_sink() );
+    BOOST_CHECK( &oman->get_sink() == snk.get() );
+  }
+
+  {
+    core::input_delegater dg( 1 );
+    observable::report_manager::build_input_delegater( oman, dg );
+    BOOST_REQUIRE( dg.has_section( "sampler" ) );
+    {
+      core::input_help hlpr;
+      dg.get_documentation( hlpr );
+      {
+        std::stringstream ss;
+        hlpr.write( ss );
+        const std::string hstr( ss.str() );
+        BOOST_CHECK( hstr.find( "trial-rate" ) < hstr.size() );
+        BOOST_CHECK( hstr.find( "population-zaxis" ) < hstr.size() );
+        BOOST_CHECK( hstr.find( "3d-distribution" ) < hstr.size() );
+        BOOST_CHECK( hstr.find( "metropolis" ) < hstr.size() );
+        BOOST_CHECK( hstr.find( "rdf-specie" ) < hstr.size() );
+        BOOST_CHECK( hstr.find( "specie-count" ) < hstr.size() );
+        BOOST_CHECK( hstr.find( "specie-region-count" ) < hstr.size() );
+        BOOST_CHECK( hstr.find( "widom" ) < hstr.size() );
+        //std::cout << hstr << "\n";
+      }
+    }
+
+    // Use Widom = tracked, specie_count = sample
+    /////////////////////////////
+    std::string canon_input( "sampler\niwidom 100\ntype widom\nspecie Na Cl\nend\n\nsampler\ntype specie-count\nend\n\n" );
+    core::input_preprocess reader;
+    reader.add_buffer( "dummy", canon_input );
+    try
+    {
+      dg.read_input( reader );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( "expected no exception from \"dg.read_input( reader )\"" );
+    }
+  }
+  BOOST_CHECK( not oman->empty() );
+  BOOST_CHECK_EQUAL( oman->size(), 2ul );
+  BOOST_CHECK( oman->has_tracked( "widom" ) );
+  BOOST_CHECK( oman->has_sample( "specie-count" ) );
+  boost::archive::text_oarchive oa( store );
+  oa << oman;
+}
+{
+  boost::shared_ptr< observable::report_manager > oman;
+
+  boost::archive::text_iarchive ia( store );
+  ia >> oman;
+  BOOST_CHECK( not oman->empty() );
+  BOOST_CHECK_EQUAL( oman->size(), 2ul );
+  BOOST_CHECK( oman->has_tracked( "widom" ) );
+  BOOST_CHECK( oman->has_sample( "specie-count" ) );
+  BOOST_CHECK_EQUAL( oman->get_tracked( "widom" )->get_label(), "widom" );
+  BOOST_CHECK_EQUAL( oman->get_sample( "specie-count" )->get_label(), "specie-count" );
+
+  {
+    std::stringstream ss;
+    oman->description( ss );
+    const std::string dstr( ss.str() );
+    //std::cout << dstr << "\n";
+    BOOST_CHECK( dstr.find( "specie-count" ) < dstr.size() );
+    BOOST_CHECK( dstr.find( "widom" ) < dstr.size() );
+    BOOST_CHECK( dstr.find( "loop : 100" ) < dstr.size() );
+  }
+  {
+    std::string canon( "sampler\niwidom 100\nspecie Na Cl\ntype widom\nend\n\nsampler\ntype specie-count\nend\n" );
+    core::input_document wrtr( 1ul );
+    oman->write_document( wrtr );
+    std::stringstream idoc;
+    wrtr.write( idoc );
+    const std::string sdoc( idoc.str() );
+    //std::cout << sdoc << "\n";
+    BOOST_CHECK_LE( sdoc.find( canon ), sdoc.size() );
+  }
+}
+
+
 !!!1525808.cpp!!!	acceptance_observable_lifetime_test() : void
 {
   // Static Lifetime method tests: virtual pattern

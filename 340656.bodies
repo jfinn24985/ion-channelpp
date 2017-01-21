@@ -53,6 +53,9 @@ UTILITY_REQUIRE(this->variables_.end() != itr, "Attempt to remove sample variabl
 UTILITY_REQUIRE(itr->get() == var.get(), "Variable in report manager with matching name does not have the same pointer.");
 this->variables_.erase(itr);
 !!!605744.cpp!!!	description(inout out : ostream) : void
+out << core::strngs::horizontal_bar() << "\n";
+out << "DATA ACCUMULATORS:\n";
+out << "------------------\n";
 for (auto & obs : this->variables_)
 {
   obs->description(out);
@@ -118,3 +121,33 @@ return std::find_if(this->variables_.begin(),
         {
           return item->get_label() == name;
         });
+!!!1793328.cpp!!!	build_input_delegater(inout rman : report_manager, inout delegate : input_delegater) : void
+///////////////////
+// Observable types
+boost::shared_ptr< observable::sampler_meta > ometa { new observable::sampler_meta( rman ) };
+
+// Monitor trial occurence and success
+observable::acceptance_observable::add_definition( *ometa );
+
+// Density histogram in zaxis
+observable::density_zaxis::add_definition( *ometa );
+
+// 3D density histogram
+observable::d3_distribution::add_definition( *ometa );
+
+// Monitor trial acceptance and energy.
+observable::metropolis_sampler::add_definition( *ometa );
+
+// Radial distribution histograms
+observable::rdf_sampler::add_definition( *ometa );
+
+// Specie particle count average
+observable::specie_count::add_definition( *ometa );
+
+// Specie particle count per region average
+observable::specie_region_count::add_definition( *ometa );
+
+// Whole-cell potential energy average using Widom method
+observable::widom::add_definition( *ometa );
+
+delegate.add_input_delegate( ometa );
