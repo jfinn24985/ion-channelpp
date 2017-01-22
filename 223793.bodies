@@ -1274,7 +1274,6 @@ std::stringstream store;
 }
 
 !!!975920.cpp!!!	particle_manager_lifetime_test() : void
-
 {
   // Test is canonical pattern
   BOOST_CHECK( std::is_default_constructible< particle::particle_manager >::type {} );
@@ -1287,56 +1286,206 @@ std::stringstream store;
   // default ctor.
   particle::particle_manager mgr;
   BOOST_CHECK_EQUAL( mgr.charge(), 0.0 );
-  BOOST_CHECK_EQUAL( mgr.get_ensemble().count(), 0 );
-  BOOST_CHECK_EQUAL( mgr.specie_count(), 0 );
+  BOOST_CHECK_EQUAL( mgr.get_ensemble().count(), 0ul );
+  BOOST_CHECK_EQUAL( mgr.specie_count(), 0ul );
+  BOOST_CHECK_EQUAL( mgr.get_species().size(), 0ul );
+  BOOST_CHECK_EQUAL( mgr.target_ionic_strength(), 0.0 );
+  BOOST_CHECK_EQUAL( mgr.target_count(), 0ul );
+  BOOST_CHECK_EQUAL( mgr.ionic_strength( 100.0 ), 0.0 );
+  try
+  {
+    double vol = mgr.target_volume();
+    BOOST_CHECK_EQUAL( vol, 0.0 );
+    BOOST_ERROR( "expected \"mgr.target_volume()\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Cannot calculate target volume without a target concentration" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"mgr.target_volume()\" was not expected type: " ) + err.what() );
+  }
+  {
+    const std::string canon( "----------------------------------------------------------------------\nParticle system details.\n------------------------\n          specie count : 0\n target particle count : 0\n----------------------------------------------------------------------\nensemble\n   particle # :0\n         size :0" );
+    std::stringstream ss;
+    mgr.description( ss );
+    const std::string dstr( ss.str() );
+    //std::cout << "{" << dstr << "}\n";
+    BOOST_CHECK( dstr.find( canon ) < dstr.size() );
+  }
+  {
+    const std::string canon( "fileversion 1\n\n" );
+    core::input_document wrtr( 1ul );
+    mgr.write_document( wrtr );
+    std::stringstream idoc;
+    wrtr.write( idoc );
+    const std::string sdoc( idoc.str() );
+    //std::cout << "[" << sdoc << "]\n";
+    BOOST_CHECK( sdoc.find( canon ) < sdoc.size() );
+  }
 }
+!!!968112.cpp!!!	particle_manager_methods_test() : void
+// Methods tested
+//  * serialize
+//  * add_specie
+//  * add_predefined_particles
+//  * build_input_delegater
+//  * charge
+//  * description
+//  * get_ensemble
+//  * get_specie
+//  * get_specie_key
+//  * get_species
+//  * has_specie
+//  * ionic_strength
+//  * set_target_count
+//  * specie_count
+//  * target_ionic_strength
+//  * target_count
+//  * write_document
+// Tested elsewhere
+//  commit
+//
 
 auto check_manager = []( particle::particle_manager const& mgr )->void
 {
-  BOOST_REQUIRE_EQUAL( mgr.specie_count(), 1 );
-  BOOST_REQUIRE_EQUAL( mgr.get_ensemble().count(), 1 );
-  BOOST_CHECK_EQUAL( mgr.get_ensemble().specie_count( 0 ), 1 );
-  particle::coordinate pos( 0.3, 0.1, 0.4 );
-  BOOST_CHECK_EQUAL( mgr.get_ensemble().position( 0 ), pos );
+  const particle::coordinate pos0( 0.3, 0.1, 0.4 );
+  const particle::coordinate pos1( 2.0, 0.0, 0.0 );
+  const particle::coordinate pos2( 0.0, 2.0, 0.0 );
+  const particle::coordinate pos3( 0.0, 0.0, 2.0 );
+  const particle::centroid ctr0( 1.0, 0.2, 0.0, 3.4 );
+  const particle::coordinate pos4( 1.3, 1.1, 1.4 );
+  BOOST_CHECK_EQUAL( mgr.specie_count(), 3 );
+  BOOST_CHECK_EQUAL( mgr.get_species().size(), 3 );
+  BOOST_CHECK_EQUAL( mgr.get_ensemble().count(), 5 );
+  BOOST_CHECK_EQUAL( mgr.charge(), -1.0 );
+  BOOST_CHECK_EQUAL( mgr.target_count(), 100ul );
   BOOST_CHECK( mgr.has_specie( "PC" ) );
+  BOOST_CHECK( mgr.has_specie( "Na" ) );
+  BOOST_CHECK( mgr.has_specie( "Cl" ) );
+  BOOST_CHECK_EQUAL( mgr.get_specie_key( "PC" ), 0ul );
+  BOOST_CHECK_EQUAL( mgr.get_specie_key( "Na" ), 1ul );
+  BOOST_CHECK_EQUAL( mgr.get_specie_key( "Cl" ), 2ul );
   BOOST_CHECK_EQUAL( mgr.get_specie( 0 ).label(), "PC" );
-  BOOST_CHECK_EQUAL( mgr.get_specie( 0 ).valency(), 2.0 );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 1 ).label(), "Na" );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 2 ).label(), "Cl" );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 0 ).valency(), 1.0 );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 1 ).valency(), 1.0 );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 2 ).valency(), -1.0 );
+  BOOST_CHECK_EQUAL( mgr.get_species().at( 0 ).label(), "PC" );
+  BOOST_CHECK_EQUAL( mgr.get_species().at( 1 ).label(), "Na" );
+  BOOST_CHECK_EQUAL( mgr.get_species().at( 2 ).label(), "Cl" );
+  BOOST_CHECK( mgr.get_specie( 0 ).is_mobile() );
+  BOOST_CHECK( mgr.get_specie( 1 ).is_solute() );
+  BOOST_CHECK( mgr.get_specie( 2 ).is_solute() );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 0 ).get_position_size(), 1 );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 1 ).get_position_size(), 1 );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 2 ).get_position_size(), 3 );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 0 ).get_localization_size(), 1 );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 1 ).get_localization_size(), 0 );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 2 ).get_localization_size(), 0 );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 0 ).get_position( 0 ), pos0 );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 0 ).get_localization_data( 0 ), ctr0 );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 1 ).get_position( 0 ), pos4 );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 2 ).get_position( 0 ), pos1 );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 2 ).get_position( 1 ), pos2 );
+  BOOST_CHECK_EQUAL( mgr.get_specie( 2 ).get_position( 2 ), pos3 );
+
+  BOOST_CHECK_EQUAL( mgr.get_ensemble().specie_count( 0 ), 1 );
+  BOOST_CHECK_EQUAL( mgr.get_ensemble().specie_count( 1 ), 1 );
+  BOOST_CHECK_EQUAL( mgr.get_ensemble().specie_count( 2 ), 3 );
+  BOOST_CHECK_EQUAL( mgr.get_ensemble().position( 0 ), pos0 );
+  BOOST_CHECK_EQUAL( mgr.get_ensemble().position( 1 ), pos4 );
+  BOOST_CHECK_EQUAL( mgr.get_ensemble().position( 2 ), pos1 );
+  BOOST_CHECK_EQUAL( mgr.get_ensemble().position( 3 ), pos2 );
+  BOOST_CHECK_EQUAL( mgr.get_ensemble().position( 4 ), pos3 );
 };
+
 std::stringstream store;
 {
   boost::shared_ptr< particle::particle_manager > mgr( new particle::particle_manager );
-  core::input_delegater dg( 1 );
   {
-    boost::shared_ptr< core::input_base_meta > m( new particle::specie_meta( mgr ) );
-    dg.add_input_delegate( m );
+    // Use input file to add data to manager
+    core::input_delegater dg( 1 );
+    particle::particle_manager::build_input_delegater( mgr, dg );
+    BOOST_REQUIRE( dg.has_section( "specie" ) );
+    std::string canon_input( "specie\ntype mob\nname \"PC\"\nz 1.0\nd 1.1\nn 1\n0.3 0.1 0.4 1.0 0.2 0.0 3.4\nend\n\nspecie\ntype free\nname \"Na\"\nz 1.0\nd 1.0\nn 1\n1.3 1.1 1.4\nctarg 0.1\nend\n\n" );
+    core::input_preprocess reader;
+    reader.add_buffer( "dummy", canon_input );
+    BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+    core::input_help hlpr;
+    dg.get_documentation( hlpr );
+    std::stringstream ss;
+    hlpr.write( ss );
+    const std::string hstr( ss.str() );
+    //std::cout << hstr << "\n";
+    BOOST_CHECK( hstr.find( "  specie\n" ) < hstr.size() );
+    BOOST_CHECK( hstr.find( "\n    chex\n" ) < hstr.size() );
+    BOOST_CHECK( hstr.find( "\n    d\n" ) < hstr.size() );
+    BOOST_CHECK( hstr.find( "\n    n\n" ) < hstr.size() );
+    BOOST_CHECK( hstr.find( "\n    name\n" ) < hstr.size() );
+    BOOST_CHECK( hstr.find( "\n    ratexc\n" ) < hstr.size() );
+    BOOST_CHECK( hstr.find( "\n    ratgr\n" ) < hstr.size() );
+    BOOST_CHECK( hstr.find( "\n    ratmov\n" ) < hstr.size() );
+    BOOST_CHECK( hstr.find( "\n    ratreg\n" ) < hstr.size() );
+    BOOST_CHECK( hstr.find( "\n    ratspc\n" ) < hstr.size() );
+    BOOST_CHECK( hstr.find( "\n    type\n" ) < hstr.size() );
+    BOOST_CHECK( hstr.find( "mob|flex|chonly|free" ) < hstr.size() );
+    BOOST_CHECK( hstr.find( "\n    z\n" ) < hstr.size() );
   }
-  // Use input file to add data to manager
-  std::string canon_input( "specie\ntype mob\nname \"PC\"\nz 2.0\nd 1.1\nn 1\n0.3 0.1 0.4 1.0 0.2 0.0 3.4\nend\n\n" );
-  core::input_preprocess reader;
-  reader.add_buffer( "dummy", canon_input );
-  BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+  BOOST_REQUIRE_EQUAL( mgr->specie_count(), 2 );
+  BOOST_REQUIRE_EQUAL( mgr->get_species().size(), 2 );
+  BOOST_REQUIRE( mgr->has_specie( "PC" ) );
+  BOOST_REQUIRE( mgr->has_specie( "Na" ) );
+  BOOST_REQUIRE_EQUAL( mgr->get_specie_key( "PC" ), 0ul );
+  BOOST_REQUIRE_EQUAL( mgr->get_specie_key( "Na" ), 1ul );
+  BOOST_REQUIRE_EQUAL( mgr->get_specie( 0 ).get_position_size(), 1 );
+  BOOST_REQUIRE_EQUAL( mgr->get_specie( 0 ).get_localization_size(), 1 );
+  BOOST_REQUIRE_EQUAL( mgr->get_specie( 1 ).get_position_size(), 1 );
+  BOOST_REQUIRE_EQUAL( mgr->get_specie( 1 ).get_localization_size(), 0 );
+  BOOST_REQUIRE_EQUAL( mgr->get_ensemble().count(), 0 );
+  BOOST_REQUIRE_EQUAL( mgr->charge(), 0.0 );
+
+  // Manually build and add specie
+  {
+    const particle::coordinate pos1( 2.0, 0.0, 0.0 );
+    const particle::coordinate pos2( 0.0, 2.0, 0.0 );
+    const particle::coordinate pos3( 0.0, 0.0, 2.0 );
+
+    particle::specie var;
+    var.set_radius( 0.9 );
+    var.set_rate( 0.5 );
+    var.set_valency( -1.0 );
+    var.set_concentration( 0.1 );
+    var.set_label( "Cl" );
+    var.append_position( pos1 );
+    var.append_position( pos2 );
+    var.append_position( pos3 );
+    var.set_type( particle::specie::SOLUTE );
+    mgr->add_specie( var );
+  }
+  BOOST_REQUIRE( mgr->has_specie( "Cl" ) );
+  BOOST_REQUIRE_EQUAL( mgr->get_specie( 2 ).get_position_size(), 3 );
+  BOOST_REQUIRE_EQUAL( mgr->get_specie( 2 ).get_localization_size(), 0 );
+
+  BOOST_REQUIRE_EQUAL( mgr->get_ensemble().count(), 0 );
+  // copy position from species to ensemble
   BOOST_REQUIRE_NO_THROW( mgr->add_predefined_particles() );
+  BOOST_REQUIRE_EQUAL( mgr->get_ensemble().count(), 5 );
+  BOOST_REQUIRE_EQUAL( mgr->charge(), -1.0 );
+
+  BOOST_REQUIRE_EQUAL( mgr->target_count(), 0ul );
+  BOOST_REQUIRE_EQUAL( mgr->target_ionic_strength(), 0.2 );
+  mgr->set_target_count( 100ul );
+  BOOST_REQUIRE_EQUAL( mgr->target_count(), 100ul );
+  BOOST_CHECK_CLOSE( mgr->target_volume(), 830269.63836775627, 0.000000001 );
+  BOOST_CHECK_CLOSE( mgr->ionic_strength( 50.0 ), 132.84314213884102, 0.0000000001 );
 
   check_manager( *mgr );
-  // copy ctor
-  {
-    particle::particle_manager mgr1( *mgr );
-    check_manager( mgr1 );
-  }
-  // move ctor
-  {
-    particle::particle_manager mgr2( *mgr );
-    particle::particle_manager mgr1( std::move( mgr2 ) );
-    check_manager( mgr1 );
-  }
-
-  // assignment
-  {
-    particle::particle_manager mgr1;
-    BOOST_REQUIRE_EQUAL( mgr1.specie_count(), 0 );
-    mgr1 = *mgr;
-    check_manager( mgr1 );
-  }
 
   // Test serialization
   boost::archive::text_oarchive oa( store );
@@ -1349,79 +1498,29 @@ std::stringstream store;
   boost::archive::text_iarchive ia( store );
   // get class instance from archive
   ia >> mgr;
-  BOOST_REQUIRE( mgr ); 
+  BOOST_REQUIRE( mgr );
   check_manager( *mgr );
+
+  {
+    std::string canon( "----------------------------------------------------------------------\nParticle system details.\n------------------------\n          specie count : 3\n target particle count : 100\n----------------------------------------------------------------------\nspecie\n        label :PC\n       radius :0.55\n         rate :0\n      valency :1\n  excess c.p. :0\n   chem. pot. :0\n target conc. :0\n         type :mob\nspecie\n        label :Na\n       radius :0.5\n         rate :0\n      valency :1\n  excess c.p. :0\n   chem. pot. :-9.71748\n target conc. :0.1\n         type :free\nspecie\n        label :Cl\n       radius :0.9\n         rate :0.5\n      valency :-1\n  excess c.p. :0\n   chem. pot. :-9.71748\n target conc. :0.1\n         type :free\n----------------------------------------------------------------------\nensemble\n   particle # :5\n         size :5\n    0   0.30000   0.10000   0.40000  0\n    1   1.30000   1.10000   1.40000  1\n    2   2.00000   0.00000   0.00000  2\n    3   0.00000   2.00000   0.00000  2\n    4   0.00000   0.00000   2.00000  2\n" );
+    std::stringstream ss;
+    mgr->description( ss );
+    const std::string dstr( ss.str() );
+    //std::cout << dstr << "\n";
+    BOOST_CHECK( dstr.find( canon ) < dstr.size() );
+  }
+
+  {
+    std::string canon( "specie\nchex 0\nctarg 0\nd 1.100000\nn 1\n0.3 0.1 0.4 1 0.2 0 3.4\nname \"PC\"\nrate 0\ntype mob\nz 1.000000\nend\n\nspecie\nchex 0\nctarg 0.100000\nd 1.000000\nn 1\n1.3 1.1 1.4\nname \"Na\"\nrate 0\ntype free\nz 1.000000\nend\n\nspecie\nchex 0\nctarg 0.100000\nd 1.800000\nn 3\n2 0 0\n0 2 0\n0 0 2\nname \"Cl\"\nrate 0.500000\ntype free\nz -1\nend" );
+    core::input_document wrtr( 1ul );
+    mgr->write_document( wrtr );
+    std::stringstream idoc;
+    wrtr.write( idoc );
+    const std::string sdoc( idoc.str() );
+    //std::cout << sdoc << "\n";
+    BOOST_CHECK( sdoc.find( canon ) < sdoc.size() );
+  }
 }
-
-!!!968112.cpp!!!	particle_manager_methods_test() : void
-boost::shared_ptr< particle::particle_manager > mgr( new particle::particle_manager );
-
-// Use input file to add data to manager
-core::input_delegater dg( 1 );
-particle::particle_manager::build_input_delegater( mgr, dg );
-BOOST_REQUIRE( dg.has_section( "specie" ) );
-std::string canon_input( "specie\ntype mob\nname \"PC\"\nz 2.0\nd 1.1\nn 1\n0.3 0.1 0.4 1.0 0.2 0.0 3.4\nend\n\n" );
-const particle::coordinate pos0( 0.3, 0.1, 0.4 );
-const particle::coordinate pos1( 2.0, 0.0, 0.0 );
-const particle::coordinate pos2( 0.0, 2.0, 0.0 );
-const particle::coordinate pos3( 0.0, 0.0, 2.0 );
-const particle::centroid ctr0( 1.0, 0.2, 0.0, 3.4 );
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-
-BOOST_REQUIRE_EQUAL( mgr->specie_count(), 1 );
-BOOST_REQUIRE( mgr->has_specie( "PC" ) );
-BOOST_REQUIRE_EQUAL( mgr->get_specie_key( "PC" ), 0 );
-BOOST_CHECK_EQUAL( mgr->get_specie( 0 ).label(), "PC" );
-BOOST_CHECK_EQUAL( mgr->get_species().at( 0 ).label(), "PC" );
-BOOST_CHECK_EQUAL( mgr->get_specie( 0 ).valency(), 2.0 );
-BOOST_CHECK( mgr->get_specie( 0 ).is_mobile() );
-BOOST_REQUIRE_EQUAL( mgr->get_specie( 0 ).get_position_size(), 1 );
-BOOST_REQUIRE_EQUAL( mgr->get_specie( 0 ).get_localization_size(), 1 );
-BOOST_CHECK_EQUAL( mgr->get_specie( 0 ).get_position( 0 ), pos0 );
-BOOST_CHECK_EQUAL( mgr->get_specie( 0 ).get_localization_data( 0 ), ctr0 );
-
-BOOST_REQUIRE_EQUAL( mgr->get_ensemble().count(), 0 );
-
-BOOST_REQUIRE_EQUAL( mgr->charge(), 0.0 );
-
-// Manually build and add specie
-{
-  particle::specie var;
-  var.set_radius( 0.9 );
-  var.set_rate( 0.5 );
-  var.set_valency( -1.0 );
-  var.set_label( "Cl" );
-  var.append_position( pos1 );
-  var.append_position( pos2 );
-  var.append_position( pos3 );
-  var.set_type( particle::specie::SOLUTE );
-  mgr->add_specie( var );
-}
-BOOST_REQUIRE( mgr->has_specie( "Cl" ) );
-BOOST_REQUIRE_EQUAL( mgr->get_specie_key( "Cl" ), 1 );
-BOOST_CHECK_EQUAL( mgr->get_specie( 1 ).label(), "Cl" );
-BOOST_CHECK_EQUAL( mgr->get_species().at( 1 ).label(), "Cl" );
-BOOST_CHECK_EQUAL( mgr->get_specie( 1 ).valency(), -1.0 );
-BOOST_CHECK( mgr->get_specie( 1 ).is_solute() );
-BOOST_REQUIRE_EQUAL( mgr->get_specie( 1 ).get_position_size(), 3 );
-BOOST_REQUIRE_EQUAL( mgr->get_specie( 1 ).get_localization_size(), 0 );
-BOOST_CHECK_EQUAL( mgr->get_specie( 1 ).get_position( 0 ), pos1 );
-BOOST_CHECK_EQUAL( mgr->get_specie( 1 ).get_position( 1 ), pos2 );
-BOOST_CHECK_EQUAL( mgr->get_specie( 1 ).get_position( 2 ), pos3 );
-
-// copy position from species to ensemble
-BOOST_REQUIRE_NO_THROW( mgr->add_predefined_particles() );
-BOOST_REQUIRE_EQUAL( mgr->get_ensemble().count(), 4 );
-BOOST_CHECK_EQUAL( mgr->get_ensemble().specie_count( 0 ), 1 );
-BOOST_CHECK_EQUAL( mgr->get_ensemble().specie_count( 1 ), 3 );
-BOOST_CHECK_EQUAL( mgr->get_ensemble().position( 0 ), pos0 );
-BOOST_CHECK_EQUAL( mgr->get_ensemble().position( 1 ), pos1 );
-BOOST_CHECK_EQUAL( mgr->get_ensemble().position( 2 ), pos2 );
-BOOST_CHECK_EQUAL( mgr->get_ensemble().position( 3 ), pos3 );
-
-BOOST_REQUIRE_EQUAL( mgr->charge(), -1.0 );
 
 !!!1226800.cpp!!!	mockup_system_test() : void
 particle::particle_manager pman;

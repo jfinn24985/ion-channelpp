@@ -2,6 +2,7 @@ class particle_manager
 !!!908336.cpp!!!	serialize(inout ar : Archive, in version : unsigned int) : void
 ar & species_;
 ar & ensemble_;
+ar & target_particles_;
 !!!937520.cpp!!!	charge() : double
 double result = 0.0;
 for( std::size_t ii = 0; ii != this->ensemble_->known_keys(); ++ii )
@@ -11,8 +12,11 @@ for( std::size_t ii = 0; ii != this->ensemble_->known_keys(); ++ii )
 return result;
 
 !!!907952.cpp!!!	description(inout os : ostream) : void
-os << "[ensemble]\n- base settings\n";
-os << "            specie count : " << this->specie_count() << "\n";
+os << core::strngs::horizontal_bar() << "\n";
+os << "Particle system details.\n";
+os << "------------------------\n";
+os << "          specie count : " << this->specie_count() << "\n";
+os << " target particle count : " << this->target_count() << "\n"; 
 if( 0 != this->specie_count() )
 {
   os << core::strngs::horizontal_bar() << "\n";
@@ -26,7 +30,6 @@ if( this->ensemble_ )
   os << core::strngs::horizontal_bar() << "\n";
   this->ensemble_->description( os );
 }
-
 !!!907952.python!!!	description(inout os : ostream) : void
 from constants import constants
 constants.description( os )
@@ -76,6 +79,40 @@ for (auto const& spc: this->species_)
   if (name == spc.label ()) return true;
 }
 return false;
+!!!1760816.cpp!!!	ionic_strength(in volume : double) : double
+std::size_t ionic_particles = 0ul;
+for( std::size_t ispec = 0ul; ispec != this->specie_count(); ++ispec )
+{
+  if( this->get_specie( ispec ).is_solute() )
+  {
+    ionic_particles += this->ensemble_->specie_count( ispec );
+  }
+}
+return ( ionic_particles == 0ul ? 0.0 : ( ionic_particles * core::constants::to_SI() )/volume );
+!!!1760816.python!!!	ionic_strength(in volume : double) : double
+result = 0.0 # ionic strength
+for spc in self.species_:
+   result += spc.concentration()
+return result
+!!!1800112.cpp!!!	target_ionic_strength() : double
+double result = 0.0; // ionic strength
+for( auto const& spc: this->species_ )
+{
+  if( spc.is_solute() )
+  {
+    result += spc.concentration();
+  }
+}
+return result;
+!!!1800112.python!!!	target_ionic_strength() : double
+result = 0.0 # ionic strength
+for spc in self.species_:
+   result += spc.concentration()
+return result
+!!!1806640.cpp!!!	target_volume() : double
+const double conc = this->target_ionic_strength();
+UTILITY_REQUIRE( conc != 0.0, "Cannot calculate target volume without a target concentration" );
+return ( ( this->target_count() == 0ul ) ? 0.0 : ( this->target_count() * core::constants::to_SI() )/conc );
 !!!951216.cpp!!!	write_document(inout wr : input_document) : void
 // Add specie definitions.
 if( this->specie_count() != 0ul )

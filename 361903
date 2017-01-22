@@ -1,6 +1,6 @@
 format 75
 "particle" // particle
-  revision 206
+  revision 208
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -1906,6 +1906,18 @@ ${docstring}${members}
 	  b parent class_ref 134577 // specie
       end
 
+      attribute 754224 "target_particles_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment "The target number of particles"
+      end
+
       extra_member 390320 "LIFETIME"
 	
 	cpp "" ""
@@ -1923,6 +1935,7 @@ ${docstring}${members}
 	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
 : ensemble_( new particle::ensemble )
 , species_()
+, target_particles_()
 {}
 "
 	
@@ -1954,6 +1967,7 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
 : ensemble_( std::move( ${p0}.ensemble_ ) )
 , species_( std::move( ${p0}.species_ ) )
+, target_particles_( std::move( ${p0}.target_particles_ ) )
 {}"
 	
 	
@@ -1971,6 +1985,7 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
 : ensemble_( ${p0}.ensemble_ )
 , species_( ${p0}.species_ )
+, target_particles_( ${p0}.target_particles_ )
 {}
 "
 	
@@ -2006,6 +2021,7 @@ ${docstring}${body}
 {
   std::swap( this->ensemble_, ${p0}.ensemble_ );
   std::swap( this->species_, ${p0}.species_ );
+  std::swap( this->target_particles_, ${p0}.target_particles_ );
 }
 "
 	
@@ -2074,7 +2090,7 @@ ${docstring}${body}
       end
 
       operation 907952 "description"
-	const cpp_virtual protected explicit_return_type "void"
+	const cpp_virtual public explicit_return_type "void"
 	nparams 1
 	  param inout name "os" explicit_type "ostream"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
@@ -2212,6 +2228,29 @@ ${docstring}return name in (x.label() for x in self.species_)
 	comment " Do we have a specie with this label?"
       end
 
+      operation 1760816 "ionic_strength"
+	const public explicit_return_type "double"
+	nparams 1
+	  param in name "volume" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " [Molar] Calculate the current ionic strength
+ (N/volume). This calculation only includes the solute
+ particles in the particle count.
+"
+      end
+
       operation 908208 "specie_count"
 	const public explicit_return_type "size_t"
 	nparams 0
@@ -2229,6 +2268,67 @@ ${docstring}return len(self.species_)
 	comment " The number of different species
 
  ( equivalent to get_species().size() ("
+      end
+
+      operation 1800112 "target_ionic_strength"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " [Molar] Sum of the specie target concentrations,"
+      end
+
+      operation 1760432 "target_count"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->target_particles_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}return self.target_particles_
+"
+	
+	comment " How many particles we want in the simulation
+
+ The intended average (solute) particle number in the
+ simulation."
+      end
+
+      operation 1806640 "target_volume"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculated from the target particle count and target
+ ionic strength.
+
+ \\pre target_ionic_strength /= 0"
       end
 
       operation 951216 "write_document"
@@ -2323,6 +2423,22 @@ ${docstring}${body}
  change has not failed.
 
  \\pre not atomset.fail"
+      end
+
+      operation 1761712 "set_target_count"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "val" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->target_particles_ = ${p0};
+}
+"
+	
+	
+	
+	
+	comment " Set the intended average number of particles in the simulation."
       end
 
       operation 1779632 "build_input_delegater"
