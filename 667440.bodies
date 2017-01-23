@@ -1,0 +1,175 @@
+class serial_storage
+!!!1837104.cpp!!!	serialize(inout ar : Archive, in version : unsigned int) : void
+ar & filename_base_;
+ar & output_dir_fmt_;
+ar & run_number_;
+!!!1841072.cpp!!!	compute_dir(in fmt : string) : string
+boost::format res(fmt);
+// Ignore error of too many arguments.
+res.exceptions( boost::io::all_error_bits ^ boost::io::too_many_args_bit  );
+res % this->run_number_;
+return res.str();
+!!!1840816.cpp!!!	find_input_filename() : std::string
+// Filenames to generate
+//   input.%03d.inp % run_index
+//   input.inp
+std::string result;
+std::string errmsg( "Unable to find files named:" );
+
+if( not this->filename_base_.empty() )
+{
+  // Check for '%' to see if filename base is a format string
+  if( std::string::npos != this->filename_base_.find( '%' ) )
+  {
+    // TRY ONE : filename base is format string
+    // -------
+    std::vector< char > fn( this->filename_base_.size() + 8, '\0' );
+    std::size_t count = 0ul;
+    do
+    {
+      if( count > fn.size() )
+      {
+        fn.resize( count + 1, '\0' );
+      }
+      count = std::snprintf( fn.data(), fn.size() - 1, this->filename_base_.c_str(), this->run_number_ );
+      UTILITY_ALWAYS( count >= 0, "Encoding error found making a filename from format text [" + this->filename_base_ + "]" );
+    }
+    while( count > fn.size() );
+    // Remove terminating nul
+    fn.resize( count );
+    result.assign( fn.begin(),fn.end() );
+    // Check if file exists
+    if( boost::filesystem::exists( result ) )
+    {
+      return result;
+    }
+    else
+    {
+      // Filename not found
+      errmsg.append( " " );
+      errmsg.append( result );
+    }
+    // TRY TWO : remove format code from filename base
+    // -------
+    result.assign( this->filename_base_ );
+    // Remove everything from the '%' to the next '.'
+    std::size_t pos1 = result.find( '%' ); // We know this is not npos!
+    std::size_t pos2 = result.find( '.', pos1 );
+    if( std::string::npos != pos2 )
+    {
+      result.erase( pos1, pos2 - pos1 + 1 );
+    }
+    else
+    {
+      result.erase( pos1 );
+    }
+    // Check if file exists
+    if( boost::filesystem::exists( result ) )
+    {
+      return result;
+    }
+    else
+    {
+      // Filename not found
+      errmsg.append( " " );
+      errmsg.append( result );
+    }
+  }
+  else
+  {
+    // TRY THREE : filename base is simple string
+    // ---------
+    result.assign( this->filename_base_ );
+    // Check if file exists
+    if( boost::filesystem::exists( result ) )
+    {
+      return result;
+    }
+    else
+    {
+      // Filename not found
+      errmsg.append( " " );
+      errmsg.append( result );
+    }
+  }
+}
+// If we got here no files where found.
+UTILITY_INPUT( false, errmsg, core::strngs::fschnl(), nullptr );
+result.clear(); // To stop compiler complaints
+return result;
+!!!1840688.cpp!!!	find_input_filename(in d : int) : std::string
+UTILITY_INPUT( not this->filename_base_.empty()
+               , "No input file name or format text for generating the input file name"
+               , core::strngs::simulator_label(), nullptr );
+// Example filenames to generate
+//   input.%03d.inp % run_index
+//   input.inp
+std::string errmsg( "Unable to find files named:" );
+// Assume filename_base is a format string.
+boost::format res( this->filename_base_ );
+// Ignore error of too many arguments.
+res.exceptions( boost::io::all_error_bits ^ boost::io::too_many_args_bit );
+res % this->run_number_;
+std::string result( res.str() );
+// Check if file exists
+if( boost::filesystem::exists( result ) )
+{
+  return result;
+}
+else
+{
+  // Filename not found
+  errmsg.append( " " );
+  errmsg.append( result );
+}
+// TRY TWO : remove format code from filename base
+// -------
+result.assign( this->filename_base_ );
+// Remove everything from the first '%' to the next '.'
+std::size_t pos1 = result.find( '%' );
+while( std::string::npos != pos1 )
+{
+  std::size_t pos2 = result.find( '.', pos1 );
+  if( std::string::npos != pos2 )
+  {
+    result.erase( pos1, pos2 - pos1 + 1 );
+  }
+  else
+  {
+    result.erase( pos1 );
+  }
+  // Check if file exists
+  if( boost::filesystem::exists( result ) )
+  {
+    return result;
+  }
+  else
+  {
+    // Filename not found
+    errmsg.append( " " );
+    errmsg.append( result );
+  }
+  pos1 = result.find( '%' );
+}
+// If we got here no files where found.
+UTILITY_INPUT( false, errmsg, core::strngs::simulator_label(), nullptr );
+// To stop compiler complaints return an empty string
+result.clear();
+return result;
+!!!1838896.cpp!!!	open_output() : base_sink
+const boost::filesystem::path dpath( this->compute_output_dir() );
+if( not boost::filesystem::exists( dpath ) )
+{
+  boost::filesystem::create_directories( dpath );
+}
+else
+{
+  UTILITY_INPUT( boost::filesystem::is_directory( dpath ), "Filesystem object at target output directory path ["+dpath.native()+"] is not a directory", core::strngs::simulator_label() );
+}
+const boost::filesystem::path outfn( dpath + this->output_filename() );
+boost::shared_ptr< utility::base_sink > result( new utility::gdbm_sink( outfn.native() ) );
+return result;
+!!!1839024.cpp!!!	open_input() : input_base_reader
+const std::string inputfn = this->find_input_filename();
+boost::shared_ptr< core::input_base_reader > reader( new core::input_reader( inputfn ) );
+return reader;

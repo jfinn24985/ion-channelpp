@@ -1,157 +1,24 @@
 class storage_manager
-!!!1759280.cpp!!!	find_input_filename() : std::string
-// Filenames to generate
-//   input.%03d.inp % run_index
-//   input.inp
-std::string Result;
-std::string errmsg ("Unable to find files named:");
-
-if (not this->filename_base_.empty())
-{
-  // Check for '%' to see if filename base is a format string
-  if (std::string::npos != this->filename_base_.find('%'))
-  {
-    // TRY ONE : filename base is format string
-    // -------
-    std::vector< char > fn (this->filename_base_.size() + 8, '\0');
-    std::size_t count = 0ul;
-    do
-    {
-      if (count > fn.size())
-      {
-        fn.resize(count + 1, '\0');
-      }
-      count = std::snprintf(fn.data(), fn.size() - 1, this->filename_base_.c_str(), this->run_index_);
-      UTILITY_ALWAYS (count >= 0, "Encoding error found making a filename from format text [" + this->filename_base_ + "]");
-    }
-    while (count > fn.size());
-    // Remove terminating nul
-    fn.resize(count);
-    Result.assign(fn.begin(),fn.end());
-    // Check if file exists
-    if (boost::filesystem::exists(Result))
-    {
-      return Result;
-    }
-    else
-    {
-      // Filename not found
-      errmsg.append(" ");
-      errmsg.append(Result);
-    }
-    // TRY TWO : remove format code from filename base
-    // -------
-    Result.assign(this->filename_base_);
-    // Remove everything from the '%' to the next '.'
-    std::size_t pos1 = Result.find('%'); // We know this is not npos!
-    std::size_t pos2 = Result.find('.', pos1);
-    if (std::string::npos != pos2)
-    {
-      Result.erase (pos1, pos2 - pos1 + 1);
-    }
-    else
-    {
-      Result.erase (pos1);
-    }
-    // Check if file exists
-    if (boost::filesystem::exists(Result))
-    {
-      return Result;
-    }
-    else
-    {
-      // Filename not found
-      errmsg.append(" ");
-      errmsg.append(Result);
-    }
-    }
-  else
-  {
-    // TRY THREE : filename base is simple string
-    // ---------
-    Result.assign(this->filename_base_);
-    // Check if file exists
-    if (boost::filesystem::exists(Result))
-    {
-      return Result;
-    }
-    else
-    {
-      // Filename not found
-      errmsg.append(" ");
-      errmsg.append(Result);
-    }
-  }
-}
-// If we got here no files where found.
-UTILITY_INPUT(false, errmsg, core::strngs::fschnl(), nullptr);
-Result.clear(); // To stop compiler complaints
-return Result;
-!!!1759152.cpp!!!	find_input_filename(in d : int) : std::string
-UTILITY_INPUT(not this->filename_base_.empty()
-               , "No input file name or format text for generating the input file name"
-               , core::strngs::simulator_label(), nullptr);
-// Example filenames to generate
-//   input.%03d.inp % run_index
-//   input.inp
-std::string errmsg ("Unable to find files named:");
-// Assume filename_base is a format string.
-boost::format res(this->filename_base_);
-// Ignore error of too many arguments.
-res.exceptions( boost::io::all_error_bits ^ boost::io::too_many_args_bit  );
-res % this->run_index_;
-std::string Result(res.str());
-// Check if file exists
-if (boost::filesystem::exists(Result))
-{
-  return Result;
-}
-else
-{
-  // Filename not found
-  errmsg.append(" ");
-  errmsg.append(Result);
-}
-// TRY TWO : remove format code from filename base
-// -------
-Result.assign(this->filename_base_);
-// Remove everything from the first '%' to the next '.'
-std::size_t pos1 = Result.find('%');
-while (std::string::npos != pos1)
-{
-  std::size_t pos2 = Result.find('.', pos1);
-  if (std::string::npos != pos2)
-  {
-    Result.erase (pos1, pos2 - pos1 + 1);
-  }
-  else
-  {
-    Result.erase (pos1);
-  }
-  // Check if file exists
-  if (boost::filesystem::exists(Result))
-  {
-    return Result;
-  }
-  else
-  {
-    // Filename not found
-    errmsg.append(" ");
-    errmsg.append(Result);
-  }
-  pos1 = Result.find('%');
-}
-// If we got here no files where found.
-UTILITY_INPUT(false, errmsg, core::strngs::simulator_label(), nullptr);
-// To stop compiler complaints return an empty string
-Result.clear();
-return Result;
-!!!1758384.cpp!!!	compute_dir(in fmt : string) : string
-boost::format res(fmt);
-// Ignore error of too many arguments.
-res.exceptions( boost::io::all_error_bits ^ boost::io::too_many_args_bit  );
-res % this->run_index_ % this->run_uuid_;
-return res.str();
+!!!1835440.cpp!!!	serialize(inout ar : Archive, in version : unsigned int) : void
+ar & checkpoint_name_;
+ar & filename_base_;
+ar & output_dir_fmt_;
+ar & output_name_;
+ar & run_number_;
+!!!1841200.cpp!!!	checkpoint_path() : std::string
+UTILITY_INPUT( not this->checkpoint_name().empty()
+               , "No name for the checkpoint file."
+               , core::strngs::simulator_label(), nullptr );
+boost::filesystem::path cpath( this->compute_output_dir() );
+cpath += this->checkpoint_name();
+return cpath.native();
+!!!1841840.cpp!!!	output_path() : std::string
+UTILITY_INPUT( not this->output_name().empty()
+               , "No name for the output file."
+               , core::strngs::simulator_label(), nullptr );
+boost::filesystem::path cpath( this->compute_output_dir() );
+cpath += this->output_name();
+return cpath.native();
 !!!1759792.cpp!!!	get_log() : ostream
 if( not this->log_ )
 {
