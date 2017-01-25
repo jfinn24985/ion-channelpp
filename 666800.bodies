@@ -204,102 +204,856 @@ std::stringstream store;
   BOOST_CHECK_EQUAL( var2->output_dir_fmt(), test_dbase );
   BOOST_CHECK_EQUAL( var2->output_name(), test_oname );
   BOOST_CHECK_EQUAL( var2->run_number(), test_runnum );
+
+  // test set/get log methods (open_log is not well defined!)
+  {
+    boost::shared_ptr< std::stringstream > ss( new std::stringstream );
+    var2->set_log( ss );
+    var2->get_log() << "TEST";
+    BOOST_CHECK_EQUAL( "TEST", ss->str() );
+  }
 }
-!!!1823024.cpp!!!	choice_meta_lifetime_test() : void
-//XX {
-//XX   // Test for virtual object pattern
-//XX   BOOST_CHECK( not std::is_default_constructible< trial::choice_meta >::type {} );
-//XX   BOOST_CHECK( not std::is_copy_constructible< trial::choice_meta >::type {} );
-//XX   BOOST_CHECK( not std::is_move_constructible< trial::choice_meta >::type {} );
-//XX   BOOST_CHECK( not ( std::is_assignable< trial::choice_meta, trial::choice_meta >::type {} ) );
-//XX   BOOST_CHECK( std::has_virtual_destructor< trial::choice_meta >::type {} );
-//XX }
-!!!1822000.cpp!!!	choice_manager_test() : void
-//XX {
-//XX   // Test for noncopyable and nonvirtual pattern
-//XX   BOOST_CHECK( std::is_default_constructible< trial::choice_manager >::type {} );
-//XX   BOOST_CHECK( not std::is_copy_constructible< trial::choice_manager >::type {} );
-//XX   BOOST_CHECK( not std::is_move_constructible< trial::choice_manager >::type {} );
-//XX   BOOST_CHECK( not( std::is_assignable< trial::choice_manager, trial::choice_manager >::type {} ) );
-//XX   BOOST_CHECK( not std::has_virtual_destructor< trial::choice_manager >::type {} );
-//XX }
-//XX std::stringstream store;
-//XX {
-//XX   // Default ctor
-//XX   boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX   // choice access methods
-//XX   BOOST_CHECK( cman->empty() );
-//XX   BOOST_CHECK_EQUAL( cman->size(), 0 );
-//XX   BOOST_CHECK( cman->begin() == cman->end() );
-//XX   // chooser access methods
-//XX   BOOST_CHECK( cman->empty_chooser() );
-//XX   BOOST_CHECK_EQUAL( cman->size_chooser(), 0 );
-//XX   BOOST_CHECK( cman->begin_chooser() == cman->end_chooser() );
-//XX   bool has = false;
-//XX   BOOST_CHECK_NO_THROW( has = cman->has_chooser( "move" ) );
-//XX   BOOST_CHECK_EQUAL( has, false );
-//XX 
-//XX   {
-//XX     core::input_delegater dg( 1 );
-//XX     trial::choice_manager::build_input_delegater( cman, dg );
-//XX     BOOST_REQUIRE( dg.has_section( "trial" ) );
-//XX     // Valid input
-//XX     /////////////////////////////
-//XX     std::string canon_input( "trial\ntype \"move\"\nrate 0.5\nspecie Na Cl\nend\n\n" );
-//XX     core::input_preprocess reader;
-//XX     reader.add_buffer( "dummy", canon_input );
-//XX     BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-//XX 
-//XX     BOOST_REQUIRE( not cman->empty_chooser() );
-//XX     BOOST_CHECK_EQUAL( cman->size_chooser(), 1 );
-//XX     BOOST_CHECK( cman->has_chooser( "move" ) );
-//XX   }
-//XX   boost::archive::text_oarchive oa( store );
-//XX   // write class instance to archive
-//XX   oa << cman;
-//XX }
-//XX {
-//XX   boost::shared_ptr< trial::choice_manager > cman2;
-//XX   boost::archive::text_iarchive ia( store );
-//XX   // get class instance from archive
-//XX   ia >> cman2;
-//XX 
-//XX   // choice access methods
-//XX   BOOST_CHECK( cman2->empty() );
-//XX   BOOST_CHECK_EQUAL( cman2->size(), 0 );
-//XX   BOOST_CHECK( cman2->begin() == cman2->end() );
-//XX   // chooser access methods
-//XX   BOOST_REQUIRE( not cman2->empty_chooser() );
-//XX   BOOST_CHECK( cman2->has_chooser( "move" ) );
-//XX   BOOST_CHECK_EQUAL( cman2->size_chooser(), 1 );
-//XX   BOOST_CHECK_EQUAL( cman2->begin_chooser()->type(), "move" );
-//XX   BOOST_CHECK_CLOSE( cman2->begin_chooser()->rate(), 0.5, 0.000001 );
-//XX   BOOST_CHECK_EQUAL( cman2->begin_chooser()->specie_list(), "Na Cl" );
-//XX   BOOST_CHECK( cman2->begin_chooser()->parameters().empty() );
-//XX 
-//XX   boost::shared_ptr< particle::particle_manager > pman = trial_test::mockup_particle_manager();
-//XX   boost::shared_ptr< geometry::geometry_manager > gman = trial_test::mockup_geometry_manager();
-//XX   boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
-//XX   utility::random_distribution rgnr( generator );
-//XX 
-//XX   BOOST_REQUIRE_NO_THROW( cman2->prepare( pman->get_species(), *gman, rgnr ) );
-//XX 
-//XX   BOOST_CHECK( not cman2->empty() );
-//XX   BOOST_REQUIRE_EQUAL( cman2->size(), 5 );
-//XX   BOOST_CHECK( cman2->begin() != cman2->end() );
-//XX   std::bitset< 5 > all_spc;
-//XX   all_spc.reset(); // set all to none
-//XX   const particle::change_hash mover( 0, 1, 1, 0 );
-//XX   for (auto const& choice : *cman2 )
-//XX   {
-//XX     BOOST_CHECK_GE( choice.key().key(), 0 );
-//XX     BOOST_CHECK_LE( choice.key().key(), 4 );
-//XX     BOOST_CHECK( mover.match( choice.key() ) );
-//XX     BOOST_REQUIRE_NO_THROW( all_spc.set( choice.key().key() ) );
-//XX   }
-//XX   BOOST_REQUIRE( all_spc.all() );
-//XX }
-//XX 
+
+!!!1855152.cpp!!!	serial_manager_lifetime_test() : void
+{
+  // Test for virtual noncopy pattern
+  BOOST_CHECK( std::is_default_constructible< platform::serial_storage >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< platform::serial_storage >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< platform::serial_storage >::type {} );
+  BOOST_CHECK( not( std::is_assignable< platform::serial_storage, platform::serial_storage >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< platform::serial_storage >::type {} );
+}
+// static methods
+const std::string cname( "checkpoint.arc" );
+const std::string fbase( "input.\%1$03d.inp" );
+const std::string dbase( "\%1$03d" );
+const std::string oname( "output.dbm" );
+const std::size_t runnum( 1ul );
+{
+  BOOST_CHECK_EQUAL( platform::storage_manager::default_checkpoint_name(), cname );
+  BOOST_CHECK_EQUAL( platform::storage_manager::default_filename_base(), fbase );
+  BOOST_CHECK_EQUAL( platform::storage_manager::default_output_dir_fmt(), dbase );
+  BOOST_CHECK_EQUAL( platform::storage_manager::default_output_name(), oname );
+  BOOST_CHECK_EQUAL( platform::storage_manager::default_run_number(), runnum );
+}
+std::stringstream store;
+{
+  // Public ctor that inherits from base storage_manager
+  boost::shared_ptr< platform::serial_storage > var1( new platform::serial_storage );
+  BOOST_CHECK_EQUAL( var1->checkpoint_name(), cname );
+  BOOST_CHECK_EQUAL( var1->filename_base(), fbase );
+  BOOST_CHECK_EQUAL( var1->output_dir_fmt(), dbase );
+  BOOST_CHECK_EQUAL( var1->output_name(), oname );
+  BOOST_CHECK_EQUAL( var1->run_number(), runnum );
+}
+
+!!!1855024.cpp!!!	serial_manager_method_test() : void
+//Tested methods
+//  * checkpoint_name
+//  * default_checkpoint_name
+//  * default_filename_base
+//  * default_output_dir_fmt
+//  * default_output_name
+//  * default_run_number
+//  * filename_base
+//  * output_dir_fmt
+//  * output_name
+//  * run_number
+//  * serialize
+//  * set_checkpoint_name
+//  * set_filename_base
+//  * set_output_dir_fmt
+//  * set_output_name
+//  * set_run_number
+//Not tested (undefined in simple_storage_manager)
+//  * checkpoint_path
+//  * compute_output_dir
+//  * find_input_filename
+//  * output_path
+//  * open_output
+//  * open_input
+//  * open_checkpoint
+//  ** open_log
+//  ** get_log (undefined because open_log is undefined.)
+
+const std::string cname( "checkpoint.arc" );
+const std::string test_cname( "check.dat" );
+const std::string fbase( "input.\%1$03d.inp" );
+const std::string test_fbase( "channel.\%1$04d.inp" );
+const std::string dbase( "\%1$03d" );
+const std::string outpath( "001" );
+const std::string outdir( "001/" );
+const std::string test_dbase( "\%1$04d.dat" );
+const std::string test_outpath( "5999.dat" );
+const std::string test_outdir( "5999.dat/" );
+const std::string oname( "output.dbm" );
+const std::string test_oname( "result.zip" );
+const std::size_t runnum( 1ul );
+const std::size_t test_runnum( 5999ul );
+
+std::stringstream store;
+{
+  // Public ctor 1
+  boost::shared_ptr< platform::serial_storage > var1( new platform::serial_storage );
+  BOOST_CHECK_EQUAL( var1->checkpoint_name(), cname );
+  BOOST_CHECK_EQUAL( var1->filename_base(), fbase );
+  BOOST_CHECK_EQUAL( var1->output_dir_fmt(), dbase );
+  BOOST_CHECK_EQUAL( var1->output_name(), oname );
+  BOOST_CHECK_EQUAL( var1->run_number(), runnum );
+  // compute_output_dir gives "001"
+  BOOST_CHECK_EQUAL( var1->compute_output_dir(), outpath );
+  BOOST_CHECK_EQUAL( var1->checkpoint_path(), outdir + cname );
+  BOOST_CHECK_EQUAL( var1->output_path(), outdir + oname );
+
+  var1->set_checkpoint_name( test_cname );
+  var1->set_filename_base( test_fbase );
+  var1->set_output_dir_fmt( test_dbase );
+  var1->set_output_name( test_oname );
+  var1->set_run_number( test_runnum );
+
+  BOOST_CHECK_EQUAL( var1->checkpoint_name(), test_cname );
+  BOOST_CHECK_EQUAL( var1->filename_base(), test_fbase );
+  BOOST_CHECK_EQUAL( var1->output_dir_fmt(), test_dbase );
+  BOOST_CHECK_EQUAL( var1->output_name(), test_oname );
+  BOOST_CHECK_EQUAL( var1->run_number(), test_runnum );
+  // compute_output_dir gives "5999.dat"
+  BOOST_CHECK_EQUAL( var1->compute_output_dir(), test_outpath );
+  BOOST_CHECK_EQUAL( var1->checkpoint_path(), test_outdir + test_cname );
+  BOOST_CHECK_EQUAL( var1->output_path(), test_outdir + test_oname );
+
+  // write class instance to archive
+  boost::archive::text_oarchive oa( store );
+  oa << var1;
+}
+{
+  boost::shared_ptr< platform::serial_storage > var2;
+  // read class instance from archive
+  boost::archive::text_iarchive ia( store );
+  ia >> var2;
+  BOOST_CHECK_EQUAL( var2->checkpoint_name(), test_cname );
+  BOOST_CHECK_EQUAL( var2->filename_base(), test_fbase );
+  BOOST_CHECK_EQUAL( var2->output_dir_fmt(), test_dbase );
+  BOOST_CHECK_EQUAL( var2->output_name(), test_oname );
+  BOOST_CHECK_EQUAL( var2->run_number(), test_runnum );
+  BOOST_CHECK_EQUAL( var2->compute_output_dir(), test_outpath );
+  BOOST_CHECK_EQUAL( var2->checkpoint_path(), test_outdir + test_cname );
+  BOOST_CHECK_EQUAL( var2->output_path(), test_outdir + test_oname );
+  try
+  {
+    std::string fn;
+    fn = var2->find_input_filename();
+    BOOST_ERROR( "Unexpected \"var2->find_input_filename()\" found file named " + fn );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Unable to find input file(s) named: channel.5999.inp channel.inp" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"var2->find_input_filename()\" was not expected type: " ) + err.what() );
+  }
+  {
+    auto ipath( boost::filesystem::unique_path( "input%%%%%.inp" ) );
+    const std::string spath( ipath.native() );
+
+    // USE PATH AS INPUT FILE NAME
+    //////////////////////////////
+    BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+    var2->set_filename_base( spath );
+    BOOST_CHECK_EQUAL( var2->filename_base(), spath );
+    // Try to find input after generating file
+    try
+    {
+      {
+        std::ofstream tmp( spath );
+        tmp << "\n";
+      }
+      BOOST_CHECK_EQUAL( var2->find_input_filename(), spath );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"var2->find_input_filename()\" was not expected:" ) + err.what() );
+    }
+    // Try to open input
+    try
+    {
+      auto reader_ptr = var2->open_input();
+      BOOST_CHECK_EQUAL( reader_ptr->current_filename(), boost::filesystem::absolute( spath ).native() );
+      BOOST_CHECK_EQUAL( reader_ptr->current_line_number(), 0 );
+      BOOST_CHECK_EQUAL( reader_ptr->next(), false );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"var2->open_input()\" was not expected:" ) + err.what() );
+    }
+    if( boost::filesystem::exists( ipath ) )
+    {
+      boost::filesystem::remove( ipath );
+    }
+    var2->set_filename_base( test_fbase );
+    // USE PATH AS OUTPUT DIR NAME
+    //////////////////////////////
+    BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+    var2->set_output_dir_fmt( spath );
+    BOOST_CHECK_EQUAL( var2->output_dir_fmt(), spath );
+    const std::string gen_cpath = var2->checkpoint_path();
+    BOOST_CHECK_EQUAL( gen_cpath, spath + "/" + test_cname );
+    const std::string gen_opath = var2->output_path();
+    BOOST_CHECK_EQUAL( gen_opath, spath + "/" + test_oname );
+    // Path should not be created until we open a file.
+    BOOST_CHECK( not boost::filesystem::exists( ipath ) );
+    try
+    {
+      {
+        auto sink_ptr = var2->open_output();
+        BOOST_CHECK( boost::filesystem::exists( ipath ) );
+        BOOST_CHECK_EQUAL( sink_ptr->filename(), gen_opath );
+        // Put entry in sink so that file is generated
+        // if lazy opening is used.
+        sink_ptr->write( "entry1", "Some value" );
+      }
+      // check for file after sink is closed.
+      BOOST_CHECK( boost::filesystem::exists( gen_opath ) );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"var2->open_output()\" was not expected:" ) + err.what() );
+    }
+    if( boost::filesystem::exists( ipath ) )
+    {
+      boost::filesystem::remove_all( ipath );
+    }
+    try
+    {
+      {
+        auto os_ptr = var2->open_checkpoint();
+        BOOST_CHECK( boost::filesystem::exists( ipath ) );
+        BOOST_CHECK( os_ptr.get() != nullptr );
+        // Put text in checkpoint so that file is generated
+        // if lazy opening is used.
+        *( os_ptr ) << "Write some text\n";
+      }
+      // check for file after checkpoint is closed.
+      BOOST_CHECK( boost::filesystem::exists( gen_cpath ) );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"var2->open_checkpoint()\" was not expected:" ) + err.what() );
+    }
+    if( boost::filesystem::exists( ipath ) )
+    {
+      boost::filesystem::remove_all( ipath );
+    }
+    try
+    {
+      var2->get_log() << "Some text on standard output stream using default serial_manager::open_log() call\n";
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"var2->get_log()\" was not expected:" ) + err.what() );
+    }
+  }
+  {
+    boost::shared_ptr< std::stringstream > ss( new std::stringstream );
+    var2->set_log( ss );
+    var2->get_log() << "TEST";
+    BOOST_CHECK_EQUAL( "TEST", ss->str() );
+  }
+  var2->get_log() << "TEST2";
+  BOOST_CHECK_EQUAL( "TESTTEST2", dynamic_cast< std::stringstream& >(var2->get_log()).str() );
+}
+
+!!!1861808.cpp!!!	serial_manager_input_filename_noexist() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "input%%%%%.inp" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS INPUT FILE NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_filename_base( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->filename_base(), spath );
+  // Try to find input before generating file
+  try
+  {
+    std::string fn;
+    fn = sman_ptr->find_input_filename();
+    BOOST_ERROR( "Unexpected \"sman_ptr->find_input_filename()\" found file named " + fn );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Unable to find input file(s) named: " + spath ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->find_input_filename()\" was not expected type: " ) + err.what() );
+  }
+}
+!!!1861936.cpp!!!	serial_manager_input_filename_is_dir() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "input%%%%%.inp" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS INPUT FILE NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_filename_base( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->filename_base(), spath );
+  boost::filesystem::create_directories( ipath );
+  try
+  {
+    std::string fn;
+    fn = sman_ptr->find_input_filename();
+    BOOST_ERROR( "Unexpected \"sman_ptr->find_input_filename()\" found file named " + fn );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Unable to find input file(s) named: " + spath ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->find_input_filename()\" was not expected type: " ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::remove_all( ipath );
+  }
+}
+
+!!!1862064.cpp!!!	serial_manager_input_filename_is_not_accessible() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "input%%%%%.inp" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS INPUT FILE NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_filename_base( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->filename_base(), spath );
+  // Try to find input after generating inaccessible file
+  try
+  {
+    {
+      std::ofstream tmp( spath );
+      tmp << "\n";
+    }
+    boost::filesystem::permissions( spath, boost::filesystem::no_perms );
+    BOOST_CHECK_EQUAL( sman_ptr->find_input_filename(), spath );
+    BOOST_ERROR( "Unexpected \"sman_ptr->find_input_filename()\" found file named " + spath );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Unable to find input file(s) named: " + spath ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->find_input_filename()\" was not expected:" ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::remove( ipath );
+  }
+}
+!!!1862192.cpp!!!	serial_manager_input_filename_is_not_readable() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "input%%%%%.inp" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS INPUT FILE NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_filename_base( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->filename_base(), spath );
+  // Try to find input after generating inaccessible file
+  try
+  {
+    {
+      std::ofstream tmp( spath );
+      tmp << "\n";
+    }
+    boost::filesystem::permissions( spath, boost::filesystem::owner_write );
+    BOOST_CHECK_EQUAL( sman_ptr->find_input_filename(), spath );
+    BOOST_ERROR( "Unexpected \"sman_ptr->find_input_filename()\" found file named " + spath );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Unable to find input file(s) named: " + spath ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->find_input_filename()\" was not expected:" ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::remove( ipath );
+  }
+}
+!!!1863600.cpp!!!	serial_manager_open_output_output_directory_is_not_directory() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS OUTPUT DIR NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_output_dir_fmt( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->output_dir_fmt(), spath );
+  // Try to get directory after generating file with same name
+  try
+  {
+    {
+      std::ofstream tmp( spath );
+      tmp << "\n";
+    }
+    auto os_str = sman_ptr->open_output();
+    BOOST_REQUIRE( os_str );
+    BOOST_ERROR( "Unexpected \"sman_ptr->open_output()\" found file named " + spath );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Filesystem object at target output directory path [" + spath + "] is not a directory" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->open_output()\" was not expected:" ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::remove( ipath );
+  }
+}
+!!!1863472.cpp!!!	serial_manager_open_output_output_directory_is_not_accessible() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS OUTPUT DIR NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_output_dir_fmt( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->output_dir_fmt(), spath );
+  // Try to get directory after generating file with same name
+  try
+  {
+    boost::filesystem::create_directories( ipath );
+    boost::filesystem::permissions( ipath, boost::filesystem::no_perms );
+    auto os_str = sman_ptr->open_output();
+    BOOST_REQUIRE( os_str );
+    BOOST_ERROR( "Unexpected \"sman_ptr->open_output()\" found file named " + spath );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Problem openning output file " + spath + "/" + sman_ptr->output_name() ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->open_output()\" was not expected:" ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::remove( ipath );
+  }
+}
+!!!1863344.cpp!!!	serial_manager_open_output_output_directory_is_0W0() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS OUTPUT DIR NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_output_dir_fmt( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->output_dir_fmt(), spath );
+  // Try to get directory after generating file with same name
+  try
+  {
+    boost::filesystem::create_directories( ipath );
+    boost::filesystem::permissions( ipath, boost::filesystem::owner_write );
+    auto os_str = sman_ptr->open_output();
+    BOOST_REQUIRE( os_str );
+    BOOST_ERROR( "Unexpected \"sman_ptr->open_output()\" found file named " + spath );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Problem openning output file " + spath + "/" + sman_ptr->output_name() ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->open_output()\" was not expected:" ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::remove( ipath );
+  }
+}
+!!!1863216.cpp!!!	serial_manager_open_output_output_directory_is_RW0() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS OUTPUT DIR NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_output_dir_fmt( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->output_dir_fmt(), spath );
+  // Try to get directory after generating file with same name
+  try
+  {
+    boost::filesystem::create_directories( ipath );
+    boost::filesystem::permissions( ipath, boost::filesystem::owner_write | boost::filesystem::owner_read );
+    auto os_str = sman_ptr->open_output();
+    BOOST_REQUIRE( os_str );
+    BOOST_ERROR( "Unexpected \"sman_ptr->open_output()\" found file named " + spath );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Problem openning output file " + spath + "/" + sman_ptr->output_name() ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->open_output()\" was not expected:" ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::remove( ipath );
+  }
+}
+!!!1863088.cpp!!!	serial_manager_open_output_output_directory_is_0WX() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS OUTPUT DIR NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_output_dir_fmt( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->output_dir_fmt(), spath );
+  // Try to get directory after generating file with same name
+  try
+  {
+    boost::filesystem::create_directories( ipath );
+    boost::filesystem::permissions( ipath, boost::filesystem::owner_write | boost::filesystem::owner_exe );
+    auto os_str = sman_ptr->open_output();
+    BOOST_REQUIRE( os_str );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->open_output()\" was not expected:" ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::permissions( ipath, boost::filesystem::owner_read | boost::filesystem::owner_write | boost::filesystem::owner_exe );
+    boost::filesystem::remove_all( ipath );
+  }
+}
+!!!1862960.cpp!!!	serial_manager_open_output_output_directory_is_R0X() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS OUTPUT DIR NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_output_dir_fmt( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->output_dir_fmt(), spath );
+  // Try to get directory after generating file with same name
+  try
+  {
+    boost::filesystem::create_directories( ipath );
+    boost::filesystem::permissions( ipath, boost::filesystem::owner_exe | boost::filesystem::owner_read );
+    auto os_str = sman_ptr->open_output();
+    BOOST_REQUIRE( os_str );
+    BOOST_ERROR( "Unexpected \"sman_ptr->open_output()\" found file named " + spath );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Problem openning output file " + spath + "/" + sman_ptr->output_name() ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->open_output()\" was not expected:" ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::remove( ipath );
+  }
+}
+!!!1862320.cpp!!!	serial_manager_open_checkpoint_output_directory_is_not_directory() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS OUTPUT DIR NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_output_dir_fmt( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->output_dir_fmt(), spath );
+  // Try to get directory after generating file with same name
+  try
+  {
+    {
+      std::ofstream tmp( spath );
+      tmp << "\n";
+    }
+    auto os_str = sman_ptr->open_checkpoint();
+    BOOST_REQUIRE( *(os_str) );
+    BOOST_ERROR( "Unexpected \"sman_ptr->open_checkpoint()\" found file named " + spath );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Filesystem object at target output directory path [" + spath + "] is not a directory" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->open_checkpoint()\" was not expected:" ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::remove( ipath );
+  }
+}
+!!!1862448.cpp!!!	serial_manager_open_checkpoint_output_directory_is_not_accessible() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS OUTPUT DIR NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_output_dir_fmt( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->output_dir_fmt(), spath );
+  // Try to get directory after generating file with same name
+  try
+  {
+    boost::filesystem::create_directories( ipath );
+    boost::filesystem::permissions( ipath, boost::filesystem::no_perms );
+    auto os_str = sman_ptr->open_checkpoint();
+    BOOST_REQUIRE( *(os_str) );
+    BOOST_ERROR( "Unexpected \"sman_ptr->open_checkpoint()\" found file named " + spath );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Problem openning checkpoint file " + spath + "/" + sman_ptr->checkpoint_name() ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->open_checkpoint()\" was not expected:" ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::remove( ipath );
+  }
+}
+!!!1862576.cpp!!!	serial_manager_open_checkpoint_output_directory_is_0W0() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS OUTPUT DIR NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_output_dir_fmt( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->output_dir_fmt(), spath );
+  // Try to get directory after generating file with same name
+  try
+  {
+    boost::filesystem::create_directories( ipath );
+    boost::filesystem::permissions( ipath, boost::filesystem::owner_write );
+    auto os_str = sman_ptr->open_checkpoint();
+    BOOST_REQUIRE( *(os_str) );
+    BOOST_ERROR( "Unexpected \"sman_ptr->open_checkpoint()\" found file named " + spath );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Problem openning checkpoint file " + spath + "/" + sman_ptr->checkpoint_name() ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->open_checkpoint()\" was not expected:" ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::remove( ipath );
+  }
+}
+!!!1862704.cpp!!!	serial_manager_open_checkpoint_output_directory_is_RW0() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS OUTPUT DIR NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_output_dir_fmt( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->output_dir_fmt(), spath );
+  // Try to get directory after generating file with same name
+  try
+  {
+    boost::filesystem::create_directories( ipath );
+    boost::filesystem::permissions( ipath, boost::filesystem::owner_write | boost::filesystem::owner_read );
+    auto os_str = sman_ptr->open_checkpoint();
+    BOOST_REQUIRE( *(os_str) );
+    BOOST_ERROR( "Unexpected \"sman_ptr->open_checkpoint()\" found file named " + spath );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Problem openning checkpoint file " + spath + "/" + sman_ptr->checkpoint_name() ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->open_checkpoint()\" was not expected:" ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::remove( ipath );
+  }
+}
+!!!1862832.cpp!!!	serial_manager_open_checkpoint_output_directory_is_0WX() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS OUTPUT DIR NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_output_dir_fmt( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->output_dir_fmt(), spath );
+  // Try to get directory after generating file with same name
+  try
+  {
+    boost::filesystem::create_directories( ipath );
+    boost::filesystem::permissions( ipath, boost::filesystem::owner_write | boost::filesystem::owner_exe );
+    auto os_str = sman_ptr->open_checkpoint();
+    BOOST_REQUIRE( *(os_str) );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->open_checkpoint()\" was not expected:" ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::permissions( ipath, boost::filesystem::owner_read | boost::filesystem::owner_write | boost::filesystem::owner_exe );
+    boost::filesystem::remove_all( ipath );
+  }
+}
+!!!1823920.cpp!!!	serial_manager_open_checkpoint_output_directory_is_R0X() : void
+boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
+{
+  auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
+  const std::string spath( ipath.native() );
+
+  // USE PATH AS OUTPUT DIR NAME
+  //////////////////////////////
+  BOOST_REQUIRE( not boost::filesystem::exists( ipath ) );
+  sman_ptr->set_output_dir_fmt( spath );
+  BOOST_CHECK_EQUAL( sman_ptr->output_dir_fmt(), spath );
+  // Try to get directory after generating file with same name
+  try
+  {
+    boost::filesystem::create_directories( ipath );
+    boost::filesystem::permissions( ipath, boost::filesystem::owner_exe | boost::filesystem::owner_read );
+    auto os_str = sman_ptr->open_checkpoint();
+    BOOST_REQUIRE( *(os_str) );
+    BOOST_ERROR( "Unexpected \"sman_ptr->open_checkpoint()\" found file named " + spath );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    // std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Problem openning checkpoint file " + spath + "/" + sman_ptr->checkpoint_name() ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->open_checkpoint()\" was not expected:" ) + err.what() );
+  }
+  if( boost::filesystem::exists( ipath ) )
+  {
+    boost::filesystem::remove( ipath );
+  }
+}
+!!!1823024.cpp!!!	simulation_manager_lifetime_test() : void
+{
+  // Test for virtual object pattern
+  BOOST_CHECK( std::is_default_constructible< platform::simulation_manager >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< platform::simulation_manager >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< platform::simulation_manager >::type {} );
+  BOOST_CHECK( not ( std::is_assignable< platform::simulation_manager, platform::simulation_manager >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< platform::simulation_manager >::type {} );
+}
+{
+  boost::shared_ptr< platform::simulation_manager > var( new platform::simulation_manager );
+  BOOST_CHECK_EQUAL( var->equilibration_interval(), 0ul );
+  BOOST_CHECK_EQUAL( var->production_interval(), 0ul );
+}
+!!!1822000.cpp!!!	simulation_manager_methods_test() : void
+std::stringstream store;
+{
+  boost::shared_ptr< platform::simulation_manager > var( new platform::simulation_manager );
+  BOOST_CHECK_EQUAL( var->equilibration_interval(), 0ul );
+  BOOST_CHECK_EQUAL( var->production_interval(), 0ul );
+
+  var->set_equilibration_interval( 100ul );
+  var->set_production_interval( 1000ul );
+
+  BOOST_CHECK_EQUAL( var->equilibration_interval(), 100ul );
+  BOOST_CHECK_EQUAL( var->production_interval(), 1000ul );
+
+  // write class instance to archive
+  boost::archive::text_oarchive oa( store );
+  oa << var;
+}
+{
+  boost::shared_ptr< platform::simulation_manager > var2;
+  // read class instance from archive
+  boost::archive::text_iarchive ia( store );
+  ia >> var2;
+
+  BOOST_CHECK_EQUAL( var2->equilibration_interval(), 100ul );
+  BOOST_CHECK_EQUAL( var2->production_interval(), 1000ul );
+}
 !!!1822128.cpp!!!	add_specie_choice_test() : void
 //XX const double prob = 0.1;
 //XX {
@@ -326,41 +1080,6 @@ std::stringstream store;
 //XX 
 //XX   trial_test::test_make_chooser_methods< trial::chooser_pair< trial::add_specie,trial::remove_specie  > >( params, "individual", "", 0.5, 4, 0.125 );
 //XX }
-//XX 
-!!!1823920.cpp!!!	trial_input_no_type_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "trial\n#type \"move\"\nrate 0.5\nspecie Na Cl\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX try
-//XX {
-//XX   dg.read_input( reader );
-//XX   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   //std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Trial section requires \"type\" parameter" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
 //XX 
 !!!1824048.cpp!!!	trial_input_type_no_value_test() : void
 //XX core::input_delegater dg( 1 );
