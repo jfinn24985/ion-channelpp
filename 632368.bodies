@@ -201,6 +201,133 @@ os << "along with this program.  If not, see <http://www.gnu.org/licenses/>.\n";
 os << core::strngs::horizontal_bar () << "\n";
 !!!1761840.cpp!!!	set_random_seed(in seedval : uint) : void
 this->rgen_->seed (seedval);
+!!!1877296.cpp!!!	main(in argc : int, in argv : char) : bool
+// NOTE: The input decoders are not required to check that
+// the final system is valid.
+if (argc > 1)
+{
+   namespace po = boost::program_options;
+   po::options_description cmdln_opts("Allowed Options");
+   cmdln_opts.add_options()
+   ("run", po::value<unsigned int>(), "Simulation run number (positive integer).")
+   (core::strngs::inputpattern_label().c_str(), po::value<std::string>(), "Plain or printf style format string for generating input filename")
+   ("seed", po::value<unsigned int>(), "Simulation random seed value (positive integer).")
+   ("restart", po::value<std::string>(), "Check point file for simulation restart")
+   ("help", "Produce help message");
+   po::variables_map vm;
+   try
+   {
+      po::store(po::parse_command_line(argc, argv, cmdln_opts), vm);
+      po::notify(vm);
+   }
+   catch (std::exception &err)
+   {
+      this->fstype_->get_log() << "Error : " << err.what() << "\n"
+       << cmdln_opts << "\n";
+      return false;
+   }
+   // After here, 'vm' will contain typed values as
+   // specified via po::value<> statement or an error
+   // would have been raised.
+   if (vm.count("help"))
+   {
+      this->fstype_->get_log() << cmdln_opts << "\n";
+      return false;
+   }
+
+   if (vm.count("restart"))
+   {
+      if (vm.count("seed"))
+      {
+         this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n"
+          << "Random seed value on command line is ignored with restart.\n";
+      }
+      if (vm.count(core::strngs::inputpattern_label()))
+      {
+         this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n"
+          << "Input filename on command line is ignored with restart.\n";
+      }
+      if (vm.count("run"))
+      {
+         this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n"
+          << "Run number on command line is ignored with restart.\n";
+      }
+      const std::string fn { vm["restart"].as<std::string>() };
+      UTILITY_INPUT( boost::filesystem::exists( fn ), "Filename \"" + fn + "\" does not exist.", core::strngs::simulator_label(), nullptr );
+      std::ifstream store( fn );
+      UTILITY_INPUT( store, "Filename \"" + fn + "\" is not readable.", core::strngs::simulator_label(), nullptr );
+      boost::archive::text_iarchive ia( store );
+      ia >> *this;
+      if (not utility::fp_env::env_.no_except())
+      {
+         this->fstype_->get_log() << " Floating point exception during deserialization ignored : "
+               << utility::fp_env::env_.error_message () << "\n";
+         utility::fp_env::env_.reset();
+      }
+      this->fstype_->restart();
+   }
+   else
+   {
+      if (vm.count(core::strngs::inputpattern_label()))
+      {
+         this->fstype_->set_filename_base( vm[core::strngs::inputpattern_label()].as<std::string>() );
+      }
+      if (vm.count("run"))
+      {
+         this->fstype_->set_run_number( vm["run"].as<unsigned int>() );
+      }
+
+      // set random generator seed
+      const unsigned int seedval( vm.count("seed") ? vm["seed"].as<unsigned int>() : this->random_seed_value() );
+      oslog << core::strngs::horizontal_bar () << "\n";
+      oslog << "Random seed value : " << seedval << ".\n";
+      this->set_random_seed( seedval );
+
+      auto reader = this->fstype_->open_input();
+      this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n"
+       << "Reading input file '" << reader->current_filename() << "'\n";
+      this->read_input( *reader );
+
+      this->generate_simulation();
+   }
+}
+else
+{
+   // set random generator seed
+   const unsigned int seedval( this->random_seed_value() );
+   this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n";
+    << "Random seed value : " << seedval << ".\n";
+   this->set_random_seed( seedval );
+
+   // initialize system from defaults
+      auto reader = this->fstype_->open_input();
+      this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n"
+       << "Reading input file '" << reader->current_filename() << "'\n";
+      this->read_input( *reader );
+
+
+   this->generate_simulation();
+}
+
+// Output settings
+this->description();
+
+// Output copy of the original input file
+{
+   this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n";
+   core::input_document wr( this->get_max_input_version() );
+   this->write_document( wr );
+   wr.write( this->fstype_->get_log() );
+   this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n";
+}
+
+// After processing input we can now set up the output
+// location.
+boost::shared_ptr< utility::base_sink > sink( this->fstype_->get_output() );
+this->rman_->set_sink( sink );
+
+// Run the simulation
+return this->simtype_->run( this->fstype_->get_log() );
 !!!1762608.cpp!!!	random_seed_value() : uint
 // Get random seed value from system's random device:
 // requires #include <boost/random/random_device.hpp>
@@ -439,244 +566,215 @@ for d9m8h2 in range(loopcount):
   if self.outer_loop_index_ % self.checkpoint_interval_ == 0:
     self.checkpoint_index_ += 1
     self.do_report( out )
-!!!1762992.cpp!!!	generate_simulation(inout oslog : ostream) : void
-// Call derived method to prepare itself and create a gridder
-// object for generating the ensemble.
-std::unique_ptr< trial::grid_generator > gridder = this->do_generate_simulation( oslog );
+!!!1762992.cpp!!!	generate_simulation() : void
+std::ostream &oslog = this->fstype_->get_log();
 
-// If the system is not Grand Canonical then we must have the
-// right number and ratio of particles in the simulation from
-// the beginning. In this version we simply test for this
-// condition and raise an error if it fails.
-const bool is_grand_canonical( true ); // TODO
-
-// Number of particles to add
-const std::size_t npart { this->target_count() };
-
-// Calculated target ionic strength.
-const double sumconc { this->ionic_strength() };
-
-// Local reference to the ensemble.
-particle::ensemble &ens( *this->ensemble_ );
-
-// Number of non-solute particles
-std::size_t nonsolute_count { 0 };
-
-// First add any predifined particles to the ensemble
-for (std::size_t ispec { 0 }; ispec != this->species_.size(); ++ispec)
 {
-   auto const& spc = this->species_[ ispec ];
-   const double charge { spc.valency() };
-   if ( spc.count() != 0 )
-   {
-      for (std::size_t idx { 0 }; idx != spc.count(); ++idx)
+// Stage 1 : Calculate target particle count or system volume.
+//////////////////////////////////////////////////////////////
+
+  // if target conc == 0, skip volume/count adjustment
+  if( not utility::feq( this->pman_->target_ionic_strength(), 0.0 ) )
+  {
+    // Number of solute particles in simulation
+    std::size_t npart = this->pman_->target_count();
+    if( npart == 0 )
+    {
+      // set npart from volume
+      double volume = this->gman_->system_region()->volume( 0.0 );
+      this->pman_->set_target_count_by_volume( volume );
+    }
+    else
+    {
+      double volume = this->pman_->target_volume();
+      this->gman_->change_volume( volume, 0.0 );
+    }
+  }
+}
+{
+// Stage 2 : Add predefined particles.
+////////////////////////////////////////////////////////
+  this->pman_->add_predefined_particles();
+  // verify added particles
+  if( this->pman_->get_ensemble().size() > 0 )
+  {
+    auto const& ens = this->pman_->get_ensemble();
+    std::size_t nspec = this->pman_->specie_count();
+    std::vector< double > rads( nspec );
+    for( std::size_t ispec = 0; ispec != nspec; ++ispec )
+    {
+      rads[ispec] = this->pman_->get_specie( ispec ).radius();
+    }
+    oslog << core::strngs::horizontal_bar() << "\n";
+    oslog << " Predefined particles\n";
+    oslog << core::strngs::horizontal_bar() << "\n";
+    boost::format line( " %|3|  %|3|   %|8|  %|8|  %|8| " );
+    oslog << boost::format( line ) % "IDX" % "KEY" % "X" % "Y" % "Z" << "\n";
+
+    auto const& cell = this->gman_->system_region();
+    bool is_overlap_with_region = false;
+    bool is_overlap_in_predefined_particles = false;
+    std::stringstream errmsg;
+    for( std::size_t idx = 0; idx != ens.size(); ++idx )
+    {
+      const std::size_t ispec = ens.key( idx );
+      if( ispec < nspec )
       {
-         ens.append_position( ispec, charge, spc.get_position( idx ), this->permittivity_ );
+        oslog << boost::format( line ) % ( idx + 1 ) % ens.key( idx )
+              % ens.x( idx ) % ens.y( idx ) % ens.z( idx ) << "\n";
+        // check particle is in a valid position.
+        /////////////////////////////////////////
+        if( not cell.is_inside( ens.position( idx ), rads[ ispec ] ) )
+        {
+          is_overlap_with_region = true;
+          errmsg << "OUT-OF-BOUNDS: Particle " << ( idx + 1 ) << " is not in valid position in the cell.\n";
+        }
+        // check for overlap in initial system.
+        ///////////////////////////////////////
+        std::vector< double > rij;
+        this->gman_->calculate_distances( ens.position( idx ), ens.get_coordinates(), rij, idx + 1, ens.size() );
+        const double iradius = rads[ ispec ];
+        for( std::size_t jdx = idx + 1; jdx != rij.size(); ++jdx )
+        {
+          const std::size_t jspec = ens.key( idx );
+          if( jspec < nspec )
+          {
+            const double min_distance = iradius + rads[ jspec ];
+            if( min_distance > rij[ jdx ] )
+            {
+              is_overlap_in_predefined_particles = true;
+              errmsg << "OVERLAP: Distance |" << ( idx + 1 ) << ", " << ( jdx + 1 ) << "| (= "
+                     << rij[ jdx ] << " ) needs to be greater than " << min_distance << ".\n";
+            }
+          }
+        }
       }
-      if ( not spc.is_solute() )
-      {
-         nonsolute_count += spc.count();
-      }
-   }
+    }
+    oslog << core::strngs::horizontal_bar() << "\n";
+    if( is_overlap_in_predefined_particles or is_overlap_with_region )
+    {
+      const std::string errstr = errmsg.str();
+      oslog << errstr;
+      UTILITY_INPUT( not is_overlap_in_predefined_particles, "Overlap between particles in predifined particle set.", core::strngs::fsspec(), nullptr );
+      UTILITY_INPUT( not is_overlap_with_region, "Overlap between particles and cell in predefined particle set.", core::strngs::fsspec(), nullptr );
+    }
+  }
 }
 
-// Print predefined particles
-if (ens.size() != 0)
+// if target conc == 0, skip adding solute particles
+if( not utility::feq( this->pman_->target_ionic_strength(), 0.0 ) )
 {
-   oslog << core::strngs::horizontal_bar() << "\n";
-   oslog << " Predefined particles\n";
-   oslog << core::strngs::horizontal_bar() << "\n";
-   boost::format line( " %|3|  %|3|   %|8|  %|8|  %|8| " );
-   oslog << boost::format(line) % "IDX" % "KEY" % "X" % "Y" % "Z" << "\n";
-   for ( std::size_t idx = 0; idx != ens.size(); ++idx )
-   {
-      oslog << boost::format(line) % (idx + 1) % ens.key( idx )
-            % ens.x( idx ) % ens.y( idx ) % ens.z( idx ) << "\n";
+// Stage 3 : Add solute particles to reach target count.
+////////////////////////////////////////////////////////
+  const double target_conc = this->pman_->target_ionic_strength();
 
-   }
-   oslog << core::strngs::horizontal_bar() << "\n";
+  // Randomised list of keys
+  std::vector< std::size_t > keys;
 
-   // Check for overlap in predefined particles.
-   bool is_overlap_in_predefined_particles { false };
-   for (std::size_t idx = 0; idx != ens.size() - 1; ++idx)
-   {
-      std::vector< double > rij;
-      this->compute_distances( ens.position( idx ), ens.get_coordinates(), rij, ens.size(), idx + 1 );
-      const double iradius { this->get_specie( ens.key( idx ) ).radius() };
-      for (std::size_t jdx = idx + 1; jdx != rij.size(); ++jdx)
+  // Total number of solute particles
+  const std::size_t add_target = this->pman_->target_count();
+
+  UTILITY_CHECK( add_target > 0, "generate_simulation stage 1 should ensure target count is greater than 0" );
+
+  // Number of species
+  const std::size_t nspec = this->pman_->specie_count();
+
+  // Per specie particle count
+  std::vector< std::size_t > to_add( nspec );
+
+  // Per specie particle radii
+  std::vector< double > rads( nspec );
+
+  auto const& ens = this->pman_->get_ensemble();
+
+  for( std::size_t ispec = 0; ispec != nspec; ++ispec )
+  {
+    rads[ispec] = this->pman_->get_specie( ispec ).radius();
+    if( this->pman_->get_specie( ispec ).is_solute() )
+    {
+      const std::size_t specie_target = std::nearbyint( add_target * this->pman_->get_specie( ispec ).concentration() / target_conc );
+      const std::size_t specie_current = ens.specie_count( ispec );
+      // Ignore excess if too many particles present.
+      to_add[ispec] = ( specie_target <= specie_current ? 0ul : specie_target - specie_current );
+      if( to_add[ispec] > 0 )
       {
-         // overlap in initial system.
-         const double min_distance { iradius + this->get_specie( ens.key( jdx ) ).radius() };
-         if( min_distance > rij[ jdx ] )
-         {
-            is_overlap_in_predefined_particles = true;
-            oslog << "OVERLAP: Distance |" << (idx + 1) << ", " << (jdx + 1) << "| (= "
-                  << rij[ jdx ] << " ) needs to be greater than " << min_distance << ".\n";
-         }
+        keys.resize( keys.size() + to_add[ispec], ispec );
       }
-   }
-   UTILITY_INPUT( not is_overlap_in_predefined_particles, "Overlap between particles in predifined particle set.", core::strngs::fsspec(), nullptr );
-}
+    }
+  }
+  // TODO: REMOVE AFTER TESTING
+  // can also remove to_add array
+  std::size_t to_add_target = 0ul;
+  for( auto count : to_add )
+  {
+    to_add_target += count;
+  }
+  UTILITY_CHECK( to_add_target == keys.size(), "generate_simulation stage 3 should ensure keys has add_target elements" );
+  for( std::size_t ispec = 0; ispec != nspec; ++ispec )
+  {
+    if( to_add[ispec] > 0 )
+    {
+      UTILITY_CHECK( std::count( keys.begin(), keys.end(), ispec ) == to_add[ispec], "generate_simulation stage 3 should ensure keys has to_add[ispec] elements equal to ispec" );
+    }
+  }
+  // END REMOVE
+  // Only if we have particles
+  if( keys.size() != 0 )
+  {
+    // Randomly order the specie keys
+    if( keys.size() > 1 )
+    {
+      this->get_random().shuffle( keys.begin(), keys.end() );
+    }
+    // Calculate minimum grid spacing
+    double min_spacing( 0.0 );
+    for( std::size_t ispec = 0; ispec != nspec; ++ispec )
+    {
+      min_spacing = std::max( min_spacing, rads[ispec] );
+    }
+    min_spacing *= 2.0;
 
-// Randomised list of keys
-std::vector< std::size_t > keys;
+    {
+      // get gridder based on minimum spacing
+      auto gridder = this->gman_->system_region()->make_gridder( min_spacing, this->get_random() );
 
-if ( ens.size() != 0 )
-{
-   // Have predefined particles.
-   // ==========================
+      UTILITY_INPUT( gridder.size() > keys.size(), "System is too dense, can not create insertion grid with enough points.", core::strngs::fsspec(), nullptr );
 
-   // Expand ensemble if necessary
-   if ( ens.size() < nonsolute_count + npart )
-   {
-      ens.resize( nonsolute_count + npart );
-      keys.resize( nonsolute_count + npart, particle::specie_key::nkey );
-   }
+      // index into keys vector
+      std::size_t idx = 0;
 
-   // The beginning index of non-predefined particles
-   const std::size_t base_position { ens.size() };
-
-   // How many particles we need to add after removing predefined particles
-   std::size_t adjusted_npart( 0ul );
-
-   // Extra check for non-GC sims.
-   bool incorrect_particle_count_for_non_grand_canonical( false );
-
-   for (std::size_t ispec { 0 }; ispec != this->specie_count(); ++ispec)
-   {
-      std::size_t nspec { std::size_t( npart * this->get_specie( ispec ).concentration() / sumconc ) };
-      if ( adjusted_npart + nspec > npart )
-      {
-         nspec = npart - adjusted_npart;
-      }
-      // If specie has ANY predefined particles then it will not contribute
-      // to randomly generated data set.
-      if ( this->get_specie( ispec ).count() != 0 )
-      {
-         if( not is_grand_canonical and nspec != this->get_specie( ispec ).count())
-         {
-            incorrect_particle_count_for_non_grand_canonical = true;
-            oslog << "Non-grand canonical simulation requires " << nspec << " or zero predefined particles for specie \"" << this->get_specie( ispec ).label() << "\"\n";
-         }
-      }
-      else
-      {
-         // Fill key array
-         std::fill( keys.begin() + base_position + adjusted_npart
-                    , keys.begin() + base_position + adjusted_npart + nspec
-                    , ispec);
-         adjusted_npart += nspec;
-      }
-   }
-   UTILITY_INPUT( not incorrect_particle_count_for_non_grand_canonical, "Non-grand canonical simulations require an exact number of particles for each specie.", core::strngs::fsspec(), nullptr );
-
-   // If no particles to be added then we are done
-   if ( adjusted_npart == 0 )
-   {
-      return;
-   }
-
-   // Randomly order the specie keys
-   this->get_random().shuffle( keys.begin() + base_position, keys.begin() + base_position + adjusted_npart );
-
-   // Count of particle to add
-   std::size_t idx { 0ul };
-
-   // Inter-particle distances
-   std::vector< double > rij;
-
-   std::vector< std::size_t > added( this->specie_count() );
-   std::fill( added.begin(), added.end(), 0 );
-
-   UTILITY_REQUIRE( gridder, "Could not allocate position generator when needed." );
-   UTILITY_REQUIRE( ens.size() != 0 or gridder->size() > npart, "Gridder object does not have enough grid points for the requested number of particles." );
-
-   // ii effectively only 'index' in the gridder.
-   for (size_t ii = 0; idx != adjusted_npart and ii != npart; ++ii)
-   {
-      const std::size_t ispec { keys[ base_position + idx ] };
       particle::coordinate pos;
-      UTILITY_CHECK( gridder->next(pos), "Grid exhausted before expected");
-
-      // Check for overlap
-      //
-      this->compute_distances( pos, ens.get_coordinates(), rij, ens.size(), 0 );
-      const double iradius { this->get_specie( ispec ).radius() };
-      bool overlap { false };
-      // Just iterate to the last predefined particle.
-      for (std::size_t jdx = 0; jdx != base_position; ++jdx)
+      while( idx != keys.size() and gridder->next( pos ) )
       {
-         // Skip grid position if overlap.
-         if ( iradius + this->get_specie( ens.key( jdx ) ).radius() > rij[ jdx ] )
-         {
-            overlap = true;
-            break;
-         }
+        const std::size_t ispec = keys[ idx ];
+        const double iradius = rads[ ispec ];
+
+        // Check for overlap.
+        this->gman_->calculate_distances( pos, ens.get_coordinates(), rij, 0ul,  ens.size() );
+        bool overlap = false;
+        for( std::size_t jdx = 0; jdx != ens.size(); ++jdx )
+        {
+          const std::size_t jspec = ens.key( jdx );
+          if( jdx < nspec )
+          {
+            if( iradius + rads[ jspec ] > rij[ jdx ] )
+            {
+              overlap = true;
+              break;
+            }
+          }
+        }
+        // if overlap skip this grid point
+        if( overlap ) continue;
+
+        this->pman_->get_ensemble().append_position( ispec, pos );
+        ++idx;
       }
-      // if overlap skip this grid point
-      if ( overlap ) continue;
-
-      ens.append_position( ispec, this->get_specie( ispec ).valency(), pos, this->permittivity_ );
-      ++added[ispec];
-      ++idx;
-   }
-   // Check that we could add most of the wanted number of particles to within 90% of target
-   UTILITY_INPUT( double(idx)/double(adjusted_npart) > 0.9, "Added less than 90\% of target particles to initial system due to too many overlaps with predefined particles.", core::strngs::fsspec(), nullptr );
-
-   // If not grand canonical then we must have added exactly the right number
-   UTILITY_INPUT( is_grand_canonical or idx == adjusted_npart, "Unable to add required number of particles in a non grand canonical simulation due to too many overlaps with predefined particles.", core::strngs::fsspec(), nullptr );
-
-   // set specie counts
-   for (size_t ispec = 0; ispec != this->specie_count(); ++ispec)
-   {
-      if ( added[ispec] != 0 )
-      {
-         this->get_specie( ispec ).set_count( added[ ispec ] + this->get_specie( ispec ).count() );
-      }
-   }
+      UTILTIY_INPUT( idx == keys.size(), "System is too dense, can not insert enough particles.", core::strngs::fsspec(), nullptr );
+    }
+  }
 }
-else
-{
-   // No predefined particles means we do not worry about overlap here!
-   ens.resize( npart );
-   keys.resize( npart, particle::specie_key::nkey );
-
-   // Current particle index
-   std::size_t cursor { 0 };
-
-   // Build specie key list
-   for (std::size_t ispec = 0; ispec != this->specie_count(); ++ispec)
-   {
-      std::size_t nspec { std::size_t( npart * this->get_specie( ispec ).concentration() / sumconc ) };
-      if ( cursor + nspec > npart )
-      {
-         nspec = npart - cursor;
-      }
-      // Fill key array
-      std::fill( keys.begin() + cursor, keys.begin() + cursor + nspec, ispec);
-      cursor += nspec;
-      this->get_specie( ispec ).set_count( nspec );
-   }
-
-   // Randomly order the specie keys
-   this->get_random().shuffle( keys.begin(), keys.begin() + cursor );
-
-   UTILITY_REQUIRE( gridder, "Could not allocate position generator when needed." );
-   UTILITY_REQUIRE( ens.size() != 0 or gridder->size() > npart, "Gridder object does not have enough grid points for the requested number of particles." );
-
-
-   // Add particles to ensemble
-   for (size_t ii = 0; ii != cursor; ++ii)
-   {
-      particle::coordinate pos;
-      UTILITY_CHECK( gridder->next(pos), "Grid exhausted before expected");
-      const std::size_t ispec { keys[ ii ] };
-      ens.append_position( ispec, this->get_specie( ispec ).valency(), pos, this->permittivity_ );
-   }
-}
-// Check ensemble invariants
-UTILITY_ENSURE( ens.check_invariants( this->species_ ), "Ensemble state is invalid" );
-!!!1762992.python!!!	generate_simulation(inout oslog : ostream) : void
+!!!1762992.python!!!	generate_simulation() : void
 from constants import constants
 ## Generate a list of trial types
 self.update_choices()

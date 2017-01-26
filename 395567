@@ -1,6 +1,6 @@
 format 75
 "platform" // platform
-  revision 274
+  revision 275
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -75,9 +75,9 @@ format 75
       size A4
     end
 
-    sequencediagram 128176 "Build Simulation"
+    sequencediagram 226481 "simulator.update_rates"
       show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
-      overlapping_bars size A4
+      size A4
     end
 
     collaborationdiagram 630319 "Read Input file"
@@ -103,6 +103,99 @@ format 75
     classdiagram 219824 "SERIAL Application"
       draw_all_relations default hide_attributes yes hide_operations yes hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
       size A4
+    end
+
+    sequencediagram 345264 "Start up : restart"
+      show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
+      overlapping_bars size A4
+    end
+
+    sequencediagram 345392 "Start up : normal run"
+      show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
+      overlapping_bars size A4
+    end
+
+    sequencediagram 128176 "Build Simulation"
+      show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
+      overlapping_bars size A4
+    end
+
+    sequencediagram 345520 "Generate Simulation"
+      show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
+      comment " At the start of the generate simulation phase we should
+ have all the region types and species from the input
+ file. The tasks that need to be done to create the initial
+ simulation are:
+
+ * Set the volume or target particle number from the
+ target concentration.
+
+ * Insert predefined particles into the simulation and
+ check these are in valid positions.
+
+ * Calculate how many more particles need to be introduced
+ to achieve the target concentration.
+
+ * Attempt inserting particles into system or removing
+ particles from system to achieve target concentration.
+"
+      overlapping_bars size A4
+    end
+
+    sequencediagram 345648 "Gen Sim: Set Volume/Particle Count"
+      show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
+      comment " Set the volume or target particle number from the target
+ concentration. We have three major cases:
+
+ * target_ionic_strength == 0:  We can not calculate volume
+ or particle count. We therefore assume that the user
+ knows what they are doing and has the desired number of
+ particles predefined. NOTE: No concentration means this
+ simulation can not be Grand Canonical.
+
+ * target_count > 0: We can calculate the target system
+ volume and adjust the system region to match.
+
+ * target_count == 0: We can calculate the target count
+ from the volume of the system region.
+"
+      overlapping_bars size A4
+    end
+
+    sequencediagram 345904 "Gen Sim: Add predefined."
+      show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
+      comment " Add predefined particles.
+
+ * Add particles.
+
+ * Check particles are in valid positions.
+"
+      overlapping_bars size A4
+    end
+
+    sequencediagram 345776 "Gen Sim: Add particles"
+      show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
+      comment " Set the volume or target particle number from the target
+ concentration. We have three major cases:
+
+ * target_ionic_strength == 0:  We can not calculate volume
+ or particle count. We therefore assume that the user
+ knows what they are doing and has the desired number of
+ particles predefined. NOTE: No concentration means this
+ simulation can not be Grand Canonical.
+
+ * target_count > 0: We can calculate the target system
+ volume and adjust the system region to match.
+
+ * target_count == 0: We can calculate the target count
+ from the volume of the system region.
+"
+      overlapping_bars size A4
+    end
+
+    sequencediagram 312112 "read input"
+      show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
+      overlapping_bars size A4
     end
 
     class 204080 "application"
@@ -3229,7 +3322,7 @@ ${docstring}${body}
     end
 
     class 632368 "simulation"
-      abstract visibility package 
+      visibility package 
       cpp_decl "${comment}${template}class ${name}${inherit}
  {
 ${members}
@@ -3422,6 +3515,19 @@ externally, print the value and use 'set_random_seed'."
 	comment " User input title for this simulation run"
       end
 
+      attribute 778544 "max_input_version_"
+	class_attribute private explicit_type "size_t"
+	init_value "{1}"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The maximum understood input file version."
+      end
+
       extra_member 689328 "LIFETIME"
 	
 	cpp "" ""
@@ -3509,9 +3615,12 @@ ${docstring}return self.temperature_kelvin_
       end
 
       operation 1762736 "get_max_input_version"
-	abstract const cpp_virtual public explicit_return_type "size_t"
+	class_operation const public explicit_return_type "size_t"
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return ${class}::max_input_version_;
+}
 "
 	
 	
@@ -3712,6 +3821,26 @@ ${docstring}${body}
 	idl ""
       end
 
+      operation 1877296 "main"
+	public explicit_return_type "bool"
+	nparams 2
+	  param in name "argc" explicit_type "int"
+	  param in name "argv" explicit_type "char"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ** ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ** ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
       operation 1762608 "random_seed_value"
 	class_operation public explicit_return_type "uint"
 	nparams 0
@@ -3796,11 +3925,10 @@ ${docstring}${body}
 
       operation 1762992 "generate_simulation"
 	public explicit_return_type "void"
-	nparams 1
-	  param inout name "oslog" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -4216,7 +4344,6 @@ ${docstring}${body}
 	comment " Write extra data of derived simulator object into the input
  document object at the given section."
       end
-
     end
 
     class 659888 "storage_manager"
@@ -4876,6 +5003,25 @@ ${docstring}${body}
 "
       end
 
+      operation 1877424 "on_restart"
+	abstract cpp_virtual public explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " When restarting a simulation from a checkpoint file the
+ previous invocation may have been a parallel execution. In
+ this case the storage_manager class must reconnect to
+ the parallel subjobs and restart them from the subjob's
+ checkpoint files.
+"
+      end
+
       operation 1841840 "output_path"
 	const cpp_virtual public explicit_return_type "std::string"
 	nparams 0
@@ -5236,6 +5382,28 @@ ${docstring}${body}
 "
       end
 
+      operation 1877552 "on_restart"
+	cpp_virtual public explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " When restarting a simulation from a checkpoint file the
+ previous invocation may have been a parallel execution. In
+ this case the storage_manager class must reconnect to
+ the parallel subjobs and restart them from the subjob's
+ checkpoint files. This serial version does nothing.
+"
+      end
+
       operation 1838896 "open_output"
 	public return_type class_ref 313520 // base_sink
 	nparams 0
@@ -5321,11 +5489,6 @@ ${docstring}${body}
 	comment " Create the system's log output stream. In this case
  the log file is to standard out."
       end
-    end
-
-    sequencediagram 312112 "read input"
-      show_full_operations_definition default write_horizontally default class_drawing_mode default drawing_language default draw_all_relations default shadow default show_stereotype_properties default show_class_context_mode default show_msg_context_mode default
-      overlapping_bars size A4
     end
   end
 
