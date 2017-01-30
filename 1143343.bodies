@@ -150,71 +150,61 @@ else
 return true;
 !!!186416.cpp!!!	do_read_end(inout sim : simulator) : void
 UTILITY_INPUT(not this->missing_required_tags_.any(), "Not all required tags were present.", this->section_label(), nullptr);
-!!!2163887.cpp!!!	simulator_meta(inout sim : simulator)
-if (0 == counter)
-{
-   const std::string seclabel( core::strngs::simulator_label() );
-   // ----------------------------------------
-   // add section
-   // ----------------------------------------
-
-   //   Simulator input section definition
-   core::input_help::exemplar().add_section( seclabel, "Simulator input section definition" );
-
-
-   // ----------------------------------------
-   // add parameters
-   // ----------------------------------------
-
-   // nstep : [required, number] production steps
-   {
-      const std::string description("[required, number > 0] Number of steps in production phase of simulation.");
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fsnstp(), description );
-   }
-   // naver : [required, number] equilibrium steps
-   {
-      const std::string description("[required, number > 0] Number of steps in equilibration/thermalization phase of simulation.");
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fsnavr(), description );
-   }
-   // isave : [required, number] steps between system checkpoints
-   {
-      const std::string description("[required, number > 0] Number of steps between checkpoints of system.");
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fsisav(), description );
-   }
-   // inner : [optional, number] steps between system checkpoints
-   {
-      const std::string description("[optional, number > 0 or 'auto'] Number of trials within a step. Default is 'auto' which gives a loop size that scales with the problem size.");
-      core::input_help::exemplar().add_option( seclabel, core::strngs::inner_label(), description );
-   }
-
-   // kelvin : [optional, number] simulation temperature (in Kelvin)
-   {
-      const std::string description("[optional, number] simulation temperature (in Kelvin, default is 298K).");
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fstsi(), description );
-   }
-   // name : [optional, string] simulation temperature (in Kelvin)
-   {
-      const std::string description("[optional, text] title text for the simulation.");
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fsname(), description );
-   }
-   // outputdir : [optional, filename] directory for output files
-   {
-      const std::string description("[optional, directory name or template] defines a directory for result/output files (will be created if not present).");
-      core::input_help::exemplar().add_option( seclabel, core::strngs::outputdir_label(), description );
-   }
-   // inputname : [optional, filename regular expression] how to locate input.
-   {
-      const std::string description("[command line only, filename regular expression] how to recognise an input file, output in the log file as documentation.");
-      core::input_help::exemplar().add_option( seclabel, core::strngs::inputpattern_label(), description );
-   }
-   // ntarg : [required, integer] target average particle count.
-   {
-      const std::string description("[required, integer] Target average number of solute particles.");
-      core::input_help::exemplar().add_option( seclabel, core::strngs::fsntrg(), description );
-   }
-
-}
-++counter;
-
 !!!268720.cpp!!!	do_reset() : void
 this->missing_required_tags_.reset();
+!!!1886768.cpp!!!	publish_help(inout helper : input_help) : void
+const std::string seclabel( core::strngs::simulator_label() );
+// ----------------------------------------
+// add section
+// ----------------------------------------
+//   Specie input section definition
+helper.add_section( { seclabel, "Define global simulation parameters." } );
+auto &sect = helper.get_section( seclabel );
+
+
+// ----------------------------------------
+// add parameters { name, type, range, default, description } 
+// ----------------------------------------
+
+//XX // nstep : [required, number] production steps
+//XX {
+//XX   const std::string description( "Number of steps in production phase of simulation." );
+//XX   sect.add_entry( { core::strngs::fsnstp(), "integer", "> 0", "required", description } );
+//XX }
+//XX // naver : [required, number] equilibrium steps
+//XX {
+//XX   const std::string description( "Number of steps in equilibration/thermalization phase of simulation." );
+//XX   sect.add_entry( { core::strngs::fsnavr(), "integer", "> 0", "required", description } );
+//XX }
+// isave : [required, number] steps between system checkpoints
+{
+  const std::string description( "Number of steps between checkpoints and reports of the system." );
+  sect.add_entry( { core::strngs::fsisav(), "integer", "> 0", "required", description } );
+}
+// inner : [optional, number] steps between system checkpoints
+{
+  const std::string description( "Number of trials within a step. TODO: Default is 'auto' which gives a loop size that scales with the problem size." );
+  sect.add_entry( { core::strngs::inner_label(), "integer", "> 0", "required", description } );
+}
+
+// kelvin : [optional, number] simulation temperature (in Kelvin)
+{
+  const std::string description( "Simulation temperature in Kelvin. The default is room temperature. For the simulation to be meaningful the temperature should be above the freezing point of the media." );
+  sect.add_entry( { core::strngs::fstsi(), "number", "> 0.0", std::to_string( evaluator::evaluator_manager::standard_room_temperature() ), description } );
+}
+// name : [optional, string] User provided descriptive title
+{
+  const std::string description( "Title or descriptive text for the simulation." );
+  sect.add_entry( { core::strngs::fsname(), "text", "", "optional", description } );
+}
+// ntarg : [required, integer] target average particle count.
+{
+  const std::string description( "Target average number of solute particles. If no value (or zero) is given then the simulation will attempt to calculate the particle number from the target concentration and initial volume.  (If no concentrations are given and no ntarg then the particle defined in the input file specie sections are used as-is.)" );
+  sect.add_entry( { core::strngs::fsntrg(), "integer", ">0", "optional", description );
+}
+// epsw : [optional, number > 0.0] The relative permittivity of the media 
+{
+  const std::string description( "The relative permittivity of the media. The default is the standard relative permittivity of water." );
+  sect.add_entry( { core::strngs::fsepsw(), "number", "> 0.0", std::to_string( evaluator::evaluator_manager::standard_relative_permittivity() ), description } );
+}
+

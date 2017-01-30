@@ -73,41 +73,6 @@ boost::shared_ptr< geometry::geometry_manager > gman;
 //XX   gman->add_region( bulk );
 //XX }
 return gman;
-!!!1821744.cpp!!!	test_storage_manager_methods(inout storage : storage_manager) : void
-//XX boost::shared_ptr< particle::particle_manager > pman( trial_test::mockup_particle_manager() );
-//XX boost::shared_ptr< geometry::geometry_manager > gman( trial_test::mockup_geometry_manager() );
-//XX BOOST_REQUIRE_EQUAL( pman->specie_count(), 5 );
-//XX BOOST_REQUIRE_EQUAL( pman->get_ensemble().count(), 6 );
-//XX 
-//XX std::stringstream ss;
-//XX {
-//XX   std::unique_ptr< trial::base_chooser > chsr = Chooser::make_chooser( params, type, specielist, rate );
-//XX   BOOST_CHECK_EQUAL( chsr->rate(), rate );
-//XX   BOOST_CHECK_EQUAL( chsr->type(), type );
-//XX   BOOST_CHECK_EQUAL( chsr->specie_list(), specielist );
-//XX   BOOST_CHECK( chsr->parameters() == params );
-//XX   boost::archive::text_oarchive oa( ss );
-//XX   // write class instance to archive
-//XX   oa << chsr;
-//XX }
-//XX {
-//XX   std::unique_ptr< trial::base_chooser > chsr;
-//XX   boost::archive::text_iarchive ia( ss );
-//XX   // read class instance from archive
-//XX   ia >> chsr;
-//XX   BOOST_CHECK_EQUAL( chsr->rate(), rate );
-//XX   BOOST_CHECK_EQUAL( chsr->type(), type );
-//XX   BOOST_CHECK_EQUAL( chsr->specie_list(), specielist );
-//XX   BOOST_CHECK( chsr->parameters() == params );
-//XX   boost::ptr_vector< trial::base_choice > choices;
-//XX   chsr->prepare_choices( pman->get_species(), *gman, choices );
-//XX   BOOST_REQUIRE_EQUAL( choices.size(), count );
-//XX   for( std::size_t idx = 0; idx != count; ++idx )
-//XX   {
-//XX     BOOST_CHECK_CLOSE( choices[ idx ].probability(), exp_rate, 0.00001 );
-//XX   }
-//XX }
-//XX 
 !!!1821872.cpp!!!	base_storage_manager_test() : void
 //Tested methods
 //  * checkpoint_name
@@ -172,6 +137,7 @@ std::stringstream store;
   BOOST_CHECK_EQUAL( var1->filename_base(), fbase );
   BOOST_CHECK_EQUAL( var1->output_dir_fmt(), dbase );
   BOOST_CHECK_EQUAL( var1->output_name(), oname );
+  BOOST_CHECK( var1->get_value().empty() );
   // compute_output_dir gives empty string so path and name should be equal
   BOOST_CHECK_EQUAL( var1->output_path(), oname );
   BOOST_CHECK_EQUAL( var1->run_number(), runnum );
@@ -204,17 +170,22 @@ std::stringstream store;
   BOOST_CHECK_EQUAL( var2->output_dir_fmt(), test_dbase );
   BOOST_CHECK_EQUAL( var2->output_name(), test_oname );
   BOOST_CHECK_EQUAL( var2->run_number(), test_runnum );
+  BOOST_CHECK( var2->get_value().empty() );
 
-  // test set/get log methods (open_log is not well defined!)
+  // test open/get/set log methods
+  {
+    var2->get_log() << "TEST1";
+    BOOST_CHECK_EQUAL( "TEST1", var2->thelog->str() );
+  }
   {
     boost::shared_ptr< std::stringstream > ss( new std::stringstream );
     var2->set_log( ss );
-    var2->get_log() << "TEST";
-    BOOST_CHECK_EQUAL( "TEST", ss->str() );
+    var2->get_log() << "TEST2";
+    BOOST_CHECK_EQUAL( "TEST2", ss->str() );
   }
 }
 
-!!!1855152.cpp!!!	serial_manager_lifetime_test() : void
+!!!1855152.cpp!!!	serial_storage_lifetime_test() : void
 {
   // Test for virtual noncopy pattern
   BOOST_CHECK( std::is_default_constructible< platform::serial_storage >::type {} );
@@ -235,8 +206,8 @@ const std::size_t runnum( 1ul );
   BOOST_CHECK_EQUAL( platform::storage_manager::default_output_dir_fmt(), dbase );
   BOOST_CHECK_EQUAL( platform::storage_manager::default_output_name(), oname );
   BOOST_CHECK_EQUAL( platform::storage_manager::default_run_number(), runnum );
+  BOOST_CHECK_EQUAL( platform::serial_storage::type_label_(), "standard" );
 }
-std::stringstream store;
 {
   // Public ctor that inherits from base storage_manager
   boost::shared_ptr< platform::serial_storage > var1( new platform::serial_storage );
@@ -247,7 +218,7 @@ std::stringstream store;
   BOOST_CHECK_EQUAL( var1->run_number(), runnum );
 }
 
-!!!1855024.cpp!!!	serial_manager_method_test() : void
+!!!1855024.cpp!!!	serial_storage_method_test() : void
 //Tested methods
 //  * checkpoint_name
 //  * default_checkpoint_name
@@ -256,6 +227,7 @@ std::stringstream store;
 //  * default_output_name
 //  * default_run_number
 //  * filename_base
+//  * get_label
 //  * output_dir_fmt
 //  * output_name
 //  * run_number
@@ -295,6 +267,7 @@ std::stringstream store;
 {
   // Public ctor 1
   boost::shared_ptr< platform::serial_storage > var1( new platform::serial_storage );
+  BOOST_CHECK_EQUAL( var1->get_label(), "standard" );
   BOOST_CHECK_EQUAL( var1->checkpoint_name(), cname );
   BOOST_CHECK_EQUAL( var1->filename_base(), fbase );
   BOOST_CHECK_EQUAL( var1->output_dir_fmt(), dbase );
@@ -446,14 +419,6 @@ std::stringstream store;
     {
       boost::filesystem::remove_all( ipath );
     }
-    try
-    {
-      var2->get_log() << "Some text on standard output stream using default serial_manager::open_log() call\n";
-    }
-    catch( std::exception const& err )
-    {
-      BOOST_ERROR( std::string( "exception thrown by \"var2->get_log()\" was not expected:" ) + err.what() );
-    }
   }
   {
     boost::shared_ptr< std::stringstream > ss( new std::stringstream );
@@ -465,7 +430,7 @@ std::stringstream store;
   BOOST_CHECK_EQUAL( "TESTTEST2", dynamic_cast< std::stringstream& >(var2->get_log()).str() );
 }
 
-!!!1861808.cpp!!!	serial_manager_input_filename_noexist() : void
+!!!1861808.cpp!!!	serial_storage_input_filename_noexist() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "input%%%%%.inp" ) );
@@ -494,7 +459,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     BOOST_ERROR( std::string( "exception thrown by \"sman_ptr->find_input_filename()\" was not expected type: " ) + err.what() );
   }
 }
-!!!1861936.cpp!!!	serial_manager_input_filename_is_dir() : void
+!!!1861936.cpp!!!	serial_storage_input_filename_is_dir() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "input%%%%%.inp" ) );
@@ -528,7 +493,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
   }
 }
 
-!!!1862064.cpp!!!	serial_manager_input_filename_is_not_accessible() : void
+!!!1862064.cpp!!!	serial_storage_input_filename_is_not_accessible() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "input%%%%%.inp" ) );
@@ -565,7 +530,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     boost::filesystem::remove( ipath );
   }
 }
-!!!1862192.cpp!!!	serial_manager_input_filename_is_not_readable() : void
+!!!1862192.cpp!!!	serial_storage_input_filename_is_not_readable() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "input%%%%%.inp" ) );
@@ -602,7 +567,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     boost::filesystem::remove( ipath );
   }
 }
-!!!1863600.cpp!!!	serial_manager_open_output_output_directory_is_not_directory() : void
+!!!1863600.cpp!!!	serial_storage_open_output_output_directory_is_not_directory() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
@@ -639,7 +604,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     boost::filesystem::remove( ipath );
   }
 }
-!!!1863472.cpp!!!	serial_manager_open_output_output_directory_is_not_accessible() : void
+!!!1863472.cpp!!!	serial_storage_open_output_output_directory_is_not_accessible() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
@@ -674,7 +639,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     boost::filesystem::remove( ipath );
   }
 }
-!!!1863344.cpp!!!	serial_manager_open_output_output_directory_is_0W0() : void
+!!!1863344.cpp!!!	serial_storage_open_output_output_directory_is_0W0() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
@@ -709,7 +674,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     boost::filesystem::remove( ipath );
   }
 }
-!!!1863216.cpp!!!	serial_manager_open_output_output_directory_is_RW0() : void
+!!!1863216.cpp!!!	serial_storage_open_output_output_directory_is_RW0() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
@@ -744,7 +709,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     boost::filesystem::remove( ipath );
   }
 }
-!!!1863088.cpp!!!	serial_manager_open_output_output_directory_is_0WX() : void
+!!!1863088.cpp!!!	serial_storage_open_output_output_directory_is_0WX() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
@@ -773,7 +738,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     boost::filesystem::remove_all( ipath );
   }
 }
-!!!1862960.cpp!!!	serial_manager_open_output_output_directory_is_R0X() : void
+!!!1862960.cpp!!!	serial_storage_open_output_output_directory_is_R0X() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
@@ -808,7 +773,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     boost::filesystem::remove( ipath );
   }
 }
-!!!1862320.cpp!!!	serial_manager_open_checkpoint_output_directory_is_not_directory() : void
+!!!1862320.cpp!!!	serial_storage_open_checkpoint_output_directory_is_not_directory() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
@@ -845,7 +810,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     boost::filesystem::remove( ipath );
   }
 }
-!!!1862448.cpp!!!	serial_manager_open_checkpoint_output_directory_is_not_accessible() : void
+!!!1862448.cpp!!!	serial_storage_open_checkpoint_output_directory_is_not_accessible() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
@@ -880,7 +845,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     boost::filesystem::remove( ipath );
   }
 }
-!!!1862576.cpp!!!	serial_manager_open_checkpoint_output_directory_is_0W0() : void
+!!!1862576.cpp!!!	serial_storage_open_checkpoint_output_directory_is_0W0() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
@@ -915,7 +880,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     boost::filesystem::remove( ipath );
   }
 }
-!!!1862704.cpp!!!	serial_manager_open_checkpoint_output_directory_is_RW0() : void
+!!!1862704.cpp!!!	serial_storage_open_checkpoint_output_directory_is_RW0() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
@@ -950,7 +915,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     boost::filesystem::remove( ipath );
   }
 }
-!!!1862832.cpp!!!	serial_manager_open_checkpoint_output_directory_is_0WX() : void
+!!!1862832.cpp!!!	serial_storage_open_checkpoint_output_directory_is_0WX() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
@@ -979,7 +944,7 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     boost::filesystem::remove_all( ipath );
   }
 }
-!!!1823920.cpp!!!	serial_manager_open_checkpoint_output_directory_is_R0X() : void
+!!!1823920.cpp!!!	serial_storage_open_checkpoint_output_directory_is_R0X() : void
 boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
@@ -1054,278 +1019,331 @@ std::stringstream store;
   BOOST_CHECK_EQUAL( var2->equilibration_interval(), 100ul );
   BOOST_CHECK_EQUAL( var2->production_interval(), 1000ul );
 }
-!!!1822128.cpp!!!	add_specie_choice_test() : void
-//XX const double prob = 0.1;
-//XX {
-//XX   // Test is virtual object pattern
-//XX   BOOST_CHECK( not std::is_default_constructible< trial::add_specie >::type {} );
-//XX   BOOST_CHECK( not std::is_copy_constructible< trial::add_specie >::type {} );
-//XX   BOOST_CHECK( not std::is_move_constructible< trial::add_specie >::type {} );
-//XX   BOOST_CHECK( not( std::is_assignable< trial::add_specie, trial::add_specie >::type {} ) );
-//XX   BOOST_CHECK( std::has_virtual_destructor< trial::add_specie >::type {} );
-//XX }
-//XX particle::change_hash key1( 0, 0, 1, 0 );
-//XX boost::shared_ptr< trial::add_specie > var1( new trial::add_specie( 0ul ) );
-//XX BOOST_CHECK_EQUAL( var1->key(), key1 );
-//XX BOOST_CHECK_EQUAL( var1->probability(), 0 );
-//XX 
-//XX BOOST_CHECK_NO_THROW( var1->set_probability( prob ) );
-//XX BOOST_CHECK_EQUAL( var1->probability(), prob );
-//XX 
-//XX trial_test::test_base_choice_methods( var1 );
-//XX 
-//XX {
-//XX   std::map< std::string, std::string > params;
-//XX   trial_test::test_choice_generate< trial::add_specie >( params );
-//XX 
-//XX   trial_test::test_make_chooser_methods< trial::chooser_pair< trial::add_specie,trial::remove_specie  > >( params, "individual", "", 0.5, 4, 0.125 );
-//XX }
-//XX 
-!!!1824048.cpp!!!	trial_input_type_no_value_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype #\"move\"\nrate 0.5\nspecie Na Cl\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX try
-//XX {
-//XX   dg.read_input( reader );
-//XX   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   //std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Trial \"type\" parameter requires a value" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1824176.cpp!!!	trial_input_type_bad_value_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"jump\"\nrate 0.5\nspecie Na Cl\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX try
-//XX {
-//XX   dg.read_input( reader );
-//XX   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   // std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Trial \"type\" parameter value (jump) is not a valid" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1824304.cpp!!!	trial_input_duplicate_type_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\nrate 0.5\nspecie Na Cl\n\ntype \"move\"\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX try
-//XX {
-//XX   dg.read_input( reader );
-//XX   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   // std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Trial \"type\" parameter appears more than once" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1824432.cpp!!!	trial_input_no_rate_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\n#rate 0.5\nspecie Na Cl\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX try
-//XX {
-//XX   dg.read_input( reader );
-//XX   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   //std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Trial section requires \"rate\" parameter" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1824560.cpp!!!	trial_input_rate_no_value_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\nrate #0.5\nspecie Na Cl\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX try
-//XX {
-//XX   dg.read_input( reader );
-//XX   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   //std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Trial \"rate\" parameter requires a value" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1824688.cpp!!!	trial_input_rate_negative_value_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\nrate -0.5\nspecie Na Cl\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX try
-//XX {
-//XX   dg.read_input( reader );
-//XX   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   // std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Trial \"rate\" parameter value (-0.5) must be greater than zero" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1824816.cpp!!!	trial_input_rate_zero_value_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\nrate 0.0\nspecie Na Cl\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX try
-//XX {
-//XX   dg.read_input( reader );
-//XX   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   // std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Trial \"rate\" parameter value (0.0) must be greater than zero" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
+!!!1914928.cpp!!!	storage_meta_lifetime_test() : void
+{
+  // Test for virtual object pattern
+  BOOST_CHECK( not std::is_default_constructible< platform::storage_meta >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< platform::storage_meta >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< platform::storage_meta >::type {} );
+  BOOST_CHECK( not ( std::is_assignable< platform::storage_meta, platform::storage_meta >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< platform::storage_meta >::type {} );
+}
+{
+  boost::shared_ptr< platform::storage_manager > tmp;
+  boost::shared_ptr< platform::storage_meta > var( new platform::storage_meta( tmp ) );
+  BOOST_CHECK_EQUAL( var->size(), 0ul );
+  BOOST_CHECK( var->empty() );
+}
+{
+  BOOST_CHECK_EQUAL( platform::storage_meta::checkpoint_name_label(), "checkname" );
+  BOOST_CHECK_EQUAL( platform::storage_meta::output_name_label(), "outname" );
+  BOOST_CHECK_EQUAL( platform::storage_meta::storage_label(), "run" );
+}
+!!!1914800.cpp!!!	storage_meta_methods_test() : void
+{
+  boost::shared_ptr< platform::storage_manager > tmp;
+  boost::shared_ptr< platform::storage_meta > var( new platform::storage_meta( tmp ) );
+  BOOST_CHECK_EQUAL( var->size(), 0ul );
+  BOOST_CHECK( not var->has_type( platform::serial_storage::type_label_() ) );
+  platform::serial_storage::add_definition( *var );
+  BOOST_CHECK( var->has_type( platform::serial_storage::type_label_() ) );
+}
+!!!1915056.cpp!!!	run_input_test() : void
+core::input_delegater dg( 1 );
+std::string type_label( "test" );
+const std::string cname( "checkpoint.arc" );
+const std::string test_cname( "check.dat" );
+const std::string fbase( "input.\%1$03d.inp" );
+const std::string test_fbase( "channel.\%1$04d.inp" );
+const std::string dbase( "\%1$03d" );
+const std::string outpath( "001" );
+const std::string outdir( "001/" );
+const std::string test_dbase( "\%1$04d.dat" );
+const std::string test_outpath( "5999.dat" );
+const std::string test_outdir( "5999.dat/" );
+const std::string oname( "output.dbm" );
+const std::string test_oname( "result.zip" );
+boost::shared_ptr< platform::platform_test::simple_storage_manager > fstype( new platform::platform_test::simple_storage_manager );
+{
+  boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
+  std::string desc( "Test storage manager." );
+  std::unique_ptr< storage_definition > defn( new storage_definition( type_label, desc ) );
+  // no extra parameters
+  meta->add_type( defn );
+
+  BOOST_REQUIRE( meta->has_type( "test" ) );
+
+  dg.add_input_delegate( meta );
+}
+
+BOOST_CHECK_EQUAL( fstype->checkpoint_name(), cname );
+BOOST_CHECK_EQUAL( fstype->filename_base(), fbase );
+BOOST_CHECK_EQUAL( fstype->output_dir_fmt(), dbase );
+BOOST_CHECK_EQUAL( fstype->output_name(), oname );
+ 
+// Should be valid input
+/////////////////////////////
+std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "Unexpected exception thrown by \"dg.read_input( reader )\": " ) + err.what() );
+}
+
+BOOST_CHECK_EQUAL( fstype->checkpoint_name(), test_cname );
+BOOST_CHECK_EQUAL( fstype->filename_base(), fbase );
+BOOST_CHECK_EQUAL( fstype->output_dir_fmt(), test_dbase );
+BOOST_CHECK_EQUAL( fstype->output_name(), test_oname );
+const std::string slog( fstype->thelog->str() );
+BOOST_CHECK( slog.find( fbase ) < slog.size() );
+BOOST_CHECK( slog.find( test_fbase ) < slog.size() );
+//std::cout << "\n" << slog << "\n";
+!!!1824048.cpp!!!	run_input_type_no_value_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::platform_test::simple_storage_manager );
+{
+  boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
+  std::string type_label( "test" );
+  std::string desc( "Test storage manager." );
+  std::unique_ptr< storage_definition > defn( new storage_definition( type_label, desc ) );
+  // no extra parameters
+  meta->add_type( defn );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "run\ntype #\"standard\"\noutdir \"%1$07d\"\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"type\" requires a value in a run section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1824176.cpp!!!	run_input_type_bad_value_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::platform_test::simple_storage_manager );
+{
+  boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
+  std::string type_label( "test" );
+  std::string desc( "Test storage manager." );
+  std::unique_ptr< storage_definition > defn( new storage_definition( type_label, desc ) );
+  // no extra parameters
+  meta->add_type( defn );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "run\ntype \"standard\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Run \"type\" parameter value (standard) does not name a valid storage manager subtype for this application" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1824304.cpp!!!	run_input_duplicate_type_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::platform_test::simple_storage_manager );
+{
+  boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
+  std::string type_label( "test" );
+  std::string desc( "Test storage manager." );
+  std::unique_ptr< storage_definition > defn( new storage_definition( type_label, desc ) );
+  // no extra parameters
+  meta->add_type( defn );
+
+  dg.add_input_delegate( meta );
+}
+// Type is repeated
+/////////////////////////////
+std::string canon_input( "run\ntype \"test\"\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Run \"type\" parameter appears more than once" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1824432.cpp!!!	run_input_checkname_no_value_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::platform_test::simple_storage_manager );
+{
+  boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
+  std::string type_label( "test" );
+  std::string desc( "Test storage manager." );
+  std::unique_ptr< storage_definition > defn( new storage_definition( type_label, desc ) );
+  // no extra parameters
+  meta->add_type( defn );
+
+  dg.add_input_delegate( meta );
+}
+// Checkname is hidden by comment character
+/////////////////////////////
+std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname #check.dat\noutname result.zip\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"checkname\" requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1824560.cpp!!!	run_input_outname_no_value_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::platform_test::simple_storage_manager );
+{
+  boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
+  std::string type_label( "test" );
+  std::string desc( "Test storage manager." );
+  std::unique_ptr< storage_definition > defn( new storage_definition( type_label, desc ) );
+  // no extra parameters
+  meta->add_type( defn );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname #result.zip\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"outname\" requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1824688.cpp!!!	run_input_outdir_no_value_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::platform_test::simple_storage_manager );
+{
+  boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
+  std::string type_label( "test" );
+  std::string desc( "Test storage manager." );
+  std::unique_ptr< storage_definition > defn( new storage_definition( type_label, desc ) );
+  // no extra parameters
+  meta->add_type( defn );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir #\"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"outputdir\" requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1824816.cpp!!!	run_input_inputpattern_no_value_test() : void
+core::input_delegater dg( 1 );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::platform_test::simple_storage_manager );
+{
+  boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
+  std::string type_label( "test" );
+  std::string desc( "Test storage manager." );
+  std::unique_ptr< storage_definition > defn( new storage_definition( type_label, desc ) );
+  // no extra parameters
+  meta->add_type( defn );
+
+  dg.add_input_delegate( meta );
+}
+// Type is hidden by comment character
+/////////////////////////////
+std::string canon_input( "run\ntype \"test\"\ninput #\"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  // std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"input\" requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
 !!!1824944.cpp!!!	trial_input_rate_nonnumber_value_test() : void
 //XX core::input_delegater dg( 1 );
 //XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
@@ -1340,7 +1358,7 @@ std::stringstream store;
 //XX }
 //XX // Type is hidden by comment character
 //XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\nrate one\nspecie Na Cl\nend\n\n" );
+//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
 //XX core::input_preprocess reader;
 //XX reader.add_buffer( "dummy", canon_input );
 //XX 
@@ -1375,7 +1393,7 @@ std::stringstream store;
 //XX }
 //XX // Type is hidden by comment character
 //XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\nrate 0.5\nspecie Na Cl\n\nrate 0.4\nend\n\n" );
+//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
 //XX core::input_preprocess reader;
 //XX reader.add_buffer( "dummy", canon_input );
 //XX 
@@ -1410,7 +1428,7 @@ std::stringstream store;
 //XX }
 //XX // Type is hidden by comment character
 //XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\nrate 0.5\nspecie # Na Cl\nend\n\n" );
+//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
 //XX core::input_preprocess reader;
 //XX reader.add_buffer( "dummy", canon_input );
 //XX 
@@ -1445,7 +1463,7 @@ std::stringstream store;
 //XX }
 //XX // Type is hidden by comment character
 //XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\nrate 0.5\nspecie Na Cl\n\nspecie \"move\"\nend\n\n" );
+//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
 //XX core::input_preprocess reader;
 //XX reader.add_buffer( "dummy", canon_input );
 //XX 
@@ -1480,7 +1498,7 @@ std::stringstream store;
 //XX }
 //XX // Type is hidden by comment character
 //XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\nrate 0.5\ndelta #0.5\nspecie Na Cl\nend\n\n" );
+//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
 //XX core::input_preprocess reader;
 //XX reader.add_buffer( "dummy", canon_input );
 //XX auto pman = trial_test::mockup_particle_manager();
@@ -1524,7 +1542,7 @@ std::stringstream store;
 //XX }
 //XX // Type is hidden by comment character
 //XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\nrate 0.5\ndelta -0.5\nspecie Na Cl\nend\n\n" );
+//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
 //XX core::input_preprocess reader;
 //XX reader.add_buffer( "dummy", canon_input );
 //XX 
@@ -1566,7 +1584,7 @@ std::stringstream store;
 //XX }
 //XX // Type is hidden by comment character
 //XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\nrate 0.5\ndelta 0.0\nspecie Na Cl\nend\n\n" );
+//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
 //XX core::input_preprocess reader;
 //XX reader.add_buffer( "dummy", canon_input );
 //XX 
@@ -1610,7 +1628,7 @@ std::stringstream store;
 //XX }
 //XX // Type is hidden by comment character
 //XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\nrate 0.1\ndelta one\nspecie Na Cl\nend\n\n" );
+//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
 //XX core::input_preprocess reader;
 //XX reader.add_buffer( "dummy", canon_input );
 //XX 
@@ -1654,7 +1672,7 @@ std::stringstream store;
 //XX }
 //XX // Type is hidden by comment character
 //XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\nrate 0.5\ndelta 0.5\nspecie Na Cl\n\ndelta 0.4\nend\n\n" );
+//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
 //XX core::input_preprocess reader;
 //XX reader.add_buffer( "dummy", canon_input );
 //XX 
@@ -1689,7 +1707,7 @@ std::stringstream store;
 //XX }
 //XX // Type is hidden by comment character
 //XX /////////////////////////////
-//XX std::string canon_input( "trial\ntype \"move\"\nrate 0.5\nDELTA 0.5\nspecie Na Cl\n\ndelta 0.4\nend\n\n" );
+//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
 //XX core::input_preprocess reader;
 //XX reader.add_buffer( "dummy", canon_input );
 //XX 
@@ -1709,4 +1727,31 @@ std::stringstream store;
 //XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
 //XX }
 //XX 
+//XX 
+!!!1822128.cpp!!!	add_specie_choice_test() : void
+//XX const double prob = 0.1;
+//XX {
+//XX   // Test is virtual object pattern
+//XX   BOOST_CHECK( not std::is_default_constructible< trial::add_specie >::type {} );
+//XX   BOOST_CHECK( not std::is_copy_constructible< trial::add_specie >::type {} );
+//XX   BOOST_CHECK( not std::is_move_constructible< trial::add_specie >::type {} );
+//XX   BOOST_CHECK( not( std::is_assignable< trial::add_specie, trial::add_specie >::type {} ) );
+//XX   BOOST_CHECK( std::has_virtual_destructor< trial::add_specie >::type {} );
+//XX }
+//XX particle::change_hash key1( 0, 0, 1, 0 );
+//XX boost::shared_ptr< trial::add_specie > var1( new trial::add_specie( 0ul ) );
+//XX BOOST_CHECK_EQUAL( var1->key(), key1 );
+//XX BOOST_CHECK_EQUAL( var1->probability(), 0 );
+//XX 
+//XX BOOST_CHECK_NO_THROW( var1->set_probability( prob ) );
+//XX BOOST_CHECK_EQUAL( var1->probability(), prob );
+//XX 
+//XX trial_test::test_base_choice_methods( var1 );
+//XX 
+//XX {
+//XX   std::map< std::string, std::string > params;
+//XX   trial_test::test_choice_generate< trial::add_specie >( params );
+//XX 
+//XX   trial_test::test_make_chooser_methods< trial::chooser_pair< trial::add_specie,trial::remove_specie  > >( params, "individual", "", 0.5, 4, 0.125 );
+//XX }
 //XX 

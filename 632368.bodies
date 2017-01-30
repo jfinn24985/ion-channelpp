@@ -204,109 +204,108 @@ this->rgen_->seed (seedval);
 !!!1877296.cpp!!!	main(in argc : int, in argv : char) : bool
 // NOTE: The input decoders are not required to check that
 // the final system is valid.
-if (argc > 1)
+if( argc > 1 )
 {
-   namespace po = boost::program_options;
-   po::options_description cmdln_opts("Allowed Options");
-   cmdln_opts.add_options()
-   ("run", po::value<unsigned int>(), "Simulation run number (positive integer).")
-   (core::strngs::inputpattern_label().c_str(), po::value<std::string>(), "Plain or printf style format string for generating input filename")
-   ("seed", po::value<unsigned int>(), "Simulation random seed value (positive integer).")
-   ("restart", po::value<std::string>(), "Check point file for simulation restart")
-   ("help", "Produce help message");
-   po::variables_map vm;
-   try
-   {
-      po::store(po::parse_command_line(argc, argv, cmdln_opts), vm);
-      po::notify(vm);
-   }
-   catch (std::exception &err)
-   {
-      this->fstype_->get_log() << "Error : " << err.what() << "\n"
-       << cmdln_opts << "\n";
-      return false;
-   }
-   // After here, 'vm' will contain typed values as
-   // specified via po::value<> statement or an error
-   // would have been raised.
-   if (vm.count("help"))
-   {
-      this->fstype_->get_log() << cmdln_opts << "\n";
-      return false;
-   }
+  namespace po = boost::program_options;
+  po::options_description cmdln_opts( "Allowed Options" );
+  cmdln_opts.add_options()
+  ( "run", po::value<unsigned int>(), "Simulation run number (positive integer)." )
+  ( core::strngs::inputpattern_label().c_str(), po::value<std::string>(), "Plain or printf style format string for generating input filename" )
+  ( "seed", po::value<unsigned int>(), "Simulation random seed value (positive integer)." )
+  ( "restart", po::value<std::string>(), "Check point file for simulation restart" )
+  ( "help", "Produce help message" );
+  po::variables_map vm;
+  try
+  {
+    po::store( po::parse_command_line( argc, argv, cmdln_opts ), vm );
+    po::notify( vm );
+  }
+  catch( std::exception &err )
+  {
+    this->fstype_->get_log() << "Error : " << err.what() << "\n"
+                             << cmdln_opts << "\n";
+    return false;
+  }
+  // After here, 'vm' will contain typed values as
+  // specified via po::value<> statement or an error
+  // would have been raised.
+  if( vm.count( "help" ) )
+  {
+    this->fstype_->get_log() << cmdln_opts << "\n";
+    return false;
+  }
 
-   if (vm.count("restart"))
-   {
-      if (vm.count("seed"))
-      {
-         this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n"
-          << "Random seed value on command line is ignored with restart.\n";
-      }
-      if (vm.count(core::strngs::inputpattern_label()))
-      {
-         this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n"
-          << "Input filename on command line is ignored with restart.\n";
-      }
-      if (vm.count("run"))
-      {
-         this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n"
-          << "Run number on command line is ignored with restart.\n";
-      }
-      const std::string fn { vm["restart"].as<std::string>() };
-      UTILITY_INPUT( boost::filesystem::exists( fn ), "Filename \"" + fn + "\" does not exist.", core::strngs::simulator_label(), nullptr );
-      std::ifstream store( fn );
-      UTILITY_INPUT( store, "Filename \"" + fn + "\" is not readable.", core::strngs::simulator_label(), nullptr );
-      boost::archive::text_iarchive ia( store );
-      ia >> *this;
-      if (not utility::fp_env::env_.no_except())
-      {
-         this->fstype_->get_log() << " Floating point exception during deserialization ignored : "
-               << utility::fp_env::env_.error_message () << "\n";
-         utility::fp_env::env_.reset();
-      }
-      this->fstype_->restart();
-   }
-   else
-   {
-      if (vm.count(core::strngs::inputpattern_label()))
-      {
-         this->fstype_->set_filename_base( vm[core::strngs::inputpattern_label()].as<std::string>() );
-      }
-      if (vm.count("run"))
-      {
-         this->fstype_->set_run_number( vm["run"].as<unsigned int>() );
-      }
+  if( vm.count( "restart" ) )
+  {
+    if( vm.count( "seed" ) )
+    {
+      this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n"
+                               << "Random seed value on command line is ignored with restart.\n";
+    }
+    if( vm.count( core::strngs::inputpattern_label() ) )
+    {
+      this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n"
+                               << "Input filename on command line is ignored with restart.\n";
+    }
+    if( vm.count( "run" ) )
+    {
+      this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n"
+                               << "Run number on command line is ignored with restart.\n";
+    }
+    const std::string fn { vm["restart"].as<std::string>() };
+    UTILITY_INPUT( boost::filesystem::exists( fn ), "Filename \"" + fn + "\" does not exist.", core::strngs::simulator_label(), nullptr );
+    std::ifstream store( fn );
+    UTILITY_INPUT( store, "Filename \"" + fn + "\" is not readable.", core::strngs::simulator_label(), nullptr );
+    boost::archive::text_iarchive ia( store );
+    ia >> *this;
+    if( not utility::fp_env::env_.no_except() )
+    {
+      this->fstype_->get_log() << " Floating point exception during deserialization ignored : "
+                               << utility::fp_env::env_.error_message() << "\n";
+      utility::fp_env::env_.reset();
+    }
+    this->fstype_->on_restart();
+  }
+  else
+  {
+    if( vm.count( core::strngs::inputpattern_label() ) )
+    {
+      this->fstype_->set_filename_base( vm[core::strngs::inputpattern_label()].as<std::string>() );
+    }
+    if( vm.count( "run" ) )
+    {
+      this->fstype_->set_run_number( vm["run"].as<unsigned int>() );
+    }
 
-      // set random generator seed
-      const unsigned int seedval( vm.count("seed") ? vm["seed"].as<unsigned int>() : this->random_seed_value() );
-      oslog << core::strngs::horizontal_bar () << "\n";
-      oslog << "Random seed value : " << seedval << ".\n";
-      this->set_random_seed( seedval );
+    // set random generator seed
+    const unsigned int seedval( vm.count( "seed" ) ? vm["seed"].as<unsigned int>() : this->random_seed_value() );
+    oslog << core::strngs::horizontal_bar() << "\n";
+    oslog << "Random seed value : " << seedval << ".\n";
+    this->set_random_seed( seedval );
 
-      auto reader = this->fstype_->open_input();
-      this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n"
-       << "Reading input file '" << reader->current_filename() << "'\n";
-      this->read_input( *reader );
+    auto reader = this->fstype_->open_input();
+    this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n"
+                             << "Reading input file '" << reader->current_filename() << "'\n";
+    this->read_input( *reader );
 
-      this->generate_simulation();
-   }
+    this->generate_simulation();
+  }
 }
 else
 {
-   // set random generator seed
-   const unsigned int seedval( this->random_seed_value() );
-   this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n";
-    << "Random seed value : " << seedval << ".\n";
-   this->set_random_seed( seedval );
+  // set random generator seed
+  const unsigned int seedval( this->random_seed_value() );
+  this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n";
+      << "Random seed value : " << seedval << ".\n";
+  this->set_random_seed( seedval );
 
-   // initialize system from defaults
-      auto reader = this->fstype_->open_input();
-      this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n"
-       << "Reading input file '" << reader->current_filename() << "'\n";
-      this->read_input( *reader );
+  // initialize system from defaults
+  auto reader = this->fstype_->open_input();
+  this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n"
+                           << "Reading input file '" << reader->current_filename() << "'\n";
+  this->read_input( *reader );
 
-
-   this->generate_simulation();
+  this->generate_simulation();
 }
 
 // Output settings
@@ -314,20 +313,20 @@ this->description();
 
 // Output copy of the original input file
 {
-   this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n";
-   core::input_document wr( this->get_max_input_version() );
-   this->write_document( wr );
-   wr.write( this->fstype_->get_log() );
-   this->fstype_->get_log() << core::strngs::horizontal_bar () << "\n";
+  this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n";
+  core::input_document wr( this->get_max_input_version() );
+  this->write_document( wr );
+  wr.write( this->fstype_->get_log() );
+  this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n";
 }
 
 // After processing input we can now set up the output
 // location.
-boost::shared_ptr< utility::base_sink > sink( this->fstype_->get_output() );
-this->rman_->set_sink( sink );
+this->rman_->set_sink( this->fstype_->open_output() );
 
 // Run the simulation
 return this->simtype_->run( this->fstype_->get_log() );
+
 !!!1762608.cpp!!!	random_seed_value() : uint
 // Get random seed value from system's random device:
 // requires #include <boost/random/random_device.hpp>

@@ -1,0 +1,147 @@
+class storage_meta
+!!!1884208.cpp!!!	do_read_entry(inout reader : input_base_reader) : bool
+// Example input section
+//
+// run
+// outputdir somewhere/here
+// inputname some regular expression
+// outname output.ext
+// checkname check.arc
+// type keyword
+// ... # type specific options
+// end
+//
+// process entry
+if( reader.name().find( core::strngs::outputdir_label() ) == 0 )
+{
+  // --------------------
+  // Output/data directory name "outputdir 'abc/def'"
+  UTILITY_INPUT( not reader.value().empty(), (core::input_error_messages::missing_value() % core::strngs::outputdir_label() % this->section_label() ).str(), this->section_label(), &reader );
+  this->fstype_->set_output_dir_fmt( reader.dequote( reader.value() ) );
+}
+else if( reader.name().find( core::strngs::inputpattern_label() ) == 0 )
+{
+  // --------------------
+  // Input file recognition pattern "inputpattern 'abc.%03d.def'"
+  UTILITY_INPUT( not reader.value().empty(), (core::input_error_messages::missing_value() % core::strngs::inputpattern_label() % this->section_label() ).str(), this->section_label(), &reader );
+  const std::string fbase = reader.dequote( reader.value() );
+  if( this->fstype_->filename_base() != fbase )
+  {
+    // TODO: issue warning.
+    this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n";
+    {
+      namespace io = boost::iostreams;
+      core::fixed_width_output_filter filt( 2, 1, 68 );
+      io::filtering_ostream os;
+      os.push( filt );
+      os.push( this->fstype_->get_log() );
+      os << "WARNING: Value for input file recognition pattern parameter \""
+         << core::strngs::inputpattern_label()
+         << "\" in input file (" << fbase
+         << ") {file: " << reader.current_filename()
+         << ", line: " << reader.current_line_number()
+         << "} is different to that used ("
+         << this->fstype_->filename_base()
+         << ").  Value in input file ignored.";
+    }
+    this->fstype_->get_log() << "\n" << core::strngs::horizontal_bar() << "\n";
+  }
+}
+else if( reader.name().find( this->output_name_label() ) == 0 )
+{
+  // --------------------
+  // outname {path} : output filename
+  UTILITY_INPUT( not reader.value().empty(), (core::input_error_messages::missing_value() % this->output_name_label() % this->section_label() ).str(), this->section_label(), &reader );
+  this->fstype_->set_output_name( reader.dequote( reader.value() ) );
+}
+else if( reader.name().find( this->checkpoint_name_label() ) == 0 )
+{
+  // --------------------
+  // checkname {path} : checkpoint filename
+  UTILITY_INPUT( not reader.value().empty(), (core::input_error_messages::missing_value() % this->checkpoint_name_label() % this->section_label() ).str(), this->section_label(), &reader );
+  this->fstype_->set_checkpoint_name( reader.dequote( reader.value() ) );
+}
+else if( reader.name().find( core::strngs::fstype() ) == 0 )
+{
+  // --------------------
+  // Storage manager subtype
+  UTILITY_INPUT( this->type_.empty(), ( "Run \"type\" parameter appears more than once." ), this->section_label(), &reader );
+  UTILITY_INPUT( not reader.value().empty(), (core::input_error_messages::missing_value() % core::strngs::fstype() % this->section_label() ).str(), this->section_label(), &reader );
+  std::string val( reader.dequote( reader.value() ) );
+  UTILITY_INPUT( this->has_type( val ), "Run \"type\" parameter value (" + val + ") does not name a valid storage manager subtype for this application (see documentation).", this->section_label(), &reader );
+  this->type_ = val;
+}
+else
+{
+  // --------------------
+  // Choice specific parameters
+  UTILITY_INPUT( 0 == this->parameter_set_.count( reader.name() ), ( "Sampler \""+reader.name()+"\" parameter appears more than once in a single in section" ), this->section_label(), &reader );
+  this->parameter_set_.insert( std::make_pair( reader.name(), reader.value() ) );
+}
+return true;
+!!!1884336.cpp!!!	do_read_end() : void
+// Call functor method to create sampler and add to simulator
+for( const auto& defn : this->types_ )
+{
+  if( defn.label() == this->type_ )
+  { 
+    // check parameters.
+    for( auto const& entry : this->parameter_set_ )
+    {
+      UTILITY_INPUT( defn.has_definition( entry.first ), str( core::input_error_messages::invalid_parameter_subtype() % entry.first % this->section_label() % this->type_ ), this->section_label(), nullptr );
+    }
+    this->fstype_->set_parameters( this->parameter_set_ );
+    return;
+  }
+}
+// error to get here
+UTILITY_CHECK( false, "should never reach this point in the code." );
+!!!1893808.cpp!!!	add_type(inout ctor : storage_definition) : void
+UTILITY_REQUIRE( not this->has_type( ctor->label() ), ("Attempt to add more than one chooser factory for type \"" + ctor->label() + "\".") );
+this->types_.push_back( ctor.release() );
+!!!1893680.cpp!!!	has_type(in label : string) : bool
+for( auto const& defn : this->types_ )
+{
+  if( defn.label() == label )
+  {
+    return true;
+  }
+}
+return false;
+
+!!!1884848.cpp!!!	do_reset() : void
+this->type_.clear();
+this->parameter_set_.clear();
+!!!1886896.cpp!!!	publish_help(inout helper : input_help) : void
+const std::string seclabel( storage_label() );
+// ----------------------------------------
+// add section
+// ----------------------------------------
+//   Specie input section definition
+helper.add_section( { seclabel, "Define parameters defining file and directory names and parallelism." } );
+auto &sect = helper.get_section( seclabel );
+
+// ----------------------------------------
+// add parameters
+// ----------------------------------------
+
+// outputdir : [optional, filename regular expression] directory for output files
+{
+  const std::string description( "Defines the directory for result/output files (will be created if not present)." );
+  sect.add_entry( { core::strngs::outputdir_label(), "directory name or template", "", "%1$03d", description } );
+}
+// inputname : [optional, filename regular expression] how to locate input.
+{
+  const std::string description( "Pattern to generate filenames so as to recognise an input file. This information is only useful on the command-line but is shown in output as documentation." );
+  sect.add_entry( { core::strngs::inputpattern_label(), "filename regular expression", "", "input.%1$03d.inp", description } );
+}
+// checkname : [optional, filename] Name of checkpoint.
+{
+  const std::string description( "The filename to use for the checkpoint file. This will be writen in the output directory." );
+  sect.add_entry( { storage_meta::checkpoint_name_label(), "filename", "", "checkpoint.arc", description } );
+}
+// outputname : [optional, filename] Name of output file.
+{
+  const std::string description( "The name of the output file to be writen in the output directory. The extension on the given filename determines the type of output file created. dbm|zip: create container files that hold all the output. mem: stores output in memory and writes no output file" );
+  sect.add_entry( { storage_meta::output_name_label(), "filename", "*.(dbm|zip|mem)", "required", description } );
+}

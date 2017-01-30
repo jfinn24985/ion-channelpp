@@ -1,6 +1,6 @@
 format 75
 "platform test" // platform::platform test
-  revision 45
+  revision 53
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -717,7 +717,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     show_infonote default drawing_language default show_stereotype_properties default
     associated_deployment_view deploymentview_ref 176688 // application test suite
     classdiagram 338736 "Platform tests"
-      draw_all_relations default hide_attributes yes hide_operations yes hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
+      draw_all_relations no hide_attributes yes hide_operations yes hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
       size A4
     end
 
@@ -753,6 +753,15 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 1070128 // <dependency>
 	  b parent class_ref 659760 // simulation_manager
+      end
+
+      classrelation 1091248 // <dependency>
+	relation 1090352 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 1091248 // <dependency>
+	  b parent class_ref 673968 // storage_meta
       end
 
       class 667312 "simple_storage_manager"
@@ -791,6 +800,31 @@ ${docstring}${members}
 	      python "${type}"
 	      classrelation_ref 1050288 // <dependency>
 	    b parent class_ref 912431 // access
+	end
+
+	attribute 812464 "thelog"
+	  public type class_ref 254383 // stringstream
+	  multiplicity "*"
+	  stereotype "shared_ptr"
+	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
+"
+	  java_decl ""
+	  php_decl ""
+	  python_decl "${comment}${self}${name} = ${stereotype}()
+"
+	  idl_decl ""
+	  comment " "
+	end
+
+	attribute 818992 "param_"
+	  private explicit_type "string"
+	  cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	  java_decl ""
+	  php_decl ""
+	  python_decl "${comment}${self}${name} = ${value}
+"
+	  idl_decl ""
 	end
 
 	operation 1841584 "compute_output_dir"
@@ -842,6 +876,61 @@ ${docstring}${body}
   * input.inp
 
  \\post exists(return val)
+"
+	end
+
+	operation 1907760 "get_label"
+	  const public explicit_return_type "string"
+	  nparams 0
+	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override
+{
+  return std::string( \"simple\" );
+}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	  comment " A word used to idenitfy the storage manager type in the input file."
+	end
+
+	operation 1921840 "get_value"
+	  const public explicit_return_type "string"
+	  nparams 0
+	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->param_;
+}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	end
+
+	operation 1907888 "on_restart"
+	  public explicit_return_type "void"
+	  nparams 0
+	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	  cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	  comment " When restarting a simulation from a checkpoint file the
+ previous invocation may have been a parallel execution. In
+ this case the storage_manager class must reconnect to
+ the parallel subjobs and restart them from the subjob's
+ checkpoint files.
 "
 	end
 
@@ -909,7 +998,7 @@ ${docstring}${body}
 "
 	  cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}${)}${const}${volatile}${throw}
 {
-  return boost::shared_ptr< ${type} >();
+  return this->thelog;
 }
 "
 	  
@@ -921,10 +1010,33 @@ ${docstring}${body}
 	  comment " Create the system's log output stream."
 	end
 
+	operation 1908272 "set_parameters"
+	  public explicit_return_type "void"
+	  nparams 1
+	    param in name "params" explicit_type "string"
+	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	  cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	  comment " Set optional parameters (from the input file)."
+	end
+
 	operation 1836336 "simple_storage_manager"
 	  public explicit_return_type ""
 	  nparams 0
-	  cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+	  cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: storage_manager()
+, thelog( new std::stringstream )
+{}
 "
 	  
 	  
@@ -970,10 +1082,49 @@ ${docstring}${body}
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
   {
     ar & boost::serialization::base_object< platform::storage_manager >( *this );
+    ar & param_;
   }"
 	  
 	  
 	  
+	  
+	end
+
+	operation 1921712 "add_definition"
+	  class_operation public explicit_return_type "void"
+	  nparams 1
+	    param inout name "meta" type class_ref 673968 // storage_meta
+	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	  cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	end
+
+	operation 1921968 "type_label_"
+	  class_operation public explicit_return_type "string"
+	  nparams 0
+	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	  cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  const std::string result{ \"test\" };
+  return result;
+}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
 	  
 	end
       end
@@ -1024,43 +1175,6 @@ ${docstring}${body}
  open cube \"bulk\" regions."
       end
 
-      operation 1821744 "test_storage_manager_methods"
-	class_operation public explicit_return_type "void"
-	nparams 1
-	  param inout name "storage" type class_ref 659888 // storage_manager
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Perform test on a storage manager derived class.
-
- Methods tested
-   filename_base
-   output_dir_fmt
-   run_number
-   set_filename_base
-   set_output_dir_fmt
-   set_run_number
-   compute_dir
-   compute_output_dir
-   find_input_filename
-   find_input_filename
-   open_output
-   open_input
-   open_checkpoint
-   open_log
-   get_log"
-      end
-
       operation 1821872 "base_storage_manager_test"
 	public explicit_return_type "void"
 	nparams 0
@@ -1107,7 +1221,7 @@ Not tested (undefined in simple_storage_manager)
 "
       end
 
-      operation 1855152 "serial_manager_lifetime_test"
+      operation 1855152 "serial_storage_lifetime_test"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1124,7 +1238,7 @@ Not tested (undefined in simple_storage_manager)
 "
       end
 
-      operation 1855024 "serial_manager_method_test"
+      operation 1855024 "serial_storage_method_test"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1170,7 +1284,7 @@ Not tested (undefined in simple_storage_manager)
 "
       end
 
-      operation 1861808 "serial_manager_input_filename_noexist"
+      operation 1861808 "serial_storage_input_filename_noexist"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1186,7 +1300,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when input file resolves to no files."
       end
 
-      operation 1861936 "serial_manager_input_filename_is_dir"
+      operation 1861936 "serial_storage_input_filename_is_dir"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1202,7 +1316,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when input file resolves to directory."
       end
 
-      operation 1862064 "serial_manager_input_filename_is_not_accessible"
+      operation 1862064 "serial_storage_input_filename_is_not_accessible"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1218,7 +1332,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when input file not accessible,"
       end
 
-      operation 1862192 "serial_manager_input_filename_is_not_readable"
+      operation 1862192 "serial_storage_input_filename_is_not_readable"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1234,7 +1348,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when input file not readable"
       end
 
-      operation 1863600 "serial_manager_open_output_output_directory_is_not_directory"
+      operation 1863600 "serial_storage_open_output_output_directory_is_not_directory"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1250,7 +1364,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when input file not readable"
       end
 
-      operation 1863472 "serial_manager_open_output_output_directory_is_not_accessible"
+      operation 1863472 "serial_storage_open_output_output_directory_is_not_accessible"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1266,7 +1380,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when output dir not readable"
       end
 
-      operation 1863344 "serial_manager_open_output_output_directory_is_0W0"
+      operation 1863344 "serial_storage_open_output_output_directory_is_0W0"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1282,7 +1396,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when output dir only writable"
       end
 
-      operation 1863216 "serial_manager_open_output_output_directory_is_RW0"
+      operation 1863216 "serial_storage_open_output_output_directory_is_RW0"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1298,7 +1412,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when output dir only readable + writable"
       end
 
-      operation 1863088 "serial_manager_open_output_output_directory_is_0WX"
+      operation 1863088 "serial_storage_open_output_output_directory_is_0WX"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1314,7 +1428,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when output dir only exec + writable (PASSES)"
       end
 
-      operation 1862960 "serial_manager_open_output_output_directory_is_R0X"
+      operation 1862960 "serial_storage_open_output_output_directory_is_R0X"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1330,7 +1444,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when output dir only readable + writable"
       end
 
-      operation 1862320 "serial_manager_open_checkpoint_output_directory_is_not_directory"
+      operation 1862320 "serial_storage_open_checkpoint_output_directory_is_not_directory"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1346,7 +1460,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when input file not readable"
       end
 
-      operation 1862448 "serial_manager_open_checkpoint_output_directory_is_not_accessible"
+      operation 1862448 "serial_storage_open_checkpoint_output_directory_is_not_accessible"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1362,7 +1476,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when output dir not readable"
       end
 
-      operation 1862576 "serial_manager_open_checkpoint_output_directory_is_0W0"
+      operation 1862576 "serial_storage_open_checkpoint_output_directory_is_0W0"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1378,7 +1492,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when output dir only writable"
       end
 
-      operation 1862704 "serial_manager_open_checkpoint_output_directory_is_RW0"
+      operation 1862704 "serial_storage_open_checkpoint_output_directory_is_RW0"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1394,7 +1508,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when output dir only readable + writable"
       end
 
-      operation 1862832 "serial_manager_open_checkpoint_output_directory_is_0WX"
+      operation 1862832 "serial_storage_open_checkpoint_output_directory_is_0WX"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1410,7 +1524,7 @@ Not tested (undefined in simple_storage_manager)
 	comment " Test what happens when output dir only exec + writable (PASSES)"
       end
 
-      operation 1823920 "serial_manager_open_checkpoint_output_directory_is_R0X"
+      operation 1823920 "serial_storage_open_checkpoint_output_directory_is_R0X"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1424,15 +1538,6 @@ Not tested (undefined in simple_storage_manager)
 	
 	
 	comment " Test what happens when output dir only readable + writable"
-      end
-
-      extra_member 697648 "TODO"
-	
-	cpp "" ""
-	java ""
-	php ""
-	python ""
-	idl ""
       end
 
       operation 1823024 "simulation_manager_lifetime_test"
@@ -1476,7 +1581,7 @@ Not tested (undefined in simple_storage_manager)
 "
       end
 
-      operation 1822128 "add_specie_choice_test"
+      operation 1914928 "storage_meta_lifetime_test"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1487,13 +1592,46 @@ Not tested (undefined in simple_storage_manager)
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
 	
+	
+	comment " Test simulation_manager ctor"
       end
 
-      operation 1824048 "trial_input_type_no_value_test"
+      operation 1914800 "storage_meta_methods_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Methods tested
+  * add_type
+  * has_type"
+      end
+
+      operation 1915056 "run_input_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Test combination of storage_meta and simple_storage_manager."
+      end
+
+      operation 1824048 "run_input_type_no_value_test"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1509,7 +1647,7 @@ ${docstring}${body}
 	comment " Test combination of choice_meta and move_chocie."
       end
 
-      operation 1824176 "trial_input_type_bad_value_test"
+      operation 1824176 "run_input_type_bad_value_test"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1525,7 +1663,7 @@ ${docstring}${body}
 	comment " Test combination of choice_meta and move_chocie."
       end
 
-      operation 1824304 "trial_input_duplicate_type_test"
+      operation 1824304 "run_input_duplicate_type_test"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1541,7 +1679,7 @@ ${docstring}${body}
 	comment " Test combination of choice_meta and move_chocie."
       end
 
-      operation 1824432 "trial_input_no_rate_test"
+      operation 1824432 "run_input_checkname_no_value_test"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1557,7 +1695,7 @@ ${docstring}${body}
 	comment " Test combination of choice_meta and move_chocie."
       end
 
-      operation 1824560 "trial_input_rate_no_value_test"
+      operation 1824560 "run_input_outname_no_value_test"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1573,7 +1711,7 @@ ${docstring}${body}
 	comment " Test combination of choice_meta and move_chocie."
       end
 
-      operation 1824688 "trial_input_rate_negative_value_test"
+      operation 1824688 "run_input_outdir_no_value_test"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1589,7 +1727,7 @@ ${docstring}${body}
 	comment " Test combination of choice_meta and move_chocie."
       end
 
-      operation 1824816 "trial_input_rate_zero_value_test"
+      operation 1824816 "run_input_inputpattern_no_value_test"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1603,6 +1741,15 @@ ${docstring}${body}
 	
 	
 	comment " Test combination of choice_meta and move_chocie."
+      end
+
+      extra_member 697648 "TODO"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
       end
 
       operation 1824944 "trial_input_rate_nonnumber_value_test"
@@ -1764,6 +1911,23 @@ ${docstring}${body}
 	
 	comment " Test combination of choice_meta and move_chocie."
       end
+
+      operation 1822128 "add_specie_choice_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
     end
   end
 
@@ -1796,10 +1960,10 @@ BOOST_CLASS_EXPORT_GUID(platform::platform_test::simple_storage_manager, \"platf
 
 ${includes}
 // Manuals
-//#include \"core/input_delegater.hpp\"
+#include \"core/input_delegater.hpp\"
 //#include \"core/input_document.hpp\"
 //#include \"core/input_help.hpp\"
-//#include \"core/input_preprocess.hpp\"
+#include \"core/input_preprocess.hpp\"
 //#include \"core/strngs.hpp\"
 //#include \"utility/fuzzy_equals.hpp\"
 //#include \"utility/random.hpp\"

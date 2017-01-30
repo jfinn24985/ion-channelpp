@@ -5,6 +5,12 @@ ar & filename_base_;
 ar & output_dir_fmt_;
 ar & output_name_;
 ar & run_number_;
+!!!1759792.cpp!!!	get_log() : ostream
+if( not this->log_ )
+{
+  this->log_ = this->open_log();
+}
+return *(this->log_);
 !!!1848496.cpp!!!	open_sink_by_extension(in fpath : path, in def_ext : string) : base_sink
 std::string ext = fpath.extension().native();
 boost::shared_ptr< utility::base_sink > result; 
@@ -47,9 +53,12 @@ UTILITY_INPUT( not this->output_name().empty()
 boost::filesystem::path cpath( this->compute_output_dir() );
 cpath /= this->output_name();
 return cpath.native();
-!!!1759792.cpp!!!	get_log() : ostream
-if( not this->log_ )
-{
-  this->log_ = this->open_log();
-}
-return *(this->log_);
+!!!1900976.cpp!!!	build_input_delegater(inout fstype : storage_manager, inout delegate : input_delegater) : void
+// build storage manager meta and add to delegater
+boost::shared_ptr< platform::storage_meta > fsmeta { new platform::storage_meta( fstype ) };
+
+// Monitor trial occurence and success
+platform::serial_storage::add_definition( *fsmeta );
+
+
+delegate.add_input_delegate( fsmeta );
