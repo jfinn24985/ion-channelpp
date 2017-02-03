@@ -5,12 +5,93 @@ ar & filename_base_;
 ar & output_dir_fmt_;
 ar & output_name_;
 ar & run_number_;
+!!!1940400.cpp!!!	description(inout os : ostream) : void
+os << core::strngs::horizontal_bar() << "\n";
+os << " Simulation Runtime Settings\n";
+os << "----------------------------\n";
+os << "                 run index : " << this->run_number() << "\n";
+os << " output directory template : " << this->output_dir_fmt() << "\n";
+os << "    input filename pattern : " << this->filename_base() << "\n";
+os << "      checkpoint file name : " << this->checkpoint_name() << "\n";
+os << "          output file name : " << this->output_name() << "\n";
+!!!1940400.python!!!	description(inout os : ostream) : void
+from constants import constants
+constants.description( os )
+print >>os, "[simulation]"
+print >>os, "        volume :", self.cell_region_.volume(-1), "Anstrom{3}"
+print >>os, "  permittivity :", self.cell_region_.permittivity()
+print >>os, " beta (1/k_BT) :", (1.0/(constants.boltzmann_constant()*self.temperature_kelvin_)), " J{-1}"
+print >>os, "  temperature :", self.temperature_kelvin_, " K"
+print >>os, " specie count :", self.specie_count()
+print >>os, " - loop sizes"
+print >>os, "       thermal :", self.equilibration_interval_
+print >>os, "    production :", self.production_interval_
+print >>os, "         inner :", self.inner_loop_size_
+print >>os, " current index :", self.outer_loop_index_
+print >>os, " - other parameters"
+print >>os, " starting particle count :", self.target_number_of_particles()
+print >>os, "          ionic strength :", self.ionic_strength()
+print >>os, "             trial rates :", self.rates_
+print >>os, "              move delta :", self.delta
+for spc in self.species_:
+  spc.description( os )
+print >>os, "[choices] trial types and rates"
+print >>os, " %6s %4s %7s" % ( "type", "spc.", "rate(%)" )
+for choice in self.choices_:
+  print >>os, " %6s %4s %7.2f" % ( choice.label(), self.species_[choice.specie_key()].label(), choice.probability()*100.0 )
+for observable in self.observables_:
+  observable.description( os )
+for potl in self.evaluators_:
+  potl.description( os )
+self.ensemble_.description( os )
+
+!!!1940656.python!!!	do_description(inout os : ostream) : void
+from constants import constants
+constants.description( os )
+print >>os, "[simulation]"
+print >>os, "        volume :", self.cell_region_.volume(-1), "Anstrom{3}"
+print >>os, "  permittivity :", self.cell_region_.permittivity()
+print >>os, " beta (1/k_BT) :", (1.0/(constants.boltzmann_constant()*self.temperature_kelvin_)), " J{-1}"
+print >>os, "  temperature :", self.temperature_kelvin_, " K"
+print >>os, " specie count :", self.specie_count()
+print >>os, " - loop sizes"
+print >>os, "       thermal :", self.equilibration_interval_
+print >>os, "    production :", self.production_interval_
+print >>os, "         inner :", self.inner_loop_size_
+print >>os, " current index :", self.outer_loop_index_
+print >>os, " - other parameters"
+print >>os, " starting particle count :", self.target_number_of_particles()
+print >>os, "          ionic strength :", self.ionic_strength()
+print >>os, "             trial rates :", self.rates_
+print >>os, "              move delta :", self.delta
+for spc in self.species_:
+  spc.description( os )
+print >>os, "[choices] trial types and rates"
+print >>os, " %6s %4s %7s" % ( "type", "spc.", "rate(%)" )
+for choice in self.choices_:
+  print >>os, " %6s %4s %7.2f" % ( choice.label(), self.species_[choice.specie_key()].label(), choice.probability()*100.0 )
+for observable in self.observables_:
+  observable.description( os )
+for potl in self.evaluators_:
+  potl.description( os )
+self.ensemble_.description( os )
+
 !!!1759792.cpp!!!	get_log() : ostream
 if( not this->log_ )
 {
   this->log_ = this->open_log();
 }
 return *(this->log_);
+!!!1928624.cpp!!!	write_document(inout wr : input_document) : void
+// Add storage information section
+std::size_t ix = wr.add_section( platform::storage_meta::storage_label() );
+auto &sec = wr[ ix ];
+sec.add_entry( core::strngs::fstype(), this->get_label() );
+sec.add_entry( core::strngs::outputdir_label(), this->output_dir_fmt() );
+sec.add_entry( core::strngs::inputpattern_label(), this->filename_base() );
+sec.add_entry( platform::storage_meta::output_name_label(), this->output_name() );
+sec.add_entry( platform::storage_meta::checkpoint_name_label(), this->checkpoint_name() );
+this->do_write_document( wr, ix );
 !!!1848496.cpp!!!	open_sink_by_extension(in fpath : path, in def_ext : string) : base_sink
 std::string ext = fpath.extension().native();
 boost::shared_ptr< utility::base_sink > result; 

@@ -411,3 +411,67 @@ catch( std::bad_cast const& err )
   UTILITY_INPUT( value_is_a_number, title + " \"" + name + "\" parameter value (" + value + ") is not a number: " + err.what(), section_name, nullptr );
 }
 target = result;
+!!!1938736.cpp!!!	get_ordinal(in name : string, in title : string, in section_name : string) : size_t
+UTILITY_INPUT( not this->value().empty(), title + " \"" + name + "\" parameter requires a value.", section_name, this );
+std::size_t result;
+try
+{
+  result = boost::lexical_cast< std::size_t >( this->value() );
+}
+catch( std::bad_cast const& err )
+{
+  const bool value_is_an_ordinal = false;
+  UTILITY_INPUT( value_is_an_ordinal, title + " \"" + name + "\" parameter value (" + this->value() + ") is not an ordinal: " + err.what(), section_name, this );
+}
+return result;
+!!!1938864.cpp!!!	get_bool(in name : string, in title : string, in section_name : string, in has_default : bool, in default_value : bool) : bool
+bool result = false;
+if( this->value().empty() )
+{
+  if( has_default )
+  {
+    result = default_value;
+  }
+  else
+  {
+    UTILITY_INPUT( not this->value().empty(), title + " \"" + name + "\" parameter requires a value.", section_name, this );
+  }
+}
+else
+{
+  try
+  {
+    result = core::input_base_reader::read_as_bool( this->value() );
+  }
+  catch( std::bad_cast const& err )
+  {
+    const bool value_is_a_boolean = false;
+    UTILITY_INPUT( value_is_a_boolean, title + " \"" + name + "\" parameter value (" + this->value() + ") is not a boolean: " + err.what(), section_name, this );
+  }
+}
+return result;
+
+!!!1938992.cpp!!!	get_float(in name : string, in title : string, in section_name : string, in above_zero : bool, in equal_zero : bool) : double
+UTILITY_INPUT( not this->value().empty(), title + " \"" + name + "\" parameter requires a value.", section_name, this );
+double result;
+try
+{
+  result = boost::lexical_cast< double >( this->value() );
+}
+catch( std::bad_cast const& err )
+{
+  const bool value_is_a_number = false;
+  UTILITY_INPUT( value_is_a_number, title + " \"" + name + "\" parameter value (" + this->value() + ") is not a number: " + err.what(), section_name, this );
+}
+if( above_zero )
+{
+  if( equal_zero )
+  {
+    UTILITY_INPUT( result >= 0.0, title + " \"" + name + "\" parameter value (" + this->value() + ") must be greater than or equal to zero.", section_name, this );
+  }
+  else
+  {
+    UTILITY_INPUT( result > 0.0, title + " \"" + name + "\" parameter value (" + this->value() + ") must be greater than zero.", section_name, this );
+  }
+}
+return result;

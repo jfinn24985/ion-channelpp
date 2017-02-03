@@ -1,5 +1,5 @@
-class simple_storage_manager
-!!!1941296.python!!!	do_description(inout os : ostream) : void
+class standard_simulation
+!!!1941168.python!!!	do_description(inout os : ostream) : void
 from constants import constants
 constants.description( os )
 print >>os, "[simulation]"
@@ -30,10 +30,30 @@ for potl in self.evaluators_:
   potl.description( os )
 self.ensemble_.description( os )
 
-!!!1939120.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
-wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
-!!!1921712.cpp!!!	add_definition(inout meta : storage_meta) : void
-std::string desc( "Test storage manager." );
-std::unique_ptr< storage_definition > result( new storage_definition( type_label_(), desc ) );
+!!!1937200.cpp!!!	do_write_part_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label() );
+!!!1937712.cpp!!!	add_definition(inout meta : simulator_meta) : void
+std::string desc( "Standard Monte Carlo simulation. This runs a single equilibration phase then a single production phase." );
+std::unique_ptr< simulation_definition > result( new simulation_definition( type_label_(), desc, &standard_simulation::make_simulation_manager ) );
 // no extra parameters
 meta.add_type( result );
+!!!1937584.cpp!!!	run(inout sim : simulation, inout oslog : ostream) : bool
+// do thermalization
+oslog << "\nSTART OF THERMALISATION\n\n";
+sim.run_loop( this->equilibration_interval() );
+oslog << "\nEND OF THERMALISATION\n\n";
+// do main simulation
+oslog << "\nSTART OF PRODUCTION\n\n";
+sim.run_loop( this->production_interval() );
+oslog << "\nEND OF PRODUCTION\n\n";
+return true;
+
+!!!1937584.python!!!	run(inout sim : simulation, inout oslog : ostream) : bool
+# do thermalization
+self.run_loop(self.equilibration_interval_, oslog)
+print >>oslog, "\nEND OF THERMALISATION\n"
+self.run_loop(self.production_interval_, oslog)
+print >>oslog, "\nEND OF PRODUCTION\n"
+!!!1939248.cpp!!!	make_simulation_manager(in params : string) : simulation_manager
+UTILITY_CHECK( params.empty(), "Standard simulation manager requires no parameters." );
+return std::unique_ptr< simulation_manager >{ new standard_simulation };

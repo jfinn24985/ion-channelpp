@@ -1,6 +1,6 @@
 format 75
 "platform" // platform
-  revision 284
+  revision 290
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -3064,6 +3064,15 @@ run-number X
 output-format \"...\"
 end
 "
+      classrelation 1098800 // <dependency>
+	relation 1097904 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 1098800 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
       classrelation 998832 // rman_ (<directional composition>)
 	relation 997936 *-->
 	  stereotype "shared_ptr"
@@ -3188,6 +3197,25 @@ end
 (Allow for restarts from last checkpoint position)"
       end
 
+      attribute 754096 "rgen_"
+	private type class_ref 889391 // mt19937
+	multiplicity "0..1"
+	stereotype "shared_ptr"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${stereotype}()
+"
+	idl_decl ""
+	comment "The randomness source. 
+
+The default seed value is taken from the host 
+system's random device and is not printed. If you
+want to record the seed value, generate the value
+externally, print the value and use 'set_random_seed'."
+      end
+
       attribute 753968 "ranf_"
 	private type class_ref 463407 // random_distribution
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -3210,25 +3238,6 @@ the rgen_ attribute as the randomness source."
 "
 	idl_decl ""
 	comment "The number of step cycles between each report."
-      end
-
-      attribute 754096 "rgen_"
-	private type class_ref 889391 // mt19937
-	multiplicity "0..1"
-	stereotype "shared_ptr"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${stereotype}()
-"
-	idl_decl ""
-	comment "The randomness source. 
-
-The default seed value is taken from the host 
-system's random device and is not printed. If you
-want to record the seed value, generate the value
-externally, print the value and use 'set_random_seed'."
       end
 
       attribute 753840 "run_title_"
@@ -3258,6 +3267,106 @@ externally, print the value and use 'set_random_seed'."
       extra_member 689328 "LIFETIME"
 	
 	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1947952 "simulation"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+: rman_( new observable::report_manager )
+, eman_( new evaluator::evaluator_manager )
+, gman_( new geometry::geometry_manager( boost::shared_ptr< geometry::base_region >( new geometry::periodic_cube_region( \"cell\", 10.0 ) ) ) )
+, pman_( new particle::particle_manager )
+, cman_( new trial::choice_manager )
+, simtype_()
+, fstype_( new platform::serial_storage )
+, inner_loop_size_()
+, energy_()
+, outer_loop_index_( 0ul )
+, rgen_( new boost::mt19937 )
+, ranf_( rgen_ )
+, report_interval_()
+, run_title_()
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1948080 "~simulation"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1948464 "simulation"
+	stereotype "move"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 632368 // simulation
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1948208 "simulation"
+	stereotype "copy"
+	private explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 632368 // simulation
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1948336 "operator="
+	private return_type class_ref 632368 // simulation
+	nparams 1
+	  param in name "source" type class_ref 632368 // simulation
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${abstract} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 721200 "friend boost...access"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
 	java ""
 	php ""
 	python ""
@@ -3397,77 +3506,16 @@ ${docstring}return self.ranf_
 	php ""
 	python ""
 	idl ""
+	comment " Access local attributes"
       end
 
-      operation 1763504 "description"
-	const public explicit_return_type "void"
-	nparams 1
-	  param inout name "os" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Details about the current simulation to be written to the
- log at the start of the simulation."
-      end
-
-      operation 1763376 "do_description"
-	const cpp_virtual protected explicit_return_type "void"
-	nparams 1
-	  param inout name "os" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Details about the current simulation object."
-      end
-
-      operation 1760304 "total_energy"
-	private explicit_return_type "void"
+      operation 1956272 "choices"
+	stereotype "const"
+	const public return_type class_ref 393392 // choice_manager
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment " Calculate the total energy"
-      end
-
-      operation 1763248 "license"
-	const public explicit_return_type "void"
-	nparams 1
-	  param inout name "os" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
-{
-  ${body}
+  return *(this->cman_);
 }
 "
 	
@@ -3476,7 +3524,152 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment "Write the name of the program and the license."
+	comment " Get the simulation's set of trial selection choices."
+      end
+
+      operation 1955888 "evaluators"
+	stereotype "const"
+	const public return_type class_ref 439344 // evaluator_manager
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return *(this->eman_);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the simulation's set of particles."
+      end
+
+      operation 1955632 "has_manager"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return ( this->simtype_ and true );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Test if simulation subtype object is set."
+      end
+
+      operation 1955504 "manager"
+	stereotype "const"
+	const public return_type class_ref 659760 // simulation_manager
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}const ${type}& ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  UTILITY_REQUIRE( this->has_manager(), \"Can not get simulation subtype before it is set.\" );
+  return *(this->simtype_);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Access simulation subtype object."
+      end
+
+      operation 1955760 "particles"
+	stereotype "const"
+	const public return_type class_ref 446128 // particle_manager
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return *(this->pman_);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the simulations set of particles."
+      end
+
+      operation 1956144 "regions"
+	stereotype "const"
+	const public return_type class_ref 452656 // geometry_manager
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return *(this->gman_);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the simulation's set of regions."
+      end
+
+      operation 1956016 "report"
+	stereotype "const"
+	const public return_type class_ref 340656 // report_manager
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return *(this->rman_);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the simulation's samplers."
+      end
+
+      operation 1956400 "storage"
+	stereotype "const"
+	const public return_type class_ref 659888 // storage_manager
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return *(this->fstype_);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the simulation's storage manager"
+      end
+
+      operation 1939504 "run_title"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->${name}_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Get the run title"
       end
 
       extra_member 682544 "MODIFY"
@@ -3486,6 +3679,7 @@ ${docstring}${body}
 	php ""
 	python ""
 	idl ""
+	comment " Change value of local attributes"
       end
 
       operation 1762096 "set_inner_loop_size"
@@ -3500,6 +3694,23 @@ ${docstring}${body}
 	
 	
 	
+	
+      end
+
+      operation 1940272 "set_manager"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "simtype" type class_ref 659760 // simulation_manager
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  std::swap( this->simtype_, simtype );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
 	
       end
 
@@ -3539,6 +3750,82 @@ ${docstring}${body}
 	
       end
 
+      operation 1939632 "set_run_title"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "val" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->run_title_ = ${p0};
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}self.temperature_kelvin_ = ${p0}
+"
+	
+	comment "Set a textual title for this simulation"
+      end
+
+      operation 1939760 "set_target_count"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "val" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  this->pman_->${name}( ${p0} );
+}
+"
+	
+	
+	
+	
+	comment " Set the intended average number of particles in the simulation."
+      end
+
+      operation 1940016 "set_temperature"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "val" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  this->eman_->temperature( ${p0} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}self.temperature_kelvin_ = ${p0}
+"
+	
+	comment "Set the temperature (in Kelvin)"
+      end
+
+      operation 1939888 "set_solvent_permittivity"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "val" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  this->eman_->permittivity( ${p0} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}self.temperature_kelvin_ = ${p0}
+"
+	
+	comment " Set the the relative permittivity of the solvent medium (relative 
+ to permittivity in a vacuum)"
+      end
+
       extra_member 682672 "METHODS"
 	
 	cpp "" ""
@@ -3546,6 +3833,131 @@ ${docstring}${body}
 	php ""
 	python ""
 	idl ""
+	comment " Methods that involve modifying and/or querying attributes."
+      end
+
+      operation 1635888 "build_input_delegater"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "delegate" type class_ref 1012655 // input_delegater
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Adds factory methods and input parsers for all the types that can be instantiated from 
+ the input file."
+      end
+
+      operation 1763504 "description"
+	const public explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Details about the current simulation to be written to the
+ log at the start of the simulation.
+
+ \\pre has_manager"
+      end
+
+      operation 1763376 "do_description"
+	const cpp_virtual private explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Details about the current simulation object.
+
+ \\pre has_manager"
+      end
+
+      operation 1939376 "get_log"
+	const public explicit_return_type "ostream"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} & ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  return this->fstype_->get_log();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the log (from the storage manager)"
+      end
+
+      operation 1763248 "license"
+	const public explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Write the name of the program and the license."
+      end
+
+      operation 1760304 "total_energy"
+	private explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate the total energy"
       end
 
       operation 1877296 "main"
@@ -3566,6 +3978,30 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+      end
+
+      operation 1759920 "prepare"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}, ${p1}${v1}${)}:
+${docstring}${body}
+"
+	
+	comment " Method for setting up and running a set of MC trials.
+
+ The 'do_run' method's jobs is to determine the sequence of
+ trials that should be performed. This method's job is to perform
+ the trials. It is not anticipated that this method would need to
+ be altered."
       end
 
       operation 1762608 "random_seed_value"
@@ -3590,6 +4026,26 @@ ${docstring}${body}
  a single random unsigned int suitable to seed the psuedo-random
  number generator. 
 "
+      end
+
+      operation 1762480 "read_input"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "reader" type class_ref 313392 // input_base_reader
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Read in the given input file"
       end
 
       operation 1763632 "run_loop"
@@ -3617,28 +4073,26 @@ ${docstring}${body}
  be altered."
       end
 
-      operation 1759920 "prepare"
+      operation 1760176 "write_document"
 	public explicit_return_type "void"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+	nparams 1
+	  param inout name "wr" type class_ref 163632 // input_document
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
 {
   ${body}
 }
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}, ${p1}${v1}${)}:
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
 ${docstring}${body}
 "
 	
-	comment " Method for setting up and running a set of MC trials.
+	comment " Write contents of simulation as an input document
 
- The 'do_run' method's jobs is to determine the sequence of
- trials that should be performed. This method's job is to perform
- the trials. It is not anticipated that this method would need to
- be altered."
+ \\pre has_manager"
       end
 
       extra_member 682288 "TODO"
@@ -3657,7 +4111,7 @@ ${docstring}${body}
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
 {
-  ${body}
+  this->pman_->generate_simulation( *(this->gman_), this->get_random(), this->fstype_->get_log() );
 }
 "
 	
@@ -3666,38 +4120,24 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment "Generate an initial ensemble to run a simulation."
-      end
+	comment " Generate an initial ensemble to run a simulation.
 
-      operation 1762480 "read_input"
-	public explicit_return_type "void"
-	nparams 2
-	  param inout name "reader" type class_ref 313392 // input_base_reader
-	  param inout name "oslog" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+ In general the \"main\" method handles creating the
+ from an input file using \"read_input\" then 
+ \"generate_simulation\". This should prepare the
+ particle system for performing a simulaton. This
+ method is publically available for manually
+ constructing a simulation, for example during testing.
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment "Read in the given input file"
       end
 
       operation 1761584 "do_report"
 	private explicit_return_type "void"
-	nparams 2
+	nparams 1
 	  param in name "self" type class_ref 632368 // simulation
-	  param inout name "os" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}
 {
   ${body}
 }
@@ -3712,51 +4152,10 @@ ${docstring}${body}
 
  * monitor that running energy and computed energy remain close"
       end
-
-      operation 1760176 "write_document"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "wr" type class_ref 163632 // input_document
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment " Write contents of simulation as an input document"
-      end
-
-      operation 1635888 "build_input_delegater"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "delegate" type class_ref 1012655 // input_delegater
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Adds factory methods and input parsers for all the types that can be instantiated from 
- the input file."
-      end
     end
 
     class 659760 "simulation_manager"
-      visibility package 
+      abstract visibility package 
       cpp_decl "${comment}${template}class ${name}${inherit}
  {
 ${members}
@@ -3930,6 +4329,42 @@ ${docstring}${body}
 	idl ""
       end
 
+      operation 1941040 "description"
+	const public explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Details about the current simulation to be written to the
+ log at the start of the simulation."
+      end
+
+      operation 1940912 "do_description"
+	abstract const cpp_virtual private explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Details about the current storage object."
+      end
+
       operation 1761328 "equilibration_interval"
 	const public explicit_return_type "size_t"
 	nparams 0
@@ -3947,6 +4382,23 @@ ${docstring}${body}
  * data may be collected but will be reset at end of thermalisation"
       end
 
+      operation 1763120 "license"
+	abstract const cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The licence or citation information for this 
+ simulation subtype. This supplements information
+ writen by the simulation class."
+      end
+
       operation 1760688 "production_interval"
 	const public explicit_return_type "size_t"
 	nparams 0
@@ -3960,6 +4412,60 @@ ${docstring}${body}
 	
 	
 	comment " The number of outer loops to perform during the simulation"
+      end
+
+      operation 1935536 "type_label"
+	abstract const cpp_virtual public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Label that identifies this simulation manager subtype in
+ the input file (virtual access)."
+      end
+
+      operation 1760048 "write_part_document"
+	const public explicit_return_type "void"
+	nparams 2
+	  param inout name "wr" type class_ref 163632 // input_document
+	  param in name "ix" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Write data of simulation manager object into the input
+ document object at the given section."
+      end
+
+      operation 1935280 "do_write_part_document"
+	abstract const cpp_virtual private explicit_return_type "void"
+	nparams 2
+	  param inout name "wr" type class_ref 163632 // input_document
+	  param in name "ix" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Write extra data of derived simulator object into the input
+ document object at the given section."
       end
 
       extra_member 706480 "MODIFY"
@@ -3984,6 +4490,21 @@ ${docstring}${body}
 	
 	
 	
+      end
+
+      operation 1938480 "set_parameters"
+	abstract cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Subtype specific parameters (from the input file)."
       end
 
       operation 1761968 "set_production_interval"
@@ -4011,11 +4532,345 @@ ${docstring}${body}
       end
 
       operation 1773104 "run"
-	public explicit_return_type "void"
+	abstract cpp_virtual public explicit_return_type "bool"
 	nparams 2
 	  param inout name "sim" type class_ref 632368 // simulation
 	  param inout name "oslog" explicit_type "ostream"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Perform the simulation. Base class just does
+ sim.run_loop(equil_int) + sim.run_loop(prod_int).
+"
+      end
+    end
+
+    class 681008 "standard_simulation"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " The style of simulation that is running.  This manages the super-loop variants
+ and can be selected from the input file at runtime."
+      classrelation 1097904 // <generalisation>
+	relation 1097008 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 1097904 // <generalisation>
+	  b parent class_ref 659760 // simulation_manager
+      end
+
+      classrelation 1097776 // <dependency>
+	relation 1096880 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 1097776 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      extra_member 720560 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1935664 "standard_simulation"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: simulation_manager()
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1935792 "~standard_simulation"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1935920 "standard_simulation"
+	stereotype "move"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 681008 // standard_simulation
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " No move"
+      end
+
+      operation 1936048 "standard_simulation"
+	stereotype "copy"
+	private explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 681008 // standard_simulation
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " No copy"
+      end
+
+      operation 1936176 "operator="
+	private return_type class_ref 681008 // standard_simulation
+	nparams 1
+	  param in name "source" type class_ref 681008 // standard_simulation
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " No assignment"
+      end
+
+      extra_member 720688 "friend boost...access"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1936304 "serialize"
+	stereotype "template"
+	private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive> ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ar & boost::serialization::base_object< platform::simulation_manager >( *this );
+}"
+	
+	
+	
+	
+      end
+
+      extra_member 720816 "ACCESS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1941168 "do_description"
+	const cpp_virtual private explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Details about the current storage object."
+      end
+
+      operation 1936560 "license"
+	const cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "Implement in derived classes to write the name of 
+the program and any citation information."
+      end
+
+      operation 1936816 "type_label"
+	const cpp_virtual public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  return ${class}::${name}_();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Label that identifies this simulation manager subtype in
+ the input file (virtual access)."
+      end
+
+      operation 1936944 "type_label_"
+	class_operation public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  std::string result{ \"standard\" };
+  return result;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Label that identifies this simulation manager subtype in
+ the input file."
+      end
+
+      operation 1937200 "do_write_part_document"
+	const cpp_virtual private explicit_return_type "void"
+	nparams 2
+	  param inout name "wr" type class_ref 163632 // input_document
+	  param in name "ix" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Write extra data of derived simulator object into the input
+ document object at the given section."
+      end
+
+      extra_member 720944 "MODIFY"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1938352 "set_parameters"
+	cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Subtype specific parameters (from the input file)."
+      end
+
+      extra_member 721072 "METHOD"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 1937712 "add_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 1143343 // simulator_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1937584 "run"
+	public explicit_return_type "bool"
+	nparams 2
+	  param inout name "sim" type class_ref 632368 // simulation
+	  param inout name "oslog" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
 {
@@ -4033,14 +4888,16 @@ ${docstring}${body}
 "
       end
 
-      operation 1763120 "do_license"
-	const cpp_virtual private explicit_return_type "void"
+      operation 1939248 "make_simulation_manager"
+	class_operation public return_type class_ref 659760 // simulation_manager
 	nparams 1
-	  param inout name "os" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
-{}
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
 "
 	
 	
@@ -4048,28 +4905,6 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment "Implement in derived classes to write the name of 
-the program and any citation information."
-      end
-
-      operation 1760048 "do_write_document"
-	const cpp_virtual private explicit_return_type "void"
-	nparams 2
-	  param inout name "wr" type class_ref 163632 // input_document
-	  param in name "ix" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
-{}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-	comment " Write extra data of derived simulator object into the input
- document object at the given section."
       end
     end
 
@@ -4442,6 +5277,42 @@ ${docstring}${body}
 	comment " The name of the checkpoint file."
       end
 
+      operation 1940400 "description"
+	const public explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Details about the current simulation to be written to the
+ log at the start of the simulation."
+      end
+
+      operation 1940656 "do_description"
+	abstract const cpp_virtual private explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Details about the current storage object."
+      end
+
       operation 1758256 "filename_base"
 	const public explicit_return_type "string"
 	nparams 0
@@ -4539,6 +5410,43 @@ ${docstring}${body}
 "
 	
 	comment "Get the index (default=1) of the current application run"
+      end
+
+      operation 1928624 "write_document"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "wr" type class_ref 163632 // input_document
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Write contents of simulation as an input document"
+      end
+
+      operation 1928496 "do_write_document"
+	abstract const cpp_virtual private explicit_return_type "void"
+	nparams 2
+	  param inout name "wr" type class_ref 163632 // input_document
+	  param in name "ix" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Write extra data of derived simulator object into the input
+ document object at the given section."
       end
 
       extra_member 696112 "MODIFY"
@@ -5083,6 +5991,46 @@ ${docstring}${body}
 	comment " A word used to idenitfy the storage manager type in the input file."
       end
 
+      operation 1940528 "do_description"
+	const private explicit_return_type "void"
+	nparams 1
+	  param inout name "os" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}${staticnl}
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Details about the current storage object."
+      end
+
+      operation 1928752 "do_write_document"
+	const private explicit_return_type "void"
+	nparams 2
+	  param inout name "wr" type class_ref 163632 // input_document
+	  param in name "ix" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Write extra data of derived simulator object into the input
+ document object at the given section."
+      end
+
       extra_member 699696 "MODIFY"
 	
 	cpp "" ""
@@ -5402,7 +6350,7 @@ construct a simulation_manager derived class object.
 * run section has a \"type\" parameter that will construct
 a storage_manager derived class object.
 "
-    class 674224 "simulaton_definition"
+    class 674224 "simulation_definition"
       visibility package 
       cpp_decl "${comment}${template}class ${name}${inherit}
 {
@@ -5430,19 +6378,13 @@ ${docstring}${members}
 	  b parent class_ref 539568 // input_definition
       end
 
-      class 674352 "choice_generator_fn"
-	visibility package stereotype "typedef" base_type class_ref 170416 // function4
-	nactuals 5
-	actual class class_ref 170416 // function4
-	  rank 0 explicit_value "std::unique_ptr< base_chooser >"
-	actual class class_ref 170416 // function4
+      class 674352 "sim_manager_generator_fn"
+	visibility package stereotype "typedef" base_type class_ref 252719 // function1
+	nactuals 2
+	actual class class_ref 252719 // function1
+	  rank 0 explicit_value "boost::shared_ptr< simulation_manager >"
+	actual class class_ref 252719 // function1
 	  rank 1 explicit_value "const std::map< std::string, std::string > &"
-	actual class class_ref 170416 // function4
-	  rank 2 explicit_value "std::string"
-	actual class class_ref 170416 // function4
-	  rank 3 explicit_value "std::string"
-	actual class class_ref 170416 // function4
-	  rank 4 explicit_value "double"
 	cpp_decl "${comment}typedef ${type} ${name};
 "
 	java_decl ""
@@ -5452,25 +6394,25 @@ ${docstring}${members}
 "
 	explicit_switch_type ""
 	
-	classrelation 1077168 // <realization>
-	  relation 1076272 -_-|>
+	classrelation 1098416 // <realization>
+	  relation 1097520 -_-|>
 	    a public
 	      cpp default "${type}"
 	      python "${type}"
-	      classrelation_ref 1077168 // <realization>
-	    b parent class_ref 170416 // function4
+	      classrelation_ref 1098416 // <realization>
+	    b parent class_ref 252719 // function1
 	end
       end
 
-      classrelation 1077296 // factory_ (<directional composition>)
-	relation 1076400 *-->
+      classrelation 1098160 // factory_ (<directional composition>)
+	relation 1097264 *-->
 	  a role_name "factory_" multiplicity "1" private
 	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
 	    python "${comment}${self}${name} = ${type}()
 "
-	    classrelation_ref 1077296 // factory_ (<directional composition>)
-	  b parent class_ref 1143855 // choice_generator_fn
+	    classrelation_ref 1098160 // factory_ (<directional composition>)
+	  b parent class_ref 674352 // sim_manager_generator_fn
       end
 
       extra_member 713392 "LIFETIME"
@@ -5482,12 +6424,12 @@ ${docstring}${members}
 	idl ""
       end
 
-      operation 1884976 "simulaton_definition"
+      operation 1884976 "simulation_definition"
 	const public explicit_return_type ""
 	nparams 3
 	  param in name "label" explicit_type "string"
 	  param in name "desc" explicit_type "string"
-	  param in name "fn" type class_ref 1143855 // choice_generator_fn
+	  param in name "fn" type class_ref 674352 // sim_manager_generator_fn
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
 : input_definition( ${p0}, ${p1} )
 , factory_( ${p2} )
@@ -5504,7 +6446,7 @@ ${docstring}${body}
  \\param label : name of the region subtype."
       end
 
-      operation 1885104 "simulaton_definition"
+      operation 1885104 "simulation_definition"
 	const private explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = delete;
@@ -5517,7 +6459,7 @@ ${docstring}${body}
 	
       end
 
-      operation 1885232 "~simulaton_definition"
+      operation 1885232 "~simulation_definition"
 	cpp_virtual public explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} {}
@@ -5530,11 +6472,11 @@ ${docstring}${body}
 	
       end
 
-      operation 1885360 "simulaton_definition"
+      operation 1885360 "simulation_definition"
 	stereotype "move"
 	private explicit_return_type ""
 	nparams 1
-	  param inout name "source" type class_ref 674224 // simulaton_definition
+	  param inout name "source" type class_ref 674224 // simulation_definition
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw} = delete;
 "
 	
@@ -5545,11 +6487,11 @@ ${docstring}${body}
 	
       end
 
-      operation 1885488 "simulaton_definition"
+      operation 1885488 "simulation_definition"
 	stereotype "copy"
 	private explicit_return_type ""
 	nparams 1
-	  param in name "source" type class_ref 674224 // simulaton_definition
+	  param in name "source" type class_ref 674224 // simulation_definition
 	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw} = delete;
 "
 	
@@ -5561,9 +6503,9 @@ ${docstring}${body}
       end
 
       operation 1885616 "operator="
-	private return_type class_ref 674224 // simulaton_definition
+	private return_type class_ref 674224 // simulation_definition
 	nparams 1
-	  param in name "source" type class_ref 674224 // simulaton_definition
+	  param in name "source" type class_ref 674224 // simulation_definition
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${abstract} = delete;
 "
 	
@@ -5584,15 +6526,12 @@ ${docstring}${body}
       end
 
       operation 1885744 "operator()"
-	const public return_type class_ref 170160 // base_chooser
-	nparams 4
+	const public return_type class_ref 659760 // simulation_manager
+	nparams 1
 	  param in name "params" explicit_type "string"
-	  param in name "label" explicit_type "string"
-	  param in name "specie_list" explicit_type "string"
-	  param in name "rate" explicit_type "double"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::unique_ptr< ${type} > ${name}${(}const std::map< ${t0}, ${t0} > & ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}const std::map< ${t0}, ${t0} > & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  return this->factory_( ${p0}, ${p1}, ${p2}, ${p3} );
+  return this->factory_( ${p0} );
 }
 "
 	
@@ -5678,17 +6617,32 @@ Base simulation subtype parameters
 	  b parent class_ref 1082671 // input_base_meta
       end
 
-      classrelation 481713 // sim_ (<directional aggregation>)
-	relation 481073 o-->
-	  a role_name "sim_" multiplicity "1" private
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} * ${name}${value};
+      classrelation 1098032 // types_ (<directional composition>)
+	relation 1097136 *-->
+	  stereotype "ptr_vector"
+	  a role_name "types_" multiplicity "*" private
+	    comment " The different simulation subtypes that can be performed."
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
 "
-	    classrelation_ref 481713 // sim_ (<directional aggregation>)
-	  b parent class_ref 1129135 // simulator
+	    python "${comment}${self}${name} = ${stereotype}()
+"
+	    classrelation_ref 1098032 // types_ (<directional composition>)
+	  b parent class_ref 674224 // simulation_definition
       end
 
-      attribute 174512 "missing_required_tags_"
-	private explicit_type "4"
+      classrelation 1098672 // sim_ (<directional aggregation>)
+	relation 1097776 o-->
+	  a role_name "sim_" private
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} * ${name}${value};
+"
+	    python "${comment}${self}${name} = ${value}
+"
+	    classrelation_ref 1098672 // sim_ (<directional aggregation>)
+	  b parent class_ref 632368 // simulation
+      end
+
+      attribute 174512 "required_tags_"
+	private explicit_type "5"
 	multiplicity "*"
 	stereotype "bitset"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}> ${name}${value};
@@ -5699,6 +6653,55 @@ Base simulation subtype parameters
 "
 	idl_decl ""
 	comment "  Which input entrys have been seen"
+      end
+
+      attribute 825904 "params_"
+	private explicit_type "string"
+	multiplicity "*"
+	stereotype "map"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}<${type}, ${type}> ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${stereotype}()
+"
+	idl_decl ""
+      end
+
+      attribute 825776 "type_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment "The type label of the current observable"
+      end
+
+      attribute 826032 "naver_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment "The number of step cycles to perform in the equilibration phase of the simulation."
+      end
+
+      attribute 826160 "nstep_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment "The number of step cycles to perform in the production phase of the simulation."
       end
 
       class 149040 "anonymous_sim_meta"
@@ -5760,7 +6763,7 @@ ${items}};
 	  comment " entry 'isave'"
 	end
 
-	attribute 175024 "SIMULATOR_NTARG"
+	attribute 175024 "SIMULATOR_INNER"
 	  public type class_ref 149040 // anonymous_sim_meta
 	  init_value "3"
 	  cpp_decl "  ${name}${value},${comment}"
@@ -5769,12 +6772,23 @@ ${items}};
 	  python_decl "${comment}${self}${name} = ${value}
 "
 	  idl_decl ""
-	  comment " entry 'ntarg'"
+	  comment " entry 'inner'"
+	end
+
+	attribute 832688 "SIMULATOR_TYPE"
+	  public type class_ref 149040 // anonymous_sim_meta
+	  cpp_decl "  ${name}${value},${comment}"
+	  java_decl ""
+	  php_decl ""
+	  python_decl "${comment}${self}${name} = ${value}
+"
+	  idl_decl ""
+	  comment " Check if \"type\" parameter was present"
 	end
       end
 
       operation 2162607 "do_read_entry"
-	protected explicit_return_type "bool"
+	private explicit_return_type "bool"
 	nparams 1
 	  param inout name "reader" type class_ref 313392 // input_base_reader
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw} override;
@@ -5796,12 +6810,11 @@ ${docstring}${body}
       end
 
       operation 186416 "do_read_end"
-	protected explicit_return_type "void"
-	nparams 1
-	  param inout name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+	private explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -5816,19 +6829,95 @@ ${docstring}${body}
  reset the meta data as 'multiple' is false."
       end
 
+      operation 1938224 "add_type"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "ctor" type class_ref 674224 // simulation_definition
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::unique_ptr< ${t0} >& ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Add ctor for input \"simulation\" section
+
+ \\pre not has_type( ctor.type_name_ )
+ \\post has_type( ctor.type_name_ )"
+      end
+
+      operation 1938096 "has_type"
+	public explicit_return_type "bool"
+	nparams 1
+	  param in name "label" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Is there a ctor to match input \"simulation\" section with
+ \"type = [label]\""
+      end
+
+      operation 1937968 "size"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} { return this->types_.${name}(); }
+
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The number of storage type definitions"
+      end
+
+      operation 1937840 "empty"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} { return this->types_.${name}(); }
+
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Ary there no storage type definitions?"
+      end
+
       operation 2163887 "simulator_meta"
 	public explicit_return_type ""
 	nparams 1
-	  param inout name "sim" type class_ref 1129135 // simulator
+	  param inout name "sim" type class_ref 632368 // simulation
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} & ${p0}${v0}${)}${volatile}${throw};
 "
 	cpp_def "${comment}${inline}${class}::${name}${(}${t0} & ${p0}${)}${volatile}${throw} 
 : input_base_meta (core::strngs::simulator_label(), false, true)
 , sim_(&${p0})
-, missing_required_tags_()
-{
-  this->missing_required_tags_.set();
-}
+, required_tags_()
+, params_()
+, type_()
+, naver_()
+, nstep_()
+{}
 "
 	
 	
@@ -5850,23 +6939,6 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-      end
-
-      operation 800817 "simulator_meta"
-	private explicit_return_type ""
-	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw} 
-: input_base_meta ()
-, sim_()
-{}
-"
-	
-	
-	
-	
-	comment "for serialization only"
       end
 
       operation 268720 "do_reset"
@@ -7042,48 +8114,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
-    artifact 783023 "simulator_meta"
-      stereotype "source"
-      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
-#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
-
-${comment}
-${includes}
-${declarations}
-${namespace_start}
-${definition}
-${namespace_end}
-
-#endif
-"
-      cpp_src "${comment}
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
-
-${includes}
-// Manual incls
-#include <sstream>
-#include <bitset>
-#include \"core/strngs.hpp\"
-#include \"core/input_help.hpp\"
-#include \"utility/utility.hpp\"
-#include <boost/lexical_cast.hpp>
-//-
-#include \"observable/base_observable.hpp\"
-#include \"evaluator/base_evaluator.hpp\"
-#include \"particle/ensemble.hpp\"
-//-
-${namespace_start}
-${members}
-${namespace_end}
-"
-      associated_classes
-	class_ref 1143343 // simulator_meta
-      end
-    end
-
     artifact 769327 "libionch_platform"
       stereotype "library"
       associated_artifacts
@@ -7191,6 +8221,9 @@ ${declarations}
 ${namespace_start}
 ${definition}
 ${namespace_end}
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_KEY( platform::serial_storage );
 #endif
 "
       cpp_src "${comment}
@@ -7212,12 +8245,79 @@ ${includes}
 // -
 ${namespace_start}
 ${members}
-${namespace_end}"
+${namespace_end}
+
+BOOST_CLASS_EXPORT_IMPLEMENT( platform::serial_storage );
+"
       python_src "${comment}
 ${import}
 ${definition}"
       associated_classes
 	class_ref 667440 // serial_storage
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 590128 "simulation"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// manual includes
+#include \"core/strngs.hpp\"
+#include \"geometry/periodic_cube_region.hpp\"
+#include \"observable/base_observable.hpp\" // for serialization
+#include \"particle/change_set.hpp\"
+#include \"particle/ensemble.hpp\"
+#include \"platform/serial_storage.hpp\"
+#include \"platform/simulator_meta.hpp\"
+#include \"platform/standard_simulation.hpp\"
+#include \"trial/base_chooser.hpp\"         // for serialization
+#include \"trial/choice.hpp\"               // for serialization
+#include \"utility/fuzzy_equals.hpp\"
+#include \"utility/machine.hpp\"
+// -
+#include <boost/program_options.hpp>
+#include <boost/random/random_device.hpp>
+#include <fstream>
+// -
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 632368 // simulation
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
@@ -7256,6 +8356,10 @@ ${namespace_end}
 #endif
 
 ${includes}
+// manual includes
+#include \"core/strngs.hpp\"
+// -
+// -
 ${namespace_start}
 ${members}
 ${namespace_end}"
@@ -7264,6 +8368,101 @@ ${import}
 ${definition}"
       associated_classes
 	class_ref 659760 // simulation_manager
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 783023 "simulator_meta"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// Manual incls
+#include \"core/input_error_messages.hpp\"
+#include \"core/strngs.hpp\"
+#include \"evaluator/evaluator_manager.hpp\"
+#include \"utility/utility.hpp\"
+//-
+#include <boost/iostreams/filtering_stream.hpp>
+//-
+${namespace_start}
+${members}
+${namespace_end}
+"
+      associated_classes
+	class_ref 674224 // simulation_definition
+	class_ref 1143343 // simulator_meta
+      end
+    end
+
+    artifact 623408 "standard_simulation"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_KEY( platform::standard_simulation );
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// manual includes
+#include \"core/strngs.hpp\"
+#include \"utility/utility.hpp\"
+// -
+// -
+${namespace_start}
+${members}
+${namespace_end}
+
+BOOST_CLASS_EXPORT_IMPLEMENT( platform::standard_simulation );"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 681008 // standard_simulation
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
@@ -7394,10 +8593,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     artifact 597040 "libionch_newplatform"
       stereotype "library"
       associated_artifacts
+	artifact_ref 215983 // program_options
+	artifact_ref 590128 // simulation
 	artifact_ref 596912 // storage_manager
 	artifact_ref 597168 // serial_storage
 	artifact_ref 610224 // simulation_manager
 	artifact_ref 616880 // storage_meta
+	artifact_ref 623408 // standard_simulation
+	artifact_ref 783023 // simulator_meta
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
@@ -7414,37 +8617,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----------------------------------------------------------------------
 "
-    end
-
-    artifact 590128 "simulation"
-      stereotype "source"
-      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
-#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
-
-${comment}
-${includes}
-${declarations}
-${namespace_start}
-${definition}
-${namespace_end}
-#endif
-"
-      cpp_src "${comment}
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
-
-${includes}
-${namespace_start}
-${members}
-${namespace_end}"
-      python_src "${comment}
-${import}
-${definition}"
-      associated_classes
-	class_ref 632368 // simulation
-      end
     end
   end
 

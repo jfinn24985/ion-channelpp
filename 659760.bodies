@@ -1,13 +1,77 @@
 class simulation_manager
-!!!1773104.cpp!!!	run(inout sim : simulation, inout oslog : ostream) : void
-// do thermalization
-oslog << "\nSTART OF THERMALISATION\n\n";
-//sim.run_loop(this->equilibration_interval_);
-oslog << "\nEND OF THERMALISATION\n\n";
-// do main simulation
-oslog << "\nSTART OF PRODUCTION\n\n";
-//sim.run_loop(this->production_interval_);
-oslog << "\nEND OF PRODUCTION\n\n";
+!!!1941040.cpp!!!	description(inout os : ostream) : void
+os << core::strngs::horizontal_bar() << "\n";
+os << " Control settings\n";
+os << "-----------------\n";
+os << " thermalization interval : " << this->equilibration_interval() << "\n";
+os << "     production interval : " << this->production_interval() << "\n";
+this->do_description( os );
+!!!1941040.python!!!	description(inout os : ostream) : void
+from constants import constants
+constants.description( os )
+print >>os, "[simulation]"
+print >>os, "        volume :", self.cell_region_.volume(-1), "Anstrom{3}"
+print >>os, "  permittivity :", self.cell_region_.permittivity()
+print >>os, " beta (1/k_BT) :", (1.0/(constants.boltzmann_constant()*self.temperature_kelvin_)), " J{-1}"
+print >>os, "  temperature :", self.temperature_kelvin_, " K"
+print >>os, " specie count :", self.specie_count()
+print >>os, " - loop sizes"
+print >>os, "       thermal :", self.equilibration_interval_
+print >>os, "    production :", self.production_interval_
+print >>os, "         inner :", self.inner_loop_size_
+print >>os, " current index :", self.outer_loop_index_
+print >>os, " - other parameters"
+print >>os, " starting particle count :", self.target_number_of_particles()
+print >>os, "          ionic strength :", self.ionic_strength()
+print >>os, "             trial rates :", self.rates_
+print >>os, "              move delta :", self.delta
+for spc in self.species_:
+  spc.description( os )
+print >>os, "[choices] trial types and rates"
+print >>os, " %6s %4s %7s" % ( "type", "spc.", "rate(%)" )
+for choice in self.choices_:
+  print >>os, " %6s %4s %7.2f" % ( choice.label(), self.species_[choice.specie_key()].label(), choice.probability()*100.0 )
+for observable in self.observables_:
+  observable.description( os )
+for potl in self.evaluators_:
+  potl.description( os )
+self.ensemble_.description( os )
+
+!!!1940912.python!!!	do_description(inout os : ostream) : void
+from constants import constants
+constants.description( os )
+print >>os, "[simulation]"
+print >>os, "        volume :", self.cell_region_.volume(-1), "Anstrom{3}"
+print >>os, "  permittivity :", self.cell_region_.permittivity()
+print >>os, " beta (1/k_BT) :", (1.0/(constants.boltzmann_constant()*self.temperature_kelvin_)), " J{-1}"
+print >>os, "  temperature :", self.temperature_kelvin_, " K"
+print >>os, " specie count :", self.specie_count()
+print >>os, " - loop sizes"
+print >>os, "       thermal :", self.equilibration_interval_
+print >>os, "    production :", self.production_interval_
+print >>os, "         inner :", self.inner_loop_size_
+print >>os, " current index :", self.outer_loop_index_
+print >>os, " - other parameters"
+print >>os, " starting particle count :", self.target_number_of_particles()
+print >>os, "          ionic strength :", self.ionic_strength()
+print >>os, "             trial rates :", self.rates_
+print >>os, "              move delta :", self.delta
+for spc in self.species_:
+  spc.description( os )
+print >>os, "[choices] trial types and rates"
+print >>os, " %6s %4s %7s" % ( "type", "spc.", "rate(%)" )
+for choice in self.choices_:
+  print >>os, " %6s %4s %7.2f" % ( choice.label(), self.species_[choice.specie_key()].label(), choice.probability()*100.0 )
+for observable in self.observables_:
+  observable.description( os )
+for potl in self.evaluators_:
+  potl.description( os )
+self.ensemble_.description( os )
+
+!!!1760048.cpp!!!	write_part_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fsnavr(), this->equilibration_interval() );
+wr[ ix ].add_entry( core::strngs::fsnstp(), this->production_interval() );
+this->do_write_part_document( wr, ix );
 !!!1773104.python!!!	run(inout sim : simulation, inout oslog : ostream) : void
 # do thermalization
 self.run_loop(self.equilibration_interval_, oslog)

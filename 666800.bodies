@@ -979,46 +979,6 @@ boost::shared_ptr< platform::serial_storage > sman_ptr( new platform::serial_sto
     boost::filesystem::remove( ipath );
   }
 }
-!!!1823024.cpp!!!	simulation_manager_lifetime_test() : void
-{
-  // Test for virtual object pattern
-  BOOST_CHECK( std::is_default_constructible< platform::simulation_manager >::type {} );
-  BOOST_CHECK( not std::is_copy_constructible< platform::simulation_manager >::type {} );
-  BOOST_CHECK( not std::is_move_constructible< platform::simulation_manager >::type {} );
-  BOOST_CHECK( not ( std::is_assignable< platform::simulation_manager, platform::simulation_manager >::type {} ) );
-  BOOST_CHECK( std::has_virtual_destructor< platform::simulation_manager >::type {} );
-}
-{
-  boost::shared_ptr< platform::simulation_manager > var( new platform::simulation_manager );
-  BOOST_CHECK_EQUAL( var->equilibration_interval(), 0ul );
-  BOOST_CHECK_EQUAL( var->production_interval(), 0ul );
-}
-!!!1822000.cpp!!!	simulation_manager_methods_test() : void
-std::stringstream store;
-{
-  boost::shared_ptr< platform::simulation_manager > var( new platform::simulation_manager );
-  BOOST_CHECK_EQUAL( var->equilibration_interval(), 0ul );
-  BOOST_CHECK_EQUAL( var->production_interval(), 0ul );
-
-  var->set_equilibration_interval( 100ul );
-  var->set_production_interval( 1000ul );
-
-  BOOST_CHECK_EQUAL( var->equilibration_interval(), 100ul );
-  BOOST_CHECK_EQUAL( var->production_interval(), 1000ul );
-
-  // write class instance to archive
-  boost::archive::text_oarchive oa( store );
-  oa << var;
-}
-{
-  boost::shared_ptr< platform::simulation_manager > var2;
-  // read class instance from archive
-  boost::archive::text_iarchive ia( store );
-  ia >> var2;
-
-  BOOST_CHECK_EQUAL( var2->equilibration_interval(), 100ul );
-  BOOST_CHECK_EQUAL( var2->production_interval(), 1000ul );
-}
 !!!1914928.cpp!!!	storage_meta_lifetime_test() : void
 {
   // Test for virtual object pattern
@@ -1032,6 +992,9 @@ std::stringstream store;
   boost::shared_ptr< platform::storage_manager > tmp;
   boost::shared_ptr< platform::storage_meta > var( new platform::storage_meta( tmp ) );
   BOOST_CHECK_EQUAL( var->size(), 0ul );
+  BOOST_CHECK_EQUAL( var->section_label(), "run" );
+  BOOST_CHECK_EQUAL( var->multiple(), false );
+  BOOST_CHECK_EQUAL( var->required(), false );
   BOOST_CHECK( var->empty() );
 }
 {
@@ -1050,7 +1013,7 @@ std::stringstream store;
 }
 !!!1915056.cpp!!!	run_input_test() : void
 core::input_delegater dg( 1 );
-std::string type_label( "test" );
+const std::string type_label( "test" );
 const std::string cname( "checkpoint.arc" );
 const std::string test_cname( "check.dat" );
 const std::string fbase( "input.\%1$03d.inp" );
@@ -1344,414 +1307,1386 @@ catch( std::exception const& err )
 {
   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
 }
-!!!1824944.cpp!!!	trial_input_rate_nonnumber_value_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX try
-//XX {
-//XX   dg.read_input( reader );
-//XX   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   // std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Trial \"rate\" parameter value (one) is not a number" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1825072.cpp!!!	trial_input_duplicate_rate_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX try
-//XX {
-//XX   dg.read_input( reader );
-//XX   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   // std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Trial \"rate\" parameter appears more than once" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1825200.cpp!!!	trial_input_specielist_no_value_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX try
-//XX {
-//XX   dg.read_input( reader );
-//XX   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   //std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Trial \"specie\" parameter requires a value" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1825328.cpp!!!	trial_input_duplicate_specielist_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX try
-//XX {
-//XX   dg.read_input( reader );
-//XX   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   // std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Trial \"specie\" parameter appears more than once" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1825456.cpp!!!	trial_input_move_delta_no_value_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX auto pman = trial_test::mockup_particle_manager();
-//XX auto gman = trial_test::mockup_geometry_manager();
-//XX boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
-//XX utility::random_distribution rgnr( generator );
-//XX 
-//XX try
-//XX {
-//XX   // attributes from parameters are only tested when choice object
-//XX   // is created (e.g. in choice_manager::prepare)
-//XX   BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-//XX   cman->prepare( pman->get_species(), *gman, rgnr );  
-//XX   // If no exception then check for number of choices created.
-//XX   BOOST_CHECK_EQUAL( cman->size(), 5 );
-//XX   BOOST_ERROR( "expected \"cman->prepare( ... )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   //std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Move trial \"delta\" parameter requires a value" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1825584.cpp!!!	trial_input_move_delta_negative_value_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX auto pman = trial_test::mockup_particle_manager();
-//XX auto gman = trial_test::mockup_geometry_manager();
-//XX boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
-//XX utility::random_distribution rgnr( generator );
-//XX try
-//XX {
-//XX   // attributes from parameters are only tested when choice object
-//XX   // is created (e.g. in choice_manager::prepare)
-//XX   BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-//XX   cman->prepare( pman->get_species(), *gman, rgnr );
-//XX   BOOST_ERROR( "expected \"cman->prepare( ... )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   // std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Move trial \"delta\" parameter value (-0.5) must be greater than zero" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1825712.cpp!!!	trial_input_move_delta_zero_value_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX auto pman = trial_test::mockup_particle_manager();
-//XX auto gman = trial_test::mockup_geometry_manager();
-//XX boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
-//XX utility::random_distribution rgnr( generator );
-//XX try
-//XX {
-//XX   // attributes from parameters are only tested when choice object
-//XX   // is created (e.g. in choice_manager::prepare)
-//XX   BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-//XX   cman->prepare( pman->get_species(), *gman, rgnr );  
-//XX   // If no exception then check for number of choices created.
-//XX   BOOST_CHECK_EQUAL( cman->size(), 5 );
-//XX   BOOST_ERROR( "expected \"cman->prepare( ... )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   // std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Move trial \"delta\" parameter value (0.0) must be greater than zero" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1825840.cpp!!!	trial_input_move_delta_nonnumber_value_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX auto pman = trial_test::mockup_particle_manager();
-//XX auto gman = trial_test::mockup_geometry_manager();
-//XX boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
-//XX utility::random_distribution rgnr( generator );
-//XX try
-//XX {
-//XX   // attributes from parameters are only tested when choice object
-//XX   // is created (e.g. in choice_manager::prepare)
-//XX   BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-//XX   cman->prepare( pman->get_species(), *gman, rgnr );  
-//XX   // If no exception then check for number of choices created.
-//XX   BOOST_CHECK_EQUAL( cman->size(), 5 );
-//XX   BOOST_ERROR( "expected \"cman->prepare( ... )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   // std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Move trial \"delta\" parameter value (one) is not a number" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1825968.cpp!!!	trial_input_move_duplicate_delta_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX try
-//XX {
-//XX   dg.read_input( reader );
-//XX   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   // std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Trial \"delta\" parameter appears more than once" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1826096.cpp!!!	trial_input_move_unknown_parameter_test() : void
-//XX core::input_delegater dg( 1 );
-//XX boost::shared_ptr< trial::choice_manager > cman( new trial::choice_manager );
-//XX {
-//XX   boost::shared_ptr< trial::choice_meta > meta( new trial::choice_meta( cman ) );
-//XX 
-//XX   trial::move_choice::add_definition( *meta );
-//XX 
-//XX   BOOST_REQUIRE( meta->has_trial_type( "move" ) );
-//XX 
-//XX   dg.add_input_delegate( meta );
-//XX }
-//XX // Type is hidden by comment character
-//XX /////////////////////////////
-//XX std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
-//XX core::input_preprocess reader;
-//XX reader.add_buffer( "dummy", canon_input );
-//XX 
-//XX try
-//XX {
-//XX   dg.read_input( reader );
-//XX   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-//XX }
-//XX catch( std::runtime_error const& err )
-//XX {
-//XX   const std::string msg( err.what() );
-//XX   // std::cout << msg << "\n";
-//XX   BOOST_CHECK( msg.find( "Trial \"DELTA\" parameter with value (0.5) is not understood by move trial" ) < msg.size() );
-//XX }
-//XX catch( std::exception const& err )
-//XX {
-//XX   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX }
-//XX 
-//XX 
-!!!1822128.cpp!!!	add_specie_choice_test() : void
-//XX const double prob = 0.1;
-//XX {
-//XX   // Test is virtual object pattern
-//XX   BOOST_CHECK( not std::is_default_constructible< trial::add_specie >::type {} );
-//XX   BOOST_CHECK( not std::is_copy_constructible< trial::add_specie >::type {} );
-//XX   BOOST_CHECK( not std::is_move_constructible< trial::add_specie >::type {} );
-//XX   BOOST_CHECK( not( std::is_assignable< trial::add_specie, trial::add_specie >::type {} ) );
-//XX   BOOST_CHECK( std::has_virtual_destructor< trial::add_specie >::type {} );
-//XX }
-//XX particle::change_hash key1( 0, 0, 1, 0 );
-//XX boost::shared_ptr< trial::add_specie > var1( new trial::add_specie( 0ul ) );
-//XX BOOST_CHECK_EQUAL( var1->key(), key1 );
-//XX BOOST_CHECK_EQUAL( var1->probability(), 0 );
-//XX 
-//XX BOOST_CHECK_NO_THROW( var1->set_probability( prob ) );
-//XX BOOST_CHECK_EQUAL( var1->probability(), prob );
-//XX 
-//XX trial_test::test_base_choice_methods( var1 );
-//XX 
-//XX {
-//XX   std::map< std::string, std::string > params;
-//XX   trial_test::test_choice_generate< trial::add_specie >( params );
-//XX 
-//XX   trial_test::test_make_chooser_methods< trial::chooser_pair< trial::add_specie,trial::remove_specie  > >( params, "individual", "", 0.5, 4, 0.125 );
-//XX }
-//XX 
+!!!1823024.cpp!!!	standard_simulation_lifetime_test() : void
+{
+  // Test for virtual object pattern
+  BOOST_CHECK( not std::is_default_constructible< platform::simulation_manager >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< platform::simulation_manager >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< platform::simulation_manager >::type {} );
+  BOOST_CHECK( not ( std::is_assignable< platform::simulation_manager, platform::simulation_manager >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< platform::simulation_manager >::type {} );
+}
+{
+  // Test for virtual object pattern
+  BOOST_CHECK( std::is_default_constructible< platform::standard_simulation >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< platform::standard_simulation >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< platform::standard_simulation >::type {} );
+  BOOST_CHECK( not ( std::is_assignable< platform::standard_simulation, platform::standard_simulation >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< platform::standard_simulation >::type {} );
+}
+{
+  boost::shared_ptr< platform::standard_simulation > var( new platform::standard_simulation );
+  BOOST_CHECK_EQUAL( var->equilibration_interval(), 0ul );
+  BOOST_CHECK_EQUAL( var->production_interval(), 0ul );
+}
+!!!1822000.cpp!!!	simulation_manager_methods_test() : void
+std::stringstream store;
+{
+  boost::shared_ptr< platform::standard_simulation > var( new platform::standard_simulation );
+  BOOST_CHECK_EQUAL( var->equilibration_interval(), 0ul );
+  BOOST_CHECK_EQUAL( var->production_interval(), 0ul );
+
+  var->set_equilibration_interval( 100ul );
+  var->set_production_interval( 1000ul );
+
+  BOOST_CHECK_EQUAL( var->equilibration_interval(), 100ul );
+  BOOST_CHECK_EQUAL( var->production_interval(), 1000ul );
+
+  // write class instance to archive
+  boost::archive::text_oarchive oa( store );
+  oa << var;
+}
+{
+  boost::shared_ptr< platform::standard_simulation > var2;
+  // read class instance from archive
+  boost::archive::text_iarchive ia( store );
+  ia >> var2;
+
+  BOOST_CHECK_EQUAL( var2->equilibration_interval(), 100ul );
+  BOOST_CHECK_EQUAL( var2->production_interval(), 1000ul );
+}
+!!!1948592.cpp!!!	simulation_lifetime_test() : void
+{
+  // Test for non-virtual no-copy object pattern
+  BOOST_CHECK( std::is_default_constructible< platform::simulation >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< platform::simulation >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< platform::simulation >::type {} );
+  BOOST_CHECK( not ( std::is_assignable< platform::simulation, platform::simulation >::type {} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< platform::simulation >::type {} );
+}
+{
+  boost::shared_ptr< platform::simulation > var( new platform::simulation );
+  BOOST_CHECK_EQUAL( var->energy(), 0.0 );
+  BOOST_CHECK_EQUAL( var->inner_loop_size(), 0ul );
+  BOOST_CHECK_EQUAL( var->get_outer_loop_index(), 0ul );
+  BOOST_CHECK_EQUAL( var->report_interval(), 0ul );
+  BOOST_CHECK( var->run_title().empty() );
+  BOOST_CHECK( not var->has_manager() );
+}
+!!!1966512.cpp!!!	simulation_modify_method_test() : void
+std::stringstream store;
+const std::string title( "Test simulation" );
+const std::size_t inner( 100ul );
+const std::size_t prod( 2000ul );
+const std::size_t therm( 100ul );
+const std::size_t report( 500ul );
+const std::size_t ntarg( 50ul );
+const double epsw( 70.0 );
+const double tmptr( 305.0 );
+{
+  boost::shared_ptr< platform::simulation_manager > simtype( new platform::standard_simulation );
+  simtype->set_production_interval( prod );
+  simtype->set_equilibration_interval( therm );
+
+  boost::shared_ptr< platform::simulation > var( new platform::simulation );
+  BOOST_CHECK_EQUAL( var->energy(), 0.0 );
+  BOOST_CHECK_EQUAL( var->inner_loop_size(), 0ul );
+  BOOST_CHECK_EQUAL( var->get_outer_loop_index(), 0ul );
+  BOOST_CHECK_EQUAL( var->report_interval(), 0ul );
+  BOOST_CHECK( var->run_title().empty() );
+  BOOST_CHECK( not var->has_manager() );
+
+  var->set_inner_loop_size( inner );
+  var->set_report_interval( report );
+  var->set_run_title( title );
+  var->set_target_count( ntarg );
+  var->set_solvent_permittivity( epsw );
+  var->set_temperature( tmptr );
+  var->set_manager( simtype );
+
+  BOOST_CHECK_EQUAL( var->inner_loop_size(), 100ul );
+  BOOST_CHECK_EQUAL( var->get_outer_loop_index(), 0ul );
+  BOOST_CHECK_EQUAL( var->report_interval(), 500ul );
+  BOOST_CHECK_EQUAL( var->run_title(), title );
+  BOOST_CHECK_EQUAL( var->particles().target_count(), ntarg );
+  BOOST_CHECK_EQUAL( var->evaluators().temperature(), tmptr );
+  BOOST_CHECK_EQUAL( var->evaluators().permittivity(), epsw );
+  BOOST_REQUIRE( var->has_manager() );
+  BOOST_CHECK_EQUAL( var->manager().equilibration_interval(), therm );
+  BOOST_CHECK_EQUAL( var->manager().production_interval(), prod );
+
+  // write class instance to archive
+  boost::archive::text_oarchive oa( store );
+  oa << var;
+}
+{
+   boost::shared_ptr< platform::simulation > var( new platform::simulation );
+   // read class instance from archive
+  boost::archive::text_iarchive ia( store );
+  ia >> var;
+
+  BOOST_CHECK_EQUAL( var->inner_loop_size(), 100ul );
+  BOOST_CHECK_EQUAL( var->get_outer_loop_index(), 0ul );
+  BOOST_CHECK_EQUAL( var->report_interval(), 500ul );
+  BOOST_CHECK_EQUAL( var->run_title(), title );
+  BOOST_CHECK_EQUAL( var->manager().equilibration_interval(), therm );
+  BOOST_CHECK_EQUAL( var->manager().production_interval(), prod );
+  BOOST_CHECK_EQUAL( var->particles().target_count(), ntarg );
+  BOOST_CHECK_EQUAL( var->evaluators().temperature(), tmptr );
+  BOOST_CHECK_EQUAL( var->evaluators().permittivity(), epsw );
+
+}
+!!!1955248.cpp!!!	simulation_definition_lifetime_test() : void
+{
+  // Test for virtual no-copy object pattern
+  BOOST_CHECK( not std::is_default_constructible< platform::simulation_definition >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< platform::simulation_definition >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< platform::simulation_definition >::type {} );
+  BOOST_CHECK( not ( std::is_assignable< platform::simulation_definition, platform::simulation_definition >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< platform::simulation_definition >::type {} );
+}
+{
+  auto dummy = [](const std::map<std::string, std::string > p)->std::unique_ptr<platform::simulation_manager>{ return std::unique_ptr<platform::simulation_manager>{}; };
+  boost::shared_ptr< platform::simulation_definition > var( new platform::simulation_definition( "standard", "some desc", dummy ) );
+  BOOST_CHECK_EQUAL( var->label(), "standard" );
+  BOOST_CHECK_EQUAL( var->description(), "some desc" );
+  BOOST_CHECK_EQUAL( var->size(), 0ul );
+  BOOST_CHECK( var->empty() );
+}
+!!!1955376.cpp!!!	simulator_meta_lifetime_test() : void
+{
+  // Test for virtual no-copy object pattern
+  BOOST_CHECK( not std::is_default_constructible< platform::simulator_meta >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< platform::simulator_meta >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< platform::simulator_meta >::type {} );
+  BOOST_CHECK( not ( std::is_assignable< platform::simulator_meta, platform::simulator_meta >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< platform::simulator_meta >::type {} );
+}
+{
+  platform::simulation dummy;
+  boost::shared_ptr< platform::simulator_meta > var( new platform::simulator_meta( dummy ) );
+  BOOST_CHECK_EQUAL( var->section_label(), "simulator" );
+  BOOST_CHECK_EQUAL( var->multiple(), false );
+  BOOST_CHECK_EQUAL( var->required(), true );
+  BOOST_CHECK_EQUAL( var->size(), 0ul );
+  BOOST_CHECK( var->empty() );
+}
+!!!1955120.cpp!!!	simulator_meta_input_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+const std::string title( "Test simulation" );
+const std::size_t inner( 100ul );
+const std::size_t prod( 2000ul );
+const std::size_t therm( 100ul );
+const std::size_t report( 500ul );
+const std::size_t ntarg( 50ul );
+const double epsw( 70.0 );
+const double tmptr( 305.0 );
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "Unexpected exception thrown by \"dg.read_input( reader )\": " ) + err.what() );
+}
+
+BOOST_CHECK_EQUAL( sim->run_title(), title );
+BOOST_CHECK_EQUAL( sim->get_outer_loop_index(), 0ul );
+BOOST_CHECK_EQUAL( sim->inner_loop_size(), inner );
+BOOST_CHECK_EQUAL( sim->report_interval(), report );
+BOOST_CHECK_EQUAL( sim->has_manager(), true );
+BOOST_CHECK_EQUAL( sim->manager().equilibration_interval(), therm );
+BOOST_CHECK_EQUAL( sim->manager().production_interval(), prod );
+BOOST_CHECK_EQUAL( sim->manager().type_label(), "standard" );
+BOOST_CHECK_EQUAL( sim->particles().target_count(), ntarg );
+BOOST_CHECK_EQUAL( sim->evaluators().temperature(), tmptr );
+BOOST_CHECK_EQUAL( sim->evaluators().permittivity(), epsw );
+
+
+!!!1965104.cpp!!!	simulator_input_type_no_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype \ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"type\" requires a value in a simulator section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1825072.cpp!!!	simulator_input_duplicate_type_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation manager \"type\" parameter appears more than once" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1825200.cpp!!!	simulator_input_type_bad_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype parallel\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation manager \"type\" parameter value (parallel) does not name a valid simulation manager subtype for this application" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1825328.cpp!!!	simulator_input_inner_no_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner #100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation inner loop \"inner\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1962928.cpp!!!	simulator_input_inner_bad_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner ten\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation inner loop \"inner\" parameter value (ten) is not an ordinal" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1966256.cpp!!!	simulator_input_name_no_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname #Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation title \"name\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1824944.cpp!!!	simulator_input_name_empty_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname \"\"\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation title \"name\" parameter requires a non-empty value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1963184.cpp!!!	simulator_input_nstep_no_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep #2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation production step \"nstep\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1963056.cpp!!!	simulator_input_nstep_bad_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep twenty\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation production step \"nstep\" parameter value (twenty) is not an ordinal" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1963440.cpp!!!	simulator_input_naver_no_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver #100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation equilibration step \"naver\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1963312.cpp!!!	simulator_input_naver_bad_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver ten\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation equilibration step \"naver\" parameter value (ten) is not an ordinal" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1963696.cpp!!!	simulator_input_isave_no_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave #500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation checkpoint/report interval \"isave\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1963568.cpp!!!	simulator_input_isave_bad_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave ten\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation checkpoint/report interval \"isave\" parameter value (ten) is not an ordinal" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1963952.cpp!!!	simulator_input_ntarg_no_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg #50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation target particle number \"ntarg\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1963824.cpp!!!	simulator_input_ntarg_bad_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg ten\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation target particle number \"ntarg\" parameter value (ten) is not an ordinal" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1964208.cpp!!!	simulator_input_epsw_no_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw #70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation media permittivity \"epsw\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1964080.cpp!!!	simulator_input_epsw_bad_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw seventy\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation media permittivity \"epsw\" parameter value (seventy) is not a number" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1964336.cpp!!!	simulator_input_epsw_negative_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw -70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation media permittivity \"epsw\" parameter value (-70.0) must be greater than zero." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1964464.cpp!!!	simulator_input_epsw_zero_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 0.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation media permittivity \"epsw\" parameter value (0.0) must be greater than zero." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1964976.cpp!!!	simulator_input_kelvin_no_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin #305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation temperature (in kelvin) \"kelvin\" parameter requires a value" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1964848.cpp!!!	simulator_input_kelvin_bad_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin \"STP\"\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation temperature (in kelvin) \"kelvin\" parameter value (\"STP\") is not a number" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1964720.cpp!!!	simulator_input_kelvin_negative_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin -305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation temperature (in kelvin) \"kelvin\" parameter value (-305.0) must be greater than zero." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1964592.cpp!!!	simulator_input_kelvin_zero_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 0.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation temperature (in kelvin) \"kelvin\" parameter value (0.0) must be greater than zero." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1966128.cpp!!!	simulator_input_no_type_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation manager \"type\" missing in input file" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1966000.cpp!!!	simulator_input_no_inner_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation inner loop \"inner\" missing in input file" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1966384.cpp!!!	simulator_input_no_nstep_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnaver 2000\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation production step \"nstep\" missing in input file" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1965744.cpp!!!	simulator_input_no_naver_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation equilibration step \"naver\" missing in input file" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1965616.cpp!!!	simulator_input_no_isave_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Simulation checkpoint/report interval \"isave\" missing in input file" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1965488.cpp!!!	simulator_input_no_ntarg_test_PASS() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1965360.cpp!!!	simulator_input_no_epsw_test_PASS() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1965232.cpp!!!	simulator_input_no_kelvin_test_PASS() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1965872.cpp!!!	simulator_input_no_name_test_PASS() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!1825584.cpp!!!	full_simulation_input_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( platform::simulation::get_max_input_version() );
+BOOST_REQUIRE_EQUAL( dg.max_version(), 1ul );
+sim->build_input_delegater( dg );
+
+BOOST_REQUIRE( dg.has_section( core::strngs::simulator_label() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::evaluator_label() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::sampler_label() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::fsspec() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::fsregn() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::fstry() ) );
+BOOST_REQUIRE( dg.has_section( platform::storage_meta::storage_label() ) );
+
+//{
+//  core::input_help hlp;
+//  dg.get_documentation( hlp );
+//  hlp.write( std::cout );
+//}
+
+const std::string title( "Test simulation" );
+const std::size_t inner( 100ul );
+const std::size_t prod( 2000ul );
+const std::size_t therm( 100ul );
+const std::size_t report( 500ul );
+const std::size_t ntarg( 50ul );
+const double epsw( 70.0 );
+const double tmptr( 305.0 );
+
+//std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n\nrun\ntype standard\noutputdir \"\%1$04d\"\nend\n\nevaluator\ntype coulomb\nend\n\nsampler\ntype specie-count\nend\n\nsampler\ntype widom\niwidom 10\nend\n\ngeometry\ntype cube\nname centre\nwidth 5\norigin 2.5 2.5 2.5\nend\n\nspecie\nlabel Na\nz 1\nd 1.01\nconc 0.1\nend\n\nspecie\nlabel Cl\nz -1\nd 1.78\nconc 0.1\nend\n\ntrial\ntype move\ndelta 1.0\nend\n\ntrial\ntype jump\nend\n\n" );
+//std::cout << canon_input;
+core::input_preprocess reader;
+//reader.add_buffer( "dummy", canon_input );
+reader.add_include( "test.inp" );
+try
+{
+  dg.read_input( reader );
+}
+catch( std::exception const& err )
+{
+  std::cout << err.what() << "\n";
+  BOOST_ERROR( std::string( "Unexpected exception thrown by \"dg.read_input( reader )\": " ) + err.what() );
+}
+
+BOOST_CHECK_EQUAL( sim->run_title(), title );
+BOOST_CHECK_EQUAL( sim->get_outer_loop_index(), 0ul );
+BOOST_CHECK_EQUAL( sim->inner_loop_size(), inner );
+BOOST_CHECK_EQUAL( sim->report_interval(), report );
+BOOST_CHECK_EQUAL( sim->has_manager(), true );
+BOOST_CHECK_EQUAL( sim->manager().equilibration_interval(), therm );
+BOOST_CHECK_EQUAL( sim->manager().production_interval(), prod );
+BOOST_CHECK_EQUAL( sim->manager().type_label(), "standard" );
+BOOST_CHECK_EQUAL( sim->particles().target_count(), ntarg );
+BOOST_CHECK_EQUAL( sim->evaluators().temperature(), tmptr );
+BOOST_CHECK_EQUAL( sim->evaluators().permittivity(), epsw );
+BOOST_CHECK_EQUAL( sim->storage().checkpoint_name(), platform::storage_manager::default_checkpoint_name() );
+BOOST_CHECK_EQUAL( sim->storage().filename_base(), platform::storage_manager::default_filename_base() );
+BOOST_CHECK_EQUAL( sim->storage().output_name(), platform::storage_manager::default_output_name() );
+BOOST_CHECK_EQUAL( sim->storage().run_number(), platform::storage_manager::default_run_number() );
+BOOST_CHECK_EQUAL( sim->storage().output_dir_fmt(), "\%1$04d" );
+BOOST_CHECK_EQUAL( sim->evaluators().size(), 1ul );
+BOOST_CHECK_EQUAL( sim->evaluators().get_evaluators()[0].type_label(), "coulomb" );
+BOOST_CHECK_EQUAL( sim->report().size(), 3ul );
+BOOST_CHECK( sim->report().has_sample( "specie-count" ) );
+BOOST_CHECK( sim->report().has_tracked( "widom" ) );
+BOOST_CHECK( sim->report().has_tracked( "metropolis" ) );
+BOOST_CHECK( not sim->report().has_sink() ); // no sink before "prepare"?
+BOOST_CHECK_EQUAL( sim->particles().get_ensemble().count(), 0ul );
+BOOST_CHECK_EQUAL( sim->particles().specie_count(), 2ul );
+BOOST_CHECK_EQUAL( sim->particles().target_ionic_strength(), 0.2 );
+BOOST_CHECK( sim->particles().has_specie( "Na" ) );
+BOOST_CHECK( sim->particles().has_specie( "Cl" ) );
+BOOST_CHECK_EQUAL( sim->regions().size(), 2ul );
+BOOST_CHECK_EQUAL( sim->regions().region_key( "cell" ), 0ul );
+BOOST_CHECK_EQUAL( sim->regions().region_key( "centre" ), 1ul );
+BOOST_CHECK_EQUAL( sim->choices().size(), 0ul );
+BOOST_CHECK_EQUAL( sim->choices().size_chooser(), 2ul );
+BOOST_CHECK( sim->choices().has_chooser( "move" ) );
+BOOST_CHECK( sim->choices().has_chooser( "jump" ) );
+BOOST_CHECK( sim->choices().empty() );
+
+try
+{
+  sim->generate_simulation();
+
+  BOOST_CHECK_EQUAL( sim->particles().get_ensemble().count(), ntarg );
+  BOOST_CHECK_EQUAL( sim->particles().get_ensemble().specie_count( 0 ), ntarg/2 );
+  BOOST_CHECK_EQUAL( sim->particles().get_ensemble().specie_count( 1 ), ntarg/2 );
+}
+catch( std::exception const& err )
+{
+  std::cout << err.what();
+  BOOST_ERROR( "Unexpected exception." );
+}
