@@ -14,6 +14,11 @@ ar & ranf_;
 ar & report_interval_;
 ar & rgen_;
 ar & run_title_;
+!!!1762608.cpp!!!	random_seed_value() : uint
+// Get random seed value from system's random device:
+// requires #include <boost/random/random_device.hpp>
+boost::random::random_device seedgenr;
+return seedgenr() - seedgenr.min();
 !!!1761840.cpp!!!	set_random_seed(in seedval : uint) : void
 this->rgen_->seed (seedval);
 !!!1635888.cpp!!!	build_input_delegater(inout delegate : input_delegater) : void
@@ -47,27 +52,205 @@ platform::storage_manager::build_input_delegater( this->fstype_, delegate );
 
   delegate.add_input_delegate( var );
 }
-!!!1763504.cpp!!!	description(inout os : ostream) : void
-UTILITY_REQUIRE( this->has_manager(), "Can not get description before setting simulation manager." );
-this->license( os );
+!!!1763248.cpp!!!	license(inout os : ostream) : void
+if( this->has_manager() )
+{
+  this->simtype_->license( os );
+}
 
+os << core::strngs::horizontal_bar () << "\n";
+os << "This software is free software: you can redistribute it and/or modify\n";
+os << "it under the terms of the GNU General Public License as published by\n";
+os << "the Free Software Foundation, either version 3 of the License, or\n";
+os << "(at your option) any later version.\n";
+os << "\n";
+os << "This program is distributed in the hope that it will be useful,\n";
+os << "but WITHOUT ANY WARRANTY; without even the implied warranty of\n";
+os << "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n";
+os << "GNU General Public License for more details.\n";
+os << "\n";
+os << "You should have received a copy of the GNU General Public License\n";
+os << "along with this program.  If not, see <http://www.gnu.org/licenses/>.\n";
+os << core::strngs::horizontal_bar () << "\n";
+!!!1979952.cpp!!!	program_description(inout os : ostream) : void
 // host and environment information
+os << core::strngs::horizontal_bar() << "\n";
 utility::machine_env::create()->description( os );
 
-os << core::strngs::horizontal_bar() << "\n";
-os << " External Libraries\n";
-os << "-------------------\n";
+os << "\n External Libraries\n";
+os << " ------------------\n";
 // LIBRARY INFORMATION
 // os << "BLAS/LAPACK LIBRARY" << util::lapack::version () "\n";
 
 // RANDOM NUMBER GENERATOR USED:
 os << " random number generator : " << utility::random_distribution::version() << "\n";
+os << "\n";
 
 // Print compile time constants
 core::constants::description( os );
+os << core::strngs::horizontal_bar() << "\n";
+!!!1979952.python!!!	program_description(inout os : ostream) : void
+from constants import constants
+constants.description( os )
+print >>os, "[simulation]"
+print >>os, "        volume :", self.cell_region_.volume(-1), "Anstrom{3}"
+print >>os, "  permittivity :", self.cell_region_.permittivity()
+print >>os, " beta (1/k_BT) :", (1.0/(constants.boltzmann_constant()*self.temperature_kelvin_)), " J{-1}"
+print >>os, "  temperature :", self.temperature_kelvin_, " K"
+print >>os, " specie count :", self.specie_count()
+print >>os, " - loop sizes"
+print >>os, "       thermal :", self.equilibration_interval_
+print >>os, "    production :", self.production_interval_
+print >>os, "         inner :", self.inner_loop_size_
+print >>os, " current index :", self.outer_loop_index_
+print >>os, " - other parameters"
+print >>os, " starting particle count :", self.target_number_of_particles()
+print >>os, "          ionic strength :", self.ionic_strength()
+print >>os, "             trial rates :", self.rates_
+print >>os, "              move delta :", self.delta
+for spc in self.species_:
+  spc.description( os )
+print >>os, "[choices] trial types and rates"
+print >>os, " %6s %4s %7s" % ( "type", "spc.", "rate(%)" )
+for choice in self.choices_:
+  print >>os, " %6s %4s %7.2f" % ( choice.label(), self.species_[choice.specie_key()].label(), choice.probability()*100.0 )
+for observable in self.observables_:
+  observable.description( os )
+for potl in self.evaluators_:
+  potl.description( os )
+self.ensemble_.description( os )
 
+!!!1762480.cpp!!!	read_input(inout reader : input_base_reader) : void
+// Random seed value
+core::input_delegater decoder( this->get_max_input_version() );
+
+this->build_input_delegater( decoder );
+
+decoder.read_input( reader );
+!!!1762992.python!!!	generate_simulation() : void
+from constants import constants
+## Generate a list of trial types
+self.update_choices()
+sumconc = self.ionic_strength()
+# Use a PBC system.
+from periodic_system import periodic_system
+self.cell_region_ = periodic_system(self.target_particles_ * constants.to_SI() / sumconc)
+# Generate initial ensemble on a grid
+gridder = self.cell_region_.make_grid_generator( self.target_particles_, self.get_random() ) 
+self.ensemble_.generate_ensemble( gridder, self.target_particles_, self.get_random() )
+pass
+!!!1760176.cpp!!!	write_document(inout wr : input_document) : void
+UTILITY_REQUIRE( this->has_manager(), "Can not write input document before setting simulation manager." );
+// Add simulator section
+std::size_t ix = wr.add_section( core::strngs::simulator_label() );
+auto &sec = wr[ ix ];
+sec.add_entry( core::strngs::fsname(), " \"" + this->run_title() + "\"" );
+sec.add_entry( core::strngs::inner_label(), this->inner_loop_size() );
+sec.add_entry( core::strngs::fsisav(), this->report_interval() );
+sec.add_entry( core::strngs::fsntrg(), this->pman_->target_count() );
+sec.add_entry( core::strngs::fstsi(), this->eman_->temperature() );
+sec.add_entry( core::strngs::fsepsw(), this->eman_->permittivity() );
+this->simtype_->write_part_document( wr, ix );
+
+this->fstype_->write_document( wr );
+
+this->rman_->write_document( wr );
+this->eman_->write_document( wr );
+this->gman_->write_document( wr );
+this->pman_->write_document( wr );
+this->cman_->write_document( wr );
+!!!1759920.cpp!!!	prepare() : void
+// Get reference to FP environment
+utility::fp_env &env(utility::fp_env::env_);
+// Check for FP error before doing anything
+if (not env.no_except())
+{
+  if (0 != ((~env.Inexact) & env.except()))
+  {
+    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except()),  " Floating point exception : "+ env.error_message ());
+  }
+  env.reset();
+}
+
+// Rebuild choices
+this->cman_->prepare( this->pman_->get_species(), *(this->gman_), this->ranf_ );
+
+// Reset observables
+this->rman_->prepare( *(this->pman_), *(this->gman_), *(this->eman_) );
+
+// Reset the evaluators
+this->eman_->prepare( *(this->pman_), *(this->gman_) );
+
+if ( not env.no_except() )
+{
+  if (0 != ((~env.Inexact) & env.except()))
+  {
+    this->fstype_->get_log() << "Floating point exception during simulation preparation \"" << env.error_message () << "\"\n";
+    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                    , " Floating point exception : "+ env.error_message ());
+  }
+  env.reset();
+}
+// Calculate/reset the system's total energy (can only be done after preparing
+// the evaluators.)
+this->total_energy();
+if ( not env.no_except() )
+{
+  if (0 != ((~env.Inexact) & env.except()))
+  {
+    this->fstype_->get_log() << "Floating point exception during calculation of initial energy\n \"" << env.error_message () << "\"\n";
+    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                    , " Floating point exception : "+ env.error_message ());
+  }
+  env.reset();
+}
+!!!1759920.python!!!	prepare() : void
+# Send signal to prepare other objects
+self.do_prepare()
+if self.checkpoint_interval_ == None or self.checkpoint_interval_ == 0:
+  self.checkpoint_interval_ = max(1, loopcount // 5)
+rgen = self.ranf_
+ens = self.ensemble_
+for d9m8h2 in range(loopcount):
+  self.outer_loop_index_ += 1
+  for t1b6b8 in range(self.inner_loop_size_):
+    # select a move
+    the_choice = None
+    sofar = rgen.uniform(0.0,1.0)
+    for choice in self.choices_:
+      sofar -= choice.probability()
+      if sofar <= 0.0:
+        the_choice = choice
+        break
+    with the_choice.generate(self) as trial:
+      if not trial.fail:
+        # Calculate distance vectors.
+        for atom in trial.changes:
+          if atom.do_old:
+            atom.old_rij = self.cell_region_.compute_distances(ens, atom.old_position)
+          if atom.do_new:
+            atom.new_rij = self.cell_region_.compute_distances(ens, atom.new_position)
+        # Calculate energy
+        for evaluator in self.evaluators_:
+          evaluator.compute_potential(self, trial)
+          if trial.fail:
+            break
+        if not trial.fail:
+          trial.accept = rgen.uniform(0.0,1.0) <= trial.metropolis_factor()
+          if trial.accept:
+            self.energy_ += trial.energy()
+            ens.commit( trial )
+      self.inner_sig_( trial )
+  # Note self.outer_loop_index_ is a 1-based count
+  print >>out,"STEP ",self.outer_loop_index_
+  self.outer_sig_(self)
+  if self.outer_loop_index_ % self.checkpoint_interval_ == 0:
+    self.checkpoint_index_ += 1
+    self.do_report( out )
+!!!1763504.cpp!!!	description(inout os : ostream) : void
+UTILITY_REQUIRE( this->has_manager(), "Can not get description before setting simulation manager." );
+// File/directory names etc.
 this->fstype_->description( os );
-
 // The particulars of this simulation object.
 this->simtype_->description( os );
 this->do_description( os );
@@ -148,24 +331,182 @@ for potl in self.evaluators_:
   potl.description( os )
 self.ensemble_.description( os )
 
-!!!1763248.cpp!!!	license(inout os : ostream) : void
-UTILITY_REQUIRE( this->has_manager(), "Can not get license before setting simulation manager." );
-this->simtype_->license( os );
+!!!1761584.cpp!!!	do_report(in self : simulation) : void
+// CALLED AT EACH CHECKPOINT
+std::ostream &os = this->fstype_->get_log();
+os << "\n" << core::strngs::horizontal_bar() << "\n";
+os << " SIMULATION STEP: " << this->outer_loop_index_ << "\n";
+// recalculate total energy
+const double ent(this->energy());
+this->total_energy();
+os << "  total energy of simulation    : " << this->energy() << "\n";
+if (std::abs(ent - this->energy()) > 1.E-6)
+{
+  os << "  ######### problems energy ################\n";
+  os << "        running energy          : " << ent << "\n";
+}
+os << "        difference to running   : " << this->energy() - ent << "\n";
 
-os << core::strngs::horizontal_bar () << "\n";
-os << "This source file is free software: you can redistribute it and/or modify\n";
-os << "it under the terms of the GNU General Public License as published by\n";
-os << "the Free Software Foundation, either version 3 of the License, or\n";
-os << "(at your option) any later version.\n";
-os << "\n";
-os << "This program is distributed in the hope that it will be useful,\n";
-os << "but WITHOUT ANY WARRANTY; without even the implied warranty of\n";
-os << "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n";
-os << "GNU General Public License for more details.\n";
-os << "\n";
-os << "You should have received a copy of the GNU General Public License\n";
-os << "along with this program.  If not, see <http://www.gnu.org/licenses/>.\n";
-os << core::strngs::horizontal_bar () << "\n";
+this->rman_->on_report( os );
+os << core::strngs::horizontal_bar() << "\n";
+!!!1761584.python!!!	do_report(in self : simulation) : void
+print >>os, "SIMULATION STAGE:", self.outer_loop_index_
+energy = self.get_energy()
+self.total_energy()
+print >>os, "ENERGY: Running %9.4g, Computed %9.4g, Difference %9.4g" % ( energy, self.energy_, self.energy_ - energy )
+trial_count = (self.outer_loop_index_ + 1) * self.inner_loop_size_
+format_str = " %6s %8s %10s %10s %7s %s"
+print >>os, format_str % ("Trial","Specie","Success","Attempt","Rate(%)","Total(%)")
+for choice in self.choices_:
+  choice.report(self, os, trial_count)
+self.report_sig_(self, os)
+pass
+
+!!!1763632.cpp!!!	run_loop(in loopcount : size_t) : void
+// Get reference to FP environment
+utility::fp_env &env(utility::fp_env::env_);
+
+// Set report interval to some meaningful default if not set
+if (this->report_interval_ == 0)
+{
+  this->report_interval_ = std::max(1ul, loopcount / 5);
+}
+
+// Run the simulation
+auto const& ens = this->pman_->get_ensemble();
+for (size_t d9m8h2 = 0; d9m8h2 != loopcount; ++d9m8h2)
+{
+  this->outer_loop_index_ += 1;
+  for ( size_t t1b6b8 = 0; t1b6b8 != this->inner_loop_size_; ++t1b6b8 )
+  {
+    // select a move
+    double sofar = this->ranf_.uniform( 0.0, 1.0 );
+    std::unique_ptr< particle::change_set > trial;
+    trial = this->cman_->generate( *(this->pman_), *(this->gman_), this->ranf_, sofar );
+    if ( not trial->fail() )
+    {
+      // Calculate distance vectors.
+      for ( auto & atom : *trial )
+      {
+        if (atom.do_old)
+        {
+          this->gman_->calculate_distances( atom.old_position, ens.get_coordinates(), atom.old_rij, 0, ens.size() );
+        }
+        if (atom.do_new)
+        {
+          this->gman_->calculate_distances( atom.new_position, ens.get_coordinates(), atom.new_rij, 0, ens.size() );
+        }
+      }
+      // Calculate energy
+      this->eman_->compute_potential( *(this->pman_), *(this->gman_), *trial );
+      if ( not env.no_except() )
+      {
+        if (0 != ((~env.Inexact) & env.except()))
+        {
+          this->fstype_->get_log() << "Floating point exception in computation of trial\n \""
+             << env.error_message () << "\"\n"
+             << "Loop [" << d9m8h2 << "][" << t1b6b8 << "]\n";
+          UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                          , " Floating point exception : "+ env.error_message ());
+        }
+        env.reset();
+      }
+
+      if ( not trial->fail() )
+      {
+        trial->set_accept( this->ranf_.uniform(0.0,1.0) <= trial->metropolis_factor() );
+        if (trial->accept())
+        {
+          this->energy_ += trial->energy();
+          this->pman_->commit( *trial );
+        }
+      }
+    }
+    this->eman_->on_conclude_trial( *trial );
+    this->rman_->on_trial_end( *trial );
+    if (not env.no_except())
+    {
+      if (0 != ((~env.Inexact) & env.except()))
+      {
+        this->fstype_->get_log() << "Floating point exception in inner sampling\n \""
+           << env.error_message () << "\"\n"
+           << "Loop [" << d9m8h2 << "][END]\n";
+        UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                        , " Floating point exception : "+ env.error_message ());
+      }
+      env.reset();
+    }
+  }
+  // Note this->outer_loop_index_ is a 1-based count
+  this->fstype_->get_log() << " STEP : " << this->outer_loop_index_ << "\n";
+  this->rman_->on_sample( *(this->pman_), *(this->gman_), *(this->eman_) );
+  if ((this->outer_loop_index_ % this->report_interval_) == 0)
+  {
+    this->do_report();
+  }
+  if (not env.no_except())
+  {
+    if (0 != ((~env.Inexact) & env.except()))
+    {
+      this->fstype_->get_log() << "Floating point exception in outer sampling\n \""
+           << env.error_message () << "\"\n"
+           << "Loop [" << d9m8h2 << "][END]\n";
+      UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                      , " Floating point exception : "+ env.error_message ());
+    }
+    env.reset();
+  }
+  if ((this->outer_loop_index_ % this->report_interval_) == 0)
+  {
+    auto fsptr = this->fstype_->open_checkpoint();
+    boost::archive::text_oarchive oa( *fsptr );
+    oa << *this;
+  }
+}
+
+!!!1763632.python!!!	run_loop(in loopcount : size_t) : void
+# Send signal to prepare other objects
+self.do_prepare()
+if self.checkpoint_interval_ == None or self.checkpoint_interval_ == 0:
+  self.checkpoint_interval_ = max(1, loopcount // 5)
+rgen = self.ranf_
+ens = self.ensemble_
+for d9m8h2 in range(loopcount):
+  self.outer_loop_index_ += 1
+  for t1b6b8 in range(self.inner_loop_size_):
+    # select a move
+    the_choice = None
+    sofar = rgen.uniform(0.0,1.0)
+    for choice in self.choices_:
+      sofar -= choice.probability()
+      if sofar <= 0.0:
+        the_choice = choice
+        break
+    with the_choice.generate(self) as trial:
+      if not trial.fail:
+        # Calculate distance vectors.
+        for atom in trial.changes:
+          if atom.do_old:
+            atom.old_rij = self.cell_region_.compute_distances(ens, atom.old_position)
+          if atom.do_new:
+            atom.new_rij = self.cell_region_.compute_distances(ens, atom.new_position)
+        # Calculate energy
+        for evaluator in self.evaluators_:
+          evaluator.compute_potential(self, trial)
+          if trial.fail:
+            break
+        if not trial.fail:
+          trial.accept = rgen.uniform(0.0,1.0) <= trial.metropolis_factor()
+          if trial.accept:
+            self.energy_ += trial.energy()
+            ens.commit( trial )
+      self.inner_sig_( trial )
+  # Note self.outer_loop_index_ is a 1-based count
+  print >>out,"STEP ",self.outer_loop_index_
+  self.outer_sig_(self)
+  if self.outer_loop_index_ % self.checkpoint_interval_ == 0:
+    self.checkpoint_index_ += 1
+    self.do_report( out )
 !!!1760304.cpp!!!	total_energy() : void
 UTILITY_REQUIRE(not this->eman_->empty (), "Can not calculate energy without evaluators.");
 this->eman_->prepare( *(this->pman_), *(this->gman_) );
@@ -319,313 +660,3 @@ this->rman_->set_sink( this->fstype_->open_output() );
  
 // Run the simulation
 return this->simtype_->run( *this, this->fstype_->get_log() );
-!!!1759920.cpp!!!	prepare() : void
-// Get reference to FP environment
-utility::fp_env &env(utility::fp_env::env_);
-// Check for FP error before doing anything
-if (not env.no_except())
-{
-  if (0 != ((~env.Inexact) & env.except()))
-  {
-    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except()),  " Floating point exception : "+ env.error_message ());
-  }
-  env.reset();
-}
-// Send signal to prepare other objects
-this->outer_loop_index_ = 0;
-
-// Rebuild choices
-this->cman_->prepare( this->pman_->get_species(), *(this->gman_), this->ranf_ );
-
-// Reset observables
-this->rman_->prepare( *(this->pman_), *(this->gman_), *(this->eman_) );
-
-// Reset the evaluators
-this->eman_->prepare( *(this->pman_), *(this->gman_) );
-
-if ( not env.no_except() )
-{
-  if (0 != ((~env.Inexact) & env.except()))
-  {
-    this->fstype_->get_log() << "Floating point exception during simulation preparation \"" << env.error_message () << "\"\n";
-    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
-                    , " Floating point exception : "+ env.error_message ());
-  }
-  env.reset();
-}
-// Calculate/reset the system's total energy (can only be done after preparing
-// the evaluators.)
-this->total_energy();
-if ( not env.no_except() )
-{
-  if (0 != ((~env.Inexact) & env.except()))
-  {
-    this->fstype_->get_log() << "Floating point exception during calculation of initial energy\n \"" << env.error_message () << "\"\n";
-    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
-                    , " Floating point exception : "+ env.error_message ());
-  }
-  env.reset();
-}
-!!!1759920.python!!!	prepare() : void
-# Send signal to prepare other objects
-self.do_prepare()
-if self.checkpoint_interval_ == None or self.checkpoint_interval_ == 0:
-  self.checkpoint_interval_ = max(1, loopcount // 5)
-rgen = self.ranf_
-ens = self.ensemble_
-for d9m8h2 in range(loopcount):
-  self.outer_loop_index_ += 1
-  for t1b6b8 in range(self.inner_loop_size_):
-    # select a move
-    the_choice = None
-    sofar = rgen.uniform(0.0,1.0)
-    for choice in self.choices_:
-      sofar -= choice.probability()
-      if sofar <= 0.0:
-        the_choice = choice
-        break
-    with the_choice.generate(self) as trial:
-      if not trial.fail:
-        # Calculate distance vectors.
-        for atom in trial.changes:
-          if atom.do_old:
-            atom.old_rij = self.cell_region_.compute_distances(ens, atom.old_position)
-          if atom.do_new:
-            atom.new_rij = self.cell_region_.compute_distances(ens, atom.new_position)
-        # Calculate energy
-        for evaluator in self.evaluators_:
-          evaluator.compute_potential(self, trial)
-          if trial.fail:
-            break
-        if not trial.fail:
-          trial.accept = rgen.uniform(0.0,1.0) <= trial.metropolis_factor()
-          if trial.accept:
-            self.energy_ += trial.energy()
-            ens.commit( trial )
-      self.inner_sig_( trial )
-  # Note self.outer_loop_index_ is a 1-based count
-  print >>out,"STEP ",self.outer_loop_index_
-  self.outer_sig_(self)
-  if self.outer_loop_index_ % self.checkpoint_interval_ == 0:
-    self.checkpoint_index_ += 1
-    self.do_report( out )
-!!!1762608.cpp!!!	random_seed_value() : uint
-// Get random seed value from system's random device:
-// requires #include <boost/random/random_device.hpp>
-boost::random::random_device seedgenr;
-return seedgenr() - seedgenr.min();
-!!!1762480.cpp!!!	read_input(inout reader : input_base_reader) : void
-// Random seed value
-core::input_delegater decoder( this->get_max_input_version() );
-
-this->build_input_delegater( decoder );
-
-decoder.read_input( reader );
-!!!1763632.cpp!!!	run_loop(in loopcount : size_t) : void
-// Get reference to FP environment
-utility::fp_env &env(utility::fp_env::env_);
-
-// Set report interval to some meaningful default if not set
-if (this->report_interval_ == 0)
-{
-  this->report_interval_ = std::max(1ul, loopcount / 5);
-}
-
-// Run the simulation
-auto const& ens = this->pman_->get_ensemble();
-for (size_t d9m8h2 = 0; d9m8h2 != loopcount; ++d9m8h2)
-{
-  this->outer_loop_index_ += 1;
-  for ( size_t t1b6b8 = 0; t1b6b8 != this->inner_loop_size_; ++t1b6b8 )
-  {
-    // select a move
-    double sofar = this->ranf_.uniform( 0.0, 1.0 );
-    std::unique_ptr< particle::change_set > trial;
-    trial = this->cman_->generate( *(this->pman_), *(this->gman_), this->ranf_, sofar );
-    if ( not trial->fail() )
-    {
-      // Calculate distance vectors.
-      for ( auto & atom : *trial )
-      {
-        if (atom.do_old)
-        {
-          this->gman_->calculate_distances( atom.old_position, ens.get_coordinates(), atom.old_rij, 0, ens.size() );
-        }
-        if (atom.do_new)
-        {
-          this->gman_->calculate_distances( atom.new_position, ens.get_coordinates(), atom.new_rij, 0, ens.size() );
-        }
-      }
-      // Calculate energy
-      this->eman_->compute_potential( *(this->pman_), *(this->gman_), *trial );
-      if ( not env.no_except() )
-      {
-        if (0 != ((~env.Inexact) & env.except()))
-        {
-          this->fstype_->get_log() << "Floating point exception in computation of trial\n \""
-             << env.error_message () << "\"\n"
-             << "Loop [" << d9m8h2 << "][" << t1b6b8 << "]\n";
-          UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
-                          , " Floating point exception : "+ env.error_message ());
-        }
-        env.reset();
-      }
-
-      if ( not trial->fail() )
-      {
-        trial->set_accept( this->ranf_.uniform(0.0,1.0) <= trial->metropolis_factor() );
-        if (trial->accept())
-        {
-          this->energy_ += trial->energy();
-          this->pman_->commit( *trial );
-        }
-      }
-    }
-    this->eman_->on_conclude_trial( *trial );
-    this->rman_->on_trial_end( *trial );
-    if (not env.no_except())
-    {
-      if (0 != ((~env.Inexact) & env.except()))
-      {
-        this->fstype_->get_log() << "Floating point exception in inner sampling\n \""
-           << env.error_message () << "\"\n"
-           << "Loop [" << d9m8h2 << "][END]\n";
-        UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
-                        , " Floating point exception : "+ env.error_message ());
-      }
-      env.reset();
-    }
-  }
-  // Note this->outer_loop_index_ is a 1-based count
-  this->fstype_->get_log() << " STEP : " << this->outer_loop_index_ << "\n";
-  this->rman_->on_sample( *(this->pman_), *(this->gman_), *(this->eman_) );
-  if ((this->outer_loop_index_ % this->report_interval_) == 0)
-  {
-    this->do_report();
-  }
-  if (not env.no_except())
-  {
-    if (0 != ((~env.Inexact) & env.except()))
-    {
-      this->fstype_->get_log() << "Floating point exception in outer sampling\n \""
-           << env.error_message () << "\"\n"
-           << "Loop [" << d9m8h2 << "][END]\n";
-      UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
-                      , " Floating point exception : "+ env.error_message ());
-    }
-    env.reset();
-  }
-  if ((this->outer_loop_index_ % this->report_interval_) == 0)
-  {
-    auto fsptr = this->fstype_->open_checkpoint();
-    boost::archive::text_oarchive oa( *fsptr );
-    oa << *this;
-  }
-}
-
-!!!1763632.python!!!	run_loop(in loopcount : size_t) : void
-# Send signal to prepare other objects
-self.do_prepare()
-if self.checkpoint_interval_ == None or self.checkpoint_interval_ == 0:
-  self.checkpoint_interval_ = max(1, loopcount // 5)
-rgen = self.ranf_
-ens = self.ensemble_
-for d9m8h2 in range(loopcount):
-  self.outer_loop_index_ += 1
-  for t1b6b8 in range(self.inner_loop_size_):
-    # select a move
-    the_choice = None
-    sofar = rgen.uniform(0.0,1.0)
-    for choice in self.choices_:
-      sofar -= choice.probability()
-      if sofar <= 0.0:
-        the_choice = choice
-        break
-    with the_choice.generate(self) as trial:
-      if not trial.fail:
-        # Calculate distance vectors.
-        for atom in trial.changes:
-          if atom.do_old:
-            atom.old_rij = self.cell_region_.compute_distances(ens, atom.old_position)
-          if atom.do_new:
-            atom.new_rij = self.cell_region_.compute_distances(ens, atom.new_position)
-        # Calculate energy
-        for evaluator in self.evaluators_:
-          evaluator.compute_potential(self, trial)
-          if trial.fail:
-            break
-        if not trial.fail:
-          trial.accept = rgen.uniform(0.0,1.0) <= trial.metropolis_factor()
-          if trial.accept:
-            self.energy_ += trial.energy()
-            ens.commit( trial )
-      self.inner_sig_( trial )
-  # Note self.outer_loop_index_ is a 1-based count
-  print >>out,"STEP ",self.outer_loop_index_
-  self.outer_sig_(self)
-  if self.outer_loop_index_ % self.checkpoint_interval_ == 0:
-    self.checkpoint_index_ += 1
-    self.do_report( out )
-!!!1760176.cpp!!!	write_document(inout wr : input_document) : void
-UTILITY_REQUIRE( this->has_manager(), "Can not write input document before setting simulation manager." );
-// Add simulator section
-std::size_t ix = wr.add_section( core::strngs::simulator_label() );
-auto &sec = wr[ ix ];
-sec.add_entry( core::strngs::fsname(), " \"" + this->run_title() + "\"" );
-sec.add_entry( core::strngs::inner_label(), this->inner_loop_size() );
-sec.add_entry( core::strngs::fsisav(), this->report_interval() );
-sec.add_entry( core::strngs::fsntrg(), this->pman_->target_count() );
-sec.add_entry( core::strngs::fstsi(), this->eman_->temperature() );
-sec.add_entry( core::strngs::fsepsw(), this->eman_->permittivity() );
-this->simtype_->write_part_document( wr, ix );
-
-this->fstype_->write_document( wr );
-
-this->rman_->write_document( wr );
-this->eman_->write_document( wr );
-this->gman_->write_document( wr );
-this->pman_->write_document( wr );
-this->cman_->write_document( wr );
-!!!1762992.python!!!	generate_simulation() : void
-from constants import constants
-## Generate a list of trial types
-self.update_choices()
-sumconc = self.ionic_strength()
-# Use a PBC system.
-from periodic_system import periodic_system
-self.cell_region_ = periodic_system(self.target_particles_ * constants.to_SI() / sumconc)
-# Generate initial ensemble on a grid
-gridder = self.cell_region_.make_grid_generator( self.target_particles_, self.get_random() ) 
-self.ensemble_.generate_ensemble( gridder, self.target_particles_, self.get_random() )
-pass
-!!!1761584.cpp!!!	do_report(in self : simulation) : void
-// CALLED AT EACH CHECKPOINT
-std::ostream &os = this->fstype_->get_log();
-os << "\n" << core::strngs::horizontal_bar() << "\n";
-os << " SIMULATION STEP: " << this->outer_loop_index_ << "\n";
-// recalculate total energy
-const double ent(this->energy());
-this->total_energy();
-os << "  total energy of simulation    : " << this->energy() << "\n";
-if (std::abs(ent - this->energy()) > 1.E-6)
-{
-  os << "  ######### problems energy ################\n";
-  os << "        running energy          : " << ent << "\n";
-}
-os << "        difference to running   : " << this->energy() - ent << "\n";
-
-this->rman_->on_report( os );
-os << core::strngs::horizontal_bar() << "\n";
-!!!1761584.python!!!	do_report(in self : simulation) : void
-print >>os, "SIMULATION STAGE:", self.outer_loop_index_
-energy = self.get_energy()
-self.total_energy()
-print >>os, "ENERGY: Running %9.4g, Computed %9.4g, Difference %9.4g" % ( energy, self.energy_, self.energy_ - energy )
-trial_count = (self.outer_loop_index_ + 1) * self.inner_loop_size_
-format_str = " %6s %8s %10s %10s %7s %s"
-print >>os, format_str % ("Trial","Specie","Success","Attempt","Rate(%)","Total(%)")
-for choice in self.choices_:
-  choice.report(self, os, trial_count)
-self.report_sig_(self, os)
-pass
-

@@ -1436,6 +1436,83 @@ const double tmptr( 305.0 );
   BOOST_CHECK_EQUAL( var->evaluators().permittivity(), epsw );
 
 }
+!!!1986480.cpp!!!	simulation_license_test() : void
+std::stringstream store;
+const std::string title( "Test simulation" );
+const std::size_t inner( 100ul );
+const std::size_t prod( 2000ul );
+const std::size_t therm( 100ul );
+const std::size_t report( 500ul );
+const std::size_t ntarg( 50ul );
+const double epsw( 70.0 );
+const double tmptr( 305.0 );
+{
+  boost::shared_ptr< platform::simulation_manager > simtype( new platform::standard_simulation );
+  simtype->set_production_interval( prod );
+  simtype->set_equilibration_interval( therm );
+
+  boost::shared_ptr< platform::simulation > var( new platform::simulation );
+  BOOST_CHECK_EQUAL( var->energy(), 0.0 );
+  BOOST_CHECK_EQUAL( var->inner_loop_size(), 0ul );
+  BOOST_CHECK_EQUAL( var->get_outer_loop_index(), 0ul );
+  BOOST_CHECK_EQUAL( var->report_interval(), 0ul );
+  BOOST_CHECK( var->run_title().empty() );
+  BOOST_CHECK( not var->has_manager() );
+
+  {
+    std::stringstream os;
+    var->license( os );
+    const std::string lic( os.str() );
+    //std::cout << lic;
+    BOOST_CHECK( lic.find( "GNU General Public License" ) < lic.size() );
+    BOOST_CHECK( lic.find( "Free Software Foundation" ) < lic.size() );
+    BOOST_CHECK( lic.find( "http://www.gnu.org/licenses" ) < lic.size() );
+  }
+
+  var->set_inner_loop_size( inner );
+  var->set_report_interval( report );
+  var->set_run_title( title );
+  var->set_target_count( ntarg );
+  var->set_solvent_permittivity( epsw );
+  var->set_temperature( tmptr );
+  var->set_manager( simtype );
+
+  {
+    std::stringstream os;
+    var->license( os );
+    const std::string lic( os.str() );
+    //std::cout << lic;
+    BOOST_CHECK( lic.find( "GNU General Public License" ) < lic.size() );
+    BOOST_CHECK( lic.find( "Free Software Foundation" ) < lic.size() );
+    BOOST_CHECK( lic.find( "http://www.gnu.org/licenses" ) < lic.size() );
+  }
+
+  BOOST_CHECK_EQUAL( var->inner_loop_size(), 100ul );
+  BOOST_CHECK_EQUAL( var->get_outer_loop_index(), 0ul );
+  BOOST_CHECK_EQUAL( var->report_interval(), 500ul );
+  BOOST_CHECK_EQUAL( var->run_title(), title );
+  BOOST_CHECK_EQUAL( var->particles().target_count(), ntarg );
+  BOOST_CHECK_EQUAL( var->evaluators().temperature(), tmptr );
+  BOOST_CHECK_EQUAL( var->evaluators().permittivity(), epsw );
+  BOOST_REQUIRE( var->has_manager() );
+  BOOST_CHECK_EQUAL( var->manager().equilibration_interval(), therm );
+  BOOST_CHECK_EQUAL( var->manager().production_interval(), prod );
+}
+!!!1986608.cpp!!!	simulation_program_description_test() : void
+boost::shared_ptr< platform::simulation > var( new platform::simulation );
+std::stringstream os;
+var->program_description( os );
+const std::string lic( os.str() );
+//std::cout << lic;
+BOOST_CHECK( lic.find( "3.1415927" ) < lic.size() );
+BOOST_CHECK( lic.find( "8.8542e-12" ) < lic.size() );
+BOOST_CHECK( lic.find( "6.02214e+23" ) < lic.size() );
+BOOST_CHECK( lic.find( "1.3806e-23" ) < lic.size() );
+BOOST_CHECK( lic.find( "1.6021917e-19" ) < lic.size() );
+BOOST_CHECK( lic.find( "1660.5393" ) < lic.size() );
+BOOST_CHECK( lic.find( "machine integer size" ) < lic.size() );
+BOOST_CHECK( lic.find( "Host machine" ) < lic.size() );
+BOOST_CHECK( lic.find( "compiled version" ) < lic.size() );
 !!!1955248.cpp!!!	simulation_definition_lifetime_test() : void
 {
   // Test for virtual no-copy object pattern
@@ -2596,6 +2673,141 @@ catch( std::exception const& err )
 
 
 !!!1825584.cpp!!!	full_simulation_input_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( platform::simulation::get_max_input_version() );
+BOOST_REQUIRE_EQUAL( dg.max_version(), 1ul );
+sim->build_input_delegater( dg );
+
+BOOST_REQUIRE( dg.has_section( core::strngs::simulator_label() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::evaluator_label() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::sampler_label() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::fsspec() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::fsregn() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::fstry() ) );
+BOOST_REQUIRE( dg.has_section( platform::storage_meta::storage_label() ) );
+
+//{
+//  core::input_help hlp;
+//  dg.get_documentation( hlp );
+//  hlp.write( std::cout );
+//}
+
+const std::string title( "Test simulation" );
+const std::size_t inner( 100ul );
+const std::size_t prod( 2000ul );
+const std::size_t therm( 100ul );
+const std::size_t report( 500ul );
+const std::size_t ntarg( 50ul );
+const double epsw( 70.0 );
+const double tmptr( 305.0 );
+
+//std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n\nrun\ntype standard\noutputdir \"\%1$04d\"\nend\n\nevaluator\ntype coulomb\nend\n\nsampler\ntype specie-count\nend\n\nsampler\ntype widom\niwidom 10\nend\n\ngeometry\ntype cube\nname centre\nwidth 5\norigin 2.5 2.5 2.5\nend\n\nspecie\nlabel Na\nz 1\nd 1.01\nconc 0.1\nend\n\nspecie\nlabel Cl\nz -1\nd 1.78\nconc 0.1\nend\n\ntrial\ntype move\ndelta 1.0\nend\n\ntrial\ntype jump\nend\n\n" );
+//std::cout << canon_input;
+core::input_preprocess reader;
+//reader.add_buffer( "dummy", canon_input );
+reader.add_include( "test.inp" );
+try
+{
+  dg.read_input( reader );
+}
+catch( std::exception const& err )
+{
+  std::cout << err.what() << "\n";
+  BOOST_ERROR( std::string( "Unexpected exception thrown by \"dg.read_input( reader )\": " ) + err.what() );
+}
+
+BOOST_CHECK_EQUAL( sim->run_title(), title );
+BOOST_CHECK_EQUAL( sim->get_outer_loop_index(), 0ul );
+BOOST_CHECK_EQUAL( sim->inner_loop_size(), inner );
+BOOST_CHECK_EQUAL( sim->report_interval(), report );
+BOOST_CHECK_EQUAL( sim->has_manager(), true );
+BOOST_CHECK_EQUAL( sim->manager().equilibration_interval(), therm );
+BOOST_CHECK_EQUAL( sim->manager().production_interval(), prod );
+BOOST_CHECK_EQUAL( sim->manager().type_label(), "standard" );
+BOOST_CHECK_EQUAL( sim->particles().target_count(), ntarg );
+BOOST_CHECK_EQUAL( sim->evaluators().temperature(), tmptr );
+BOOST_CHECK_EQUAL( sim->evaluators().permittivity(), epsw );
+BOOST_CHECK_EQUAL( sim->storage().checkpoint_name(), platform::storage_manager::default_checkpoint_name() );
+BOOST_CHECK_EQUAL( sim->storage().filename_base(), platform::storage_manager::default_filename_base() );
+BOOST_CHECK_EQUAL( sim->storage().output_name(), platform::storage_manager::default_output_name() );
+BOOST_CHECK_EQUAL( sim->storage().run_number(), platform::storage_manager::default_run_number() );
+BOOST_CHECK_EQUAL( sim->storage().output_dir_fmt(), "\%1$04d" );
+BOOST_CHECK_EQUAL( sim->evaluators().size(), 1ul );
+BOOST_CHECK_EQUAL( sim->evaluators().get_evaluators()[0].type_label(), "coulomb" );
+BOOST_CHECK_EQUAL( sim->report().size(), 3ul );
+BOOST_CHECK( sim->report().has_sample( "specie-count" ) );
+BOOST_CHECK( sim->report().has_tracked( "widom" ) );
+BOOST_CHECK( sim->report().has_tracked( "metropolis" ) );
+BOOST_CHECK( not sim->report().has_sink() ); // no sink before "prepare"?
+BOOST_CHECK_EQUAL( sim->particles().get_ensemble().count(), 0ul );
+BOOST_CHECK_EQUAL( sim->particles().specie_count(), 2ul );
+BOOST_CHECK_EQUAL( sim->particles().target_ionic_strength(), 0.2 );
+BOOST_CHECK_EQUAL( sim->particles().get_ensemble().count(), 0ul );
+BOOST_CHECK_EQUAL( sim->particles().get_ensemble().known_keys(), 0ul );
+BOOST_CHECK( sim->particles().has_specie( "Na" ) );
+BOOST_CHECK( sim->particles().has_specie( "Cl" ) );
+BOOST_CHECK_EQUAL( sim->regions().size(), 2ul );
+BOOST_CHECK_EQUAL( sim->regions().region_key( "cell" ), 0ul );
+BOOST_CHECK_EQUAL( sim->regions().region_key( "centre" ), 1ul );
+BOOST_CHECK_EQUAL( sim->choices().size(), 0ul );
+BOOST_CHECK_EQUAL( sim->choices().size_chooser(), 2ul );
+BOOST_CHECK( sim->choices().has_chooser( "move" ) );
+BOOST_CHECK( sim->choices().has_chooser( "jump" ) );
+BOOST_CHECK( sim->choices().empty() );
+!!!1979696.cpp!!!	full_simulation_generate_sim_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( platform::simulation::get_max_input_version() );
+BOOST_REQUIRE_EQUAL( dg.max_version(), 1ul );
+sim->build_input_delegater( dg );
+
+BOOST_REQUIRE( dg.has_section( core::strngs::simulator_label() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::evaluator_label() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::sampler_label() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::fsspec() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::fsregn() ) );
+BOOST_REQUIRE( dg.has_section( core::strngs::fstry() ) );
+BOOST_REQUIRE( dg.has_section( platform::storage_meta::storage_label() ) );
+
+//{
+//  core::input_help hlp;
+//  dg.get_documentation( hlp );
+//  hlp.write( std::cout );
+//}
+
+const std::size_t ntarg( 50ul );
+//std::string canon_input( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n\nrun\ntype standard\noutputdir \"\%1$04d\"\nend\n\nevaluator\ntype coulomb\nend\n\nsampler\ntype specie-count\nend\n\nsampler\ntype widom\niwidom 10\nend\n\ngeometry\ntype cube\nname centre\nwidth 5\norigin 2.5 2.5 2.5\nend\n\nspecie\nlabel Na\nz 1\nd 1.01\nconc 0.1\nend\n\nspecie\nlabel Cl\nz -1\nd 1.78\nconc 0.1\nend\n\ntrial\ntype move\ndelta 1.0\nend\n\ntrial\ntype jump\nend\n\n" );
+//std::cout << canon_input;
+core::input_preprocess reader;
+//reader.add_buffer( "dummy", canon_input );
+reader.add_include( "test.inp" );
+try
+{
+  dg.read_input( reader );
+}
+catch( std::exception const& err )
+{
+  std::cout << err.what() << "\n";
+  BOOST_ERROR( std::string( "Unexpected exception thrown by \"dg.read_input( reader )\": " ) + err.what() );
+}
+
+BOOST_CHECK_EQUAL( sim->particles().get_ensemble().count(), 0ul );
+BOOST_CHECK_EQUAL( sim->particles().get_ensemble().known_keys(), 0ul );
+try
+{
+  sim->generate_simulation();
+
+  BOOST_CHECK_EQUAL( sim->particles().get_ensemble().count(), ntarg );
+  BOOST_CHECK_EQUAL( sim->particles().get_ensemble().specie_count( 0 ), ntarg/2 );
+  BOOST_CHECK_EQUAL( sim->particles().get_ensemble().specie_count( 1 ), ntarg/2 );
+}
+catch( std::exception const& err )
+{
+  std::cout << err.what();
+  BOOST_ERROR( "Unexpected exception." );
+}
+!!!1979824.cpp!!!	full_simulation_echo_input_test() : void
 boost::shared_ptr< platform::simulation > sim( new platform::simulation );
 
 core::input_delegater dg( platform::simulation::get_max_input_version() );
