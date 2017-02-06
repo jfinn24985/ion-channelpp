@@ -1,6 +1,6 @@
 format 75
 "platform" // platform
-  revision 292
+  revision 295
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -3275,17 +3275,19 @@ the rgen_ attribute as the randomness source."
 
       operation 1947952 "simulation"
 	public explicit_return_type ""
-	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
+	nparams 2
+	  param inout name "cell_region" type class_ref 452912 // base_region
+	  param inout name "fstype" type class_ref 659888 // storage_manager
+	cpp_decl "    ${comment}${inline}${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}, boost::shared_ptr< ${t1} > ${p1}${v1}${)}${volatile}${throw};
 "
-	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+	cpp_def "${comment}${inline}${class}::${name}${(}boost::shared_ptr< ${t0} > ${p0}, boost::shared_ptr< ${t1} > ${p1}${)}${volatile}${throw}
 : rman_( new observable::report_manager )
 , eman_( new evaluator::evaluator_manager )
-, gman_( new geometry::geometry_manager( boost::shared_ptr< geometry::base_region >( new geometry::periodic_cube_region( \"cell\", 10.0 ) ) ) )
+, gman_( new geometry::geometry_manager( ${p0} ) )
 , pman_( new particle::particle_manager )
 , cman_( new trial::choice_manager )
 , simtype_()
-, fstype_( new platform::serial_storage )
+, fstype_( ${p1} )
 , inner_loop_size_()
 , energy_()
 , outer_loop_index_( 0ul )
@@ -3293,6 +3295,23 @@ the rgen_ attribute as the randomness source."
 , ranf_( rgen_ )
 , report_interval_()
 , run_title_()
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 1999664 "simulation"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+: simulation( boost::shared_ptr< geometry::base_region >( new geometry::periodic_cube_region( \"cell\", 10.0 ) ), boost::shared_ptr< platform::storage_manager >( new platform::serial_storage ) )
 {}
 "
 	

@@ -144,7 +144,7 @@ UTILITY_REQUIRE( this->has_manager(), "Can not write input document before setti
 // Add simulator section
 std::size_t ix = wr.add_section( core::strngs::simulator_label() );
 auto &sec = wr[ ix ];
-sec.add_entry( core::strngs::fsname(), " \"" + this->run_title() + "\"" );
+sec.add_entry( core::strngs::fsname(), "\"" + this->run_title() + "\"" );
 sec.add_entry( core::strngs::inner_label(), this->inner_loop_size() );
 sec.add_entry( core::strngs::fsisav(), this->report_interval() );
 sec.add_entry( core::strngs::fsntrg(), this->pman_->target_count() );
@@ -203,6 +203,12 @@ if ( not env.no_except() )
                     , " Floating point exception : "+ env.error_message ());
   }
   env.reset();
+}
+// After processing input we can now set up the output
+// location.
+if( not this->rman_->has_sink() )
+{
+  this->rman_->set_sink( this->fstype_->open_output() );
 }
 !!!1759920.python!!!	prepare() : void
 # Send signal to prepare other objects
@@ -438,9 +444,9 @@ for (size_t d9m8h2 = 0; d9m8h2 != loopcount; ++d9m8h2)
     }
   }
   // Note this->outer_loop_index_ is a 1-based count
-  this->fstype_->get_log() << " STEP : " << this->outer_loop_index_ << "\n";
+  this->fstype_->get_log() << " STEP : " << (d9m8h2 + 1) << "(" << this->outer_loop_index_ << ")\n";
   this->rman_->on_sample( *(this->pman_), *(this->gman_), *(this->eman_) );
-  if ((this->outer_loop_index_ % this->report_interval_) == 0)
+  if (((d9m8h2 + 1) % this->report_interval_) == 0)
   {
     this->do_report();
   }
@@ -456,7 +462,7 @@ for (size_t d9m8h2 = 0; d9m8h2 != loopcount; ++d9m8h2)
     }
     env.reset();
   }
-  if ((this->outer_loop_index_ % this->report_interval_) == 0)
+  if (((d9m8h2 + 1) % this->report_interval_) == 0)
   {
     auto fsptr = this->fstype_->open_checkpoint();
     boost::archive::text_oarchive oa( *fsptr );
@@ -653,10 +659,6 @@ this->description( this->fstype_->get_log() );
   wr.write( this->fstype_->get_log() );
   this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n";
 }
-
-// After processing input we can now set up the output
-// location.
-this->rman_->set_sink( this->fstype_->open_output() );
  
 // Run the simulation
 return this->simtype_->run( *this, this->fstype_->get_log() );
