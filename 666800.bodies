@@ -3336,6 +3336,60 @@ catch( std::exception const& err )
   }
   BOOST_CHECK( expect == found );
 }
+!!!2012976.cpp!!!	full_simulation_description_test() : void
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+  stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
+
+core::input_delegater dg( platform::simulation::get_max_input_version() );
+BOOST_REQUIRE_EQUAL( dg.max_version(), 1ul );
+sim->build_input_delegater( dg );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", platform_test::canon_input() );
+try
+{
+  dg.read_input( reader );
+}
+catch( std::exception const& err )
+{
+  std::cout << err.what() << "\n";
+  BOOST_ERROR( std::string( "Unexpected exception thrown by \"dg.read_input( reader )\": " ) + err.what() );
+}
+try
+{
+  sim->generate_simulation();
+}
+catch( std::exception const& err )
+{
+  std::cout << err.what();
+  BOOST_ERROR( "Unexpected exception thrown by sim->generate_simulation()." );
+}
+try
+{
+  sim->prepare();
+  // std::cout << slog->str();
+}
+catch( std::exception const& err )
+{
+  std::cout << err.what();
+  BOOST_ERROR( "Unexpected exception thrown by sim->prepare();." );
+  return;
+}
+try
+{
+  std::stringstream desc;
+  sim->description( desc );
+  std::cout << desc.str();
+}
+catch( std::exception const& err )
+{
+  std::cout << err.what();
+  BOOST_ERROR( "Unexpected exception thrown by sim->prepare();." );
+  return;
+}
 !!!1999792.cpp!!!	full_simulation_run_loop_test() : void
 boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
 boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
@@ -3382,6 +3436,7 @@ try
   slog->str( "" );
   sim->run_loop( sim->manager().equilibration_interval() );
   std::cout << slog->str();
+  sim->prepare();
   slog->str( "" );
   sim->run_loop( sim->manager().production_interval() );
   std::cout << slog->str();

@@ -268,6 +268,7 @@ this->pman_->description( os ); // reports target count
 this->eman_->description( os ); // report temperature and epsw
 this->cman_->description( os ); // choice rate table
 this->rman_->description( os ); // UUID and observers
+os << core::strngs::horizontal_bar() << "\n";
 !!!1763504.python!!!	description(inout os : ostream) : void
 from constants import constants
 constants.description( os )
@@ -380,6 +381,7 @@ if (this->report_interval_ == 0)
 
 // Run the simulation
 auto const& ens = this->pman_->get_ensemble();
+const std::size_t nspec = this->pman_->specie_count();
 for (size_t d9m8h2 = 0; d9m8h2 != loopcount; ++d9m8h2)
 {
   this->outer_loop_index_ += 1;
@@ -401,6 +403,45 @@ for (size_t d9m8h2 = 0; d9m8h2 != loopcount; ++d9m8h2)
         if (atom.do_new)
         {
           this->gman_->calculate_distances( atom.new_position, ens.get_coordinates(), atom.new_rij, 0, ens.size() );
+          // check for overlap to existing particles.
+          const double iradius = this->pman_->get_specie( atom.key ).radius();
+          for( std::size_t idx = 0; idx != atom.new_rij.size() and not trial->fail(); ++idx )
+          {
+            if( idx != atom.index )
+            {
+              const std::size_t jspec = ens.key( idx );
+              if( jspec < nspec )
+              {
+                const double min_distance = iradius + this->pman_->get_specie( jspec ).radius();
+                if( min_distance > atom.new_rij[ idx ] )
+                {
+                  trial->set_fail();
+                }
+              }
+            }
+          }
+        }
+      }
+      // check for overlap within trial.
+      if( not trial->fail() and (trial->size() > 1) )
+      {
+        for( std::size_t idx = 0; idx + 1 != trial->size() and not trial->fail(); ++idx )
+        {
+          if( (*trial)[idx].do_new )
+          {
+            for( std::size_t jdx = idx + 1; jdx != trial->size() and not trial->fail(); ++jdx )
+            {
+              if( (*trial)[jdx].do_new )
+              {
+                const double rij2 = this->gman_->calculate_distance_squared( (*trial)[idx].new_position, (*trial)[jdx].new_position );
+                const double minij2 = std::pow( this->pman_->get_specie( (*trial)[idx].key ).radius() + this->pman_->get_specie( (*trial)[jdx].key ).radius(), 2 );
+                if( minij2 > rij2 )
+                {
+                  trial->set_fail();
+                }
+              }
+            }
+          }         
         }
       }
       // Calculate energy
