@@ -1,6 +1,6 @@
 format 75
 "utility" // utility
-  revision 239
+  revision 240
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -10200,6 +10200,80 @@ ${docstring}${members}
 	  b parent class_ref 1075759 // uuid_t
       end
 
+      class 687536 "open_mode"
+	visibility package stereotype "enum"
+	cpp_decl "${comment}enum ${name}
+ {
+${items}
+};
+"
+	java_decl "${comment}${@}${visibility}${final}${abstract}enum ${name}${implements} {
+${items};
+${members}}
+"
+	php_decl "${comment}${visibility}final class ${name} {
+${items}}
+"
+	python_decl "class ${name}:
+${docstring}${members}
+"
+	idl_decl "${comment}enum ${name} {
+${items}};
+"
+	explicit_switch_type ""
+	
+	comment " sink open modes. 
+
+ These are advisory.  Sink classes should attempt to support
+ these values as much as possible.  Errors may be reported
+ using exceptions. "
+	attribute 839216 "READ_ONLY"
+	  public type class_ref 687536 // open_mode
+	  cpp_decl "  ${name}${value},${comment}"
+	  java_decl ""
+	  php_decl ""
+	  python_decl "${comment}${self}${name} = ${value}
+"
+	  idl_decl ""
+	  comment " Open existing sink for reading"
+	end
+
+	attribute 839344 "READ_WRITE"
+	  public type class_ref 687536 // open_mode
+	  cpp_decl "  ${name}${value},${comment}"
+	  java_decl ""
+	  php_decl ""
+	  python_decl "${comment}${self}${name} = ${value}
+"
+	  idl_decl ""
+	  comment " Open existing sink for reading/writing"
+	end
+
+	attribute 839472 "RW_CREATE"
+	  public type class_ref 687536 // open_mode
+	  cpp_decl "  ${name}${value},${comment}"
+	  java_decl ""
+	  php_decl ""
+	  python_decl "${comment}${self}${name} = ${value}
+"
+	  idl_decl ""
+	  comment " Open sink for reading/writing, create new sink if 
+ it doesn't exist."
+	end
+
+	attribute 839600 "NEW_SINK"
+	  public type class_ref 687536 // open_mode
+	  cpp_decl "  ${name}${value},${comment}"
+	  java_decl ""
+	  php_decl ""
+	  python_decl "${comment}${self}${name} = ${value}
+"
+	  idl_decl ""
+	  comment " Open new sink for reading/writing, replaces old sink if 
+ it exists."
+	end
+      end
+
       attribute 341680 "path_"
 	protected explicit_type "string"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -10223,12 +10297,25 @@ ${docstring}${members}
 	comment " The unique identifier for a simulation"
       end
 
+      attribute 839728 "mode_"
+	private type class_ref 687536 // open_mode
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " How to open the sink."
+      end
+
       operation 577712 "base_sink"
 	protected explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
 : path_()
 , uuid_()
+, mode_()
 {}
 "
 	
@@ -10242,11 +10329,13 @@ ${docstring}${body}
 
       operation 578352 "base_sink"
 	public explicit_return_type ""
-	nparams 1
+	nparams 2
 	  param in name "path" explicit_type "string"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
+	  param in name "mode" type class_ref 687536 // open_mode
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
 : path_( ${p0} )
 , uuid_( make_uuid_string() )
+, mode_( ${p1} )
 {}
 "
 	
@@ -10333,7 +10422,7 @@ ${docstring}${body}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-   ar & this->path_; ar & this->uuid_;
+   ar & this->path_; ar & this->uuid_; ar & this->mode_;
 }"
 	
 	
@@ -10463,6 +10552,23 @@ ${docstring}${body}
 	comment "Generate a UUID string"
       end
 
+      operation 2019760 "mode"
+	const public return_type class_ref 687536 // open_mode
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->mode_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the sink's open mode."
+      end
+
       operation 556080 "read"
 	public explicit_return_type "bool"
 	nparams 2
@@ -10529,6 +10635,7 @@ ${docstring}${body}
 	  param in name "buffer" explicit_type "string"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
+   UTILITY_REQUIRE( this->mode() != READ_ONLY, \"Can not write to read-only sink.\" );
    UTILITY_REQUIRE( not ${p0}.empty(), \"Can not write to an empty location/path.\" );
    UTILITY_REQUIRE( not ${p1}.empty(), \"Can not write without content.\" );
    return this->do_${name}( ${p0}, ${p1} );
@@ -10543,6 +10650,7 @@ ${docstring}${body}
 	comment "Write a \"content\" of file with the given \"subpath\" into the archive.
 Any file with the given \"subpath\" will be overwritten.
 
+\\pre mode /= READ_ONLY
 \\pre not path.empty and not buffer.empty : strong exception safety"
       end
 
@@ -10642,12 +10750,14 @@ ${docstring}${body}
 
       operation 508720 "archive_file"
 	public explicit_return_type ""
-	nparams 1
+	nparams 2
 	  param in name "path" explicit_type "string"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw};
+	  param in name "mode" type class_ref 687536 // open_mode
+	    defaultvalue "RW_CREATE"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw};
 "
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}${)}${volatile}${throw}
-: base_sink( ${p0} )
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${volatile}${throw}
+: base_sink( ${p0}, ${p1} )
 , arch_( nullptr )
 , dirty_( false )
 {
@@ -10813,9 +10923,9 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment "Check that the archive is open. If it is not open, then
-attempt to open it. Throw an exception if the archive
-can not be openned."
+	comment " Check that the archive is open. If it is not open, then
+ attempt to open it. Throw an exception if the archive
+ can not be openned."
       end
 
       operation 556976 "ensure_close"
@@ -11518,10 +11628,12 @@ ${docstring}${body}
 
       operation 559024 "memory_sink"
 	public explicit_return_type ""
-	nparams 1
+	nparams 2
 	  param in name "rootpath" explicit_type "string"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
-: base_sink( ${p0} )
+	  param in name "mode" type class_ref 687536 // open_mode
+	    defaultvalue "RW_CREATE"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
+: base_sink( ${p0}, ${p1} )
 , data_()
 {}
 "
@@ -11913,12 +12025,14 @@ ${docstring}${body}
 
       operation 569648 "gdbm_sink"
 	public explicit_return_type ""
-	nparams 1
+	nparams 2
 	  param in name "path" explicit_type "string"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw};
+	  param in name "mode" type class_ref 687536 // open_mode
+	    defaultvalue "RW_CREATE"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw};
 "
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}${)}${throw}
-: base_sink(  ${p0} )
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${throw}
+: base_sink(  ${p0}, ${p1} )
 , dbf_( nullptr )
 {
   ${body}
@@ -11940,7 +12054,7 @@ ${docstring}${body}
 "
 	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
 {
-  ${body}
+   this->ensure_close();
 }
 "
 	
@@ -12179,6 +12293,7 @@ ${docstring}${body}
 	comment "Write a \"content\" of file with the given \"subpath\" into the archive.
 Any file with the given \"subpath\" will be overwritten."
       end
+
     end
   end
 
@@ -13072,6 +13187,9 @@ ${namespace_end}
 #endif
 
 ${includes}
+// manuals
+#include \"core/strngs.hpp\"
+// -
 ${namespace_start}
 ${members}
 ${namespace_end}

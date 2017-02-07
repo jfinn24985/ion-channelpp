@@ -1,5 +1,5 @@
 class archive_file
-!!!508720.cpp!!!	archive_file(in path : string)
+!!!508720.cpp!!!	archive_file(in path : string, in mode : base_sink::open_mode = RW_CREATE)
 const std::string ext( ".zip" );
 if ( ext != this->path_.substr( this->path_.size() - ext.size() ) )
 {
@@ -21,28 +21,53 @@ if ( this->exists( subpath ) )
 this->write( subpath, content );
 this->dirty_ = true;
 !!!556848.cpp!!!	ensure_open() : void
-if (nullptr == this->arch_)
+if( nullptr == this->arch_ )
 {
-   //DEBUG std::cerr << "OPEN : " << this->path_ << "\n";
-   // Check path exits
-   boost::filesystem::path parent( boost::filesystem::path( this->path_ ).parent_path() );
-   if ( not parent.empty())
-   {
-      if (not boost::filesystem::exists( parent ) )
-      {
-         boost::filesystem::create_directories( parent );
-      }
-      UTILITY_INPUT( boost::filesystem::is_directory( parent ),
-                     "Unable to create directory "+parent.string(), core::strngs::simulator_label(), nullptr);
-   }
-   // open file and test for success.
-   int error;
-   this->arch_ = ::zip_open( this->path_.c_str(), ZIP_CREATE, &error);
-   if (nullptr == this->arch_)
-   {
-      throw archive_error( error, 0 );
-   }
-   this->dirty_ = false;
+  //DEBUG std::cerr << "OPEN : " << this->path_ << "\n";
+  // Check path exits
+  boost::filesystem::path parent( boost::filesystem::path( this->path_ ).parent_path() );
+  if( not parent.empty() )
+  {
+    if( not boost::filesystem::exists( parent ) )
+    {
+      boost::filesystem::create_directories( parent );
+    }
+    UTILITY_INPUT( boost::filesystem::is_directory( parent ),
+                   "Unable to create directory "+parent.string(), core::strngs::simulator_label(), nullptr );
+  }
+  // open file and test for success.
+  int flag = 0;
+  bool must_exist = false;
+  switch( this->mode() )
+  {
+  case READ_ONLY: // == 0 : must exist (fall through)
+  case READ_WRITE: // == 0 : must exist
+    must_exist = true;
+    break;
+  case RW_CREATE:  // ok not to exist
+    flag = ZIP_CREATE;
+    break;
+  case NEW_SINK: // create or truncate to zero size
+    flag = ZIP_CREATE | ZIP_TRUNCATE;
+  default:
+  {
+    UTILITY_ALWAYS( false, "Should never be here!" );
+    break;
+  }
+  }
+  if( must_exist )
+  {
+    UTILITY_INPUT( boost::filesystem::exists( this->path_ )
+                   , "Zip file \""+this->path_+"\" must exist."
+                   , core::strngs::simulator_label(), nullptr );
+  }
+  int error;
+  this->arch_ = ::zip_open( this->path_.c_str(), flag, &error );
+  if( nullptr == this->arch_ )
+  {
+    throw archive_error( error, 0 );
+  }
+  this->dirty_ = false;
 }
 !!!556976.cpp!!!	ensure_close() : void
 if (nullptr != this->arch_)
