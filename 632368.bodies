@@ -127,6 +127,13 @@ core::input_delegater decoder( this->get_max_input_version() );
 this->build_input_delegater( decoder );
 
 decoder.read_input( reader );
+
+// After processing input we can now set up the output
+// location.
+if( not this->rman_->has_sink() )
+{
+  this->rman_->set_sink( this->fstype_->open_output() );
+}
 !!!1762992.python!!!	generate_simulation() : void
 from constants import constants
 ## Generate a list of trial types
@@ -159,100 +166,6 @@ this->eman_->write_document( wr );
 this->gman_->write_document( wr );
 this->pman_->write_document( wr );
 this->cman_->write_document( wr );
-!!!1759920.cpp!!!	prepare() : void
-// Get reference to FP environment
-utility::fp_env &env(utility::fp_env::env_);
-// Check for FP error before doing anything
-if (not env.no_except())
-{
-  if (0 != ((~env.Inexact) & env.except()))
-  {
-    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except()),  " Floating point exception : "+ env.error_message ());
-  }
-  env.reset();
-}
-
-// Rebuild choices
-this->cman_->prepare( this->pman_->get_species(), *(this->gman_), this->ranf_ );
-
-// Reset observables
-this->rman_->prepare( *(this->pman_), *(this->gman_), *(this->eman_) );
-
-// Reset the evaluators
-this->eman_->prepare( *(this->pman_), *(this->gman_) );
-
-if ( not env.no_except() )
-{
-  if (0 != ((~env.Inexact) & env.except()))
-  {
-    this->fstype_->get_log() << "Floating point exception during simulation preparation \"" << env.error_message () << "\"\n";
-    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
-                    , " Floating point exception : "+ env.error_message ());
-  }
-  env.reset();
-}
-// Calculate/reset the system's total energy (can only be done after preparing
-// the evaluators.)
-this->total_energy();
-if ( not env.no_except() )
-{
-  if (0 != ((~env.Inexact) & env.except()))
-  {
-    this->fstype_->get_log() << "Floating point exception during calculation of initial energy\n \"" << env.error_message () << "\"\n";
-    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
-                    , " Floating point exception : "+ env.error_message ());
-  }
-  env.reset();
-}
-// After processing input we can now set up the output
-// location.
-if( not this->rman_->has_sink() )
-{
-  this->rman_->set_sink( this->fstype_->open_output() );
-}
-!!!1759920.python!!!	prepare() : void
-# Send signal to prepare other objects
-self.do_prepare()
-if self.checkpoint_interval_ == None or self.checkpoint_interval_ == 0:
-  self.checkpoint_interval_ = max(1, loopcount // 5)
-rgen = self.ranf_
-ens = self.ensemble_
-for d9m8h2 in range(loopcount):
-  self.outer_loop_index_ += 1
-  for t1b6b8 in range(self.inner_loop_size_):
-    # select a move
-    the_choice = None
-    sofar = rgen.uniform(0.0,1.0)
-    for choice in self.choices_:
-      sofar -= choice.probability()
-      if sofar <= 0.0:
-        the_choice = choice
-        break
-    with the_choice.generate(self) as trial:
-      if not trial.fail:
-        # Calculate distance vectors.
-        for atom in trial.changes:
-          if atom.do_old:
-            atom.old_rij = self.cell_region_.compute_distances(ens, atom.old_position)
-          if atom.do_new:
-            atom.new_rij = self.cell_region_.compute_distances(ens, atom.new_position)
-        # Calculate energy
-        for evaluator in self.evaluators_:
-          evaluator.compute_potential(self, trial)
-          if trial.fail:
-            break
-        if not trial.fail:
-          trial.accept = rgen.uniform(0.0,1.0) <= trial.metropolis_factor()
-          if trial.accept:
-            self.energy_ += trial.energy()
-            ens.commit( trial )
-      self.inner_sig_( trial )
-  # Note self.outer_loop_index_ is a 1-based count
-  print >>out,"STEP ",self.outer_loop_index_
-  self.outer_sig_(self)
-  if self.outer_loop_index_ % self.checkpoint_interval_ == 0:
-    self.checkpoint_index_ += 1
-    self.do_report( out )
 !!!1763504.cpp!!!	description(inout os : ostream) : void
 UTILITY_REQUIRE( this->has_manager(), "Can not get description before setting simulation manager." );
 // File/directory names etc.
@@ -369,6 +282,94 @@ for choice in self.choices_:
 self.report_sig_(self, os)
 pass
 
+!!!1759920.cpp!!!	prepare() : void
+// Get reference to FP environment
+utility::fp_env &env(utility::fp_env::env_);
+// Check for FP error before doing anything
+if (not env.no_except())
+{
+  if (0 != ((~env.Inexact) & env.except()))
+  {
+    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except()),  " Floating point exception : "+ env.error_message ());
+  }
+  env.reset();
+}
+
+// Rebuild choices
+this->cman_->prepare( this->pman_->get_species(), *(this->gman_), this->ranf_ );
+
+// Reset observables
+this->rman_->prepare( *(this->pman_), *(this->gman_), *(this->eman_) );
+
+// Reset the evaluators
+this->eman_->prepare( *(this->pman_), *(this->gman_) );
+
+if ( not env.no_except() )
+{
+  if (0 != ((~env.Inexact) & env.except()))
+  {
+    this->fstype_->get_log() << "Floating point exception during simulation preparation \"" << env.error_message () << "\"\n";
+    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                    , " Floating point exception : "+ env.error_message ());
+  }
+  env.reset();
+}
+// Calculate/reset the system's total energy (can only be done after preparing
+// the evaluators.)
+this->total_energy();
+if ( not env.no_except() )
+{
+  if (0 != ((~env.Inexact) & env.except()))
+  {
+    this->fstype_->get_log() << "Floating point exception during calculation of initial energy\n \"" << env.error_message () << "\"\n";
+    UTILITY_ALWAYS (0 == ((~env.Inexact) & env.except())
+                    , " Floating point exception : "+ env.error_message ());
+  }
+  env.reset();
+}
+!!!1759920.python!!!	prepare() : void
+# Send signal to prepare other objects
+self.do_prepare()
+if self.checkpoint_interval_ == None or self.checkpoint_interval_ == 0:
+  self.checkpoint_interval_ = max(1, loopcount // 5)
+rgen = self.ranf_
+ens = self.ensemble_
+for d9m8h2 in range(loopcount):
+  self.outer_loop_index_ += 1
+  for t1b6b8 in range(self.inner_loop_size_):
+    # select a move
+    the_choice = None
+    sofar = rgen.uniform(0.0,1.0)
+    for choice in self.choices_:
+      sofar -= choice.probability()
+      if sofar <= 0.0:
+        the_choice = choice
+        break
+    with the_choice.generate(self) as trial:
+      if not trial.fail:
+        # Calculate distance vectors.
+        for atom in trial.changes:
+          if atom.do_old:
+            atom.old_rij = self.cell_region_.compute_distances(ens, atom.old_position)
+          if atom.do_new:
+            atom.new_rij = self.cell_region_.compute_distances(ens, atom.new_position)
+        # Calculate energy
+        for evaluator in self.evaluators_:
+          evaluator.compute_potential(self, trial)
+          if trial.fail:
+            break
+        if not trial.fail:
+          trial.accept = rgen.uniform(0.0,1.0) <= trial.metropolis_factor()
+          if trial.accept:
+            self.energy_ += trial.energy()
+            ens.commit( trial )
+      self.inner_sig_( trial )
+  # Note self.outer_loop_index_ is a 1-based count
+  print >>out,"STEP ",self.outer_loop_index_
+  self.outer_sig_(self)
+  if self.outer_loop_index_ % self.checkpoint_interval_ == 0:
+    self.checkpoint_index_ += 1
+    self.do_report( out )
 !!!1763632.cpp!!!	run_loop(in loopcount : size_t) : void
 // Get reference to FP environment
 utility::fp_env &env(utility::fp_env::env_);

@@ -2675,7 +2675,7 @@ catch( std::exception const& err )
 }
 
 
-!!!1825584.cpp!!!	full_simulation_input_test() : void
+!!!1825584.cpp!!!	full_simulation_build_input_delegate_test() : void
 boost::shared_ptr< platform::simulation > sim( new platform::simulation );
 
 core::input_delegater dg( platform::simulation::get_max_input_version() );
@@ -2695,6 +2695,8 @@ BOOST_REQUIRE( dg.has_section( platform::storage_meta::storage_label() ) );
 //  dg.get_documentation( hlp );
 //  hlp.write( std::cout );
 //}
+!!!2020144.cpp!!!	full_simulation_read_input_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
 
 const std::string title( "Test simulation" );
 const std::size_t inner( 100ul );
@@ -2709,7 +2711,10 @@ core::input_preprocess reader;
 reader.add_buffer( "dummy", platform_test::canon_input() );
 try
 {
-  dg.read_input( reader );
+  sim->read_input( reader );
+  // test post-conditions
+  BOOST_REQUIRE( sim->has_manager() );
+  BOOST_REQUIRE( sim->report().has_sink() );
 }
 catch( std::exception const& err )
 {
@@ -2739,7 +2744,6 @@ BOOST_CHECK_EQUAL( sim->report().size(), 3ul );
 BOOST_CHECK( sim->report().has_sample( "specie-count" ) );
 BOOST_CHECK( sim->report().has_tracked( "widom" ) );
 BOOST_CHECK( sim->report().has_tracked( "metropolis" ) );
-BOOST_CHECK( not sim->report().has_sink() ); // no sink before "prepare"?
 BOOST_CHECK_EQUAL( sim->particles().get_ensemble().count(), 0ul );
 BOOST_CHECK_EQUAL( sim->particles().specie_count(), 2ul );
 BOOST_CHECK_EQUAL( sim->particles().target_ionic_strength(), 0.2 );
@@ -2757,17 +2761,12 @@ BOOST_CHECK( sim->choices().has_chooser( "jump" ) );
 BOOST_CHECK( sim->choices().empty() );
 !!!1979696.cpp!!!	full_simulation_generate_sim_test() : void
 boost::shared_ptr< platform::simulation > sim( new platform::simulation );
-
-core::input_delegater dg( platform::simulation::get_max_input_version() );
-BOOST_REQUIRE_EQUAL( dg.max_version(), 1ul );
-sim->build_input_delegater( dg );
-
 const std::size_t ntarg( 50ul );
 core::input_preprocess reader;
 reader.add_buffer( "dummy", platform_test::canon_input() );
 try
 {
-  dg.read_input( reader );
+  sim->read_input( reader );
 }
 catch( std::exception const& err )
 {
@@ -2793,15 +2792,11 @@ catch( std::exception const& err )
 !!!1979824.cpp!!!	full_simulation_echo_input_test() : void
 boost::shared_ptr< platform::simulation > sim( new platform::simulation );
 
-core::input_delegater dg( platform::simulation::get_max_input_version() );
-BOOST_REQUIRE_EQUAL( dg.max_version(), 1ul );
-sim->build_input_delegater( dg );
-
 core::input_preprocess reader;
 reader.add_buffer( "dummy", platform_test::canon_input() );
 try
 {
-  dg.read_input( reader );
+  sim->read_input( reader );
 }
 catch( std::exception const& err )
 {
@@ -2956,15 +2951,11 @@ std::stringstream echoinput;
 {
   boost::shared_ptr< platform::simulation > sim( new platform::simulation );
 
-  core::input_delegater dg( platform::simulation::get_max_input_version() );
-  BOOST_REQUIRE_EQUAL( dg.max_version(), 1ul );
-  sim->build_input_delegater( dg );
-
   core::input_preprocess reader;
   reader.add_buffer( "dummy", platform_test::canon_input() );
   try
   {
-    dg.read_input( reader );
+    sim->read_input( reader );
   }
   catch( std::exception const& err )
   {
@@ -2995,16 +2986,12 @@ std::stringstream echoinput;
   stor->set_log( slog );
   boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
-  core::input_delegater dg( platform::simulation::get_max_input_version() );
-  BOOST_REQUIRE_EQUAL( dg.max_version(), 1ul );
-  sim->build_input_delegater( dg );
-
   core::input_preprocess reader;
   const std::string canon_input( echoinput.str() );
   reader.add_buffer( "dummy", canon_input );
   try
   {
-    dg.read_input( reader );
+    sim->read_input( reader );
   }
   catch( std::exception const& err )
   {
@@ -3161,6 +3148,68 @@ std::stringstream echoinput;
   }
 }
 
+!!!2012976.cpp!!!	full_simulation_description_test() : void
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+  stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", platform_test::canon_input() );
+try
+{
+  sim->read_input( reader );
+}
+catch( std::exception const& err )
+{
+  std::cout << err.what() << "\n";
+  BOOST_ERROR( std::string( "Unexpected exception thrown by \"dg.read_input( reader )\": " ) + err.what() );
+}
+try
+{
+  sim->generate_simulation();
+}
+catch( std::exception const& err )
+{
+  std::cout << err.what();
+  BOOST_ERROR( "Unexpected exception thrown by sim->generate_simulation()." );
+}
+try
+{
+  std::stringstream desc;
+  sim->description( desc );
+  //std::cout << desc.str();
+  const std::string sdesc( desc.str() );
+  BOOST_CHECK( sdesc.find( "Simulation Runtime Settings" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "output directory template : \%1$04d" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "thermalization interval : 100" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "steps between reports : 500" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "trials per \"step\" : 100" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "chem. pot. :-9.71748" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "radius :0.505" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "radius :0.89" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "particle # :50" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "beta (1/k_bT): 2.37483e+20 J{-1}" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "Temperature: 305 (Kelvin)" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "Permittivity of media: 70 (relative to vacuum)" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "Scale factor: 167110 / ( permittivity * T )" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "             = 0" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "move   50.00" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "jump   50.00" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "metropolis\n ----------\n    Sample the metropolis factor of each trial" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( " widom\n -----\n    Sample the free energy distribution of the ensemble\n    - Trials per sampling loop : 10" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "specie-count\n ------------\n    Sample average specie numbers." ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "target particle count : 50" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "target ionic strength : 0.2" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "number of species : 2" ) < sdesc.size() );
+}
+catch( std::exception const& err )
+{
+  std::cout << err.what();
+  BOOST_ERROR( "Unexpected exception thrown by sim->prepare();." );
+  return;
+}
 !!!2006448.cpp!!!	full_simulation_prepare_test() : void
 boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
 boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
@@ -3168,15 +3217,11 @@ boost::shared_ptr< std::stringstream > slog( new std::stringstream );
   stor->set_log( slog );
 boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
-core::input_delegater dg( platform::simulation::get_max_input_version() );
-BOOST_REQUIRE_EQUAL( dg.max_version(), 1ul );
-sim->build_input_delegater( dg );
-
 core::input_preprocess reader;
 reader.add_buffer( "dummy", platform_test::canon_input() );
 try
 {
-  dg.read_input( reader );
+  sim->read_input( reader );
 }
 catch( std::exception const& err )
 {
@@ -3336,22 +3381,18 @@ catch( std::exception const& err )
   }
   BOOST_CHECK( expect == found );
 }
-!!!2012976.cpp!!!	full_simulation_description_test() : void
+!!!2020272.cpp!!!	full_simulation_prepare_description_test() : void
 boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
 boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
 boost::shared_ptr< std::stringstream > slog( new std::stringstream );
   stor->set_log( slog );
 boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
-core::input_delegater dg( platform::simulation::get_max_input_version() );
-BOOST_REQUIRE_EQUAL( dg.max_version(), 1ul );
-sim->build_input_delegater( dg );
-
 core::input_preprocess reader;
 reader.add_buffer( "dummy", platform_test::canon_input() );
 try
 {
-  dg.read_input( reader );
+  sim->read_input( reader );
 }
 catch( std::exception const& err )
 {
@@ -3361,6 +3402,7 @@ catch( std::exception const& err )
 try
 {
   sim->generate_simulation();
+  sim->prepare();
 }
 catch( std::exception const& err )
 {
@@ -3369,20 +3411,33 @@ catch( std::exception const& err )
 }
 try
 {
-  sim->prepare();
-  // std::cout << slog->str();
-}
-catch( std::exception const& err )
-{
-  std::cout << err.what();
-  BOOST_ERROR( "Unexpected exception thrown by sim->prepare();." );
-  return;
-}
-try
-{
   std::stringstream desc;
   sim->description( desc );
-  std::cout << desc.str();
+  //std::cout << desc.str();
+  const std::string sdesc( desc.str() );
+  BOOST_CHECK( sdesc.find( "Simulation Runtime Settings" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "output directory template : \%1$04d" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "thermalization interval : 100" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "steps between reports : 500" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "trials per \"step\" : 100" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "chem. pot. :-9.71748" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "radius :0.505" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "radius :0.89" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "particle # :50" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "beta (1/k_bT): 2.37483e+20 J{-1}" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "Temperature: 305 (Kelvin)" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "Permittivity of media: 70 (relative to vacuum)" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "Scale factor: 167110 / ( permittivity * T )" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "             = 7.82716" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "move   50.00" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "jump   50.00" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "   type spc. rate(%)\n      0    0   25.00\n      1    1   25.00\n      0    1   25.00\n      1    0   25.00" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "metropolis\n ----------\n    Sample the metropolis factor of each trial" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( " widom\n -----\n    Sample the free energy distribution of the ensemble\n    - Trials per sampling loop : 10" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "specie-count\n ------------\n    Sample average specie numbers." ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "target particle count : 50" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "target ionic strength : 0.2" ) < sdesc.size() );
+  BOOST_CHECK( sdesc.find( "number of species : 2" ) < sdesc.size() );
 }
 catch( std::exception const& err )
 {
@@ -3397,15 +3452,11 @@ boost::shared_ptr< std::stringstream > slog( new std::stringstream );
   stor->set_log( slog );
 boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
-core::input_delegater dg( platform::simulation::get_max_input_version() );
-BOOST_REQUIRE_EQUAL( dg.max_version(), 1ul );
-sim->build_input_delegater( dg );
-
 core::input_preprocess reader;
 reader.add_buffer( "dummy", platform_test::canon_input() );
 try
 {
-  dg.read_input( reader );
+  sim->read_input( reader );
 }
 catch( std::exception const& err )
 {
@@ -3424,27 +3475,18 @@ catch( std::exception const& err )
 try
 {
   sim->prepare();
-}
-catch( std::exception const& err )
-{
-  std::cout << err.what();
-  BOOST_ERROR( "Unexpected exception thrown by sim->prepare();." );
-  return;
-}
-try
-{
   slog->str( "" );
   sim->run_loop( sim->manager().equilibration_interval() );
-  std::cout << slog->str();
+  //std::cout << slog->str();
   sim->prepare();
   slog->str( "" );
   sim->run_loop( sim->manager().production_interval() );
-  std::cout << slog->str();
+  //std::cout << slog->str();
 }
 catch( std::exception const& err )
 {
   std::cout << err.what();
-  BOOST_ERROR( "Unexpected exception thrown by sim->prepare();." );
+  BOOST_ERROR( "Unexpected exception thrown by sim->prepare() or sim->run_loop(...)." );
   return;
 }
 {
@@ -3579,4 +3621,74 @@ catch( std::exception const& err )
     }
   }
   BOOST_CHECK( expect == found );
+}
+!!!2019504.cpp!!!	full_simulation_main_test() : void
+if( boost::filesystem::exists( "0002" ) )
+{
+  boost::filesystem::remove_all( "0002" );
+}
+{
+  boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+  boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+  stor->set_log( slog );
+  boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
+
+  char a1[] { "ionch" };
+  char a2[] { "--input" };
+  char a3[] { "test.inp" };
+  char a4[] { "--run" };
+  char a5[] { "2" };
+  char* argv[] { &a1[0], &a2[0], &a3[0], &a4[0], &a5[0] };
+  int argc = 5;
+
+  if( boost::filesystem::exists( "0002" ) )
+  {
+    boost::filesystem::remove_all( "0002" );
+  }
+  try
+  {
+    BOOST_CHECK( sim->main( argc, argv ) );
+  }
+  catch( std::exception const& err )
+  {
+    std::cout << err.what() << "\n";
+    BOOST_ERROR( std::string( "Unexpected exception thrown by \"sim.main(...)\": " ) + err.what() );
+  }
+}
+{
+  BOOST_REQUIRE( boost::filesystem::exists( "0002" ) );
+  BOOST_REQUIRE( boost::filesystem::is_directory( "0002" ) );
+  BOOST_REQUIRE( boost::filesystem::exists( "0002/checkpoint.arc" ) );
+  BOOST_REQUIRE( boost::filesystem::exists( "0002/output.dbm" ) );
+  try
+  {
+    utility::gdbm_sink db( "0002/output.dbm", utility::base_sink::READ_ONLY );
+    BOOST_REQUIRE( db.exists( "metropolis.dat" ) );
+    BOOST_REQUIRE( db.exists( "specie-count.dat" ) );
+    BOOST_REQUIRE( db.exists( "widom.dat" ) );
+    const std::string speciecount( "# TITLE: \"Time series specie counts\" \n# FIELDS: INDEX SPC[0]_MEAN SPC[0]_VAR SPC[1]_MEAN SPC[1]_VAR \n# UNITS: ORDINAL COUNT COUNT COUNT COUNT \n500 25 0 25 0 \n1000 25 0 25 0 \n1500 25 0 25 0 \n2000 25 0 25 0" );
+    const std::string uuidlabel( "# UUID:" );
+    const std::string widom( "# TITLE: \"Series of Widom method chemical potential estimates\" \n# FIELDS: INDEX Na_EXCESS0 Na_POTENTIAL Na_EXCESS Na_COUNT Cl_EXCESS0 Cl_POTENTIAL Cl_EXCESS Cl_COUNT \n# UNITS: ORDINAL ENERGY ENERGY ENERGY COUNT ENERGY ENERGY ENERGY COUNT \n" );
+    const std::string metropolis( "# TITLE: \"Energy distribution histogram\" \n# FIELDS: EMIN EMAX EMID PMEAN PVAR \n# UNITS: e^-E e^-E e^-E COUNT COUNT**2" );
+    std::string buffer;
+    BOOST_REQUIRE( db.read( "specie-count.dat", buffer ) );
+    BOOST_CHECK_EQUAL( buffer.find( speciecount ), 42ul );
+    BOOST_CHECK_EQUAL( buffer.find( uuidlabel ), 0ul );
+    BOOST_REQUIRE( db.read( "metropolis.dat", buffer ) );
+    BOOST_CHECK_EQUAL( buffer.find( metropolis ), 42ul );
+    BOOST_CHECK_EQUAL( buffer.find( uuidlabel ), 0ul );
+    BOOST_REQUIRE( db.read( "widom.dat", buffer ) );
+    BOOST_CHECK_EQUAL( buffer.find( widom ), 42ul );
+    BOOST_CHECK_EQUAL( buffer.find( uuidlabel ), 0ul );
+  }
+  catch( std::exception const& err )
+  {
+    std::cout << err.what() << "\n";
+    BOOST_ERROR( std::string( "Unexpected exception working on db \"0002/output.dbm\": " ) + err.what() );
+  }
+}
+if( boost::filesystem::exists( "0002" ) )
+{
+  boost::filesystem::remove_all( "0002" );
 }
