@@ -1,0 +1,84 @@
+class hard_sphere_overlap
+!!!2027056.cpp!!!	compute_potential(in pman : particle_manager, in gman : geometry_manager, inout changes : change_set) : void
+if( not changes.fail() )
+{
+  auto const& ens = pman.get_ensemble();
+  for( auto const& atom : changes )
+  {
+    if( atom.do_new )
+    {
+      // check for overlap to existing particles.
+      const double iradius = this->radii_[ atom.key ];
+      for( std::size_t idx = 0; idx != atom.new_rij.size() and not changes.fail(); ++idx )
+      {
+        const std::size_t jspec = ens.key( idx );
+        if( jspec < this->radii_.size() )
+        {
+          const double min_distance = iradius + this->radii_[ jspec ];
+          if( min_distance > atom.new_rij[ idx ] )
+          {
+            bool do_fail = true;
+            for( auto const& etom : changes )
+            {
+              // if we have more than one particle in motion
+              // then we need to check that idx is not one of
+              // the atom indices. If it then ignore overlap.
+              if( idx == etom.index )
+              {
+                do_fail = false;
+              }
+            }
+            if( do_fail )
+            {
+              changes.set_fail();
+            }
+          }
+        }
+      }
+    }
+  }
+  // check for overlap within trial.
+  if( not changes.fail() and ( changes.size() > 1 ) )
+  {
+    for( std::size_t idx = 0; idx + 1 != changes.size() and not changes.fail(); ++idx )
+    {
+      if( changes[idx].do_new )
+      {
+        for( std::size_t jdx = idx + 1; jdx != changes.size() and not changes.fail(); ++jdx )
+        {
+          if( changes[jdx].do_new )
+          {
+            const double rij2 = gman.calculate_distance_squared( changes[idx].new_position, changes[jdx].new_position );
+            const double minij2 = std::pow( this->radii_[ changes[idx].key ] + this->radii_[ changes[jdx].key ], 2 );
+            if( minij2 > rij2 )
+            {
+              changes.set_fail();
+            }
+          }
+        }
+      }
+    }
+  }
+}
+!!!2027440.cpp!!!	do_description(inout os : ostream) : void
+os << " Check for overlap of hard sphere particles\n";
+!!!2027696.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
+if( this->radii_.size() != pman.specie_count() )
+{
+  this->radii_.resize( pman.specie_count() );
+}
+for( std::size_t ispec = 0; ispec != pman.specie_count(); ++ispec )
+{
+  this->radii_[ ispec ] = pman.get_specie( ispec ).radius();
+}
+!!!2028464.cpp!!!	add_definition(inout meta : evaluator_meta) : void
+std::string desc( "Checks for hard-sphere particle overlap." );
+std::unique_ptr< evaluator_definition > defn( new evaluator_definition( hard_sphere_overlap::type_label_(), desc, &hard_sphere_overlap::make_evaluator ) );
+// no extra parameter definitions.
+
+meta.add_definition( defn );
+!!!2028336.cpp!!!	make_evaluator(in param_set : string) : base_evaluator
+// Check no parameters have been set
+UTILITY_INPUT( param_set.empty(), "Hard-sphere overlap evaluator requires no input parameters.", core::strngs::evaluator_label(), nullptr );
+std::unique_ptr< evaluator::base_evaluator > cc( new hard_sphere_overlap );
+return cc;
