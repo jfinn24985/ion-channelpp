@@ -1,6 +1,6 @@
 format 75
 "platform" // platform
-  revision 298
+  revision 302
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -157,7 +157,7 @@ format 75
       overlapping_bars size A4
     end
 
-    class 204080 "application"
+    class 204080 "cube_application"
       visibility package stereotype "struct"
       cpp_decl "${comment}${template}struct ${name}${inherit} 
 {
@@ -173,60 +173,34 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
-      classrelation 218160 // <dependency>
-	relation 217904 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 218160 // <dependency>
-	  b parent class_ref 128559 // fp_env
-      end
-
-      classrelation 377392 // <dependency>
-	relation 377008 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 377392 // <dependency>
-	  b parent class_ref 320176 // gdbm_sink
-      end
-
-      classrelation 377264 // <dependency>
-	relation 376880 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 377264 // <dependency>
-	  b parent class_ref 871087 // input_reader
-      end
-
-      classrelation 218032 // simulator_ (<directional composition>)
-	relation 217776 *-->
+      comment " Perform Monte Carlo simulation serially in a periodic cube"
+      classrelation 1125680 // thesim_ (<directional composition>)
+	relation 1124784 *-->
 	  stereotype "shared_ptr"
-	  a role_name "simulator_" multiplicity "0..1" class_relation public
-	    comment " The real simulation!"
+	  a role_name "thesim_" multiplicity "*" private
+	    comment " The simulation"
 	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
 "
 	    python "${comment}${self}${name} = ${stereotype}()
 "
-	    classrelation_ref 218032 // simulator_ (<directional composition>)
-	  b parent class_ref 1129135 // simulator
+	    classrelation_ref 1125680 // thesim_ (<directional composition>)
+	  b parent class_ref 632368 // simulation
       end
 
-      attribute 394288 "checkpoint_path"
-	class_attribute private explicit_type "string"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+      classrelation 1125808 // stor_ (<directional composition>)
+	relation 1124912 *-->
+	  stereotype "shared_ptr"
+	  a role_name "stor_" multiplicity "*" private
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
 "
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
+	    python "${comment}${self}${name} = ${stereotype}()
 "
-	idl_decl ""
-	comment "The path to the checkpoint file."
+	    classrelation_ref 1125808 // stor_ (<directional composition>)
+	  b parent class_ref 667440 // serial_storage
       end
 
       operation 576944 "main"
-	class_operation public explicit_return_type "bool"
+	public explicit_return_type "int"
 	nparams 2
 	  param in name "argc" explicit_type "int"
 	  param in name "argv" explicit_type "char"
@@ -245,24 +219,39 @@ ${docstring}${body}
 	
       end
 
-      operation 807601 "write_checkpoint"
-	class_operation public explicit_return_type "void"
-	nparams 1
-	  param in name "sim" type class_ref 1129135 // simulator
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} * ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} * ${p0}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
+      operation 2035504 "cube_application"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
 ${docstring}${body}
 "
 	
-	comment " Write a checkpoint archive of this simulation."
+      end
+
+      operation 2035632 "~cube_application"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      classrelation 1125936 // <dependency>
+	relation 1125040 -_->
+	  a default
+	    cpp default "#include in source"
+	    python "${type}"
+	    classrelation_ref 1125936 // <dependency>
+	  b parent class_ref 453296 // periodic_cube_region
       end
     end
 
@@ -4027,6 +4016,28 @@ ${docstring}${body}
  system for performing a simulaton. This method is
  publically available for manually constructing a
  simulation, for example during testing.
+"
+      end
+
+      operation 2049840 "resolve_system_size"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  this->pman_->generate_simulation( *(this->gman_), this->get_random(), this->fstype_->get_log() );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Finalize the volume or particle count based on
+ ionic-strength and the volume or particle count
+ set in the input file.
 "
       end
 
@@ -7988,7 +7999,7 @@ ${docstring}${body}
     //deployment diagram settings
     package_name_in_tab default show_context default write_horizontally default auto_label_position default draw_all_relations default shadow default
     draw_component_as_icon default show_component_req_prov default show_component_rea default show_stereotype_properties default
-    artifact 195760 "application"
+    artifact 195760 "cube_application"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
 #define @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -8008,24 +8019,24 @@ ${namespace_end}
 #endif
 
 ${includes}
-// manual includes
-#include \"core/input_document.hpp\"
-#include \"core/input_preprocess.hpp\"
-#include \"core/strngs.hpp\"
-
-#include <boost/filesystem.hpp>
-#include <boost/program_options.hpp>
-#include <fstream>
-// - 
 ${namespace_start}
 ${members}
 ${namespace_end}
-"
+
+int main( int argc, char ** argv )
+{
+  int result = 0;
+  {
+    platform::cube_application appl;
+    result = appl.main( argc, argv );
+  }
+  return result;
+}"
       python_src "${comment}
 ${import}
 ${definition}"
       associated_classes
-	class_ref 204080 // application
+	class_ref 204080 // cube_application
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
@@ -8200,7 +8211,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     artifact 769327 "libionch_platform"
       stereotype "library"
       associated_artifacts
-	artifact_ref 195760 // application
+	artifact_ref 195760 // cube_application
 	artifact_ref 776367 // simulator
 	artifact_ref 783023 // simulator_meta
       end
@@ -8701,6 +8712,33 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 ----------------------------------------------------------------------
 "
+    end
+
+    artifact 636464 "csccube"
+      stereotype "executable"
+      associated_artifacts
+	artifact_ref 185007 // serialization
+	artifact_ref 195760 // cube_application
+	artifact_ref 207919 // libionch_utility
+	artifact_ref 215855 // filesystem
+	artifact_ref 215983 // program_options
+	artifact_ref 216111 // regex
+	artifact_ref 216239 // date_time
+	artifact_ref 281519 // system
+	artifact_ref 332080 // libionch_zip_sink
+	artifact_ref 332208 // libionch_gdbm_sink
+	artifact_ref 334257 // uuid
+	artifact_ref 371376 // gdbm
+	artifact_ref 449840 // libionch_geometry
+	artifact_ref 597040 // libionch_newplatform
+	artifact_ref 603696 // zip
+	artifact_ref 609327 // libionch_core
+	artifact_ref 617391 // libionch_particle
+	artifact_ref 651439 // random
+	artifact_ref 694959 // libionch_trial
+	artifact_ref 716335 // libionch_evaluator
+	artifact_ref 769583 // libionch_observable
+      end
     end
   end
 
