@@ -8,13 +8,26 @@ class digitizer
   UTILITY_REQUIRE(amaximum > aminimum, "Minimum of range must be less than the maximum");
   UTILITY_REQUIRE(abinwidth > 0.0, "Step size must be greater than zero");
   size_ = std::max(1ul, std::size_t(std::ceil(width_/step_)));
-  // Check size
-  while (width_ <= step_ * size_ - step_)
+  // MINIMUM SIZE IS 1
+  if( size_ > 1ul )
   {
-    // Check if method accidentally gave a slightly
-    // higher bin number
-    --size_;
-    UTILITY_REQUIRE(size_ > 0, "Number of bins must be greater than zero");
+    // Check size
+    // CASE 1: size_ is 1 too large: step*(size - 1 ) > width
+    while( width_ <= ((step_ * size_) - step_) )
+    {
+      // Check if method accidentally gave a slightly
+      // higher bin number
+      --size_;
+      UTILITY_REQUIRE(size_ > 0, "Number of bins must be greater than zero");
+    }
+    // CASE 2: FEQ(step*(size-1), width)
+    if( utility::feq( width_, (step_ * size_) - step_ ) )
+    {
+      // Check if method accidentally gave a slightly
+      // higher bin number
+      --size_;
+      UTILITY_REQUIRE(size_ > 0, "Number of bins must be greater than zero");
+    }  
   }
   // Adjust width to match step and size.
   width_ = step_ * size_;
