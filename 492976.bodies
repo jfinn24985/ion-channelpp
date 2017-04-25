@@ -7,7 +7,7 @@ BOOST_REQUIRE_NO_THROW( full = reg.volume( 0.0 ) );
 BOOST_REQUIRE_NO_THROW( access = reg.volume( radius ) );
 BOOST_CHECK_EQUAL( full, full_volume );
 BOOST_CHECK_EQUAL( access, reduced_volume );
-!!!1121840.cpp!!!	cubic_region_new_position_test(in regn : base_region, in okradius : double) : void
+!!!1121840.cpp!!!	cubic_region_new_position_test(in regn : base_region, in okradius : double, in title : string) : void
 // region = regn
 // radius = okradius
 BOOST_REQUIRE( regn.fits( okradius ) );
@@ -22,7 +22,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
   }; 
 
   particle::coordinate big, small;
-  std::cerr << "Doing radius " << radius << "\n";
+  std::cerr << "[" << title << "] Doing radius " << radius << "\n";
   regn.extent( small, big, radius );
 
   // want about 1E6 elements.
@@ -37,7 +37,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
   BOOST_REQUIRE_GE( digitizer.size(), 800000 );
   BOOST_REQUIRE_LE( digitizer.size(), 1200000 );
 
-  std::vector< std::size_t > histogram( digitizer.size() + 1, 0ul );
+  std::vector< std::size_t > histogram( digitizer.size(), 0ul );
 
   const std::size_t loopsize { digitizer.size() };
   const std::size_t histsize { histogram.size() };
@@ -48,22 +48,61 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
     {
       particle::coordinate pos;
       pos = regn.new_position( rand, radius );
+      BOOST_REQUIRE( regn.is_inside( pos, radius ) );
       ++histogram[ digitizer.convert( pos ) ];
     }
   }
   // Assume all points are evenly distributed and average is
   // 100 and stddev is ~ 10
   utility::estimater sample;
-  for( auto count : histogram )
+  std::size_t inside = 0;
   {
-    sample.append( count );
+    // Use corners to check if cube at index is in the cell
+    for( std::size_t idx = 0; idx != loopsize; ++idx )
+    {
+      bool is_inside { true };
+      std::array< particle::coordinate, 8 > pts;
+      digitizer.corners( idx, pts );
+      for ( std::size_t jdx = 0; jdx != 8; ++jdx )
+      {
+        if (not regn.is_inside( pts[ jdx ], radius ) )
+        {
+          is_inside = false;
+        }
+      }
+      particle::coordinate pos( pts[0].x + spacing/2, pts[0].y + spacing/2, pts[0].z + spacing/2 );
+      BOOST_REQUIRE_EQUAL( idx, digitizer.convert( pos ) );
+      if( is_inside )
+      {
+        ++inside;
+        sample.append( histogram[ idx ] );
+      }
+    }
   }
+  std::cerr << "\% included cubes " << ((double)inside/loopsize) << "\n";
   std::cerr << "Mean " << sample.mean() << "\n";
   std::cerr << "Variance " << sample.variance() << "\n";
   BOOST_CHECK_LE( sample.mean(), 110.0 );
   BOOST_CHECK_GE( sample.mean(), 90.0 );
   BOOST_CHECK_LE( sample.variance(), 110.0 );
   BOOST_CHECK_GE( sample.variance(), 90.0 );
+  if( sample.variance() > 110.0 )
+  {
+    utility::histogram check( 0.0, 160.0, 1.0, true );
+    check.begin_sample();
+    for (auto count : histogram )
+    {
+      check.sample_datum( count );
+    } 
+    check.end_sample();
+    std::cout << "# " << title << "\n";
+    std::cout << "# radius " << radius << "\n";
+
+    for( auto iter = check.begin(); iter != check.end(); ++ iter )
+    {
+      std::cout << iter.minimum() << " " << iter.mean() << " " << iter.variance() << "\n";
+    }
+  }
   const double dev{ std::sqrt( sample.variance() ) };
   const double lower2{ sample.mean() - 2 * dev };
   const double upper2{ sample.mean() + 2 * dev };
@@ -109,7 +148,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
 }
 std::cout << "Distribution test complete.\n";
 
-!!!1130032.cpp!!!	cylinder_region_new_position_test(in regn : base_region, in okradius : double) : void
+!!!1130032.cpp!!!	cylinder_region_new_position_test(in regn : base_region, in okradius : double, in title : string) : void
 // region = regn
 // radius = okradius
 BOOST_REQUIRE( regn.fits( okradius ) );
@@ -122,7 +161,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
   const double radius { okradius * rad_index / 10.0 };
 
   particle::coordinate big, small;
-  std::cerr << "Doing radius " << radius << "\n";
+  std::cerr << "[" << title << "] Doing radius " << radius << "\n";
   regn.extent( small, big, radius );
   const double cyl_radius { big.x };
   const double cyl_hlength { big.y };
@@ -136,19 +175,12 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
   // generate discretizer
   observable::digitizer_3d digitizer( small, big, spacing );
 
-  BOOST_REQUIRE_GE( digitizer.size(), 800000 );
+  BOOST_REQUIRE_GE( digitizer.size(), 700000 );
   BOOST_REQUIRE_LE( digitizer.size(), 1200000 );
 
-  std::vector< std::size_t > histogram( digitizer.size() + 1, 0ul );
+  std::vector< std::size_t > histogram( digitizer.size(), 0ul );
 
-  const std::size_t loopsize
-  {
-    digitizer.size()
-  };
-  const std::size_t histsize
-  {
-    histogram.size()
-  };
+  const std::size_t loopsize { digitizer.size() };
   // Generate 100 times more positions as historgram slots
   for( int outer = 0; outer < 100; ++outer )
   {
@@ -159,39 +191,56 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
       ++histogram[ digitizer.convert( pos ) ];
     }
   }
-  const double bound_volume
-  {
-    ( big.x - small.x ) * ( big.y - small.y ) * ( big.z - small.z )
-  };
-  const double approx_mean
-  {
-    bound_volume * 100.0 / regn.volume( radius )
-  };
+  const double bound_volume { ( big.x - small.x ) * ( big.y - small.y ) * ( big.z - small.z ) };
+  const double approx_mean { bound_volume * 100.0 / regn.volume( radius ) };
   utility::estimater sample;
+  std::size_t inside = 0;
   {
     // Use cylinder gridder to get points inside cylinder
-    geometry::tubular_grid cursor( 2 * cyl_hlength, cyl_radius, spacing );
+    std::array< particle::coordinate, 8 > pts;
     particle::coordinate pos;
-    std::vector< std::size_t > once( histsize, 0ul );
-    while( cursor.next( pos ) )
+    for( std::size_t idx = 0; idx != loopsize; ++idx )
     {
-      const std::size_t idx
+      bool is_inside { true };
+      digitizer.corners( idx, pts );
+      for ( std::size_t jdx = 0; jdx != 8; ++jdx )
       {
-        digitizer.convert( pos )
-      };
-      ++once[ idx ];
-      if( once[ idx ] == 1 )
+        if (not regn.is_inside( pts[ jdx ], radius ) )
+        {
+          is_inside = false;
+        }
+      }
+      if( is_inside )
       {
+        ++inside;
         sample.append( histogram[ idx ] );
       }
     }
   }
+  std::cerr << "\% included cubes " << ((double)inside/loopsize) << "\n";
   std::cerr << "Mean " << sample.mean() << "\n";
   std::cerr << "Variance " << sample.variance() << "\n";
   BOOST_CHECK_LE( sample.mean(), approx_mean + 10.0 );
   BOOST_CHECK_GE( sample.mean(), approx_mean - 10.0 );
   BOOST_CHECK_LE( sample.variance(), approx_mean + 10.0 );
   BOOST_CHECK_GE( sample.variance(), approx_mean - 10.0 );
+  if( sample.variance() > approx_mean + 10.0 )
+  {
+    utility::histogram check( 0.0, approx_mean + 60.0, 1.0, true );
+    check.begin_sample();
+    for (auto count : histogram )
+    {
+      check.sample_datum( count );
+    } 
+    check.end_sample();
+    std::cout << "# " << title << "\n";
+    std::cout << "# radius " << radius << "\n";
+
+    for( auto iter = check.begin(); iter != check.end(); ++ iter )
+    {
+      std::cout << iter.minimum() << " " << iter.mean() << " " << iter.variance() << "\n";
+    }
+  }
   const double dev { std::sqrt( sample.variance() ) };
   const double lower2 { sample.mean() - 2 * dev };
   const double upper2 { sample.mean() + 2 * dev };
@@ -209,7 +258,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
     // Use cylinder gridder to get points inside cylinder
     geometry::tubular_grid cursor( 2 * cyl_hlength, cyl_radius, spacing );
     particle::coordinate pos;
-    std::vector< std::size_t > once( histsize, 0ul );
+    std::vector< std::size_t > once( loopsize, 0ul );
     while( cursor.next( pos ) )
     {
       const std::size_t idx
@@ -239,10 +288,10 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
       }
     }
   }
-  std::cout << "2 dev : " << ( double( twoout )/double( histsize ) ) << "\n";
-  std::cout << "3 dev : " << ( double( threeout )/double( histsize ) ) << "\n";
-  std::cout << "20  : " << ( double( twentyout )/double( histsize ) ) << "\n";
-  std::cout << "30  : " << ( double( thirtyout )/double( histsize ) ) << "\n";
+  std::cout << "2 dev : " << ( double( twoout )/double( loopsize ) ) << "\n";
+  std::cout << "3 dev : " << ( double( threeout )/double( loopsize ) ) << "\n";
+  std::cout << "20  : " << ( double( twentyout )/double( loopsize ) ) << "\n";
+  std::cout << "30  : " << ( double( thirtyout )/double( loopsize ) ) << "\n";
 
   if( okradius == 0.0 )
   {
@@ -252,7 +301,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
 std::cout << "Distribution test complete.\n";
 
 
-!!!1136688.cpp!!!	general_new_position_test(in regn : base_region, in okradius : double) : void
+!!!1136688.cpp!!!	general_new_position_test(in regn : base_region, in okradius : double, in title : string) : void
 // region = regn
 // radius = okradius
 BOOST_REQUIRE( regn.fits( okradius ) );
@@ -264,7 +313,7 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
   const double radius { okradius * rad_index / 10.0 };
 
   particle::coordinate big, small;
-  std::cerr << "Doing radius " << radius << "\n";
+  std::cerr << "[" << title << "] Doing radius " << radius << "\n";
   regn.extent( small, big, radius );
 
   // want about 1E6 elements.
@@ -280,11 +329,20 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
   BOOST_REQUIRE_LE( digitizer.size(), 1250000 );
 
   BOOST_REQUIRE_LE( digitizer.x_axis().minimum(), small.x );
-  BOOST_REQUIRE_GE( digitizer.x_axis().maximum(), big.x );
+  if( not utility::feq( digitizer.x_axis().maximum(), big.x ) )
+  {
+    BOOST_REQUIRE_GE( digitizer.x_axis().maximum(), big.x );
+  }
   BOOST_REQUIRE_LE( digitizer.y_axis().minimum(), small.y );
-  BOOST_REQUIRE_GE( digitizer.y_axis().maximum(), big.y );
+  if( not utility::feq( digitizer.y_axis().maximum(), big.y ) )
+  {
+    BOOST_REQUIRE_GE( digitizer.y_axis().maximum(), big.y );
+  }
   BOOST_REQUIRE_LE( digitizer.z_axis().minimum(), small.z );
-  BOOST_REQUIRE_GE( digitizer.z_axis().maximum(), big.z );
+  if( not utility::feq( digitizer.z_axis().maximum(), big.z ) )
+  {
+    BOOST_REQUIRE_GE( digitizer.z_axis().maximum(), big.z );
+  }
 
   std::vector< std::size_t > histogram( digitizer.size(), 0ul );
 
@@ -301,14 +359,9 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
       ++histogram[ digitizer.convert( pos ) ];
     }
   }
-  const double bound_volume
-  {
-    ( big.x - small.x ) * ( big.y - small.y ) * ( big.z - small.z )
-  };
-  const double approx_mean
-  {
-    bound_volume * 100.0 / regn.volume( radius )
-  };
+  const double bound_volume { ( big.x - small.x ) * ( big.y - small.y ) * ( big.z - small.z ) };
+  const double approx_mean { bound_volume * 100.0 / regn.volume( radius ) };
+  const double approx_delta { std::sqrt( approx_mean )  };
   utility::estimater sample;
   std::vector< bool > usable( histsize, false );
   std::size_t inside = 0;
@@ -339,10 +392,10 @@ for( std::size_t rad_index = 0; rad_index != 11; ++rad_index )
   std::cerr << "\% included cubes " << ((double)inside/loopsize) << "\n";
   std::cerr << "Mean " << sample.mean() << "\n";
   std::cerr << "Variance " << sample.variance() << "\n";
-  BOOST_CHECK_LE( sample.mean(), approx_mean + 10.0 );
-  BOOST_CHECK_GE( sample.mean(), approx_mean - 10.0 );
-  BOOST_CHECK_LE( sample.variance(), approx_mean + 10.0 );
-  BOOST_CHECK_GE( sample.variance(), approx_mean - 10.0 );
+  BOOST_CHECK_LE( sample.mean(), approx_mean + approx_delta );
+  BOOST_CHECK_GE( sample.mean(), approx_mean - approx_delta );
+  BOOST_CHECK_LE( sample.variance(), approx_mean + approx_delta );
+  BOOST_CHECK_GE( sample.variance(), approx_mean - approx_delta );
   const double dev { std::sqrt( sample.variance() ) };
   const double lower2 { sample.mean() - 2 * dev };
   const double upper2 { sample.mean() + 2 * dev };
@@ -406,7 +459,7 @@ BOOST_CHECK_EQUAL( var1.length(), 10.0 );
 BOOST_CHECK_EQUAL( var1.label(), "bulk" );
 BOOST_CHECK_EQUAL( var1.volume( 1.0 ), 1000.0 );
 
-geom_distribution_test::cubic_region_new_position_test( var1, 0.0 );
+geom_distribution_test::cubic_region_new_position_test( var1, 0.0, "Periodic Cube" );
 
 !!!1123504.cpp!!!	cube_region_test() : void
 particle::coordinate origin( 1.0, -2.0, 3.0 );
@@ -418,7 +471,7 @@ BOOST_CHECK_EQUAL( var1.label(), "bulk" );
 BOOST_CHECK( not var1.is_open() );
 BOOST_CHECK_EQUAL( var1.origin(), origin );
 
-geom_distribution_test::cubic_region_new_position_test( var1, 4.0 );
+geom_distribution_test::cubic_region_new_position_test( var1, 4.0, "Cubic Region (1,-2, 3)" );
 
 !!!1130160.cpp!!!	cylinder_region_test() : void
 // Cylinder main ctor 
@@ -427,7 +480,7 @@ BOOST_CHECK_EQUAL( var1.half_length(), 10.0 );
 BOOST_CHECK_EQUAL( var1.radius(), 5.0 );
 BOOST_CHECK_EQUAL( var1.label(), "bulk" );
 
-geom_distribution_test::cylinder_region_new_position_test( var1, 2.0 );
+geom_distribution_test::cylinder_region_new_position_test( var1, 2.0, "Cylinder" );
 
 !!!1137200.cpp!!!	generic_region_test() : void
 // Cylinder main ctor 
@@ -436,7 +489,7 @@ BOOST_CHECK_EQUAL( var1.half_length(), 10.0 );
 BOOST_CHECK_EQUAL( var1.radius(), 5.0 );
 BOOST_CHECK_EQUAL( var1.label(), "bulk" );
 
-geom_distribution_test::general_new_position_test( var1, 2.0 );
+geom_distribution_test::general_new_position_test( var1, 2.0, "Cylinder 2" );
 
 !!!1137584.cpp!!!	membrane_cell_region_test() : void
 // Cylinder main ctor 
@@ -448,5 +501,5 @@ BOOST_CHECK_EQUAL( var1.channel_radius(), 5.0 );
 BOOST_CHECK_EQUAL( var1.arc_radius(), 15.0 );
 BOOST_CHECK_EQUAL( var1.label(), "bulk" );
 
-geom_distribution_test::general_new_position_test( var1, 2.0 );
+geom_distribution_test::general_new_position_test( var1, 2.0, "Membrane Cell" );
 

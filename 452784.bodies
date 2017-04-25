@@ -151,7 +151,7 @@ for( std::size_t count = 0; count != 1000; ++count )
 }
 
 
-!!!1047472.cpp!!!	region_make_gridder_test(in regn : base_region, in min_count : size_t, in max_count : size_t, in min_space : double, in max_space : double) : void
+!!!1047472.cpp!!!	region_make_gridder_test(in regn : base_region, in min_count : size_t, in max_count : size_t, in min_space : double, in max_space : double, in is_closed : bool) : void
 boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
 utility::random_distribution rand( generator );
 // region = regn
@@ -169,6 +169,52 @@ utility::random_distribution rand( generator );
     boost::shared_ptr< geometry::grid_generator > grid;
     grid = regn.make_gridder( rand, count );
     BOOST_CHECK_LE( count, grid->size() );
+    // All points are inside the region
+    {
+      particle::coordinate pos;
+      if( is_closed )
+      {
+        const double hspace { grid->spacing() / 2 };
+//#if ( defined(DEBUG) and DEBUG>0 )
+//        std::stringstream ss;
+//        grid->dump( ss );
+//#endif
+        while( grid->next( pos ) )
+        {
+          if ( not regn.is_inside( pos, hspace ) )
+          {
+            particle::coordinate p1, p2;
+            regn.extent( p1, p2, hspace );
+            std::cerr << "Point(" << grid->size() << ") [" << pos << "] with radius " << hspace;
+            std::cerr << " is outside region with bounds [" << p1;
+            std::cerr << "][" << p2 << "]\n";
+//#if ( defined(DEBUG) and DEBUG>0 )
+//            std::cerr << ss.str();
+//#endif
+          }
+          BOOST_REQUIRE( regn.is_inside( pos, hspace ) );
+//#if ( defined(DEBUG) and DEBUG>0 ) 
+//          ss.str( "" );
+//          grid->dump( ss );
+//#endif
+        }
+      }
+      else
+      {
+        while( grid->next( pos ) )
+        {
+          if ( not regn.is_inside( pos, 0.0 ) )
+          {
+            particle::coordinate p1, p2;
+            regn.extent( p1, p2, 0.0 );
+            std::cerr << "Point(" << grid->size() << ") [" << pos << "] with zero radius";
+            std::cerr << " is outside region with bounds [" << p1;
+            std::cerr << "][" << p2 << "]\n";
+          }
+          BOOST_REQUIRE( regn.is_inside( pos, 0.0 ) );
+        }
+      }
+    }
   }
 }
 
@@ -188,6 +234,51 @@ utility::random_distribution rand( generator );
       boost::shared_ptr< geometry::grid_generator > grid;
       BOOST_CHECK_NO_THROW( grid = regn.make_gridder( space, rand ) );
       BOOST_CHECK_LE( space, grid->spacing() );
+      {
+        particle::coordinate pos;
+        if( is_closed )
+        {
+          const double hspace { space / 2 };
+          while( grid->next( pos ) )
+          {
+            if ( not regn.is_inside( pos, hspace ) )
+            {
+              particle::coordinate p1, p2;
+              regn.extent( p1, p2, hspace );
+              std::cerr << "Point(" << grid->size() << ")[" << pos << "] with radius " << hspace;
+              std::cerr << " is outside region with bounds [" << p1;
+              std::cerr << "][" << p2 << "]\n";
+            }
+            BOOST_REQUIRE( regn.is_inside( pos, hspace ) );
+          }
+        }
+        else
+        {
+//#if ( defined(DEBUG) and DEBUG>0 )
+//          std::stringstream ss;
+//          grid->dump( ss );
+//#endif
+          while( grid->next( pos ) )
+          {
+            if ( not regn.is_inside( pos, 0.0 ) )
+            {
+              particle::coordinate p1, p2;
+              regn.extent( p1, p2, 0.0 );
+              std::cerr << "Point(" << grid->size() << ") [" << pos << "] with zero radius";
+              std::cerr << " is outside region with bounds [" << p1;
+              std::cerr << "][" << p2 << "]\n";
+//#if ( defined(DEBUG) and DEBUG>0 )
+//              std::cerr << ss.str();
+//#endif
+            }
+            BOOST_REQUIRE( regn.is_inside( pos, 0.0 ) );
+//#if ( defined(DEBUG) and DEBUG>0 ) 
+//            ss.str( "" );
+//            grid->dump( ss );
+//#endif
+          }
+        }
+      }
     }
     else
     {
@@ -209,6 +300,8 @@ utility::random_distribution rand( generator );
     }
   }
 }
+
+
 !!!262320.cpp!!!	test_grid_generator(inout gridder : grid_generator) : void
 // Store generated coordinates
 std::vector< particle::coordinate > postns;
@@ -222,6 +315,11 @@ std::stringstream store;
    BOOST_REQUIRE_NO_THROW( oa << gridder );
 }
 
+auto sqr = [](particle::coordinate a, particle::coordinate b){
+  const double dx{ a.x - b.x }, dy{ a.y - b.y }, dz{ a.z - b.z };
+  return dx * dx + dy * dy + dz * dz;
+};
+const double spc_sqr{ std::pow( gridder->spacing(), 2 ) };
 // Test grid next
 for ( std::size_t idx = 0; idx != count; ++idx )
 {
@@ -240,10 +338,13 @@ for ( std::size_t idx = 0; idx != count; ++idx )
    // Size decreases by one during call to gridder->next
    BOOST_CHECK_EQUAL( remain - 1, gridder->size() );
 
-   // Generated position is not the same as any previously generated position
+   // New generated position is...
    for (auto const& p2 : postns )
    {
+      // not the same as any previously generated position
       BOOST_REQUIRE_NE( p2, pnt );
+      // not closer than spacing from any previous position
+      BOOST_REQUIRE_LE( spc_sqr, sqr( pnt, p2 ) );
    }
 
    // store generated position.
@@ -464,7 +565,7 @@ std::stringstream ss;
   boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
   utility::random_distribution rgen( generator );
   // Cubic grid ctor from count
-  boost::shared_ptr< geometry::cubic_grid > var1( geometry::cubic_grid::make_grid( 30.0, rgen, 216 ) );
+  boost::shared_ptr< geometry::cubic_grid > var1( geometry::cubic_grid::make_grid( { 0.0, 0.0, 0.0 }, 30.0, rgen, 216 ) );
   BOOST_CHECK_EQUAL( var1->size(), 216 );
 
   boost::archive::text_oarchive oa( ss );
@@ -473,7 +574,7 @@ std::stringstream ss;
   BOOST_CHECK_EQUAL( var1->size(), 216 );
 
   // Cubic grid ctor from spacing
-  boost::shared_ptr< geometry::cubic_grid > var2( geometry::cubic_grid::make_grid( 30.0, var1->spacing(), rgen ) );
+  boost::shared_ptr< geometry::cubic_grid > var2( geometry::cubic_grid::make_grid( { 0.0, 0.0, 0.0 }, 30.0, var1->spacing(), rgen ) );
   BOOST_CHECK_EQUAL( var2->size(), 216 );
   BOOST_CHECK_EQUAL( var2->spacing(), var1->spacing() );
 }
@@ -496,7 +597,7 @@ std::vector< particle::coordinate > canon;
 // Min == 2.5; Max == 27.5
 {
   // cubic grid ctor(length, numpart, ranf)
-  boost::shared_ptr< geometry::grid_generator > var1( geometry::cubic_grid::make_grid( 30.0, rgen, 216 ) );
+  boost::shared_ptr< geometry::grid_generator > var1( geometry::cubic_grid::make_grid( { 0.0, 0.0, 0.0 }, 30.0, rgen, 216 ) );
   BOOST_CHECK_EQUAL( var1->size(), 216 );
   BOOST_CHECK( not var1->empty() );
   // Test base class behavior
@@ -505,7 +606,7 @@ std::vector< particle::coordinate > canon;
 {
   // Test all coordinates are in the expected
   // range.
-  boost::shared_ptr< geometry::cubic_grid > var1( geometry::cubic_grid::make_grid( 30.0, rgen, 216 ) );
+  boost::shared_ptr< geometry::cubic_grid > var1( geometry::cubic_grid::make_grid( { 0.0, 0.0, 0.0 }, 30.0, rgen, 216 ) );
 
   boost::shared_ptr< geometry::cubic_grid > var2;
   {
@@ -1024,7 +1125,7 @@ BOOST_CHECK_EQUAL( var1->length(), 10.0 );
   double bigradius( 10.1 );
   // tests fits, is_inside, new_position and new_position_offset
   geometry_test::region_new_position_test( *var1, inside, outside, okradius, bigradius );
-  geometry_test::region_make_gridder_test( *var1, 20, 10000, 0.1, 9.0 );
+  geometry_test::region_make_gridder_test( *var1, 20, 10000, 0.1, 9.0, true );
   geometry_test::region_serialization_test( var1 );
 }
 // Test volume (should be the same regardless of size)
@@ -1096,7 +1197,6 @@ BOOST_CHECK_EQUAL( var1->length(), 10.0 );
   pnts.set_z( 9 , 5.0 );
 
   target.resize( 10 );
-  particle::coordinate newpos( 0.0, 5.0, 0.0 );
   target[0] = 5.0;
   target[1] = 5.0;
   target[2] = 5.0;
@@ -1110,15 +1210,53 @@ BOOST_CHECK_EQUAL( var1->length(), 10.0 );
 
   geometry::geometry_manager man( var1 );
 
-  man.calculate_distances( newpos, pnts, result, 0, 10 );
-  BOOST_REQUIRE_EQUAL( result.size(), 10 );
-  for( std::size_t ii = 0; ii != 10; ++ii )
   {
-    BOOST_CHECK( utility::feq( result[ii], target[ii] ) );
-    particle::coordinate otherpos( pnts.x( ii ), pnts.y( ii ), pnts.z( ii ) );
-    BOOST_CHECK( utility::feq( man.calculate_distance_squared( newpos, otherpos ), std::pow( target[ii], 2 ) ) );
+    particle::coordinate newpos( 0.0, 5.0, 0.0 );
+    man.calculate_distances( newpos, pnts, result, 0, 10 );
+    BOOST_REQUIRE_EQUAL( result.size(), 10 );
+    for( std::size_t ii = 0; ii != 10; ++ii )
+    {
+      BOOST_CHECK( utility::feq( result[ii], target[ii] ) );
+      particle::coordinate otherpos( pnts.x( ii ), pnts.y( ii ), pnts.z( ii ) );
+      BOOST_CHECK( utility::feq( man.calculate_distance_squared( newpos, otherpos ), std::pow( target[ii], 2 ) ) );
+    }
   }
-
+  {
+    // Same position as before but wrapped in Y direction
+    particle::coordinate newpos( 0.0, 15.0, 0.0 );
+    man.calculate_distances( newpos, pnts, result, 0, 10 );
+    BOOST_REQUIRE_EQUAL( result.size(), 10 );
+    for( std::size_t ii = 0; ii != 10; ++ii )
+    {
+      BOOST_CHECK( utility::feq( result[ii], target[ii] ) );
+      particle::coordinate otherpos( pnts.x( ii ), pnts.y( ii ), pnts.z( ii ) );
+      BOOST_CHECK( utility::feq( man.calculate_distance_squared( newpos, otherpos ), std::pow( target[ii], 2 ) ) );
+    }
+  }
+  {
+    // Same position as before but wrapped in X direction
+    particle::coordinate newpos( 10.0, 5.0, 0.0 );
+    man.calculate_distances( newpos, pnts, result, 0, 10 );
+    BOOST_REQUIRE_EQUAL( result.size(), 10 );
+    for( std::size_t ii = 0; ii != 10; ++ii )
+    {
+      BOOST_CHECK( utility::feq( result[ii], target[ii] ) );
+      particle::coordinate otherpos( pnts.x( ii ), pnts.y( ii ), pnts.z( ii ) );
+      BOOST_CHECK( utility::feq( man.calculate_distance_squared( newpos, otherpos ), std::pow( target[ii], 2 ) ) );
+    }
+  }
+  {
+    // Same position as before but wrapped in Z direction
+    particle::coordinate newpos( 0.0, 5.0, 10.0 );
+    man.calculate_distances( newpos, pnts, result, 0, 10 );
+    BOOST_REQUIRE_EQUAL( result.size(), 10 );
+    for( std::size_t ii = 0; ii != 10; ++ii )
+    {
+      BOOST_CHECK( utility::feq( result[ii], target[ii] ) );
+      particle::coordinate otherpos( pnts.x( ii ), pnts.y( ii ), pnts.z( ii ) );
+      BOOST_CHECK( utility::feq( man.calculate_distance_squared( newpos, otherpos ), std::pow( target[ii], 2 ) ) );
+    }
+  }
 }
 // change volume
 {
@@ -1145,11 +1283,10 @@ BOOST_CHECK_EQUAL( var1->length(), 10.0 );
   {
     BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
   }
+  // test make_gridder after volume change
+  geometry_test::region_make_gridder_test( *var1, 1, 500, 0.5, 11.0, true );
 }
-// make_gridder
-{
-  geometry_test::region_make_gridder_test( *var1, 1, 500, 0.5, 11.0 );
-}
+
 !!!1039536.cpp!!!	cube_region_lifetime_test() : void
 {
   // Test is virtual object pattern
@@ -1201,7 +1338,7 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
     double bigradius( -1.0 ); // negative number -> any radius fits
     // tests fits, is_inside, new_position and new_position_offset
     geometry_test::region_new_position_test( *var1, inside, outside, okradius, bigradius );
-    geometry_test::region_make_gridder_test( *var1, 20, 10000, 0.1, 9.0 );
+    geometry_test::region_make_gridder_test( *var1, 20, 10000, 0.1, 9.0, false );
   }
   // Test volume (cube is open so should be the same regardless of size)
   {
@@ -1288,8 +1425,8 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
   // No radius should be too large for open cube.
   BOOST_CHECK_NO_THROW( man.change_volume( 729.0, 5.0 ) );
 
-  // make_gridder
-  geometry_test::region_make_gridder_test( *var1, 1, 500, 0.5, 3.0 );
+  // make_gridder after volume change
+  geometry_test::region_make_gridder_test( *var1, 1, 500, 0.5, 3.0, false );
 }
 
 
@@ -1310,6 +1447,7 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
     double bigradius( 10.1 );
     // tests fits, is_inside, new_position and new_position_offset
     geometry_test::region_new_position_test( *var1, inside, outside, okradius, bigradius );
+    geometry_test::region_make_gridder_test( *var1, 20, 10000, 0.1, 9.0, true );
   }
   // Test volume (cube is open so should be the same regardless of size)
   {
@@ -1412,6 +1550,9 @@ const particle::coordinate origin( 1.0, -1.0, -2.0 );
 
   BOOST_REQUIRE_NO_THROW( man.change_volume( 729.0, 5.0 ) );
   BOOST_CHECK( utility::feq( var1->volume( 5.0 ), 729.0 ) );
+
+  // make_gridder after volume change
+  geometry_test::region_make_gridder_test( *var1, 1, 500, 0.5, 3.0, true );
 }
 // make_gridder: see cube_region_method_open_test as gridder generation is
 // always independent of open/closedness.
@@ -1442,7 +1583,7 @@ std::stringstream ss;
     double bigradius( 10.1 );
     geometry_test::region_serialization_test( var1 );
     geometry_test::region_new_position_test( *var1, inside, outside, okradius, bigradius );
-    geometry_test::region_make_gridder_test( *var1, 20, 10000, 0.1, 9.0 );
+    geometry_test::region_make_gridder_test( *var1, 20, 10000, 0.1, 9.0, true );
   }
   boost::archive::text_oarchive oa( ss );
   // write class instance to archive
@@ -1484,7 +1625,7 @@ std::stringstream ss;
     double bigradius( 10.1 );
     geometry_test::region_serialization_test( var1 );
     geometry_test::region_new_position_test( *var1, inside, outside, okradius, bigradius );
-    geometry_test::region_make_gridder_test( *var1, 20, 10000, 0.1, 9.0 );
+    geometry_test::region_make_gridder_test( *var1, 20, 10000, 0.1, 9.0, false );
   }
   boost::archive::text_oarchive oa( ss );
   // write class instance to archive
@@ -1527,7 +1668,7 @@ std::stringstream ss;
     double bigradius( -1.0 );
     geometry_test::region_serialization_test( var1 );
     geometry_test::region_new_position_test( *var1, inside, outside, okradius, bigradius );
-    geometry_test::region_make_gridder_test( *var1, 20, 10000, 0.1, 9.0 );
+    geometry_test::region_make_gridder_test( *var1, 20, 10000, 0.1, 9.0, false );
   }
   boost::archive::text_oarchive oa( ss );
   // write class instance to archive

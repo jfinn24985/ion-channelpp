@@ -2,20 +2,22 @@ class cubic_grid
 !!!1988527.python!!!	__init__(in self : , in length : double, in npart : size_t, inout rgen : random_distribution)
 self.sequence_ = [x for x in range(pow(self.steps_, 3))]
 rgen.shuffle(self.sequence_)
-!!!1054512.cpp!!!	cubic_grid(in space : double, in per_dim : size_t, inout rgen : random_distribution)
-: steps_( per_dim ) // (*)
+!!!1054512.cpp!!!	cubic_grid(in origin : coordinate, in space : double, in per_dim : size_t, inout rgen : random_distribution)
+: sequence_()
+, origin_( origin )
+, steps_( per_dim ) // (*)
 , delta_( space )
-, sequence_()
 {
   sequence_.resize( std::pow( per_dim, 3 ) );
   for( size_t ii = 0; ii != sequence_.size(); ++ii ) sequence_[ii] = ii;
   rgen.shuffle( sequence_ );
 }
-
-
-!!!1054512.python!!!	cubic_grid(in space : double, in per_dim : size_t, inout rgen : random_distribution)
+!!!1054512.python!!!	cubic_grid(in origin : coordinate, in space : double, in per_dim : size_t, inout rgen : random_distribution)
 self.sequence_ = [x for x in range(pow(self.steps_, 3))]
 rgen.shuffle(self.sequence_)
+!!!2043312.cpp!!!	dump(inout os : ostream) : void
+os << "[" << this->origin_ << "](" << this->steps_ << ")(" << this->delta_ << ")";
+os << ":[" << this->size() << "]=" << this->sequence_.back() << "\n";
 !!!1531055.cpp!!!	next(inout pnt : coordinate) : bool
 if (this->sequence_.empty())
 {
@@ -25,11 +27,11 @@ else
 {
   lldiv_t part;
   part = std::lldiv(std::int64_t(this->sequence_.back()), std::int64_t(this->steps_));
-  const std::size_t zi (part.rem);
+  const std::size_t xi (part.rem);
   part = std::lldiv(part.quot, std::int64_t(this->steps_));
-  const std::size_t xi (part.quot);
   const std::size_t yi (part.rem);
-  pnt = particle::coordinate( this->delta_ * (xi + 0.5), this->delta_ * (yi + 0.5), this->delta_ * (zi + 0.5) );
+  const std::size_t zi (part.quot);
+  pnt = particle::coordinate( this->origin_.x + this->delta_ * (xi + 0.5), this->origin_.y + this->delta_ * (yi + 0.5), this->origin_.z + this->delta_ * (zi + 0.5) );
   this->sequence_.pop_back();
   return true;
 }
@@ -41,13 +43,13 @@ else:
   xi, yi = divmod(xi, self.steps_)
   from coordinate import coordinate
   return coordinate( self.delta_ * (xi + 0.5), self.delta_ * (yi + 0.5), self.delta_ * (zi + 0.5) );
-!!!1054256.cpp!!!	make_grid(in cube_width : double, in spacing : double, inout rgenr : random_distribution) : cubic_grid
+!!!1054256.cpp!!!	make_grid(in origin : coordinate, in cube_width : double, in spacing : double, inout rgenr : random_distribution) : cubic_grid
 UTILITY_REQUIRE( spacing < cube_width, "No grid can be generated with the given spacing." );
 // calc max count from spacing and cube width.
 std::size_t count( std::max( 1ul, std::size_t(std::floor(cube_width / spacing) ) ) );
 double newspace = cube_width / count;
-return boost::shared_ptr< cubic_grid >( new cubic_grid( newspace, count, rgenr ) );
-!!!1054384.cpp!!!	make_grid(in cube_width : double, inout rgenr : random_distribution, in count : size_t) : cubic_grid
+return boost::shared_ptr< cubic_grid >( new cubic_grid( origin, newspace, count, rgenr ) );
+!!!1054384.cpp!!!	make_grid(in origin : coordinate, in cube_width : double, inout rgenr : random_distribution, in count : size_t) : cubic_grid
 std::size_t ndim( 1 ); // per nodes in each dim
 double delta = cube_width;
 if( count > 1 )
@@ -67,4 +69,4 @@ if( count > 1 )
   }
   delta = cube_width / double( ndim );
 }
-return boost::shared_ptr< cubic_grid >( new cubic_grid( delta, ndim, rgenr ) );
+return boost::shared_ptr< cubic_grid >( new cubic_grid( origin, delta, ndim, rgenr ) );
