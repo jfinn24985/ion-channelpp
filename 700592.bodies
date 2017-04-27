@@ -1,0 +1,28 @@
+class object_overlap
+!!!2069808.cpp!!!	compute_potential(in pman : particle_manager, in gman : geometry_manager, inout changes : change_set) : void
+if( not changes.fail() )
+{
+  // System region object is responsible for overlap between particles and
+  // objects.
+  for( auto const& atom : changes )
+  {
+    if( not gman.system_region().is_inside( atom.new_position, pman.get_specie( atom.key ).radius() ) )
+    {
+      changes.set_fail();
+      return;
+    }
+  }
+}
+!!!2070064.cpp!!!	do_description(inout os : ostream) : void
+os << " Check for overlap of particles with objects.\n";
+!!!2070704.cpp!!!	add_definition(inout meta : evaluator_meta) : void
+std::string desc( "Checks for particle-object overlap." );
+std::unique_ptr< evaluator_definition > defn( new evaluator_definition( object_overlap::type_label_(), desc, &object_overlap::make_evaluator ) );
+// no extra parameter definitions.
+
+meta.add_definition( defn );
+!!!2070832.cpp!!!	make_evaluator(in param_set : string) : base_evaluator
+// Check no parameters have been set
+UTILITY_INPUT( param_set.empty(), "Particle-object overlap evaluator requires no input parameters.", core::strngs::evaluator_label(), nullptr );
+std::unique_ptr< evaluator::base_evaluator > cc( new object_overlap );
+return cc;

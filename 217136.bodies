@@ -921,6 +921,182 @@ evaluator::evaluator_manager eman;
     BOOST_CHECK( trial.fail() );
   }
 }
+!!!2071088.cpp!!!	object_overlap_lifetime_tests() : void
+{
+  //  Constructor tests
+  BOOST_CHECK( std::is_default_constructible< evaluator::object_overlap >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< evaluator::object_overlap >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< evaluator::object_overlap >::type {} );
+  BOOST_CHECK( ( not std::is_assignable< evaluator::object_overlap, evaluator::object_overlap >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< evaluator::object_overlap >::type {} );
+}
+const std::string defn_label( "object-overlap" );
+{
+  evaluator::object_overlap eval;
+  BOOST_CHECK_EQUAL( eval.type_label(), defn_label );
+}
+!!!2070960.cpp!!!	object_overlap_static_method_tests() : void
+const std::string defn_label( "object-overlap" );
+{
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr;
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::object_overlap::make_evaluator( {} ) );
+  BOOST_REQUIRE( eval_ptr );
+  evaluator::object_overlap *clmb_ptr = dynamic_cast< evaluator::object_overlap* >( eval_ptr.get() );
+  BOOST_REQUIRE( clmb_ptr != nullptr );
+  BOOST_CHECK_EQUAL( eval_ptr->type_label(), defn_label );
+
+  boost::shared_ptr< evaluator::evaluator_manager > eman;
+  evaluator::evaluator_meta m( eman );
+  BOOST_REQUIRE_NO_THROW( evaluator::object_overlap::add_definition( m ) );
+  BOOST_REQUIRE( m.has_definition( defn_label ) );
+}
+
+!!!2071216.cpp!!!	object_overlap_evaluator_serialization_test() : void
+// Build basic system.
+particle::particle_manager pman;
+{
+  particle::specie spc1;
+  spc1.set_label( "Na" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( 1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 1.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 0.0, 1.0, 1.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 0.0, 1.0 ) );
+  pman.add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "Cl" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.2 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.3123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 1.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 0.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 1.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 1.0, 1.0 ) );
+  pman.add_specie( spc1 );
+}
+pman.add_predefined_particles();
+BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
+BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
+
+boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+geometry::geometry_manager gman( sys_rgn );
+
+evaluator::evaluator_manager eman;
+
+std::stringstream store;
+{
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::object_overlap::make_evaluator( {} ) );
+  evaluator::object_overlap* llp = dynamic_cast< evaluator::object_overlap* >( eval_ptr.get() );
+  BOOST_REQUIRE( nullptr != llp );
+
+  eval_ptr->prepare( pman, gman, eman );
+  {
+    double energy = 0.0;
+    BOOST_REQUIRE_NO_THROW( energy = eval_ptr->compute_total_potential( pman, gman ) );
+    BOOST_CHECK_CLOSE( energy, 0.0, 0.000001 );
+  }
+  {
+    // attempt add without overlap
+    particle::change_set trial;
+    particle::change_atom atom;
+    atom.key = 0;
+    atom.index = pman.get_ensemble().size();
+    atom.do_old = false;
+    atom.do_new = true;
+    atom.new_position = { 0.5, 0.5, 0.5 };
+    gman.calculate_distances( atom.new_position, pman.get_ensemble().get_coordinates(), atom.new_rij, 0, pman.get_ensemble().size() );
+    trial.add_atom( atom );
+    // std::cout << trial << "\n";
+    BOOST_REQUIRE_NO_THROW( eval_ptr->compute_potential( pman, gman, trial ) );
+    BOOST_CHECK( not trial.fail() );
+  }
+  {
+    // attempt move without overlap
+    particle::change_set trial;
+    particle::change_atom atom;
+    atom.key = 0;
+    atom.index = 0;
+    atom.do_old = true;
+    atom.new_position = pman.get_ensemble().position( atom.index );
+    atom.do_new = true;
+    atom.new_position = { 0.5, 0.5, 0.5 };
+    gman.calculate_distances( atom.new_position, pman.get_ensemble().get_coordinates(), atom.new_rij, 0, pman.get_ensemble().size() );
+    trial.add_atom( atom );
+    // std::cout << trial << "\n";
+    BOOST_REQUIRE_NO_THROW( eval_ptr->compute_potential( pman, gman, trial ) );
+    BOOST_CHECK( not trial.fail() );
+  }
+
+  boost::archive::text_oarchive oa( store );
+  oa << eval_ptr;
+}
+{
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr;
+  boost::archive::text_iarchive ia( store );
+  ia >> eval_ptr;
+  {
+    // attempt add without overlap
+    particle::change_set trial;
+    particle::change_atom atom;
+    atom.key = 0;
+    atom.index = pman.get_ensemble().size();
+    atom.do_old = false;
+    atom.do_new = true;
+    atom.new_position = { 0.5, 0.5, 0.5 };
+    gman.calculate_distances( atom.new_position, pman.get_ensemble().get_coordinates(), atom.new_rij, 0, pman.get_ensemble().size() );
+    trial.add_atom( atom );
+    // std::cout << trial << "\n";
+    BOOST_REQUIRE_NO_THROW( eval_ptr->compute_potential( pman, gman, trial ) );
+    BOOST_CHECK( not trial.fail() );
+  }
+  {
+    // attempt move without overlap
+    particle::change_set trial;
+    particle::change_atom atom;
+    atom.key = 0;
+    atom.index = 0;
+    atom.do_old = true;
+    atom.new_position = pman.get_ensemble().position( atom.index );
+    atom.do_new = true;
+    atom.new_position = { 0.5, 0.5, 0.5 };
+    gman.calculate_distances( atom.new_position, pman.get_ensemble().get_coordinates(), atom.new_rij, 0, pman.get_ensemble().size() );
+    trial.add_atom( atom );
+    // std::cout << trial << "\n";
+    BOOST_REQUIRE_NO_THROW( eval_ptr->compute_potential( pman, gman, trial ) );
+    BOOST_CHECK( not trial.fail() );
+  }
+  {
+    // attempt move with overlap to our old position
+    particle::change_set trial;
+    particle::change_atom atom;
+    atom.key = 0;
+    atom.index = 0;
+    atom.do_old = true;
+    atom.new_position = pman.get_ensemble().position( atom.index );
+    atom.do_new = true;
+    atom.new_position = { 0.05, 0.05, 0.05 };
+    gman.calculate_distances( atom.new_position, pman.get_ensemble().get_coordinates(), atom.new_rij, 0, pman.get_ensemble().size() );
+    trial.add_atom( atom );
+    // std::cout << trial << "\n";
+    BOOST_REQUIRE_NO_THROW( eval_ptr->compute_potential( pman, gman, trial ) );
+    BOOST_CHECK( not trial.fail() );
+  }
+  double energy = 0.0;
+  BOOST_REQUIRE_NO_THROW( energy = eval_ptr->compute_total_potential( pman, gman ) );
+  BOOST_CHECK_CLOSE( energy, 0.0, 0.000001 );
+}
+
+
 !!!1394352.cpp!!!	localizer_lifetime_tests() : void
 {
   //  Constructor tests
