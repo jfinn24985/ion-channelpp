@@ -110,6 +110,22 @@ result = 0.0 # ionic strength
 for spc in self.species_:
    result += spc.concentration()
 return result
+!!!2056368.cpp!!!	target_ionic_strength(in volume : double) : double
+std::size_t ionic_particles = this->target_count();
+return ( ionic_particles == 0ul ? 0.0 : ( ionic_particles * core::constants::to_SI() )/volume );
+!!!2056368.python!!!	target_ionic_strength(in volume : double) : double
+result = 0.0 # ionic strength
+for spc in self.species_:
+   result += spc.concentration()
+return result
+!!!2056496.cpp!!!	target_count(in volume : double) : double
+const double ionic_conc = this->target_ionic_strength();
+return ( ionic_conc == 0.0 ? 0.0 : ( ionic_conc * volume ) / core::constants::to_SI() );
+!!!2056496.python!!!	target_count(in volume : double) : double
+result = 0.0 # ionic strength
+for spc in self.species_:
+   result += spc.concentration()
+return result
 !!!1806640.cpp!!!	target_volume() : double
 const double conc = this->target_ionic_strength();
 UTILITY_REQUIRE( conc != 0.0, "Cannot calculate target volume without a target concentration" );
@@ -175,26 +191,142 @@ self.cell_region_ = periodic_system(self.target_particles_ * constants.to_SI() /
 gridder = self.cell_region_.make_grid_generator( self.target_particles_, self.get_random() ) 
 self.ensemble_.generate_ensemble( gridder, self.target_particles_, self.get_random() )
 pass
-!!!1941424.cpp!!!	generate_simulation(inout gman : geometry_manager, inout ranf : random_distribution, inout oslog : ostream) : void
-{
-// Stage 1 : Calculate target particle count or system volume.
-//////////////////////////////////////////////////////////////
+!!!2063024.cpp!!!	compute_initial_size(in input_volume : double) : std::tuple< double, bool, double, bool, std::size_t, bool >
+// Initial value (may be 0.0)
+double conc{ this->target_ionic_strength() };
+bool conc_set{ false };
+// Initial values (may not be 0.0)
+double volume{ input_volume };
+bool volume_set{ false };
+// Initial values (may be 0)
+std::size_t count{ this->target_count() };
+bool count_set{ false };
 
-  // if target conc == 0, skip volume/count adjustment
-  if( not utility::feq( this->target_ionic_strength(), 0.0 ) )
+UTILITY_CHECK( volume > 0.0, "System volume should never be zero or less." );
+UTILITY_CHECK( conc >= 0.0, "System concentration should never be less than zero." );
+
+// if target conc == 0, skip volume/count adjustment
+if( conc != 0.0 )
+{
+  // Number of solute particles in simulation
+  if( count == 0 )
   {
-    // Number of solute particles in simulation
-    std::size_t npart = this->target_count();
-    if( npart == 0 )
+    // CASE 1 : *N* = V . C
+    // set npart from volume
+    double dcount{ ( conc * volume ) / core::constants::to_SI() };
+    UTILITY_CHECK( dcount > 0.0, "Target count should never be zero or less here." );
+    count = static_cast< std::size_t >( std::nearbyint( dcount ) );
+    count_set = true;
+  }
+  else
+  {
+    // CASE 2 : *V* = N / C
+    volume = ( count * core::constants::to_SI() )/ conc;
+    volume_set = true;
+  }
+}
+else
+{
+  // CASE 3 : C = N / V
+  // Calculate target concentration from particle numbers
+  // and volume
+  if( count == 0 )
+  {
+    // Count particles from ensemble
+    if( this->ensemble_->size() > 0 )
     {
-      // set npart from volume
-      double volume = gman.system_region().volume( 0.0 );
-      this->set_target_count_by_volume( volume );
+      for( std::size_t idx = 0; idx != this->ensemble_->size(); ++idx )
+      {
+        std::size_t key = this->ensemble_->key( idx );
+        if( key < this->species_.size() and this->species_[ key ].is_solute() )
+        {
+          ++count;
+        }
+      }
     }
     else
     {
-      double volume = this->target_volume();
-      gman.change_volume( volume, 0.0 );
+      for( std::size_t idx = 0; idx != this->species_.size(); ++idx )
+      {
+        if( this->species_[ idx ].is_solute() )
+        {
+          count += this->species_[ idx ].get_position_size();
+        }
+      }
+    }
+    if( count != 0 )
+    {
+      count_set = true;
+      conc = ( count * core::constants::to_SI() ) / volume;
+      conc_set = true;
+    }
+    else
+    {
+      // Error if no particles are predefined.
+      if( this->ensemble_->size() == 0 )
+      {
+        std::size_t nonsolute{ 0ul };
+        bool has_solute{ false };
+        for( std::size_t idx = 0; idx != this->species_.size(); ++idx )
+        {
+          if( this->species_[ idx ].is_solute() )
+          {
+            has_solute = true;
+            break;
+          }
+          else
+          {
+            nonsolute += this->species_[ idx ].get_position_size();
+          }
+        }
+        UTILITY_INPUT( not has_solute, "All solute species are without predefined particles or target concentration in the simulation input.", core::strngs::fsspec(), nullptr );
+        UTILITY_INPUT( nonsolute > 0, "No particles defined in the simulation input", core::strngs::fsspec(), nullptr );
+      }
+    }
+  }
+  else
+  {
+    conc = ( count * core::constants::to_SI() ) / volume;
+    conc_set = true;
+  }
+}
+return std::make_tuple( conc, conc_set, volume, volume_set, count, count_set );
+!!!1941424.cpp!!!	generate_simulation(inout gman : geometry_manager, inout ranf : random_distribution, inout oslog : ostream) : void
+{
+  // Stage 1 : Calculate target particle count or system volume.
+  //////////////////////////////////////////////////////////////
+  double conc, vol;
+  std::size_t count;
+  bool cset, vset, nset;
+  std::tie( conc, cset, vol, vset, count, nset ) = this->compute_initial_size( gman.system_region().volume( 0.0 ) );
+
+  // if target conc == 0, skip volume/count adjustment
+  if( vset )
+  {
+    gman.change_volume( vol, 0.0 );
+  }
+  else
+  {
+    if( nset )
+    {
+      this->set_target_count( count );
+    }
+    if( cset )
+    {
+      // SET CONCENTRATIONS
+      /////////////////////
+      // Ionic strength set. This means that target
+      // concentrations have not been set on the solute
+      // species but solute particles have been defined.
+      UTILITY_CHECK( this->ensemble_->size() > 0, "Predefined particles not yet added." );
+      const double factor{ conc / count };
+      for( auto &spec : this->species_ )
+      {
+        if( spec.is_solute() )
+        {
+          spec.set_concentration( spec.get_position_size() * factor );
+        }
+      }
     }
   }
 }

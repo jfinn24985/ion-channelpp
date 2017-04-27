@@ -1292,28 +1292,14 @@ std::stringstream store;
   BOOST_CHECK_EQUAL( mgr.target_ionic_strength(), 0.0 );
   BOOST_CHECK_EQUAL( mgr.target_count(), 0ul );
   BOOST_CHECK_EQUAL( mgr.ionic_strength( 100.0 ), 0.0 );
-  try
+
   {
-    double vol = mgr.target_volume();
-    BOOST_CHECK_EQUAL( vol, 0.0 );
-    BOOST_ERROR( "expected \"mgr.target_volume()\" exception not thrown" );
-  }
-  catch( std::runtime_error const& err )
-  {
-    const std::string msg( err.what() );
-    // std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Cannot calculate target volume without a target concentration" ) < msg.size() );
-  }
-  catch( std::exception const& err )
-  {
-    BOOST_ERROR( std::string( "exception thrown by \"mgr.target_volume()\" was not expected type: " ) + err.what() );
-  }
-  {
-    const std::string canon( "----------------------------------------------------------------------\nParticle system details.\n------------------------\n          specie count : 0\n target particle count : 0\n----------------------------------------------------------------------\nensemble\n   particle # :0\n         size :0" );
+    const std::string canon( "----------------------------------------------------------------------\nParticle system details.\n------------------------\n     number of species : 0\n target particle count : 0\n target ionic strength : 0\n----------------------------------------------------------------------\nensemble\n   particle # :0\n         size :0" );
     std::stringstream ss;
     mgr.description( ss );
     const std::string dstr( ss.str() );
-    //std::cout << "{" << dstr << "}\n";
+    // std::cout << "CANON\n" << canon << "\n";
+    // std::cout << "OUTPUT\n" << dstr << "\n";
     BOOST_CHECK( dstr.find( canon ) < dstr.size() );
   }
   {
@@ -1325,6 +1311,57 @@ std::stringstream store;
     const std::string sdoc( idoc.str() );
     //std::cout << "[" << sdoc << "]\n";
     BOOST_CHECK( sdoc.find( canon ) < sdoc.size() );
+  }
+//   try
+//   {
+//     double vol = mgr.target_volume();
+//     BOOST_CHECK_EQUAL( vol, 0.0 );
+//     BOOST_ERROR( "expected \"mgr.target_volume()\" exception not thrown" );
+//   }
+//   catch( std::runtime_error const& err )
+//   {
+//     const std::string msg( err.what() );
+//     // std::cout << msg << "\n";
+//     BOOST_CHECK( msg.find( "Cannot calculate target volume without a target concentration" ) < msg.size() );
+//   }
+//   catch( std::exception const& err )
+//   {
+//     BOOST_ERROR( std::string( "exception thrown by \"mgr.target_volume()\" was not expected type: " ) + err.what() );
+//   }
+  // HAVE VOLUME ONLY -> ERROR
+  {
+    double conc, vol;
+    std::size_t count;
+    bool cset, vset, nset;
+    try
+    {
+    std::tie( conc, cset, vol, vset, count, nset ) = mgr.compute_initial_size( 830270.0 );BOOST_ERROR( "expected \"mgr.compute_initial_size()\" exception not thrown" );
+   }
+   catch( std::runtime_error const& err )
+   {
+     const std::string msg( err.what() );
+     // std::cout << msg << "\n";
+     BOOST_CHECK( msg.find( "No particles defined in the simulation input" ) < msg.size() );
+   }
+   catch( std::exception const& err )
+   {
+     BOOST_ERROR( std::string( "exception thrown by \"mgr.compute_initial_size()\" was not expected type: " ) + err.what() );
+   }
+  }
+  mgr.set_target_count( 100ul );
+  BOOST_REQUIRE_EQUAL( mgr.target_count(), 100ul );
+  // HAVE VOLUME AND COUNT -> set CONCENTRATION
+  {
+    double conc, vol;
+    std::size_t count;
+    bool cset, vset, nset;
+    std::tie( conc, cset, vol, vset, count, nset ) = mgr.compute_initial_size( 830270.0 );
+    BOOST_REQUIRE( cset );
+    BOOST_REQUIRE_CLOSE( conc, 0.2, 0.0001 );
+    BOOST_REQUIRE( not vset );
+    BOOST_REQUIRE_EQUAL( vol, 830270.0 );
+    BOOST_REQUIRE( not nset );
+    BOOST_REQUIRE_EQUAL( count, 100ul );
   }
 }
 !!!968112.cpp!!!	particle_manager_methods_test() : void
@@ -1344,11 +1381,50 @@ std::stringstream store;
 //  * set_target_count
 //  * specie_count
 //  * target_ionic_strength
+//  **PRIV target_ionic_strength( V )
 //  * target_count
+//  **PRIV target_count( V )
 //  * write_document
 // Tested elsewhere
 //  commit
 //
+auto compare_str = [](std::string s2, std::string s1)
+{
+  if( s1 != s2)
+  {
+    std::stringstream ss1(s1), ss2(s2);
+    std::size_t line = 0;
+    std::string st2;
+    std::getline( ss2, st2 );
+    while( ss1 and ss2 )
+    {
+      std::string st1;
+      std::getline( ss1, st1 );
+      ++line;
+      if( st1.empty() ) continue;
+      if( st1.find(st2) > st1.size() and st2.find(st1) > st2.size() )
+      {
+        std::cerr << "Difference at line [" << line << "]\n\"" << st1 << "\"\n\"" << st2 << "\"\n";
+      }
+      else
+      {
+        std::cerr << "Start match at line [" << line << "]\n\"" << st1 << "\"\n\"" << st2 << "\"\n";
+        break;
+      }
+    }
+    while( ss1 and ss2 )
+    {
+      std::string st1;
+      std::getline( ss1, st1 );
+      std::getline( ss2, st2 );
+      ++line;
+      if( st1 != st2 )
+      {
+         std::cerr << "Difference at line [" << line << "]\n\"" << st1 << "\"\n\"" << st2 << "\"\n";
+      }
+    }
+  }
+};
 
 auto check_manager = []( particle::particle_manager const& mgr )->void
 {
@@ -1480,9 +1556,37 @@ std::stringstream store;
 
   BOOST_REQUIRE_EQUAL( mgr->target_count(), 0ul );
   BOOST_REQUIRE_EQUAL( mgr->target_ionic_strength(), 0.2 );
+  // HAVE VOLUME AND IONIC_STRENGTH -> set COUNT
+  {
+    double conc, vol;
+    std::size_t count;
+    bool cset, vset, nset;
+    std::tie( conc, cset, vol, vset, count, nset ) = mgr->compute_initial_size( 830270.0 );
+    BOOST_REQUIRE( not cset );
+    BOOST_REQUIRE_EQUAL( conc, 0.2 );
+    BOOST_REQUIRE( not vset );
+    BOOST_REQUIRE_EQUAL( vol, 830270.0 );
+    BOOST_REQUIRE( nset );
+    BOOST_REQUIRE_EQUAL( count, 100ul );
+  }
   mgr->set_target_count( 100ul );
   BOOST_REQUIRE_EQUAL( mgr->target_count(), 100ul );
-  BOOST_CHECK_CLOSE( mgr->target_volume(), 830269.63836775627, 0.000000001 );
+  // HAVE VOLUME, COUNT AND IONIC_STRENGTH -> set VOLUME
+  {
+    double conc, vol;
+    std::size_t count;
+    bool cset, vset, nset;
+    std::tie( conc, cset, vol, vset, count, nset ) = mgr->compute_initial_size( 100.0 );
+    BOOST_REQUIRE( not cset );
+    BOOST_REQUIRE_EQUAL( conc, 0.2 );
+    BOOST_REQUIRE( vset );
+    BOOST_CHECK_CLOSE( vol, 830269.63836775627, 0.000000001 );
+    BOOST_REQUIRE( not nset );
+    BOOST_REQUIRE_EQUAL( count, 100ul );
+  }
+  //BOOST_CHECK_CLOSE( mgr->target_count( 830270.0 ), 100.0, 0.0001 );
+  //BOOST_CHECK_CLOSE( mgr->target_volume(), 830269.63836775627, 0.000000001 );
+  //BOOST_CHECK_CLOSE( mgr->target_ionic_strength( 830270.0 ), 0.2, 0.0001 );
   BOOST_CHECK_CLOSE( mgr->ionic_strength( 50.0 ), 132.84314213884102, 0.0000000001 );
 
   check_manager( *mgr );
@@ -1502,23 +1606,27 @@ std::stringstream store;
   check_manager( *mgr );
 
   {
-    std::string canon( "----------------------------------------------------------------------\nParticle system details.\n------------------------\n          specie count : 3\n target particle count : 100\n----------------------------------------------------------------------\nspecie\n        label :PC\n       radius :0.55\n         rate :0\n      valency :1\n  excess c.p. :0\n   chem. pot. :0\n target conc. :0\n         type :mob\nspecie\n        label :Na\n       radius :0.5\n         rate :0\n      valency :1\n  excess c.p. :0\n   chem. pot. :-9.71748\n target conc. :0.1\n         type :free\nspecie\n        label :Cl\n       radius :0.9\n         rate :0.5\n      valency :-1\n  excess c.p. :0\n   chem. pot. :-9.71748\n target conc. :0.1\n         type :free\n----------------------------------------------------------------------\nensemble\n   particle # :5\n         size :5\n    0   0.30000   0.10000   0.40000  0\n    1   1.30000   1.10000   1.40000  1\n    2   2.00000   0.00000   0.00000  2\n    3   0.00000   2.00000   0.00000  2\n    4   0.00000   0.00000   2.00000  2\n" );
+    std::string canon( "----------------------------------------------------------------------\nParticle system details.\n------------------------\n     number of species : 3\n target particle count : 100\n target ionic strength : 0.2\n----------------------------------------------------------------------\nspecie\n        label :PC\n       radius :0.55\n         rate :1\n      valency :1\n  excess c.p. :0\n   chem. pot. :0\n target conc. :0\n         type :mob\nspecie\n        label :Na\n       radius :0.5\n         rate :1\n      valency :1\n  excess c.p. :0\n   chem. pot. :-9.71748\n target conc. :0.1\n         type :free\nspecie\n        label :Cl\n       radius :0.9\n         rate :0.5\n      valency :-1\n  excess c.p. :0\n   chem. pot. :-9.71748\n target conc. :0.1\n         type :free\n----------------------------------------------------------------------\nensemble\n   particle # :5\n         size :5\n    0   0.30000   0.10000   0.40000  0\n    1   1.30000   1.10000   1.40000  1\n    2   2.00000   0.00000   0.00000  2\n    3   0.00000   2.00000   0.00000  2\n    4   0.00000   0.00000   2.00000  2\n" );
     std::stringstream ss;
     mgr->description( ss );
     const std::string dstr( ss.str() );
-    //std::cout << dstr << "\n";
+    // std::cout << "CANON\n" << canon << "\n";
+    // std::cout << "OUTPUT\n" << dstr << "\n";
     BOOST_CHECK( dstr.find( canon ) < dstr.size() );
+    if( dstr.find( canon ) > dstr.size() ) compare_str( canon, dstr );
   }
 
   {
-    std::string canon( "specie\nchex 0\nctarg 0\nd 1.100000\nn 1\n0.3 0.1 0.4 1 0.2 0 3.4\nname \"PC\"\nrate 0\ntype mob\nz 1.000000\nend\n\nspecie\nchex 0\nctarg 0.100000\nd 1.000000\nn 1\n1.3 1.1 1.4\nname \"Na\"\nrate 0\ntype free\nz 1.000000\nend\n\nspecie\nchex 0\nctarg 0.100000\nd 1.800000\nn 3\n2 0 0\n0 2 0\n0 0 2\nname \"Cl\"\nrate 0.500000\ntype free\nz -1\nend" );
+    std::string canon( "specie\nchex 0\nctarg 0\nd 1.100000\nn 1\n0.3 0.1 0.4 1 0.2 0 3.4\nname \"PC\"\nrate 1.000000\ntype mob\nz 1.000000\nend\n\nspecie\nchex 0\nctarg 0.100000\nd 1.000000\nn 1\n1.3 1.1 1.4\nname \"Na\"\nrate 1.000000\ntype free\nz 1.000000\nend\n\nspecie\nchex 0\nctarg 0.100000\nd 1.800000\nn 3\n2 0 0\n0 2 0\n0 0 2\nname \"Cl\"\nrate 0.500000\ntype free\nz -1\nend" );
     core::input_document wrtr( 1ul );
     mgr->write_document( wrtr );
     std::stringstream idoc;
     wrtr.write( idoc );
     const std::string sdoc( idoc.str() );
-    //std::cout << sdoc << "\n";
+    // std::cout << "CANON\n" << canon << "\n";
+    // std::cout << "OUTPUT\n" << sdoc << "\n";
     BOOST_CHECK( sdoc.find( canon ) < sdoc.size() );
+    if( sdoc.find( canon ) > sdoc.size() ) compare_str( canon, sdoc );
   }
 }
 
@@ -1794,7 +1902,7 @@ auto specie_validation = []( particle::specie const& aspec )
   BOOST_CHECK_EQUAL( var.excess_potential(), 0.0 );
   BOOST_CHECK_EQUAL( var.chemical_potential(), 0.0 );
   BOOST_CHECK_EQUAL( var.radius(), 0.0 );
-  BOOST_CHECK_EQUAL( var.rate(), 0.0 );
+  BOOST_CHECK_EQUAL( var.rate(), 1.0 );
   BOOST_CHECK_EQUAL( var.valency(), 0.0 );
   BOOST_CHECK( var.label().empty() );
   BOOST_CHECK_EQUAL( var.sub_type(), particle::specie::INVALID );
@@ -2062,7 +2170,7 @@ auto specie_validation = []( particle::specie const& aspec )
     BOOST_CHECK_NO_THROW( var.set_radius( radius ) );
     BOOST_CHECK_EQUAL( var.radius(), radius );
 
-    BOOST_CHECK_EQUAL( var.rate(), 0.0 );
+    BOOST_CHECK_EQUAL( var.rate(), 1.0 );
     BOOST_CHECK_NO_THROW( var.set_rate( rate ) );
     BOOST_CHECK_EQUAL( var.rate(), rate );
 
