@@ -1381,9 +1381,7 @@ std::stringstream store;
 //  * set_target_count
 //  * specie_count
 //  * target_ionic_strength
-//  **PRIV target_ionic_strength( V )
 //  * target_count
-//  **PRIV target_count( V )
 //  * write_document
 // Tested elsewhere
 //  commit
@@ -1584,9 +1582,6 @@ std::stringstream store;
     BOOST_REQUIRE( not nset );
     BOOST_REQUIRE_EQUAL( count, 100ul );
   }
-  //BOOST_CHECK_CLOSE( mgr->target_count( 830270.0 ), 100.0, 0.0001 );
-  //BOOST_CHECK_CLOSE( mgr->target_volume(), 830269.63836775627, 0.000000001 );
-  //BOOST_CHECK_CLOSE( mgr->target_ionic_strength( 830270.0 ), 0.2, 0.0001 );
   BOOST_CHECK_CLOSE( mgr->ionic_strength( 50.0 ), 132.84314213884102, 0.0000000001 );
 
   check_manager( *mgr );
@@ -1698,6 +1693,150 @@ BOOST_REQUIRE_EQUAL( pman.specie_count(), 5 );
 BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 6 );
 
 
+!!!2084272.cpp!!!	particle_man_generate_simulation_test() : void
+std::stringstream store;
+{
+  particle::particle_manager pman;
+  {
+    particle::specie spc1;
+    spc1.set_label( "Na" );
+    spc1.set_concentration( 1.0 );
+    spc1.set_radius( 0.12 );
+    spc1.set_rate( 0.1 );
+    spc1.set_valency( 1.0 );
+    spc1.set_excess_potential( 0.123 );
+    spc1.set_type( particle::specie::SOLUTE );
+    spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
+    spc1.append_position( particle::coordinate( 2.0, 0.0, 0.0 ) );
+    pman.add_specie( spc1 );
+  }
+  {
+    particle::specie spc1;
+    spc1.set_label( "Cl" );
+    spc1.set_concentration( 1.0 );
+    spc1.set_radius( 0.2 );
+    spc1.set_rate( 0.1 );
+    spc1.set_valency( -1.0 );
+    spc1.set_excess_potential( 0.3123 );
+    spc1.set_type( particle::specie::SOLUTE );
+    spc1.append_position( particle::coordinate( 0.0, 2.0, 0.0 ) );
+    pman.add_specie( spc1 );
+  }
+  {
+    particle::specie spc1;
+    spc1.set_label( "CA" );
+    spc1.set_concentration( 1.0 );
+    spc1.set_radius( 0.11 );
+    spc1.set_rate( 0.1 );
+    spc1.set_valency( 1.0 );
+    spc1.set_excess_potential( 0.123 );
+    spc1.set_type( particle::specie::MOBILE );
+    spc1.append_position( particle::coordinate( 2.0, 2.0, 0.0 ), particle::centroid( 3.0, 2.0, 2.0, 0.0 ) );
+    pman.add_specie( spc1 );
+  }
+  {
+    particle::specie spc1;
+    spc1.set_label( "CO" );
+    spc1.set_concentration( 1.0 );
+    spc1.set_radius( 0.12 );
+    spc1.set_rate( 0.1 );
+    spc1.set_valency( -1.0 );
+    spc1.set_excess_potential( 0.123 );
+    spc1.set_type( particle::specie::FLEXIBLE );
+    spc1.append_position( particle::coordinate( 0.0, 0.0, 2.0 ), particle::centroid( 3.0, 0.0, 0.0, 2.0 ) );
+    pman.add_specie( spc1 );
+  }
+  {
+    particle::specie spc1;
+    spc1.set_label( "OX" );
+    spc1.set_concentration( 1.0 );
+    spc1.set_radius( 0.12 );
+    spc1.set_rate( 0.1 );
+    spc1.set_valency( -1.0 );
+    spc1.set_excess_potential( 0.123 );
+    spc1.set_type( particle::specie::CHANNEL_ONLY );
+    spc1.append_position( particle::coordinate( 2.0, 0.0, 2.0 ) );
+    pman.add_specie( spc1 );
+  }
+
+  BOOST_REQUIRE_EQUAL( pman.target_count(), 0ul );
+  // Test serialization
+  boost::archive::text_oarchive oa( store );
+  // write class instance to archive
+  oa << pman;
+
+  const std::string label( "bulk" );
+  // Cubic grid main ctor
+  boost::shared_ptr< geometry::periodic_cube_region > sys_reg( new geometry::periodic_cube_region( label, 100.0 ) );
+  geometry::geometry_manager gman( sys_reg );
+  boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+  utility::random_distribution rand( generator );
+
+  {
+    double conc, vol;
+    std::size_t count;
+    bool cset, vset, nset;
+    std::tie( conc, cset, vol, vset, count, nset ) = pman.compute_initial_size( sys_reg->volume( 0.0 ) );
+    // std::cout << "conc   : " << conc << "\n";
+    // std::cout << "volume : " << vol << "\n";
+    // std::cout << "count  : " << count << "\n";
+    BOOST_REQUIRE( not cset );
+    BOOST_REQUIRE_CLOSE( conc, 2.0, 0.0001 );
+    BOOST_REQUIRE( not vset );
+    BOOST_CHECK_CLOSE( vol, 1000000.0, 0.00001 );
+    BOOST_REQUIRE( nset );
+    BOOST_REQUIRE_EQUAL( count, 1204ul );
+  }
+  // Call generate simulation
+  std::stringstream log;
+  pman.generate_simulation( gman, rand, log );
+
+  // count should be 1204 solute + 3 specials
+  BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 1207ul );
+
+}
+{
+  const std::string label( "bulk" );
+  // Cubic grid main ctor
+  boost::shared_ptr< geometry::periodic_cube_region > sys_reg( new geometry::periodic_cube_region( label, 100.0 ) );
+  geometry::geometry_manager gman( sys_reg );
+  boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+  utility::random_distribution rand( generator );
+
+  // Test (de)serialization
+  particle::particle_manager mgr;
+  boost::archive::text_iarchive ia( store );
+  // get class instance from archive
+  ia >> mgr;
+
+  BOOST_REQUIRE_EQUAL( mgr.target_count(), 0ul );
+  mgr.set_target_count( 500 );
+  {
+    double conc, vol;
+    std::size_t count;
+    bool cset, vset, nset;
+    std::tie( conc, cset, vol, vset, count, nset ) = mgr.compute_initial_size( sys_reg->volume( 0.0 ) );
+    // std::cout << "conc   : " << conc << "\n";
+    // std::cout << "volume : " << vol << "\n";
+    // std::cout << "count  : " << count << "\n";
+    BOOST_REQUIRE( not cset );
+    BOOST_REQUIRE_CLOSE( conc, 2.0, 0.0001 );
+    BOOST_REQUIRE( vset );
+    BOOST_CHECK_CLOSE( vol, 415134.82, 0.00001 );
+    BOOST_REQUIRE( not nset );
+    BOOST_REQUIRE_EQUAL( count, 500ul );
+  }
+
+  // Call generate simulation
+  std::stringstream log;
+  mgr.generate_simulation( gman, rand, log );
+
+  // count should be 500 solute + 3 specials
+  BOOST_REQUIRE_EQUAL( mgr.get_ensemble().count(), 503ul );
+
+  BOOST_CHECK_CLOSE( sys_reg->volume( 0.0 ), 415134.82, 0.00001 );
+
+}
 !!!413105.cpp!!!	specie_meta_test() : void
 {
   // Test is virtual + noncopyable object type

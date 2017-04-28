@@ -442,22 +442,6 @@ if( not utility::feq( this->target_ionic_strength(), 0.0 ) )
       }
     }
   }
-//DEL  // TODO: REMOVE AFTER TESTING
-//DEL  // can also remove to_add array
-//DEL  std::size_t to_add_target = 0ul;
-//DEL  for( auto count : to_add )
-//DEL  {
-//DEL    to_add_target += count;
-//DEL  }
-//DEL  UTILITY_CHECK( to_add_target == keys.size(), "generate_simulation stage 3 should ensure keys has add_target elements" );
-//DEL  for( std::size_t ispec = 0; ispec != nspec; ++ispec )
-//DEL  {
-//DEL    if( to_add[ispec] > 0 )
-//DEL    {
-//DEL      UTILITY_CHECK( std::count( keys.begin(), keys.end(), ispec ) == to_add[ispec], "generate_simulation stage 3 should ensure keys has to_add[ispec] elements equal to ispec" );
-//DEL    }
-//DEL  }
-//DEL  // END REMOVE
   // Only if we have particles
   if( keys.size() != 0 )
   {
@@ -472,7 +456,7 @@ if( not utility::feq( this->target_ionic_strength(), 0.0 ) )
     {
       min_spacing = std::max( min_spacing, rads[ispec] );
     }
-    min_spacing *= 2.0;
+    min_spacing *= 2.01;
 
     {
       // get gridder based on minimum spacing
@@ -482,7 +466,9 @@ if( not utility::feq( this->target_ionic_strength(), 0.0 ) )
 
       // index into keys vector
       std::size_t idx = 0;
-
+      // Only need to check overlap with predefined particles
+      // as grid ensures no overlap between the one we insert here.
+      const std::size_t predef = ens.size();
       particle::coordinate pos;
       while( idx != keys.size() and gridder->next( pos ) )
       {
@@ -491,11 +477,11 @@ if( not utility::feq( this->target_ionic_strength(), 0.0 ) )
 
         // Check for overlap.
         bool overlap = false;
-        if( ens.size() > 1 )
+        if( predef > 0 )
         {
           std::vector< double > rij;
-          gman.calculate_distances( pos, ens.get_coordinates(), rij, 0ul,  ens.size() );
-          for( std::size_t jdx = 0; jdx != ens.size(); ++jdx )
+          gman.calculate_distances( pos, ens.get_coordinates(), rij, 0ul, predef );
+          for( std::size_t jdx = 0; jdx != predef; ++jdx )
           {
             const std::size_t jspec = ens.key( jdx );
             if( jdx < nspec )
