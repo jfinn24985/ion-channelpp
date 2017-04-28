@@ -1,6 +1,6 @@
 format 75
 "build" // build
-  revision 148
+  revision 149
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -4655,6 +4655,34 @@ to be closer to the equilibrium leading to rapid thermalisation.
 
 TODO: REF
 
++ Evaluators +
+
+++ Hard-sphere Overlap ++
+
+This evaluator ensures that two particles can not be closer 
+than the sum of their hard-sphere radii.  It is only required
+for simulations with hard-sphere particles.
+
+++ Particle-Object Overlap ++
+
+This evaluator ensures that a particle can not overlap 
+an immobile object in the simulation.  It is only necessary
+if there are immobile objects (such as the membrane in the
+membrane-cell simulation) in the simulation.  This check is
+actually the responsibility of the ''system_region'' region
+object. 
+
+Even if there are immobile objects in the simulation
+there may be no need to include this evaluator as the trial
+generators check new positions are within some ''region''
+object.  The \"move\" and \"jump\" trial generators use the 
+''system_region'' when generating an new position which 
+automatically performs this check, therefore simulations
+with just these trials do not require this evaluator.
+However, the \"jump-in\", \"jump-out\" and \"jump-about\" trial 
+generators may not be using the ''system_region'' and
+so require this evaluator when immobile objects are
+present.
 
 + Glossary +
 
@@ -4664,6 +4692,12 @@ overall cell geometry, for example cubic or cylindrical.
 : particle : A simulation element representing chemical
 entities in the simulation.  For example in the simulation 
 of an ionic solution these are solute ions.
+
+: region : Some volume within the simulation. This is
+represented in the program by a ''geometry::base_region''
+derived object. These objects are responsible for
+calculating inter-particle distances, generating new
+positions and testing a particle is in a valid position.
 
 : specie : A definition of a particle type. The definition
 contains properties common to all particles of the given
