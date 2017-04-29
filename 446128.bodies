@@ -435,6 +435,26 @@ if( not utility::feq( this->target_ionic_strength(), 0.0 ) )
       const std::size_t specie_target = std::nearbyint( add_target * this->get_specie( ispec ).concentration() / target_conc );
       const std::size_t specie_current = ens.specie_count( ispec );
       // Ignore excess if too many particles present.
+      if( specie_target < specie_current )
+      {
+        std::stringstream message;
+        message << "WARNING: Specie " << this->get_specie( ispec ).label()
+                << " has " << specie_current << " particle defined in the "
+                << "input file but only "<< specie_target 
+                << " are required for the simulation. You may"
+                << "ignore this message if the simulation involves "
+                << "grand-canonical moves. You may want to change "
+                << "the input file and restart the simulation for "
+                << "fixed-size simulations.";
+        {
+          const std::string msg( message.str() );
+          core::fixed_width_output_filter aset( 2, 1, 65 );
+          boost::iostreams::filtering_ostream out;
+          out.push( aset );
+          out.push( oslog );
+          boost::iostreams::write( out, msg.data(), msg.size() );
+        }
+      }
       to_add[ispec] = ( specie_target <= specie_current ? 0ul : specie_target - specie_current );
       if( to_add[ispec] > 0 )
       {
