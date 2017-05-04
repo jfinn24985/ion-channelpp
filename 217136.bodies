@@ -131,6 +131,153 @@ const std::string defn_desc( "blah blech blab." );
   BOOST_CHECK( defn.empty() );
 }
 
+!!!1369520.cpp!!!	evaluator_meta_lifetime_test() : void
+{
+  //  Constructor tests
+  BOOST_CHECK( not std::is_default_constructible< evaluator::evaluator_meta >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< evaluator::evaluator_meta >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< evaluator::evaluator_meta >::type {} );
+  BOOST_CHECK( ( not std::is_assignable< evaluator::evaluator_meta, evaluator::evaluator_meta >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< evaluator::evaluator_meta >::type {} );
+}
+const std::string meta_label( "evaluator" );
+{
+  boost::shared_ptr< evaluator::evaluator_manager > eman( new evaluator::evaluator_manager{} );
+  evaluator::evaluator_meta meta( eman );
+  BOOST_CHECK_EQUAL( meta.required(), true );
+  BOOST_CHECK_EQUAL( meta.multiple(), true );
+  BOOST_CHECK_EQUAL( meta.section_label(), core::strngs::evaluator_label() );
+  BOOST_CHECK_EQUAL( meta.size(), 0 );
+  BOOST_CHECK( meta.empty() );
+
+  meta.add_definition( std::unique_ptr< evaluator::evaluator_definition >( new evaluator::evaluator_definition( "coloumb", "blah blab blech.", [](std::map<std::string, std::string>)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; }) ) );
+  
+  BOOST_CHECK_EQUAL( meta.size(), 1 );
+  BOOST_CHECK( not meta.empty() );
+  BOOST_CHECK( meta.has_definition( "coloumb" ) );
+
+}
+
+!!!1409072.cpp!!!	input_unknown_parameter_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::coulomb::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype coulomb\nmobk 4.5\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"mobk\" is not valid in a evaluator \"coulomb\" type section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1408432.cpp!!!	input_no_type_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::coulomb::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Required parameter \"type\" was not found in a evaluator section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1408560.cpp!!!	input_type_no_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::coulomb::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype #localizer\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"type\" requires a value in a evaluator section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1401904.cpp!!!	input_type_bad_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::coulomb::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype localizer\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"type\" value (localizer) does not name a valid evaluator subtype (see documentation)." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
 !!!1380272.cpp!!!	coulomb_lifetime_tests() : void
 {
   //  Constructor tests
@@ -416,6 +563,41 @@ double expected_value = 0.0;
   BOOST_CHECK_CLOSE( energy, expected_value, 0.000001 );
 }
 
+!!!1401520.cpp!!!	evaluator_meta_coulomb_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::coulomb::add_definition( *m );
+
+  core::input_help hlpr;
+  m->publish_help( hlpr );
+  {
+    std::stringstream ss;
+    hlpr.write( ss );
+    BOOST_CHECK( ss.str().find( "coulomb" ) < ss.str().size() );
+  }
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"coulomb\"\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+BOOST_REQUIRE_EQUAL( mngr->size(), 1ul );
+BOOST_CHECK_EQUAL( mngr->get_evaluators()[ 0 ].type_label(), "coulomb" );
+
+std::string canon( "evaluator\ntype coulomb\nend\n" );
+
+core::input_document wrtr( 1ul );
+mngr->write_document( wrtr );
+std::stringstream idoc;
+wrtr.write( idoc );
+const std::string sdoc( idoc.str() );
+BOOST_CHECK_LE( sdoc.find( canon ), sdoc.size() );
 !!!2028720.cpp!!!	hard_sphere_overlap_lifetime_tests() : void
 {
   //  Constructor tests
@@ -425,13 +607,13 @@ double expected_value = 0.0;
   BOOST_CHECK( ( not std::is_assignable< evaluator::hard_sphere_overlap, evaluator::hard_sphere_overlap >::type {} ) );
   BOOST_CHECK( std::has_virtual_destructor< evaluator::hard_sphere_overlap >::type {} );
 }
-const std::string defn_label( "overlap" );
+const std::string defn_label( "hard-sphere" );
 {
   evaluator::hard_sphere_overlap eval;
   BOOST_CHECK_EQUAL( eval.type_label(), defn_label );
 }
 !!!2028592.cpp!!!	hard_sphere_overlap_static_method_tests() : void
-const std::string defn_label( "overlap" );
+const std::string defn_label( "hard-sphere" );
 {
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
   BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::hard_sphere_overlap::make_evaluator( {} ) );
@@ -921,6 +1103,41 @@ evaluator::evaluator_manager eman;
     BOOST_CHECK( trial.fail() );
   }
 }
+!!!2090800.cpp!!!	evaluator_meta_hard_sphere_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::hard_sphere_overlap::add_definition( *m );
+
+  core::input_help hlpr;
+  m->publish_help( hlpr );
+  {
+    std::stringstream ss;
+    hlpr.write( ss );
+    BOOST_CHECK( ss.str().find( "hard-sphere" ) < ss.str().size() );
+  }
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"hard-sphere\"\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+BOOST_REQUIRE_EQUAL( mngr->size(), 1ul );
+BOOST_CHECK_EQUAL( mngr->get_evaluators()[ 0 ].type_label(), "hard-sphere" );
+
+std::string canon( "evaluator\ntype hard-sphere\nend\n" );
+
+core::input_document wrtr( 1ul );
+mngr->write_document( wrtr );
+std::stringstream idoc;
+wrtr.write( idoc );
+const std::string sdoc( idoc.str() );
+BOOST_CHECK_LE( sdoc.find( canon ), sdoc.size() );
 !!!2071088.cpp!!!	object_overlap_lifetime_tests() : void
 {
   //  Constructor tests
@@ -1249,6 +1466,41 @@ eval_ptr->prepare( pman, gman, eman );
   BOOST_CHECK( trial.fail() );
 }
 
+!!!2090928.cpp!!!	evaluator_meta_object_overlap_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::object_overlap::add_definition( *m );
+
+  core::input_help hlpr;
+  m->publish_help( hlpr );
+  {
+    std::stringstream ss;
+    hlpr.write( ss );
+    BOOST_CHECK( ss.str().find( "object-overlap" ) < ss.str().size() );
+  }
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"object-overlap\"\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+BOOST_REQUIRE_EQUAL( mngr->size(), 1ul );
+BOOST_CHECK_EQUAL( mngr->get_evaluators()[ 0 ].type_label(), "object-overlap" );
+
+std::string canon( "evaluator\ntype object-overlap\nend\n" );
+
+core::input_document wrtr( 1ul );
+mngr->write_document( wrtr );
+std::stringstream idoc;
+wrtr.write( idoc );
+const std::string sdoc( idoc.str() );
+BOOST_CHECK_LE( sdoc.find( canon ), sdoc.size() );
 !!!1394352.cpp!!!	localizer_lifetime_tests() : void
 {
   //  Constructor tests
@@ -1543,6 +1795,101 @@ evaluator::evaluator_manager eman;
     eval_ptr->compute_potential( pman, gman, move );
     BOOST_REQUIRE( move.fail() );
   }
+}
+!!!1408688.cpp!!!	evaluator_meta_localizer_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::localizer::add_definition( *m );
+
+  core::input_help hlpr;
+  m->publish_help( hlpr );
+  {
+    std::stringstream ss;
+    hlpr.write( ss );
+    BOOST_CHECK( ss.str().find( "localize" ) < ss.str().size() );
+    BOOST_CHECK( ss.str().find( "mobk" ) < ss.str().size() );
+  }
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"localize\"\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+BOOST_REQUIRE_EQUAL( mngr->size(), 1ul );
+BOOST_CHECK_EQUAL( mngr->get_evaluators()[ 0 ].type_label(), "localize" );
+
+std::string canon( "evaluator\nmobk 4.500000\ntype localize\nend\n" );
+
+core::input_document wrtr( 1ul );
+mngr->write_document( wrtr );
+std::stringstream idoc;
+wrtr.write( idoc );
+const std::string sdoc( idoc.str() );
+BOOST_CHECK_LE( sdoc.find( canon ), sdoc.size() );
+
+!!!1408944.cpp!!!	input_localizer_no_mobk_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::localizer::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"localize\"\nmobk #one\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "localize \"mobk\" parameter requires a value." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1401776.cpp!!!	input_localizer_bad_mobk_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::localizer::add_definition( *m );
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"localize\"\nmobk one\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "localize \"mobk\" parameter value (one) is not a number" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
 }
 !!!1424176.cpp!!!	lennard_jones_lifetime_tests() : void
 {
@@ -2345,6 +2692,405 @@ double expected_value = 0.0;
   BOOST_CHECK_CLOSE( energy, expected_value, 0.000001 );
 }
 
+!!!1425840.cpp!!!	evaluator_meta_lennard_jones_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::lennard_jones::add_definition( *m );
+
+  core::input_help hlpr;
+  m->publish_help( hlpr );
+  {
+    std::stringstream ss;
+    hlpr.write( ss );
+    BOOST_CHECK( ss.str().find( "lennard-jones" ) < ss.str().size() );
+    BOOST_CHECK( ss.str().find( "epsilon" ) < ss.str().size() );
+    BOOST_CHECK( ss.str().find( "sigma" ) < ss.str().size() );
+  }
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 0.5 Cl 0.3\nsigma \"Na\" 2.0 Cl 3.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+
+BOOST_REQUIRE_EQUAL( mngr->size(), 1ul );
+BOOST_CHECK_EQUAL( mngr->get_evaluators()[ 0 ].type_label(), "lennard-jones" );
+
+std::string canon( "evaluator\nepsilon Cl 0.3 Na 0.5\nsigma Cl 3 Na 2\ntype lennard-jones\nend\n" );
+
+core::input_document wrtr( 1ul );
+mngr->write_document( wrtr );
+std::stringstream idoc;
+wrtr.write( idoc );
+const std::string sdoc( idoc.str() );
+// std::cout << sdoc << "\n";
+BOOST_CHECK_LE( sdoc.find( canon ), sdoc.size() );
+
+!!!1425968.cpp!!!	input_lennard_jones_unknown_parameter_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::lennard_jones::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 0.5 Cl 0.3\nmobk \"Na\" 2.0 Cl 3.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"mobk\" is not valid in a evaluator \"lennard-jones\" type section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1426096.cpp!!!	input_lennard_jones_different_size_list_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::lennard_jones::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 1.0 #Cl 1.0\nsigma \"Na\" 1.0 Cl 1.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"epsilon\" value (Na 1.0) has a different size list to parameter \"sigma\" value (\"Na\" 1.0 Cl 1.0) in a evaluator section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1426224.cpp!!!	input_lennard_jones_no_epsilon_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::lennard_jones::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"lennard-jones\"\n#epsilon Na 1.0 Cl 1.0\nsigma \"Na\" 1.0 Cl 1.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Required parameter \"epsilon\" was not found in a evaluator section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1426352.cpp!!!	input_lennard_jones_no_sigma_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::lennard_jones::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 1.0 Cl 1.0\n#sigma \"Na\" 1.0 Cl 1.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Required parameter \"sigma\" was not found in a evaluator section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1426480.cpp!!!	input_lennard_jones_different_species_in_list_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::lennard_jones::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 1.0 Cl 1.0\nsigma \"Ca\" 1.0 Cl 1.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"epsilon\" value (Na 1.0 Cl 1.0) has a different specie labels in the list to parameter \"sigma\" value (\"Ca\" 1.0 Cl 1.0) in a evaluator section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1426608.cpp!!!	input_lennard_jones_different_species_to_pman_test() : void
+// Build basic system.
+particle::particle_manager pman;
+{
+  particle::specie spc1;
+  spc1.set_label( "Na" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( 1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 1.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 0.0, 1.0, 1.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 0.0, 1.0 ) );
+  pman.add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "Cl" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.2 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.3123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 1.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 0.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 1.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 1.0, 1.0 ) );
+  pman.add_specie( spc1 );
+}
+pman.add_predefined_particles();
+BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
+BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
+
+boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+geometry::geometry_manager gman( sys_rgn );
+
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::lennard_jones::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Ca 1.0 Cl 1.0\nsigma \"Ca\" 1.0 Cl 1.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+try
+{
+  mngr->prepare( pman, gman );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Missing epsilon and sigma values for \"Na\" specie in Lennard-Jones potential evaluator." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1426736.cpp!!!	input_lennard_jones_extra_species_to_pman_test() : void
+// Build basic system.
+particle::particle_manager pman;
+{
+  particle::specie spc1;
+  spc1.set_label( "Na" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( 1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 1.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 0.0, 1.0, 1.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 0.0, 1.0 ) );
+  pman.add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "Cl" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.2 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.3123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 1.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 0.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 1.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 1.0, 1.0 ) );
+  pman.add_specie( spc1 );
+}
+pman.add_predefined_particles();
+BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
+BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
+
+boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+geometry::geometry_manager gman( sys_rgn );
+
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::lennard_jones::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 1.0 Ca 1.0 Cl 1.0\nsigma \"Ca\" 1.0 \"Na\" 1.0 Cl 1.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+try
+{
+  mngr->prepare( pman, gman );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Less species than epsilon and sigma values in Lennard-Jones potential evaluator." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!1424816.cpp!!!	input_lennard_jones_missing_species_to_pman_test() : void
+// Build basic system.
+particle::particle_manager pman;
+{
+  particle::specie spc1;
+  spc1.set_label( "Na" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.12 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( 1.0 );
+  spc1.set_excess_potential( 0.123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 1.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 0.0, 1.0, 1.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 0.0, 1.0 ) );
+  pman.add_specie( spc1 );
+}
+{
+  particle::specie spc1;
+  spc1.set_label( "Cl" );
+  spc1.set_concentration( 1.0 );
+  spc1.set_radius( 0.2 );
+  spc1.set_rate( 0.1 );
+  spc1.set_valency( -1.0 );
+  spc1.set_excess_potential( 0.3123 );
+  spc1.set_type( particle::specie::SOLUTE );
+  spc1.append_position( particle::coordinate( 0.0, 1.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 0.0, 0.0 ) );
+  spc1.append_position( particle::coordinate( 0.0, 0.0, 1.0 ) );
+  spc1.append_position( particle::coordinate( 1.0, 1.0, 1.0 ) );
+  pman.add_specie( spc1 );
+}
+pman.add_predefined_particles();
+BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
+BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
+
+boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+geometry::geometry_manager gman( sys_rgn );
+
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::lennard_jones::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Cl 1.0\nsigma Cl 1.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
+try
+{
+  mngr->prepare( pman, gman );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "More species than epsilon and sigma values in Lennard-Jones potential evaluator." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
 !!!359216.cpp!!!	arc_integrator_lifetime_test() : void
 {
   //  Constructor tests virtual with default ctor.
@@ -3350,679 +4096,3 @@ std::stringstream store;
 //XX//XX        BOOST_CHECK_CLOSE_FRACTION( area, 2*core::constants::pi()*40.0*10, 0.0001 );
 //XX//XX     }
 //XX//XX  }
-!!!1369520.cpp!!!	evaluator_meta_lifetime_test() : void
-{
-  //  Constructor tests
-  BOOST_CHECK( not std::is_default_constructible< evaluator::evaluator_meta >::type {} );
-  BOOST_CHECK( not std::is_copy_constructible< evaluator::evaluator_meta >::type {} );
-  BOOST_CHECK( not std::is_move_constructible< evaluator::evaluator_meta >::type {} );
-  BOOST_CHECK( ( not std::is_assignable< evaluator::evaluator_meta, evaluator::evaluator_meta >::type {} ) );
-  BOOST_CHECK( std::has_virtual_destructor< evaluator::evaluator_meta >::type {} );
-}
-const std::string meta_label( "evaluator" );
-{
-  boost::shared_ptr< evaluator::evaluator_manager > eman( new evaluator::evaluator_manager{} );
-  evaluator::evaluator_meta meta( eman );
-  BOOST_CHECK_EQUAL( meta.required(), true );
-  BOOST_CHECK_EQUAL( meta.multiple(), true );
-  BOOST_CHECK_EQUAL( meta.section_label(), core::strngs::evaluator_label() );
-  BOOST_CHECK_EQUAL( meta.size(), 0 );
-  BOOST_CHECK( meta.empty() );
-
-  meta.add_definition( std::unique_ptr< evaluator::evaluator_definition >( new evaluator::evaluator_definition( "coloumb", "blah blab blech.", [](std::map<std::string, std::string>)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; }) ) );
-  
-  BOOST_CHECK_EQUAL( meta.size(), 1 );
-  BOOST_CHECK( not meta.empty() );
-  BOOST_CHECK( meta.has_definition( "coloumb" ) );
-
-}
-
-!!!1401520.cpp!!!	evaluator_meta_coulomb_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::coulomb::add_definition( *m );
-
-  core::input_help hlpr;
-  m->publish_help( hlpr );
-  {
-    std::stringstream ss;
-    hlpr.write( ss );
-    BOOST_CHECK( ss.str().find( "coulomb" ) < ss.str().size() );
-  }
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"coulomb\"\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-
-BOOST_REQUIRE_EQUAL( mngr->size(), 1ul );
-BOOST_CHECK_EQUAL( mngr->get_evaluators()[ 0 ].type_label(), "coulomb" );
-
-std::string canon( "evaluator\ntype coulomb\nend\n" );
-
-core::input_document wrtr( 1ul );
-mngr->write_document( wrtr );
-std::stringstream idoc;
-wrtr.write( idoc );
-const std::string sdoc( idoc.str() );
-BOOST_CHECK_LE( sdoc.find( canon ), sdoc.size() );
-!!!1409072.cpp!!!	input_unknown_parameter_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::coulomb::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype coulomb\nmobk 4.5\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( std::runtime_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Parameter \"mobk\" is not valid in a evaluator \"coulomb\" type section." ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1408432.cpp!!!	input_no_type_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::coulomb::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( std::runtime_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Required parameter \"type\" was not found in a evaluator section." ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1408560.cpp!!!	input_type_no_value_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::coulomb::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype #localizer\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( std::runtime_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Parameter \"type\" requires a value in a evaluator section." ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1401904.cpp!!!	input_type_bad_value_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::coulomb::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype localizer\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( std::runtime_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Parameter \"type\" value (localizer) does not name a valid evaluator subtype (see documentation)." ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1408688.cpp!!!	evaluator_meta_localizer_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::localizer::add_definition( *m );
-
-  core::input_help hlpr;
-  m->publish_help( hlpr );
-  {
-    std::stringstream ss;
-    hlpr.write( ss );
-    BOOST_CHECK( ss.str().find( "localize" ) < ss.str().size() );
-    BOOST_CHECK( ss.str().find( "mobk" ) < ss.str().size() );
-  }
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"localize\"\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-
-BOOST_REQUIRE_EQUAL( mngr->size(), 1ul );
-BOOST_CHECK_EQUAL( mngr->get_evaluators()[ 0 ].type_label(), "localize" );
-
-std::string canon( "evaluator\nmobk 4.500000\ntype localize\nend\n" );
-
-core::input_document wrtr( 1ul );
-mngr->write_document( wrtr );
-std::stringstream idoc;
-wrtr.write( idoc );
-const std::string sdoc( idoc.str() );
-BOOST_CHECK_LE( sdoc.find( canon ), sdoc.size() );
-
-!!!1408944.cpp!!!	input_localizer_no_mobk_value_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::localizer::add_definition( *m );
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"localize\"\nmobk #one\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( std::runtime_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "localize \"mobk\" parameter requires a value." ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1401776.cpp!!!	input_localizer_bad_mobk_value_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::localizer::add_definition( *m );
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"localize\"\nmobk one\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( std::runtime_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "localize \"mobk\" parameter value (one) is not a number" ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1425840.cpp!!!	evaluator_meta_lennard_jones_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  core::input_help hlpr;
-  m->publish_help( hlpr );
-  {
-    std::stringstream ss;
-    hlpr.write( ss );
-    BOOST_CHECK( ss.str().find( "lennard-jones" ) < ss.str().size() );
-    BOOST_CHECK( ss.str().find( "epsilon" ) < ss.str().size() );
-    BOOST_CHECK( ss.str().find( "sigma" ) < ss.str().size() );
-  }
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 0.5 Cl 0.3\nsigma \"Na\" 2.0 Cl 3.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-
-BOOST_REQUIRE_EQUAL( mngr->size(), 1ul );
-BOOST_CHECK_EQUAL( mngr->get_evaluators()[ 0 ].type_label(), "lennard-jones" );
-
-std::string canon( "evaluator\nepsilon Cl 0.3 Na 0.5\nsigma Cl 3 Na 2\ntype lennard-jones\nend\n" );
-
-core::input_document wrtr( 1ul );
-mngr->write_document( wrtr );
-std::stringstream idoc;
-wrtr.write( idoc );
-const std::string sdoc( idoc.str() );
-// std::cout << sdoc << "\n";
-BOOST_CHECK_LE( sdoc.find( canon ), sdoc.size() );
-
-!!!1425968.cpp!!!	input_lennard_jones_unknown_parameter_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 0.5 Cl 0.3\nmobk \"Na\" 2.0 Cl 3.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( std::runtime_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Parameter \"mobk\" is not valid in a evaluator \"lennard-jones\" type section." ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1426096.cpp!!!	input_lennard_jones_different_size_list_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 1.0 #Cl 1.0\nsigma \"Na\" 1.0 Cl 1.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( std::runtime_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Parameter \"epsilon\" value (Na 1.0) has a different size list to parameter \"sigma\" value (\"Na\" 1.0 Cl 1.0) in a evaluator section." ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1426224.cpp!!!	input_lennard_jones_no_epsilon_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\n#epsilon Na 1.0 Cl 1.0\nsigma \"Na\" 1.0 Cl 1.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( std::runtime_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Required parameter \"epsilon\" was not found in a evaluator section." ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1426352.cpp!!!	input_lennard_jones_no_sigma_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 1.0 Cl 1.0\n#sigma \"Na\" 1.0 Cl 1.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( std::runtime_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Required parameter \"sigma\" was not found in a evaluator section." ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1426480.cpp!!!	input_lennard_jones_different_species_in_list_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 1.0 Cl 1.0\nsigma \"Ca\" 1.0 Cl 1.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( std::runtime_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Parameter \"epsilon\" value (Na 1.0 Cl 1.0) has a different specie labels in the list to parameter \"sigma\" value (\"Ca\" 1.0 Cl 1.0) in a evaluator section." ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1426608.cpp!!!	input_lennard_jones_different_species_to_pman_test() : void
-// Build basic system.
-particle::particle_manager pman;
-{
-  particle::specie spc1;
-  spc1.set_label( "Na" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.12 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( 1.0 );
-  spc1.set_excess_potential( 0.123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
-  spc1.append_position( particle::coordinate( 1.0, 1.0, 0.0 ) );
-  spc1.append_position( particle::coordinate( 0.0, 1.0, 1.0 ) );
-  spc1.append_position( particle::coordinate( 1.0, 0.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-{
-  particle::specie spc1;
-  spc1.set_label( "Cl" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.2 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( -1.0 );
-  spc1.set_excess_potential( 0.3123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( particle::coordinate( 0.0, 1.0, 0.0 ) );
-  spc1.append_position( particle::coordinate( 1.0, 0.0, 0.0 ) );
-  spc1.append_position( particle::coordinate( 0.0, 0.0, 1.0 ) );
-  spc1.append_position( particle::coordinate( 1.0, 1.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-pman.add_predefined_particles();
-BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
-BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
-
-boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
-geometry::geometry_manager gman( sys_rgn );
-
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Ca 1.0 Cl 1.0\nsigma \"Ca\" 1.0 Cl 1.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-try
-{
-  mngr->prepare( pman, gman );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( std::runtime_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Missing epsilon and sigma values for \"Na\" specie in Lennard-Jones potential evaluator." ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1426736.cpp!!!	input_lennard_jones_extra_species_to_pman_test() : void
-// Build basic system.
-particle::particle_manager pman;
-{
-  particle::specie spc1;
-  spc1.set_label( "Na" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.12 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( 1.0 );
-  spc1.set_excess_potential( 0.123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
-  spc1.append_position( particle::coordinate( 1.0, 1.0, 0.0 ) );
-  spc1.append_position( particle::coordinate( 0.0, 1.0, 1.0 ) );
-  spc1.append_position( particle::coordinate( 1.0, 0.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-{
-  particle::specie spc1;
-  spc1.set_label( "Cl" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.2 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( -1.0 );
-  spc1.set_excess_potential( 0.3123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( particle::coordinate( 0.0, 1.0, 0.0 ) );
-  spc1.append_position( particle::coordinate( 1.0, 0.0, 0.0 ) );
-  spc1.append_position( particle::coordinate( 0.0, 0.0, 1.0 ) );
-  spc1.append_position( particle::coordinate( 1.0, 1.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-pman.add_predefined_particles();
-BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
-BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
-
-boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
-geometry::geometry_manager gman( sys_rgn );
-
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 1.0 Ca 1.0 Cl 1.0\nsigma \"Ca\" 1.0 \"Na\" 1.0 Cl 1.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-try
-{
-  mngr->prepare( pman, gman );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( std::runtime_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Less species than epsilon and sigma values in Lennard-Jones potential evaluator." ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1424816.cpp!!!	input_lennard_jones_missing_species_to_pman_test() : void
-// Build basic system.
-particle::particle_manager pman;
-{
-  particle::specie spc1;
-  spc1.set_label( "Na" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.12 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( 1.0 );
-  spc1.set_excess_potential( 0.123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
-  spc1.append_position( particle::coordinate( 1.0, 1.0, 0.0 ) );
-  spc1.append_position( particle::coordinate( 0.0, 1.0, 1.0 ) );
-  spc1.append_position( particle::coordinate( 1.0, 0.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-{
-  particle::specie spc1;
-  spc1.set_label( "Cl" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.2 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( -1.0 );
-  spc1.set_excess_potential( 0.3123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( particle::coordinate( 0.0, 1.0, 0.0 ) );
-  spc1.append_position( particle::coordinate( 1.0, 0.0, 0.0 ) );
-  spc1.append_position( particle::coordinate( 0.0, 0.0, 1.0 ) );
-  spc1.append_position( particle::coordinate( 1.0, 1.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-pman.add_predefined_particles();
-BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
-BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
-
-boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
-geometry::geometry_manager gman( sys_rgn );
-
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Cl 1.0\nsigma Cl 1.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-try
-{
-  mngr->prepare( pman, gman );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( std::runtime_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "More species than epsilon and sigma values in Lennard-Jones potential evaluator." ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
