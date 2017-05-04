@@ -1,55 +1,62 @@
-class igcmc
-!!!488881.cpp!!!	description(inout os : ostream) : void
+class imc_simulation
+!!!488881.cpp!!!	do_description(inout os : ostream) : void
+os << " Iterative Monte Carlo Simulation.\n"; 
 os << " - Number of repeats : " << this->super_loop_size_ << "\n"; 
 os << " - Current loop*     : " << this->super_loop_count_ + 1 << "\n"; 
 os << " (*Will be one except after restart.)\n";
-!!!488881.python!!!	description(inout os : ostream) : void
+this->updater_->description( os );
+!!!488881.python!!!	do_description(inout os : ostream) : void
 print >>os, " - Number of repeats : ", self.super_loop_size_ 
 print >>os, " - Current loop*     : ", self.super_loop_count_ + 1 
 print >>os, " (*Will be one except after restart.)"
-!!!458033.cpp!!!	on_super_loop(inout sys : simulator, inout out : ostream) : void
-++this->super_loop_count_;
-// Save existing chemical potentials.
-std::vector< double > old_cpx_list;
-for (auto const& spc : sys.get_species() )
+!!!457265.cpp!!!	prepare(inout sim : simulator) : void
+this->updater_->prepare( sim );
+!!!457265.python!!!	prepare(inout sim : simulator) : void
+# Set up chemex estimator
+from estimater import estimater
+self.chem_potential_ = []
+for i in range( sim.specie_count() ):
+  self.chem_potential_.append( estimater() )
+!!!2105776.cpp!!!	do_write_part_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label() );
+wr[ ix ].add_entry( core::strngs::fsnstp(), this->super_loop_size_);
+this->updater_->do_write_part_document( wr, ix );
+!!!458033.cpp!!!	run(inout sim : simulation, inout oslog : ostream) : bool
+// do thermalization
+oslog << "\n -----------------------";
+oslog << "\n Start of Thermalisation";
+oslog << "\n -----------------------\n\n";
+// This should recursively call out prepare method.
+sim.prepare();
+sim.run_loop( this->equilibration_interval() );
+oslog << "\n ---------------------";
+oslog << "\n End of Thermalisation";
+oslog << "\n ---------------------\n\n";
+
+// Perform iterations on thermalised simulation.
+for( ; this->super_loop_count_ < this->super_loop_size_; ++this->super_loop_count_)
 {
-  old_cpx_list.push_back(spc.excess_potential());
+  // do main simulation
+  oslog << "\n ---------------------------";
+  oslog << "\n Start of Iteration [" << (this->super_loop_count_ + 1) << "]\n";
+  oslog << "\n ---------------------------\n\n";
+  // This should recursively call out prepare method.
+  sim.prepare();
+  sim.run_loop( this->production_interval() );
+  oslog << "\n -------------------------";
+  oslog << "\n Update [" << (this->super_loop_count_ + 1) << "]\n";
+  oslog << "\n -------------------------\n\n";
+
+  // Perform iteration update
+  this->updater_->update( sim, oslog );
+  oslog << "\n -------------------------";
+  oslog << "\n End of Iteration [" << (this->super_loop_count_ + 1) << "]\n";
+  oslog << "\n -------------------------\n\n";
+
 }
 
-// Call derived class to update excess potentials
-this->do_on_super_loop(sys);
-
-this->write_output( sys );
-// Report chemical potentials
-bool first = true;
-boost::format fmt_head (" %3s %8s %8s %8s\n");
-boost::format fmt_row (" %3s %8.4f %8.4f %8.4f\n");
-for (std::size_t ispec = 0; ispec != sys.specie_count(); ++ispec)
-{
-  auto const& spcobj = sys.get_specie(ispec);
-  // only solute species have interesting chemical potentials
-  //if (spcobj.is_solute())
-  //{
-    if (first)
-    {
-      first = false;
-      out << core::strngs::horizontal_bar() << "\n";
-      out << " CHEMICAL POTENTIAL ESTIMATE [" << this->super_loop_count_ << "]\n";
-      out << boost::format(fmt_head) % "SPC" % "CHEM EX" % "DLTA_CPX" % "<CPX>";
-      out << core::strngs::horizontal_bar() << "\n";
-    }
-    out << boost::format(fmt_row) % spcobj.label() % spcobj.excess_potential()
-        % (spcobj.excess_potential() - old_cpx_list[ispec]) % this->chem_potential_[ispec].mean();
-    this->chem_potential_[ispec].append(spcobj.excess_potential());
-  //}
-}
-// Output horizontal bar only if at least
-// one chemical potential was changed.
-if (not first)
-{
-  out << core::strngs::horizontal_bar() << "\n";
-}
-!!!458033.python!!!	on_super_loop(inout sys : simulator, inout out : ostream) : void
+return true;
+!!!458033.python!!!	run(inout sim : simulation, inout oslog : ostream) : bool
 self.super_loop_count_ += 1
 old_cpx_list = [ v.excess_potential() for v in sys.get_species() ]
 
@@ -66,59 +73,40 @@ with open("chex.dat","a") as f:
     print >>f, fmt_row % (spc.label(),spc.excess_potential(),(spc.excess_potential()-old_cpx),mean.mean()),
     mean.append(spc.excess_potential())
   print >>f,""
-!!!457265.cpp!!!	prepare(inout sim : simulator) : void
-this->chem_potential_.clear();
-this->chem_potential_.resize( sim.specie_count() );
-this->do_prepare( sim );
-!!!457265.python!!!	prepare(inout sim : simulator) : void
-# Set up chemex estimator
-from estimater import estimater
-self.chem_potential_ = []
-for i in range( sim.specie_count() ):
-  self.chem_potential_.append( estimater() )
-!!!542897.cpp!!!	charge_correction_factor(in sim : simulator) : double
-//namespace cc = core::constants;
-//static const double csloth { ( 6*std::log( 2 + std::sqrt(3.0)) - cc::pi() )
-//  / (16 * cc::pi() * cc::eps0() * cc.dsi() ) };
-return 0.0;
-// csloth * sim.beta() * std::cbrt(sim.volume());
-//    chisp=-xz(ispec)*avchg*chcons
-!!!595249.python!!!	__init__(inout self : , in sim : simulator)
-sim.add_observable(self)
-!!!215728.cpp!!!	write_document(inout wr : input_document) : void
-std::size_t ix = wr.add_section( core::strngs::imc_label() );
-wr[ ix ].add_entry( core::strngs::fsnstp(), this->super_loop_size_);
-this->do_write_document( wr, ix );
-!!!591920.cpp!!!	write_output(inout sim : simulator) : void
-const std::string filename { "igcmc.dat" };
+!!!2098992.cpp!!!	add_definition(inout meta : simulator_meta) : void
+std::string desc( "Iterative Monte Carlo simulation. This runs a single equilibration phase then multiple production phases." );
+std::unique_ptr< simulation_definition > result( new simulation_definition( type_label_(), desc, &imc_simulation::make_simulation_manager ) );
+// extra parameters
+std::stringstream labels;
+labels << "(";
+labels <<  malasics_igcmc::add_to_definition( *result );
+labels << "|";
+labels << lamperski_igcmc::add_to_definition( *result );
+labels << ")";
+result->add_definition( { "update", "label", labels.str(), "None", "The type of iterative simulation to perform." } );
 
-const std::size_t loopindex { this->super_loop_count_ };
-
-core::output_series dset { sim.run_uuid() };
-dset.set_title( "Series of chemical potential estimates" );
-
-dset.push_back_entry( core::output_field( "INDEX", "ORDINAL", [loopindex](std::ostream& os, std::size_t)
+meta.add_type( result );
+!!!2098864.cpp!!!	make_simulation_manager(in params : string) : simulation_manager
+UTILITY_CHECK( not params.empty(), "IMC simulation manager requires parameters." );
+UTILITY_INPUT( params.find( "update" ) != params.end(), "Iterative Monte Carlo simulation requires parameter \"update\".", "simulation_manager", nullptr );
+std::unique_ptr< imc_simulation > result{ new imc_simulation };
+// if( params.find( "update" ) != params.end() )
 {
-   os << loopindex;
-} ) );
-
-for (std::size_t ispec = 0; ispec != this->chem_potential_.size(); ++ispec)
-{
-   auto const& spc = sim.get_specie( ispec );
-   auto const& estmt = this->chem_potential_[ ispec ];
-   dset.push_back_entry( core::output_field( spc.label() + "_CURRENT" , "COUNT", [&spc](std::ostream& os, std::size_t)
-   {
-      os << spc.excess_potential();
-   } ) );
-   dset.push_back_entry( core::output_field( spc.label() + "_MEAN" , "COUNT", [&estmt](std::ostream& os, std::size_t)
-   {
-      os << estmt.mean();
-   } ) );
-   dset.push_back_entry( core::output_field( spc.label() + "_VAR" , "COUNT", [&estmt](std::ostream& os, std::size_t)
-   {
-      os << estmt.variance();
-   } ) );
+  // -------------------
+  const std::string label{ params.at( "update" ) };
+  UTILITY_INPUT( not label.empty(), "Iterative Monte Carlo parameter \"update\" requires a value.", "simulation_manager", nullptr );
+  if( 0 == malasics_igcmc::type_label_().find( label ) )
+  {
+    result->updater_ = malasics_igcmc::make_updater( params );
+  }
+  else if ( 0 == lamperski_igcmc::type_label_().find( label ) )
+  {
+    result->updater_ = lamperski_igcmc::make_updater( params );
+  }
+  else
+  {
+    const bool known_label{ false };
+    UTILITY_INPUT( known_label, "Iterative Monte Carlo parameter \"update\" value \""+label+"\" is not a known updater type.", "simulation_manager", nullptr );
+  }
 }
-
-dset.write( filename, sim.get_reporter().get_sink(), 1 == loopindex );
-
+return boost::shared_ptr< simulation_manager >( result.release() );

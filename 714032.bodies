@@ -1,0 +1,52 @@
+class sim_manager_test
+!!!2116016.cpp!!!	canon_input() : string
+const std::string result( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n\nrun\ntype standard\noutputdir \"\%1$04d\"\nend\n\nevaluator\ntype coulomb\nend\n\nsampler\ntype specie-count\nend\n\nsampler\ntype metropolis\nend\n\nsampler\ntype widom\niwidom 10\nend\n\nregion\ntype cube\nname centre\nwidth 5\norigin 2.5 2.5 2.5\nend\n\nspecie\nname Na\nz 1\nd 1.01\nctarg 0.1\nend\n\nspecie\nname Cl\nz -1\nd 1.78\nctarg 0.1\nend\n\ntrial\nrate 0.5\ntype move\ndelta 1.0\nend\n\ntrial\nrate 0.5\ntype jump\nend\n\n" );
+return result;
+!!!2119856.cpp!!!	standard_simulation_lifetime_test() : void
+{
+  // Test for virtual object pattern
+  BOOST_CHECK( not std::is_default_constructible< platform::simulation_manager >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< platform::simulation_manager >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< platform::simulation_manager >::type {} );
+  BOOST_CHECK( not ( std::is_assignable< platform::simulation_manager, platform::simulation_manager >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< platform::simulation_manager >::type {} );
+}
+{
+  // Test for virtual object pattern
+  BOOST_CHECK( std::is_default_constructible< platform::standard_simulation >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< platform::standard_simulation >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< platform::standard_simulation >::type {} );
+  BOOST_CHECK( not ( std::is_assignable< platform::standard_simulation, platform::standard_simulation >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< platform::standard_simulation >::type {} );
+}
+{
+  boost::shared_ptr< platform::standard_simulation > var( new platform::standard_simulation );
+  BOOST_CHECK_EQUAL( var->equilibration_interval(), 0ul );
+  BOOST_CHECK_EQUAL( var->production_interval(), 0ul );
+}
+!!!2119984.cpp!!!	simulation_manager_methods_test() : void
+std::stringstream store;
+{
+  boost::shared_ptr< platform::standard_simulation > var( new platform::standard_simulation );
+  BOOST_CHECK_EQUAL( var->equilibration_interval(), 0ul );
+  BOOST_CHECK_EQUAL( var->production_interval(), 0ul );
+
+  var->set_equilibration_interval( 100ul );
+  var->set_production_interval( 1000ul );
+
+  BOOST_CHECK_EQUAL( var->equilibration_interval(), 100ul );
+  BOOST_CHECK_EQUAL( var->production_interval(), 1000ul );
+
+  // write class instance to archive
+  boost::archive::text_oarchive oa( store );
+  oa << var;
+}
+{
+  boost::shared_ptr< platform::standard_simulation > var2;
+  // read class instance from archive
+  boost::archive::text_iarchive ia( store );
+  ia >> var2;
+
+  BOOST_CHECK_EQUAL( var2->equilibration_interval(), 100ul );
+  BOOST_CHECK_EQUAL( var2->production_interval(), 1000ul );
+}

@@ -8,7 +8,6 @@ os << "   Attila Malasics, Dirk Gillespie and Dezso¨ Boda \"Simulating\n";
 os << "   prescribed particle densities in the grand canonical\n";
 os << "   ensemble using iterative algorithms\", The Journal of Chemical\n";
 os << "   Physics, 2008, 128, 124102\n";
-this->igcmc::description(os);
 !!!488241.python!!!	description(inout os : ostream) : void
 print >>os, "[observable]",self.type_label()
 print >>os, " Iteratively estimate the excess chemical potential"
@@ -21,27 +20,31 @@ super( malasics_igcmc, self ).description( os )
 pass
 
 
-!!!458801.cpp!!!	do_on_super_loop(inout sys : simulator) : void
+!!!458801.cpp!!!	do_update(inout sys : simulation, inout oslog : ostream) : void
+// Malasics
+//   Update with  mu_ex = (mu_ideal - mu_ex) - log(<dens>)
+//
 // Get mean concentration from specie_count sampler.
 //
 // NOTE: we could use specie_count::type_label_()
-boost::any means_any = sys.get_reporter().get_sample("specie-count")->get_value();
+boost::any means_any = sys.report().get_sample("specie-count")->get_value();
 std::vector< utility::estimater > const& means = *(boost::any_cast< std::vector< utility::estimater > const* >(means_any));
-
-for (size_t ispec = 0; ispec != sys.specie_count(); ++ispec)
+particle::particle_manager& pman = sys.particles();
+auto const& sysreg = sys.regions().system_region();
+for (size_t ispec = 0; ispec != pman.specie_count(); ++ispec)
 {
-  particle::specie & spcobj = sys.get_specie(ispec);
+  particle::specie & spcobj = pman.get_specie(ispec);
   // only solute species have interesting chemical potentials
-  //if (spcobj.is_solute())
-  //{
-    double bulk_density = means[ispec].mean()/sys.volume(ispec);
+  if (spcobj.is_solute())
+  {
+    double bulk_density = means[ispec].mean()/sysreg.volume( spcobj.radius() );
     if (not utility::feq(bulk_density,0.0))
     {
       spcobj.set_excess_potential(spcobj.chemical_potential() - std::log(bulk_density));
     }
-  //}
+  }
 } 
-!!!458801.python!!!	do_on_super_loop(inout sys : simulator) : void
+!!!458801.python!!!	do_update(inout sys : simulation, inout oslog : ostream) : void
 import math
 for ispec, (mean, spc) in enumerate(zip(self.bulk_count_,sys.get_species())):
   bulk_density = mean/sys.get_cell_region().volume(ispec)
@@ -49,31 +52,6 @@ for ispec, (mean, spc) in enumerate(zip(self.bulk_count_,sys.get_species())):
     # ignore species with zero average density
     spc.set_excess_potential( spc.chemical_potential() - math.log(bulk_density) )
 
-!!!459441.cpp!!!	make_super_looper(in params : string, inout sim : simulator) : void
-// Only generate for bulk simulations
-std::unique_ptr< malasics_igcmc > smplr(new malasics_igcmc);
-// Check parameters for usable values
-if (not params.empty())
-{
-  size_t count = 0;
-  if (params.end() != params.find (core::strngs::fsnstp()))
-  {
-    smplr->set_loop_size(boost::lexical_cast< std::size_t >(params.at(core::strngs::fsnstp())));
-    ++count;
-  }
-  UTILITY_INPUT(params.size() == count,
-                "Unused parameter for sampler type ["+malasics_igcmc::type_label_()+"]",
-                core::strngs::sampler_label (), nullptr);
-}
-boost::shared_ptr< periodic_cube::igcmc > result( smplr.release() );
-dynamic_cast< periodic_cube::periodic_system& >( sim ).set_super_looper( result );
-!!!595633.python!!!	__init__(inout self : , in sim : simulator)
-open("chex.dat","w").truncate()
-!!!595505.python!!!	__del__(in self : )
-if self.specie_count_conx_ != None and self.specie_count_conx_.connected():
-  self.specie_count_conx_.disconnect()
-  self.specie_count_conx_ = None
-pass
 !!!457521.python!!!	do_prepare(inout sim : simulator) : void
 super( malasics_igcmc, self ).prepare( sim )
 # Set up signal/slot to set specie means list
@@ -81,5 +59,10 @@ if self.specie_count_conx_ == None or not self.specie_count_conx_.connected():
   sig = sim.get_signal("specie-count")
   self.specie_count_conx_ = sig.connect(lambda *args: self.on_specie_count_signal(*args))
 pass
-!!!217776.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
-wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
+!!!217776.cpp!!!	do_write_part_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( "update", this->type_label_() );
+!!!2112688.cpp!!!	add_to_definition(inout defn : simulation_definition) : string
+return type_label_();
+!!!2112560.cpp!!!	make_updater(in params : string) : imc_update
+UTILITY_CHECK( not params.empty(), "Malasics Iterative Monte Carlo updater requires no parameters." );
+return boost::shared_ptr< imc_update >{ new malasics_igcmc };
