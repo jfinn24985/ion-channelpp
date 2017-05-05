@@ -1,14 +1,68 @@
 class imc_simulation
+!!!2098992.cpp!!!	add_definition(inout meta : simulator_meta) : void
+std::string desc( "Iterative Monte Carlo simulation. This runs a single equilibration phase then multiple production phases." );
+std::unique_ptr< simulation_definition > result( new simulation_definition( type_label_(), desc, &imc_simulation::make_simulation_manager ) );
+// extra parameters
+std::stringstream labels;
+labels << "(";
+labels <<  malasics_igcmc::add_to_definition( *result );
+labels << "|";
+labels << lamperski_igcmc::add_to_definition( *result );
+labels << ")";
+result->add_definition( { "update", "label", labels.str(), "None", "The type of iterative simulation to perform." } );
+result->add_definition( { "niter", "number", ">1", "100", "The number of iterations to perform in a iterative simulation." } );
+
+meta.add_type( result );
 !!!488881.cpp!!!	do_description(inout os : ostream) : void
 os << " Iterative Monte Carlo Simulation.\n"; 
-os << " - Number of repeats : " << this->super_loop_size_ << "\n"; 
-os << " - Current loop*     : " << this->super_loop_count_ + 1 << "\n"; 
-os << " (*Will be one except after restart.)\n";
+os << " ---------------------------------\n"; 
 this->updater_->description( os );
+os << "    number of iterations : " << this->super_loop_size_ << "\n"; 
+os << "     current iterations* : " << this->super_loop_count_ + 1; 
+os << " (*will be 1 except after restart.)\n";
 !!!488881.python!!!	do_description(inout os : ostream) : void
 print >>os, " - Number of repeats : ", self.super_loop_size_ 
 print >>os, " - Current loop*     : ", self.super_loop_count_ + 1 
 print >>os, " (*Will be one except after restart.)"
+!!!2098864.cpp!!!	make_simulation_manager(in params : string) : simulation_manager
+UTILITY_INPUT( not params.empty(), "Iterative Monte Carlo simulation requires parameters.", core::strngs::simulator_label(), nullptr );
+UTILITY_INPUT( params.find( "update" ) != params.end(), "Iterative Monte Carlo simulation requires parameter \"update\".", core::strngs::simulator_label(), nullptr );
+std::unique_ptr< imc_simulation > result{ new imc_simulation };
+const std::string number_of_iterations_label{ "niter" };
+const std::string updater_label{ "update" };
+// make copy of params so we can remove used parameters
+std::map< std::string, std::string > subparams( params );
+
+if( subparams.find( number_of_iterations_label ) != subparams.end() )
+{
+  // -------------------
+  std::size_t niter;
+  core::input_base_reader::ordinal_input( number_of_iterations_label, subparams.at( number_of_iterations_label ), "Iterative Monte Carlo", core::strngs::simulator_label(), niter );
+  UTILITY_INPUT( niter > 1, "Iterative Monte Carlo parameter \"niter\" requires a value greater than 1.", core::strngs::simulator_label(), nullptr );
+  result->set_loop_size( niter );
+  subparams.erase( subparams.find( number_of_iterations_label ) );
+}
+// if( subparams.find( "update" ) != subparams.end() )
+{
+  // -------------------
+  const std::string label{ subparams.at( updater_label ) };
+  UTILITY_INPUT( not label.empty(), ( core::input_error_messages::missing_value() % updater_label % ("Iterative Monte Carlo " + core::strngs::simulator_label()) ).str(), core::strngs::simulator_label(), nullptr );
+  subparams.erase( subparams.find( updater_label ) );
+  if( 0 == malasics_igcmc::type_label_().find( label ) )
+  {
+    result->updater_ = malasics_igcmc::make_updater( subparams );
+  }
+  else if ( 0 == lamperski_igcmc::type_label_().find( label ) )
+  {
+    result->updater_ = lamperski_igcmc::make_updater( subparams );
+  }
+  else
+  {
+    const bool known_label{ false };
+    UTILITY_INPUT( known_label, ( core::input_error_messages::bad_value() % updater_label % label % core::strngs::simulator_label() ).str(), core::strngs::simulator_label(), nullptr );
+  }
+}
+return boost::shared_ptr< simulation_manager >( result.release() );
 !!!457265.cpp!!!	prepare(inout sim : simulator) : void
 this->updater_->prepare( sim );
 !!!457265.python!!!	prepare(inout sim : simulator) : void
@@ -17,10 +71,6 @@ from estimater import estimater
 self.chem_potential_ = []
 for i in range( sim.specie_count() ):
   self.chem_potential_.append( estimater() )
-!!!2105776.cpp!!!	do_write_part_document(inout wr : input_document, in ix : size_t) : void
-wr[ ix ].add_entry( core::strngs::fstype(), this->type_label() );
-wr[ ix ].add_entry( core::strngs::fsnstp(), this->super_loop_size_);
-this->updater_->do_write_part_document( wr, ix );
 !!!458033.cpp!!!	run(inout sim : simulation, inout oslog : ostream) : bool
 // do thermalization
 oslog << "\n -----------------------";
@@ -73,40 +123,7 @@ with open("chex.dat","a") as f:
     print >>f, fmt_row % (spc.label(),spc.excess_potential(),(spc.excess_potential()-old_cpx),mean.mean()),
     mean.append(spc.excess_potential())
   print >>f,""
-!!!2098992.cpp!!!	add_definition(inout meta : simulator_meta) : void
-std::string desc( "Iterative Monte Carlo simulation. This runs a single equilibration phase then multiple production phases." );
-std::unique_ptr< simulation_definition > result( new simulation_definition( type_label_(), desc, &imc_simulation::make_simulation_manager ) );
-// extra parameters
-std::stringstream labels;
-labels << "(";
-labels <<  malasics_igcmc::add_to_definition( *result );
-labels << "|";
-labels << lamperski_igcmc::add_to_definition( *result );
-labels << ")";
-result->add_definition( { "update", "label", labels.str(), "None", "The type of iterative simulation to perform." } );
-
-meta.add_type( result );
-!!!2098864.cpp!!!	make_simulation_manager(in params : string) : simulation_manager
-UTILITY_CHECK( not params.empty(), "IMC simulation manager requires parameters." );
-UTILITY_INPUT( params.find( "update" ) != params.end(), "Iterative Monte Carlo simulation requires parameter \"update\".", "simulation_manager", nullptr );
-std::unique_ptr< imc_simulation > result{ new imc_simulation };
-// if( params.find( "update" ) != params.end() )
-{
-  // -------------------
-  const std::string label{ params.at( "update" ) };
-  UTILITY_INPUT( not label.empty(), "Iterative Monte Carlo parameter \"update\" requires a value.", "simulation_manager", nullptr );
-  if( 0 == malasics_igcmc::type_label_().find( label ) )
-  {
-    result->updater_ = malasics_igcmc::make_updater( params );
-  }
-  else if ( 0 == lamperski_igcmc::type_label_().find( label ) )
-  {
-    result->updater_ = lamperski_igcmc::make_updater( params );
-  }
-  else
-  {
-    const bool known_label{ false };
-    UTILITY_INPUT( known_label, "Iterative Monte Carlo parameter \"update\" value \""+label+"\" is not a known updater type.", "simulation_manager", nullptr );
-  }
-}
-return boost::shared_ptr< simulation_manager >( result.release() );
+!!!2105776.cpp!!!	do_write_part_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label() );
+wr[ ix ].add_entry( core::strngs::fsnstp(), this->super_loop_size_);
+this->updater_->do_write_part_document( wr, ix );

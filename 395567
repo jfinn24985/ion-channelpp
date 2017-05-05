@@ -1,6 +1,6 @@
 format 75
 "platform" // platform
-  revision 308
+  revision 309
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -4833,7 +4833,9 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
-{}
+{
+  ${body}
+}
 "
 	
 	
@@ -7660,7 +7662,7 @@ ${docstring}${members}
 	actual class class_ref 251439 // function2
 	  rank 0 explicit_value "void"
 	actual class class_ref 251439 // function2
-	  rank 1 explicit_value "std::map< std::string, std::string > const&"
+	  rank 1 explicit_value "std::map< std::string, std::string >&"
 	actual class class_ref 251439 // function2
 	  rank 2 explicit_value "platform::simulator&"
 	cpp_decl "${comment}typedef ${type} ${name};
@@ -7970,21 +7972,23 @@ ${docstring}${members}
 	comment "The current loop count"
       end
 
-      operation 655409 "at_end"
-	const public explicit_return_type "bool"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+      operation 2098992 "add_definition"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "meta" type class_ref 1143343 // simulator_meta
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
 {
-  return this->super_loop_size_ <= this->super_loop_count_;
+  ${body}
 }
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}return self.super_loop_size_ <= self.super_loop_count_
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
 "
 	
-	comment "Whether all IGCMC loops have been performed"
       end
 
       operation 602673 "count"
@@ -8026,6 +8030,24 @@ ${docstring}${body}
 
       operation 458289 "imc_simulation"
 	public explicit_return_type ""
+	nparams 1
+	  param in name "up" type class_ref 707504 // imc_update
+	cpp_decl "    ${comment}${inline}${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}boost::shared_ptr< ${t0} > ${p0}${)}${throw}
+: updater_( ${p0} )
+, super_loop_size_( 100 )
+, super_loop_count_( 0 )
+{}
+"
+	
+	
+	
+	
+      end
+
+      operation 2140080 "imc_simulation"
+	private explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
 "
@@ -8039,6 +8061,7 @@ ${docstring}${body}
 	
 	
 	
+	comment " For serialization."
       end
 
       operation 458417 "~imc_simulation"
@@ -8072,6 +8095,42 @@ ${docstring}${body}
 the program and any citation information."
       end
 
+      operation 2140464 "loop_size"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->super_loop_size_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}self.super_loop_size_ = sz
+"
+	
+	comment "Set the super-loop size"
+      end
+
+      operation 2098864 "make_simulation_manager"
+	class_operation public return_type class_ref 659760 // simulation_manager
+	nparams 1
+	  param in name "params" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
       operation 457265 "prepare"
 	public explicit_return_type "void"
 	nparams 1
@@ -8092,22 +8151,30 @@ ${docstring}${body}
 	comment " Prepare updater for performing a run."
       end
 
-      operation 595761 "reset_count"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "self" explicit_type ""
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+      operation 458033 "run"
+	public explicit_return_type "bool"
+	nparams 2
+	  param inout name "sim" type class_ref 632368 // simulation
+	  param inout name "oslog" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}
 {
-  this->super_loop_count_ = 0;
+  ${body}
 }
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}self.super_loop_count_ = 0
+	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}, ${p1}${v1}${)}:
+${docstring}${body}
 "
 	
-	comment " Reset super loop count to zero"
+	comment "Update the chemical potentials.
+
+* Set do_repeat to true if loop count less than loop size.
+* Update chemical potential by calling (defined in derived classes)
+do_on_super_loop.
+* Report chemical potentials."
       end
 
       extra_member 221361 "friend"
@@ -8187,6 +8254,27 @@ ${docstring}${body}
  the input file (virtual access)."
       end
 
+      operation 2099248 "type_label_"
+	class_operation public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  const std::string label( \"imc\" );
+  return label;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Label that identifies this simulation manager subtype in
+ the input file (virtual access)."
+      end
+
       operation 2105776 "do_write_part_document"
 	const cpp_virtual private explicit_return_type "void"
 	nparams 2
@@ -8207,85 +8295,6 @@ ${docstring}${body}
 	
 	comment " Write extra data of derived simulator object into the input
  document object at the given section."
-      end
-
-      operation 458033 "run"
-	public explicit_return_type "bool"
-	nparams 2
-	  param inout name "sim" type class_ref 632368 // simulation
-	  param inout name "oslog" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}${staticnl}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}, ${p1}${v1}${)}:
-${docstring}${body}
-"
-	
-	comment "Update the chemical potentials.
-
-* Set do_repeat to true if loop count less than loop size.
-* Update chemical potential by calling (defined in derived classes)
-do_on_super_loop.
-* Report chemical potentials."
-      end
-
-      operation 2098992 "add_definition"
-	class_operation public explicit_return_type "void"
-	nparams 1
-	  param inout name "meta" type class_ref 1143343 // simulator_meta
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
-      operation 2099248 "type_label_"
-	class_operation public explicit_return_type "string"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Label that identifies this simulation manager subtype in
- the input file (virtual access)."
-      end
-
-      operation 2098864 "make_simulation_manager"
-	class_operation public return_type class_ref 659760 // simulation_manager
-	nparams 1
-	  param in name "params" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}boost::shared_ptr< ${type} > ${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}const std::map< ${t0}, ${t0} >& ${p0}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
       end
 
       classrelation 1147440 // <dependency>
@@ -9524,6 +9533,11 @@ BOOST_CLASS_EXPORT_KEY( platform::imc_simulation );
 #endif
 
 ${includes}
+// manuals
+#include \"core/input_base_reader.hpp\"
+#include \"core/input_error_messages.hpp\"
+#include \"core/strngs.hpp\"
+//-
 ${namespace_start}
 ${members}
 ${namespace_end}
@@ -9611,6 +9625,9 @@ BOOST_CLASS_EXPORT_KEY( platform::lamperski_igcmc );
 
 ${includes}
 //manual includes
+#include \"core/input_base_reader.hpp\"
+#include \"core/input_error_messages.hpp\"
+#include \"core/strngs.hpp\"
 #include \"geometry/geometry_manager.hpp\"
 #include \"particle/particle_manager.hpp\"
 #include \"utility/estimater.hpp\"
@@ -10135,6 +10152,7 @@ ${includes}
 #include \"observable/base_observable.hpp\" // for serialization
 #include \"particle/change_set.hpp\"
 #include \"particle/ensemble.hpp\"
+#include \"platform/imc_simulation.hpp\"
 #include \"platform/serial_storage.hpp\"
 #include \"platform/simulator_meta.hpp\"
 #include \"platform/standard_simulation.hpp\"

@@ -1,6 +1,6 @@
 format 75
 "platform test" // platform::platform test
-  revision 70
+  revision 71
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -717,7 +717,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     show_infonote default drawing_language default show_stereotype_properties default
     associated_deployment_view deploymentview_ref 176688 // application test suite
     classdiagram 338736 "Platform tests"
-      draw_all_relations no hide_attributes yes hide_operations yes hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
+      draw_all_relations default hide_attributes yes hide_operations yes hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
       size A4
     end
 
@@ -737,6 +737,9 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
+      comment " Unit tests for the simulation class and related classes.
+
+ Includes:  simulation, simulation_definition, simulation_meta"
       classrelation 1063600 // <dependency>
 	relation 1062704 -_->
 	  a default
@@ -974,7 +977,9 @@ ${docstring}${body}
 	
 	
 	
-	comment " Test defining simulation object from input."
+	comment " Test defining simulation object from input.
+
+ * using standard_simulation simulation manager."
       end
 
       operation 1965104 "simulator_input_type_no_value_test"
@@ -1675,13 +1680,17 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
-      classrelation 1147824 // <dependency>
-	relation 1146928 -_->
+      comment " Unit tests for the simulation_manager and derived classes
+
+ Includes: simulation_manager, standard_simulation, imc_simulation,
+   imc_update, chemical_potential_update, malasics_igcmc, lamperski_igcmc"
+      classrelation 1156528 // <dependency>
+	relation 1155632 -_->
 	  a default
 	    cpp default "#include in source"
 	    python "${type}"
-	    classrelation_ref 1147824 // <dependency>
-	  b parent class_ref 667440 // serial_storage
+	    classrelation_ref 1156528 // <dependency>
+	  b parent class_ref 256689 // imc_simulation
       end
 
       classrelation 1147952 // <dependency>
@@ -1729,13 +1738,141 @@ ${docstring}${members}
 	  b parent class_ref 681008 // standard_simulation
       end
 
-      classrelation 1148592 // <dependency>
-	relation 1147696 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 1148592 // <dependency>
-	  b parent class_ref 673968 // storage_meta
+      class 720944 "simple_updater"
+	visibility package 
+	cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+	java_decl ""
+	php_decl ""
+	python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+	idl_decl ""
+	explicit_switch_type ""
+	
+	classrelation 1156656 // <generalisation>
+	  relation 1155760 ---|>
+	    a public
+	      cpp default "${type}"
+	      python "${type}"
+	      classrelation_ref 1156656 // <generalisation>
+	    b parent class_ref 707504 // imc_update
+	end
+
+	operation 2139568 "description"
+	  const cpp_virtual public explicit_return_type "void"
+	  nparams 1
+	    param inout name "os" explicit_type "ostream"
+	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	  cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	  comment " Log message descibing the itearation update and its parameters"
+	end
+
+	operation 2139696 "do_write_part_document"
+	  const cpp_virtual public explicit_return_type "void"
+	  nparams 2
+	    param inout name "wr" type class_ref 163632 // input_document
+	    param in name "ix" explicit_type "size_t"
+	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	  cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	  
+	  comment " Add content of update into IMC section of an input file section.
+
+only throw possible should be from os.write() operation"
+	end
+
+	operation 2139824 "prepare"
+	  cpp_virtual public explicit_return_type "void"
+	  nparams 1
+	    param inout name "sim" type class_ref 1129135 // simulator
+	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	  cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}self, ${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	  comment "Prepare the updater before running a series of simulation steps"
+	end
+
+	operation 2139952 "update"
+	  cpp_virtual public explicit_return_type "void"
+	  nparams 2
+	    param inout name "sys" type class_ref 632368 // simulation
+	    param inout name "oslog" explicit_type "ostream"
+	  cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract} override;
+"
+	  cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	  
+	  
+	  python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	  
+	  comment " Perform update after each IMC cycle."
+	end
+
+	extra_member 755376 "friend"
+	  
+	  cpp "
+  friend class boost::serialization::access;" ""
+	  java ""
+	  php ""
+	  python ""
+	  idl ""
+	end
+
+	operation 2140208 "serialize"
+	  stereotype "template"
+	  cpp_inline private explicit_return_type "void"
+	  nparams 2
+	    param inout name "ar" explicit_type "Archive"
+	    param in name "version" explicit_type "unsigned int"
+	  cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract} {
+  ${p0} & boost::serialization::base_object< imc_update >(*this);
+}
+"
+	  
+	  
+	  
+	  
+	end
       end
 
       operation 2116016 "canon_input"
@@ -1757,6 +1894,39 @@ ${docstring}${body}
 	comment " Test input file content."
       end
 
+      operation 2119984 "simulation_manager_methods_test"
+	class_operation public explicit_return_type "void"
+	nparams 4
+	  param inout name "sman" type class_ref 659760 // simulation_manager
+	  param in name "label" explicit_type "string"
+	  param in name "lic_text" explicit_type "string"
+	  param in name "entries" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, std::vector< ${t3} > ${p3}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}boost::shared_ptr< ${t0} > ${p0}, ${t1} ${p1}, ${t2} ${p2}, std::vector< ${t3} > ${p3}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " (using standard_simulation)
+ Methods tested
+  * equilibration_interval
+  * production_interval
+  * set_equilibration_interval
+  * set_production_interval
+  * serialize
+  * description
+  run
+  * license
+  write_part_document
+  * type_label
+"
+      end
+
       operation 2119856 "standard_simulation_lifetime_test"
 	public explicit_return_type "void"
 	nparams 0
@@ -1773,7 +1943,7 @@ ${docstring}${body}
 	comment " Test standard_simulation ctor (also simulation_manager)"
       end
 
-      operation 2119984 "simulation_manager_methods_test"
+      operation 2139312 "imc_simulation_lifetime_test"
 	public explicit_return_type "void"
 	nparams 0
 	
@@ -1786,17 +1956,257 @@ ${docstring}${body}
 	
 	
 	
-	comment " (using standard_simulation)
- Methods tested
-  * equilibration_interval
-  * production_interval
-  * set_equilibration_interval
-  * set_production_interval
-  * serialize
-  run
-  do_license
-  do_write_document
+	comment " Test standard_simulation ctor (also simulation_manager)"
+      end
+
+      operation 2140336 "imc_simulation_method_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
 "
+	
+	
+	
+	
+	comment " Test standard_simulation ctor (also simulation_manager)"
+      end
+
+      operation 2140592 "input_malasics_update_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Test defining simulation object from input.
+
+ * using imc_simulation "
+      end
+
+      operation 2140720 "input_lamperski_update_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Test defining simulation object from input.
+
+ * using imc_simulation "
+      end
+
+      operation 2141360 "simulator_input_imc_no_keywords_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 2142384 "simulator_input_imc_missing_update_keyword_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 2142128 "simulator_input_imc_update_bad_value_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 2142256 "simulator_input_imc_update_no_value_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 2141488 "simulator_input_imc_niter_no_value_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 2141616 "simulator_input_imc_niter_negative_value_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 2141744 "simulator_input_imc_niter_bad_value_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 2141872 "simulator_input_imc_niter_zero_value_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 2142000 "simulator_input_imc_niter_one_value_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 2141232 "simulator_input_lamperski_delta_no_value_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Test combination of choice_meta and move_chocie."
+      end
+
+      operation 2141104 "simulator_input_lamperski_delta_bad_value_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Test combination of choice_meta and move_chocie."
+      end
+
+      operation 2140976 "simulator_input_lamperski_delta_negative_value_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+      end
+
+      operation 2140848 "simulator_input_lamperski_delta_zero_value_test"
+	public explicit_return_type "void"
+	nparams 0
+	
+	cpp_def "${comment}BOOST_AUTO_TEST_CASE( ${name} )
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Test combination of choice_meta and move_chocie."
       end
 
       extra_member 748592 "TODO"
@@ -1807,7 +2217,6 @@ ${docstring}${body}
 	python ""
 	idl ""
       end
-
     end
 
     class 714288 "storage_manager_test"
@@ -1826,6 +2235,9 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
+      comment " Unit test for the storage_manager and derived classes.
+
+ Includes: storage_manager, serial_storage, storage_definition, storage_meta"
       classrelation 1148976 // <dependency>
 	relation 1148080 -_->
 	  a default
@@ -2890,7 +3302,6 @@ Not tested (undefined in simple_storage_manager)
 	python ""
 	idl ""
       end
-
     end
   end
 
@@ -2992,21 +3403,22 @@ ${namespace_end}
 
 ${includes}
 // Manuals
+#include \"core/input_document.hpp\"
 #include \"core/input_delegater.hpp\"
-#include \"core/input_help.hpp\"
+//#include \"core/input_help.hpp\"
 #include \"core/input_preprocess.hpp\"
 #include \"core/strngs.hpp\"
 #include \"evaluator/evaluator_manager.hpp\" // for simulation serialization
-#include \"geometry/geometry_manager.hpp\"   // for simulation serialization
-#include \"geometry/periodic_cube_region.hpp\"
-#include \"observable/base_observable.hpp\"  // for simulation serialization
-#include \"observable/report_manager.hpp\"   // for simulation serialization
-#include \"particle/ensemble.hpp\"           // for simulation serialization
+//#include \"geometry/geometry_manager.hpp\"   // for simulation serialization
+//#include \"geometry/periodic_cube_region.hpp\"
+//#include \"observable/base_observable.hpp\"  // for simulation serialization
+//#include \"observable/report_manager.hpp\"   // for simulation serialization
+//#include \"particle/ensemble.hpp\"           // for simulation serialization
 #include \"particle/particle_manager.hpp\"   // for simulation serialization
-#include \"trial/choice_manager.hpp\"        // for simulation serialization
-#include \"trial/base_chooser.hpp\"          // for simulation serialization
-#include \"trial/choice.hpp\"                // for simulation serialization
-#include \"utility/gdbm_sink.hpp\"
+//#include \"trial/choice_manager.hpp\"        // for simulation serialization
+//#include \"trial/base_chooser.hpp\"          // for simulation serialization
+//#include \"trial/choice.hpp\"                // for simulation serialization
+//#include \"utility/gdbm_sink.hpp\"
 //#include \"utility/XXrandomXX.hpp\"
 //#include \"utility/XXutilityXX.hpp\"
 // -
@@ -3014,7 +3426,11 @@ ${includes}
 // - 
 ${namespace_start}
 ${members}
-${namespace_end}"
+${namespace_end}
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_GUID( platform::sim_manager_test::simple_updater, \"platform::sim_manager_test::simple_updater\" );
+"
       python_src "${comment}
 ${import}
 ${definition}"

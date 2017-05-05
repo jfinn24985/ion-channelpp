@@ -2,6 +2,62 @@ class sim_manager_test
 !!!2116016.cpp!!!	canon_input() : string
 const std::string result( "\n\nsimulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n\nrun\ntype standard\noutputdir \"\%1$04d\"\nend\n\nevaluator\ntype coulomb\nend\n\nsampler\ntype specie-count\nend\n\nsampler\ntype metropolis\nend\n\nsampler\ntype widom\niwidom 10\nend\n\nregion\ntype cube\nname centre\nwidth 5\norigin 2.5 2.5 2.5\nend\n\nspecie\nname Na\nz 1\nd 1.01\nctarg 0.1\nend\n\nspecie\nname Cl\nz -1\nd 1.78\nctarg 0.1\nend\n\ntrial\nrate 0.5\ntype move\ndelta 1.0\nend\n\ntrial\nrate 0.5\ntype jump\nend\n\n" );
 return result;
+!!!2119984.cpp!!!	simulation_manager_methods_test(inout sman : simulation_manager, in label : string, in lic_text : string, in entries : string) : void
+std::stringstream store;
+{
+  BOOST_CHECK_EQUAL( sman->equilibration_interval(), 0ul );
+  BOOST_CHECK_EQUAL( sman->production_interval(), 0ul );
+
+  sman->set_equilibration_interval( 100ul );
+  sman->set_production_interval( 1000ul );
+
+  BOOST_CHECK_EQUAL( sman->equilibration_interval(), 100ul );
+  BOOST_CHECK_EQUAL( sman->production_interval(), 1000ul );
+
+  // write class instance to archive
+  boost::archive::text_oarchive oa( store );
+  oa << sman;
+}
+{
+  boost::shared_ptr< platform::simulation_manager > var2;
+  // read class instance from archive
+  boost::archive::text_iarchive ia( store );
+  ia >> var2;
+
+  BOOST_CHECK_EQUAL( var2->equilibration_interval(), 100ul );
+  BOOST_CHECK_EQUAL( var2->production_interval(), 1000ul );
+  BOOST_CHECK_EQUAL( var2->type_label(), label );
+
+  {
+    std::stringstream desc;
+    var2->description( desc );
+    const std::string canon(  "\n thermalization interval : 100\n     production interval : 1000\n" );
+    BOOST_CHECK( desc.str().find( canon ) != std::string::npos );
+  }
+  {
+    std::stringstream lisc;
+    var2->license( lisc );
+    if( lic_text.empty() )
+    {
+      BOOST_CHECK( lisc.str().empty() );
+    }
+    else
+    {
+      BOOST_CHECK( lisc.str().find( lic_text ) != std::string::npos );
+    }
+  }
+  {
+    core::input_document out( 1 );
+    const std::size_t ix = out.add_section( core::strngs::simulator_label() );
+    var2->write_part_document( out, ix );
+    BOOST_CHECK( out[ ix ].has_entry( core::strngs::fsnavr() ) );
+    BOOST_CHECK( out[ ix ].has_entry( core::strngs::fsnstp() ) );
+    for( auto item : entries )
+    {
+       BOOST_CHECK( out[ ix ].has_entry( item ) );
+    }
+  }
+}
 !!!2119856.cpp!!!	standard_simulation_lifetime_test() : void
 {
   // Test for virtual object pattern
@@ -23,30 +79,590 @@ return result;
   boost::shared_ptr< platform::standard_simulation > var( new platform::standard_simulation );
   BOOST_CHECK_EQUAL( var->equilibration_interval(), 0ul );
   BOOST_CHECK_EQUAL( var->production_interval(), 0ul );
+
+  sim_manager_test::simulation_manager_methods_test( var, "standard", "", {} );
 }
-!!!2119984.cpp!!!	simulation_manager_methods_test() : void
-std::stringstream store;
+!!!2139312.cpp!!!	imc_simulation_lifetime_test() : void
 {
-  boost::shared_ptr< platform::standard_simulation > var( new platform::standard_simulation );
+  // Test for virtual object pattern
+  BOOST_CHECK( not std::is_default_constructible< platform::imc_simulation >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< platform::imc_simulation >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< platform::imc_simulation >::type {} );
+  BOOST_CHECK( not ( std::is_assignable< platform::imc_simulation, platform::imc_simulation >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< platform::imc_simulation >::type {} );
+}
+{
+  boost::shared_ptr< platform::imc_update > up( new platform::sim_manager_test::simple_updater );
+  boost::shared_ptr< platform::imc_simulation > var( new platform::imc_simulation( up ) );
   BOOST_CHECK_EQUAL( var->equilibration_interval(), 0ul );
   BOOST_CHECK_EQUAL( var->production_interval(), 0ul );
 
-  var->set_equilibration_interval( 100ul );
-  var->set_production_interval( 1000ul );
-
-  BOOST_CHECK_EQUAL( var->equilibration_interval(), 100ul );
-  BOOST_CHECK_EQUAL( var->production_interval(), 1000ul );
-
-  // write class instance to archive
-  boost::archive::text_oarchive oa( store );
-  oa << var;
+  sim_manager_test::simulation_manager_methods_test( var, "imc", "", {} );
 }
+!!!2140336.cpp!!!	imc_simulation_method_test() : void
 {
-  boost::shared_ptr< platform::standard_simulation > var2;
-  // read class instance from archive
-  boost::archive::text_iarchive ia( store );
-  ia >> var2;
+  boost::shared_ptr< platform::imc_update > up( new platform::sim_manager_test::simple_updater );
+  boost::shared_ptr< platform::imc_simulation > var( new platform::imc_simulation( up ) );
+  BOOST_CHECK_EQUAL( var->count(), 0ul );
+  BOOST_CHECK_EQUAL( var->loop_size(), 100ul );
+  var->set_loop_size( 200ul );
+  BOOST_CHECK_EQUAL( var->loop_size(), 200ul );
 
-  BOOST_CHECK_EQUAL( var2->equilibration_interval(), 100ul );
-  BOOST_CHECK_EQUAL( var2->production_interval(), 1000ul );
 }
+!!!2140592.cpp!!!	input_malasics_update_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  BOOST_REQUIRE( meta->has_type( "imc" ) );
+  dg.add_input_delegate( meta );
+}
+
+const std::string title( "Test simulation" );
+const std::size_t inner( 100ul );
+const std::size_t prod( 2000ul );
+const std::size_t therm( 100ul );
+const std::size_t report( 500ul );
+const std::size_t ntarg( 50ul );
+const double epsw( 70.0 );
+const double tmptr( 305.0 );
+
+std::string canon_input( "\n\nsimulator\ntype imc\nupdate malasics\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "Unexpected exception thrown by \"dg.read_input( reader )\": " ) + err.what() );
+}
+
+BOOST_CHECK_EQUAL( sim->run_title(), title );
+BOOST_CHECK_EQUAL( sim->get_outer_loop_index(), 0ul );
+BOOST_CHECK_EQUAL( sim->inner_loop_size(), inner );
+BOOST_CHECK_EQUAL( sim->report_interval(), report );
+BOOST_CHECK_EQUAL( sim->has_manager(), true );
+BOOST_CHECK_EQUAL( sim->manager().equilibration_interval(), therm );
+BOOST_CHECK_EQUAL( sim->manager().production_interval(), prod );
+BOOST_CHECK_EQUAL( sim->manager().type_label(), "imc" );
+{
+  std::stringstream out;
+  sim->manager().description( out );
+  BOOST_CHECK( out.str().find( "Update Method [malasics]" ) != std::string::npos );
+}
+BOOST_CHECK_EQUAL( sim->particles().target_count(), ntarg );
+BOOST_CHECK_EQUAL( sim->evaluators().temperature(), tmptr );
+BOOST_CHECK_EQUAL( sim->evaluators().permittivity(), epsw );
+
+
+!!!2140720.cpp!!!	input_lamperski_update_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  BOOST_REQUIRE( meta->has_type( "standard" ) );
+  BOOST_REQUIRE( meta->has_type( "imc" ) );
+  dg.add_input_delegate( meta );
+}
+
+const std::string title( "Test simulation" );
+const std::size_t inner( 100ul );
+const std::size_t prod( 2000ul );
+const std::size_t therm( 100ul );
+const std::size_t report( 500ul );
+const std::size_t ntarg( 50ul );
+const double epsw( 70.0 );
+const double tmptr( 305.0 );
+
+std::string canon_input( "\n\nsimulator\ntype imc\nupdate lamperski\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "Unexpected exception thrown by \"dg.read_input( reader )\": " ) + err.what() );
+}
+
+BOOST_CHECK_EQUAL( sim->run_title(), title );
+BOOST_CHECK_EQUAL( sim->get_outer_loop_index(), 0ul );
+BOOST_CHECK_EQUAL( sim->inner_loop_size(), inner );
+BOOST_CHECK_EQUAL( sim->report_interval(), report );
+BOOST_CHECK_EQUAL( sim->has_manager(), true );
+BOOST_CHECK_EQUAL( sim->manager().equilibration_interval(), therm );
+BOOST_CHECK_EQUAL( sim->manager().production_interval(), prod );
+BOOST_CHECK_EQUAL( sim->manager().type_label(), "imc" );
+{
+  std::stringstream out;
+  sim->manager().description( out );
+  BOOST_CHECK( out.str().find( "Update Method [lamperski]" ) != std::string::npos );
+}
+BOOST_CHECK_EQUAL( sim->particles().target_count(), ntarg );
+BOOST_CHECK_EQUAL( sim->evaluators().temperature(), tmptr );
+BOOST_CHECK_EQUAL( sim->evaluators().permittivity(), epsw );
+
+
+!!!2141360.cpp!!!	simulator_input_imc_no_keywords_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype imc\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Iterative Monte Carlo simulation requires parameters." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!2142384.cpp!!!	simulator_input_imc_missing_update_keyword_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype imc\nniter 100\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Iterative Monte Carlo simulation requires parameter \"update\"." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!2142128.cpp!!!	simulator_input_imc_update_bad_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype imc\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nupdate something\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"update\" value (something) is not valid in a simulator section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!2142256.cpp!!!	simulator_input_imc_update_no_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype imc\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nupdate \nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"update\" requires a value in a Iterative Monte Carlo simulator section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!2141488.cpp!!!	simulator_input_imc_niter_no_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype imc\nupdate malasics\nniter \ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Iterative Monte Carlo \"niter\" parameter requires a value." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!2141616.cpp!!!	simulator_input_imc_niter_negative_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype imc\nupdate malasics\nniter -1\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+  //sim->description( std::cout );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Parameter \"type\" requires a value in a simulator section." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!2141744.cpp!!!	simulator_input_imc_niter_bad_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype imc\nupdate malasics\nniter ten\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Iterative Monte Carlo \"niter\" parameter value (ten) is not a number" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!2141872.cpp!!!	simulator_input_imc_niter_zero_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype imc\nupdate malasics\nniter 0\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Iterative Monte Carlo parameter \"niter\" requires a value greater than 1." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!2142000.cpp!!!	simulator_input_imc_niter_one_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype imc\nupdate malasics\nniter 1\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Iterative Monte Carlo parameter \"niter\" requires a value greater than 1." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!2141232.cpp!!!	simulator_input_lamperski_delta_no_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype imc\nupdate lamperski\ndelta \ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Lamperski IMC \"delta\" parameter requires a value." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!2141104.cpp!!!	simulator_input_lamperski_delta_bad_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype imc\nupdate lamperski\ndelta ten\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Lamperski IMC \"delta\" parameter value (ten) is not a number" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!2140976.cpp!!!	simulator_input_lamperski_delta_negative_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype imc\nupdate lamperski\ndelta -0.1\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Lamperski IMC \"delta\" parameter value (-0.1) must be greater than zero." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
+!!!2140848.cpp!!!	simulator_input_lamperski_delta_zero_value_test() : void
+boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< platform::simulator_meta > meta( new platform::simulator_meta( *sim ) );
+  platform::standard_simulation::add_definition( *meta );
+  platform::imc_simulation::add_definition( *meta );
+
+  dg.add_input_delegate( meta );
+}
+
+std::string canon_input( "\n\nsimulator\ntype imc\nupdate lamperski\ndelta 0\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( std::runtime_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Lamperski IMC \"delta\" parameter value (0) must be greater than zero." ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+
+
