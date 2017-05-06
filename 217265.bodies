@@ -411,20 +411,6 @@ BOOST_CHECK_EQUAL( core::constants::electron_charge(), 1.6021917E-19 );
 BOOST_CHECK_EQUAL( core::constants::epsilon_0(), 8.8542E-12 );
 BOOST_CHECK_EQUAL( core::constants::pi(), 3.141592653589793 );
 BOOST_CHECK_EQUAL( core::constants::to_SI(), 1660.539276735512625080121 );
-// Program constants that may be deprecated in future.
-BOOST_CHECK_EQUAL( static_cast< int >( core::constants::ibulk ), 3 );
-BOOST_CHECK_EQUAL( static_cast< int >( core::constants::ichan ), 2 );
-BOOST_CHECK_EQUAL( static_cast< int >( core::constants::ifilt ), 1 );
-BOOST_CHECK_EQUAL( static_cast< int >( core::constants::izlim ), 0 );
-BOOST_CHECK_EQUAL( static_cast< int >( core::constants::mag ), 12584210 );
-BOOST_CHECK_EQUAL( static_cast< int >( core::constants::nionmx ), 2048 );
-BOOST_CHECK_EQUAL( static_cast< int >( core::constants::nnewmx ), 4 );
-BOOST_CHECK_EQUAL( static_cast< int >( core::constants::npchmx ), 2048 );
-BOOST_CHECK_EQUAL( static_cast< int >( core::constants::nrgnmx ), 4 );
-BOOST_CHECK_EQUAL( static_cast< int >( core::constants::nsltmx ), 4 );
-BOOST_CHECK_EQUAL( static_cast< int >( core::constants::nspcmx ), 16 );
-BOOST_CHECK_EQUAL( static_cast< int >( core::constants::ntotmx ), 8192 );
-BOOST_CHECK_EQUAL( static_cast< int >( core::constants::nzgmx ), 4096 );
 
 
 !!!855856.cpp!!!	input_base_reader_statics_test() : void
@@ -439,247 +425,385 @@ BOOST_CHECK_EQUAL( static_cast< int >( core::constants::nzgmx ), 4096 );
   BOOST_CHECK( std::has_virtual_destructor< core::input_base_reader >::type{} );
 }
 {
-   // TEST BOOL CONVERTERS
-   {
-      // Converting string to bool
-      // Converting string to bool: true -> true
-      const std::string test ("true");
-      bool pass = false;
-      pass = core::input_base_reader::read_as_bool(test);
-      BOOST_CHECK_EQUAL(pass, true);
-   }
-   {
-      // Converting string to bool
-      // Converting string to bool: false -> false
-      const std::string test ("false");
-      bool pass = true;
-      pass = core::input_base_reader::read_as_bool(test);
-      BOOST_CHECK_EQUAL(pass, false);
-   }
-   {
-      // Converting string to bool
-      // Converting string to bool: 0 -> false
-      const std::string test ("0");
-      bool pass = true;
-      pass = core::input_base_reader::read_as_bool(test);
-      BOOST_CHECK_EQUAL(pass, false);
-   }
-   {
-      // Converting string to bool
-      // Converting string to bool: 1 -> true
-      const std::string test ("1");
-      bool pass = false;
-      pass = core::input_base_reader::read_as_bool(test);
-      BOOST_CHECK_EQUAL(pass, true);
+  // TEST BOOL CONVERTERS
+  {
+    // Converting string to bool
+    // Converting string to bool: true -> true
+    const std::string test ("true");
+    bool pass = false;
+    pass = core::input_base_reader::read_as_bool(test);
+    BOOST_CHECK_EQUAL(pass, true);
+  }
+  {
+    // Converting string to bool
+    // Converting string to bool: false -> false
+    const std::string test ("false");
+    bool pass = true;
+    pass = core::input_base_reader::read_as_bool(test);
+    BOOST_CHECK_EQUAL(pass, false);
+  }
+  {
+    // Converting string to bool
+    // Converting string to bool: 0 -> false
+    const std::string test ("0");
+    bool pass = true;
+    pass = core::input_base_reader::read_as_bool(test);
+    BOOST_CHECK_EQUAL(pass, false);
+  }
+  {
+    // Converting string to bool
+    // Converting string to bool: 1 -> true
+    const std::string test ("1");
+    bool pass = false;
+    pass = core::input_base_reader::read_as_bool(test);
+    BOOST_CHECK_EQUAL(pass, true);
 
-   }
-   {
-      // Converting string to bool
-      // Converting string to bool: .false. -> false
-      const std::string test (".false.");
-      bool pass = true;
-      pass = core::input_base_reader::read_as_bool(test);
-      BOOST_CHECK_EQUAL(pass, false);
-   }
-   {
-      // Converting string to bool
-      // Converting string to bool: 2.0 -> ?true?
-      const std::string test ("2.0");
-      bool pass = true;
-      BOOST_CHECK_THROW(pass = core::input_base_reader::read_as_bool(test), boost::bad_lexical_cast);
-      BOOST_CHECK_EQUAL(pass, true);
-   }
-   {
-      // Converting string to bool
-      // Converting string to bool: 2 -> ?true?
-      const std::string test ("2");
-      bool pass = true;
-      BOOST_CHECK_THROW(pass = core::input_base_reader::read_as_bool(test), boost::bad_lexical_cast);
-      BOOST_CHECK_EQUAL(pass, true);
-   }
+  }
+  {
+    // Converting string to bool
+    // Converting string to bool: .false. -> false
+    const std::string test (".false.");
+    bool pass = true;
+    pass = core::input_base_reader::read_as_bool(test);
+    BOOST_CHECK_EQUAL(pass, false);
+  }
+  {
+    // Converting string to bool
+    // Converting string to bool: 2.0 -> ?true?
+    const std::string test ("2.0");
+    bool pass = true;
+    BOOST_CHECK_THROW(pass = core::input_base_reader::read_as_bool(test), boost::bad_lexical_cast);
+    BOOST_CHECK_EQUAL(pass, true);
+  }
+  {
+    // Converting string to bool
+    // Converting string to bool: 2 -> ?true?
+    const std::string test ("2");
+    bool pass = true;
+    BOOST_CHECK_THROW(pass = core::input_base_reader::read_as_bool(test), boost::bad_lexical_cast);
+    BOOST_CHECK_EQUAL(pass, true);
+  }
 
 }
 {
-   // Test of dequoting
-   {
-      const std::string expect("abc  ");
-      const std::string input1("'abc  '");   // -> |abc  |
-      const std::string input2("\"abc  \""); // -> |abc  |
-      const std::string input3("\"abc  '");  // unchanged
-      const std::string input4("\"abc  \" ");// -> |abc  |
-      const std::string input5("\"abc  ' "); // unchanged
-      std::string result;
+  // Test of dequoting
+  {
+    const std::string expect("abc  ");
+    const std::string input1("'abc  '");   // -> |abc  |
+    const std::string input2("\"abc  \""); // -> |abc  |
+    const std::string input3("\"abc  '");  // unchanged
+    const std::string input4("\"abc  \" ");// -> |abc  |
+    const std::string input5("\"abc  ' "); // unchanged
+    std::string result;
 
-      result = core::input_base_reader::dequote(input1);
-      BOOST_CHECK_EQUAL(result, expect);
+    result = core::input_base_reader::dequote(input1);
+    BOOST_CHECK_EQUAL(result, expect);
 
-      result = core::input_base_reader::dequote(input2);
-      BOOST_CHECK_EQUAL(result, expect);
+    result = core::input_base_reader::dequote(input2);
+    BOOST_CHECK_EQUAL(result, expect);
 
-      result = core::input_base_reader::dequote(input3);
-      BOOST_CHECK_EQUAL(result, input3);
+    result = core::input_base_reader::dequote(input3);
+    BOOST_CHECK_EQUAL(result, input3);
 
-      result = core::input_base_reader::dequote(input4);
-      BOOST_CHECK_EQUAL(result, expect);
+    result = core::input_base_reader::dequote(input4);
+    BOOST_CHECK_EQUAL(result, expect);
 
-      result = core::input_base_reader::dequote(input5);
-      BOOST_CHECK_EQUAL(result, input5);
-   }
-   {
-      // No quotes
-      // Unquoted text: unchanged
-      std::string result = "The lazy dog.";
-      const std::string pass = "The lazy dog.";
-      result = core::input_base_reader::dequote(result);
-      BOOST_CHECK_EQUAL(result, pass);
-   }
-   {
-      // Uneven quoted (front) text: unchanged
-      std::string result = "\"The lazy dog.";
-      const std::string pass = "\"The lazy dog.";
-      result = core::input_base_reader::dequote(result);
-      BOOST_CHECK_EQUAL(result, pass);
-   }
-   {
-      // Uneven quotes (back) text: unchanged
-      std::string result = "The lazy dog.\"";
-      const std::string pass = "The lazy dog.\"";
-      result = core::input_base_reader::dequote(result);
-      BOOST_CHECK_EQUAL(result, pass);
-   }
-   {
-      // Matched quotes [\"] text: strip quotes
-      std::string result = "\"The lazy dog.\"";
-      const std::string pass = "The lazy dog.";
-      result = core::input_base_reader::dequote(result);
-      BOOST_CHECK_EQUAL(result, pass);
-   }
-   {
-      // Matched multi-quoted text: strip one set of quotes
-      std::string result = "\"\"The lazy dog.\"\"";
-      const std::string pass = "\"The lazy dog.\"";
-      result = core::input_base_reader::dequote(result);
-      BOOST_CHECK_EQUAL(result, pass);
-   }
-   {
-      // Matched quoted with one end embedded in text: unchanged
-      std::string result = "\"The\" lazy dog.";
-      const std::string pass = "\"The\" lazy dog.";
-      result = core::input_base_reader::dequote(result);
-      BOOST_CHECK_EQUAL(result, pass);
-   }
-   {
-      // Matched quoted ['] text: strip quotes
-      std::string result = "'The lazy dog.'";
-      const std::string pass = "The lazy dog.";
-      result = core::input_base_reader::dequote(result);
-      BOOST_CHECK_EQUAL(result, pass);
-   }
-   {
-      // Mismatched quoted [\"...'] text: unchanged
-      std::string result = "\"The lazy dog.'";
-      const std::string pass = "\"The lazy dog.'";
-      result = core::input_base_reader::dequote(result);
-      BOOST_CHECK_EQUAL(result, pass);
-   }
-   {
-      // Matched quoted [\"] text with external spacing: strip quotes and
-      // whitespace
-      std::string result = "\"The lazy dog. \" ";
-      const std::string pass = "The lazy dog. ";
-      result = core::input_base_reader::dequote(result);
-      BOOST_CHECK_EQUAL(result, pass);
-   }
-   {
-      // Matched quoted [\"] text with internal spacing: strip quotes, leave
-      // internal whitespace
-      std::string result = "\"The lazy dog. \"";
-      const std::string pass = "The lazy dog. ";
-      result = core::input_base_reader::dequote(result);
-      BOOST_CHECK_EQUAL(result, pass);
-   }
+    result = core::input_base_reader::dequote(input5);
+    BOOST_CHECK_EQUAL(result, input5);
+  }
+  {
+    // No quotes
+    // Unquoted text: unchanged
+    std::string result = "The lazy dog.";
+    const std::string pass = "The lazy dog.";
+    result = core::input_base_reader::dequote(result);
+    BOOST_CHECK_EQUAL(result, pass);
+  }
+  {
+    // Uneven quoted (front) text: unchanged
+    std::string result = "\"The lazy dog.";
+    const std::string pass = "\"The lazy dog.";
+    result = core::input_base_reader::dequote(result);
+    BOOST_CHECK_EQUAL(result, pass);
+  }
+  {
+    // Uneven quotes (back) text: unchanged
+    std::string result = "The lazy dog.\"";
+    const std::string pass = "The lazy dog.\"";
+    result = core::input_base_reader::dequote(result);
+    BOOST_CHECK_EQUAL(result, pass);
+  }
+  {
+    // Matched quotes [\"] text: strip quotes
+    std::string result = "\"The lazy dog.\"";
+    const std::string pass = "The lazy dog.";
+    result = core::input_base_reader::dequote(result);
+    BOOST_CHECK_EQUAL(result, pass);
+  }
+  {
+    // Matched multi-quoted text: strip one set of quotes
+    std::string result = "\"\"The lazy dog.\"\"";
+    const std::string pass = "\"The lazy dog.\"";
+    result = core::input_base_reader::dequote(result);
+    BOOST_CHECK_EQUAL(result, pass);
+  }
+  {
+    // Matched quoted with one end embedded in text: unchanged
+    std::string result = "\"The\" lazy dog.";
+    const std::string pass = "\"The\" lazy dog.";
+    result = core::input_base_reader::dequote(result);
+    BOOST_CHECK_EQUAL(result, pass);
+  }
+  {
+    // Matched quoted ['] text: strip quotes
+    std::string result = "'The lazy dog.'";
+    const std::string pass = "The lazy dog.";
+    result = core::input_base_reader::dequote(result);
+    BOOST_CHECK_EQUAL(result, pass);
+  }
+  {
+    // Mismatched quoted [\"...'] text: unchanged
+    std::string result = "\"The lazy dog.'";
+    const std::string pass = "\"The lazy dog.'";
+    result = core::input_base_reader::dequote(result);
+    BOOST_CHECK_EQUAL(result, pass);
+  }
+  {
+    // Matched quoted [\"] text with external spacing: strip quotes and
+    // whitespace
+    std::string result = "\"The lazy dog. \" ";
+    const std::string pass = "The lazy dog. ";
+    result = core::input_base_reader::dequote(result);
+    BOOST_CHECK_EQUAL(result, pass);
+  }
+  {
+    // Matched quoted [\"] text with internal spacing: strip quotes, leave
+    // internal whitespace
+    std::string result = "\"The lazy dog. \"";
+    const std::string pass = "The lazy dog. ";
+    result = core::input_base_reader::dequote(result);
+    BOOST_CHECK_EQUAL(result, pass);
+  }
 }
 {
-   // TEST Decommenting
-   const std::string input1("#abc  '"); // empty
+  // TEST Decommenting
+  const std::string input1("#abc  '"); // empty
 
-   const std::string expect2(" ");
-   const std::string input2(" #abc  "); // -> | |
+  const std::string expect2(" ");
+  const std::string input2(" #abc  "); // -> | |
 
-   const std::string expect3("abc  ");
-   const std::string input3("abc  # "); // -> |abc  |
+  const std::string expect3("abc  ");
+  const std::string input3("abc  # "); // -> |abc  |
 
-   const std::string input4("abc   ");  // unchanged
+  const std::string input4("abc   ");  // unchanged
 
-   const std::string input5("abc  \\# "); // unchanged
+  const std::string input5("abc  \\# "); // unchanged
 
-   const std::string input6("\"abc  # \""); // unchanged
+  const std::string input6("\"abc  # \""); // unchanged
 
-   const std::string expect7("\'abc\'  ");
-   const std::string input7("\'abc\'  # ");
+  const std::string expect7("\'abc\'  ");
+  const std::string input7("\'abc\'  # ");
 
-   const std::string input8("\"abc\"  \"# "); // -> unchanged
+  const std::string input8("\"abc\"  \"# "); // -> unchanged
 
-   const std::string expect9("\"abc\'  \"");
-   const std::string input9("\"abc\'  \"# ");
+  const std::string expect9("\"abc\'  \"");
+  const std::string input9("\"abc\'  \"# ");
 
-   const std::string expectA("abc  \\\\");
-   const std::string inputA("abc  \\\\# ");
-   std::string result;
+  const std::string expectA("abc  \\\\");
+  const std::string inputA("abc  \\\\# ");
+  std::string result;
 
-   result = core::input_base_reader::decomment(input1);
-   BOOST_CHECK(result.empty());
+  result = core::input_base_reader::decomment(input1);
+  BOOST_CHECK(result.empty());
 
-   result = core::input_base_reader::decomment(input2);
-   BOOST_CHECK_EQUAL(result, expect2);
+  result = core::input_base_reader::decomment(input2);
+  BOOST_CHECK_EQUAL(result, expect2);
 
-   result = core::input_base_reader::decomment(input3);
-   BOOST_CHECK_EQUAL(result, expect3);
+  result = core::input_base_reader::decomment(input3);
+  BOOST_CHECK_EQUAL(result, expect3);
 
-   result = core::input_base_reader::decomment(input4);
-   BOOST_CHECK_EQUAL(result, input4);
+  result = core::input_base_reader::decomment(input4);
+  BOOST_CHECK_EQUAL(result, input4);
 
-   result = core::input_base_reader::decomment(input5);
-   BOOST_CHECK_EQUAL(result, input5);
+  result = core::input_base_reader::decomment(input5);
+  BOOST_CHECK_EQUAL(result, input5);
 
-   result = core::input_base_reader::decomment(input6);
-   BOOST_CHECK_EQUAL(result, input6);
+  result = core::input_base_reader::decomment(input6);
+  BOOST_CHECK_EQUAL(result, input6);
 
-   result = core::input_base_reader::decomment(input7);
-   BOOST_CHECK_EQUAL(result, expect7);
+  result = core::input_base_reader::decomment(input7);
+  BOOST_CHECK_EQUAL(result, expect7);
 
-   result = core::input_base_reader::decomment(input8);
-   BOOST_CHECK_EQUAL(result, input8);
+  result = core::input_base_reader::decomment(input8);
+  BOOST_CHECK_EQUAL(result, input8);
 
-   result = core::input_base_reader::decomment(input9);
-   BOOST_CHECK_EQUAL(result, expect9);
+  result = core::input_base_reader::decomment(input9);
+  BOOST_CHECK_EQUAL(result, expect9);
 
-   result = core::input_base_reader::decomment(inputA);
-   BOOST_CHECK_EQUAL(result, expectA);
+  result = core::input_base_reader::decomment(inputA);
+  BOOST_CHECK_EQUAL(result, expectA);
 
 }
 // READ AS FLOATS
 {
-   std::vector< double > result;
-   BOOST_CHECK( core::input_base_reader::read_as_floats("-1.0 2.4 1.3", result) );
-   BOOST_CHECK_EQUAL( result.size(), 3 );
-   BOOST_CHECK_EQUAL( result[0], -1.0 );
-   BOOST_CHECK_EQUAL( result[1], 2.4 );
-   BOOST_CHECK_EQUAL( result[2], 1.3 );
+  std::vector< double > result;
+  BOOST_CHECK( core::input_base_reader::read_as_floats("-1.0 2.4 1.3", result) );
+  BOOST_CHECK_EQUAL( result.size(), 3 );
+  BOOST_CHECK_EQUAL( result[0], -1.0 );
+  BOOST_CHECK_EQUAL( result[1], 2.4 );
+  BOOST_CHECK_EQUAL( result[2], 1.3 );
 }
 {
-   std::vector< double > result;
-   BOOST_CHECK( not core::input_base_reader::read_as_floats("1 2 3 ABC 4", result) );
-   BOOST_CHECK_EQUAL( result.size(), 3 );
-   BOOST_CHECK_EQUAL( result[0], 1.0 );
-   BOOST_CHECK_EQUAL( result[1], 2.0 );
-   BOOST_CHECK_EQUAL( result[2], 3.0 );
+  std::vector< double > result;
+  BOOST_CHECK( not core::input_base_reader::read_as_floats("1 2 3 ABC 4", result) );
+  BOOST_CHECK_EQUAL( result.size(), 3 );
+  BOOST_CHECK_EQUAL( result[0], 1.0 );
+  BOOST_CHECK_EQUAL( result[1], 2.0 );
+  BOOST_CHECK_EQUAL( result[2], 3.0 );
 }
 {
-   std::vector< double > result;
-   BOOST_CHECK( core::input_base_reader::read_as_floats("1", result) );
-   BOOST_CHECK_EQUAL(result.size(),1);
-   BOOST_CHECK_EQUAL(result[0],1.0);
+  std::vector< double > result;
+  BOOST_CHECK( core::input_base_reader::read_as_floats("1", result) );
+  BOOST_CHECK_EQUAL(result.size(),1);
+  BOOST_CHECK_EQUAL(result[0],1.0);
+}
+{
+  // core::input_base_reader::ordinal_input( name, val, title, sec, targ );
+  const std::string name( "label" );
+  const std::string title( "Test Base Reader" );
+  const std::string sec( "core" );
+  // VALID INPUTS
+  {
+    std::size_t targ{ 0ul };
+    //BOOST_CHECK_NO_THROW(
+    core::input_base_reader::ordinal_input( name, "1", title, sec, targ ); // );
+    BOOST_CHECK_EQUAL( targ, 1ul );
+    BOOST_CHECK_NO_THROW( core::input_base_reader::ordinal_input( name, "100", title, sec, targ ) );
+    BOOST_CHECK_EQUAL( targ, 100ul );
+    BOOST_CHECK_NO_THROW( core::input_base_reader::ordinal_input( name, "31", title, sec, targ ) );
+    BOOST_CHECK_EQUAL( targ, 31ul );
+    BOOST_CHECK_NO_THROW( core::input_base_reader::ordinal_input( name, "18446744073709551614", title, sec, targ ) );
+    BOOST_CHECK_EQUAL( targ, 18446744073709551614ul );
+    BOOST_CHECK_NO_THROW( core::input_base_reader::ordinal_input( name, "0", title, sec, targ ) );
+    BOOST_CHECK_EQUAL( targ, 0ul );
+    // Leading whitespace is not an error
+    BOOST_CHECK_NO_THROW( core::input_base_reader::ordinal_input( name, " 1", title, sec, targ ) );
+    BOOST_CHECK_EQUAL( targ, 1ul );
+    // Trialing whitespace is not an error
+    BOOST_CHECK_NO_THROW( core::input_base_reader::ordinal_input( name, "10  ", title, sec, targ ) );
+    BOOST_CHECK_EQUAL( targ, 10ul );
+  }
+  // INVALID INPUTS
+  {
+    try
+    {
+      // NEGATIVE
+      std::size_t targ{ 0ul };
+      core::input_base_reader::ordinal_input( name, "-1", title, sec, targ );
+      BOOST_CHECK_EQUAL( targ, 0ul );
+      BOOST_ERROR( "expected \"core::input_base_reader::ordinal_input\" exception on NEGATIVE input not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter value (-1) cannot be negative." ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"core::input_base_reader::ordinal_input\" was not expected type: " ) + err.what() );
+    }
+    try
+    {
+      std::size_t targ{ 0ul };
+      // OVERFLOW
+      core::input_base_reader::ordinal_input( name, "18446744073709551616", title, sec, targ );
+      BOOST_CHECK_EQUAL( targ, 0ul );
+      BOOST_ERROR( "expected \"core::input_base_reader::ordinal_input\" exception on NEGATIVE input not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter value (18446744073709551616) outside numeric range." ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"core::input_base_reader::ordinal_input\" was not expected type: " ) + err.what() );
+    }
+    try
+    {
+      std::size_t targ{ 0ul };
+      // TRIALING CHARACTERS
+      core::input_base_reader::ordinal_input( name, "1KL", title, sec, targ );
+      BOOST_CHECK_EQUAL( targ, 0ul );
+      BOOST_ERROR( "expected \"core::input_base_reader::ordinal_input\" exception on NEGATIVE input not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter value (1KL) is not an number." ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"core::input_base_reader::ordinal_input\" was not expected type: " ) + err.what() );
+    }
+    try
+    {
+      std::size_t targ{ 0ul };
+      // ONLY WHITESPACE CHARACTERS
+      core::input_base_reader::ordinal_input( name, " \t\n", title, sec, targ );
+      BOOST_CHECK_EQUAL( targ, 0ul );
+      BOOST_ERROR( "expected \"core::input_base_reader::ordinal_input\" exception on NEGATIVE input not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter requires a value." ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"core::input_base_reader::ordinal_input\" was not expected type: " ) + err.what() );
+    }
+    try
+    {
+      std::size_t targ{ 0ul };
+      // LEADING CHARACTERS
+      core::input_base_reader::ordinal_input( name, "K1", title, sec, targ );
+      BOOST_CHECK_EQUAL( targ, 0ul );
+      BOOST_ERROR( "expected \"core::input_base_reader::ordinal_input\" exception on NEGATIVE input not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter value (K1) is not an number." ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"core::input_base_reader::ordinal_input\" was not expected type: " ) + err.what() );
+    }
+    try
+    {
+      std::size_t targ{ 0ul };
+      // NOT A NUMBER
+      core::input_base_reader::ordinal_input( name, "ten", title, sec, targ );
+      BOOST_CHECK_EQUAL( targ, 0ul );
+      BOOST_ERROR( "expected \"core::input_base_reader::ordinal_input\" exception on NEGATIVE input not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter value (ten) is not an number." ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"core::input_base_reader::ordinal_input\" was not expected type: " ) + err.what() );
+    }
+  }
 }
 !!!554672.cpp!!!	input_base_reader_test() : void
 ////////////
