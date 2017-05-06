@@ -399,17 +399,19 @@ else
 target = result;
 
 !!!1628848.cpp!!!	ordinal_input(in name : string, in value : string, in title : string, in section_name : string, inout target : size_t) : void
-UTILITY_INPUT( not value.empty(), title + " \"" + name + "\" parameter requires a value.", section_name, nullptr );
+const char *start = value.c_str();
+// Move past any whitespace
+while( not *start == '\0' and std::isspace( *start ) ) ++start;
+UTILITY_INPUT( *start != '\0', title + " \"" + name + "\" parameter requires a value.", section_name, nullptr );
+// Check for negative sign
+UTILITY_INPUT( *start != '-', title + " \"" + name + "\" parameter value ("+value+") cannot be negative.", section_name, nullptr );
+char *end;
 std::size_t result;
-try
-{
-  result = boost::lexical_cast< std::size_t >( value );
-}
-catch( std::bad_cast const& err )
-{
-  const bool value_is_a_number = false;
-  UTILITY_INPUT( value_is_a_number, title + " \"" + name + "\" parameter value (" + value + ") is not a number: " + err.what(), section_name, nullptr );
-}
+errno = 0;
+// Expect base ten.
+result = std::strtoul(start, &end, 0);
+UTILITY_INPUT( errno != ERANGE, title + " \"" + name + "\" parameter value ("+value+") outside numeric range.", section_name, nullptr );
+UTILITY_INPUT( *end == '\0' or std::isspace( *end ), title + " \"" + name + "\" parameter value ("+value+") is not an number.", section_name, nullptr );
 target = result;
 !!!1938736.cpp!!!	get_ordinal(in name : string, in title : string, in section_name : string) : size_t
 UTILITY_INPUT( not this->value().empty(), title + " \"" + name + "\" parameter requires a value.", section_name, this );
