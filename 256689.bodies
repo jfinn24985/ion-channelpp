@@ -63,26 +63,18 @@ if( subparams.find( number_of_iterations_label ) != subparams.end() )
   }
 }
 return boost::shared_ptr< simulation_manager >( result.release() );
-!!!457265.cpp!!!	prepare(inout sim : simulator) : void
-this->updater_->prepare( sim );
-!!!457265.python!!!	prepare(inout sim : simulator) : void
-# Set up chemex estimator
-from estimater import estimater
-self.chem_potential_ = []
-for i in range( sim.specie_count() ):
-  self.chem_potential_.append( estimater() )
 !!!458033.cpp!!!	run(inout sim : simulation, inout oslog : ostream) : bool
 // do thermalization
 oslog << "\n -----------------------";
 oslog << "\n Start of Thermalisation";
 oslog << "\n -----------------------\n\n";
-// This should recursively call out prepare method.
 sim.prepare();
 sim.run_loop( this->equilibration_interval() );
 oslog << "\n ---------------------";
 oslog << "\n End of Thermalisation";
 oslog << "\n ---------------------\n\n";
 
+this->updater_->prepare( sim );
 // Perform iterations on thermalised simulation.
 for( ; this->super_loop_count_ < this->super_loop_size_; ++this->super_loop_count_)
 {
@@ -90,7 +82,6 @@ for( ; this->super_loop_count_ < this->super_loop_size_; ++this->super_loop_coun
   oslog << "\n ---------------------------";
   oslog << "\n Start of Iteration [" << (this->super_loop_count_ + 1) << "]\n";
   oslog << "\n ---------------------------\n\n";
-  // This should recursively call out prepare method.
   sim.prepare();
   sim.run_loop( this->production_interval() );
   oslog << "\n -------------------------";

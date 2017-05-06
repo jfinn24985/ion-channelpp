@@ -8,25 +8,25 @@ os << "   S. Lamperski, Mol. Simul. 33, 1193, 2007\n\n";
 // Lamperski: 
 //  Add or subtract "delta" depending on whether average 
 // density is greater or less than desired
-// 
+//
 // Use mean concentration from specie_count sampler.
 //
 // NOTE: we could use specie_count::type_label_()
 boost::any means_any = sys.report().get_sample("specie-count")->get_value();
-std::vector< utility::estimater > const& means = *(boost::any_cast< std::vector< utility::estimater > const* >(means_any));
+utility::estimate_array const& means = *(boost::any_cast< utility::estimate_array const* >(means_any));
 auto & pman = sys.particles();
 auto const& sysreg = sys.regions().system_region();
 
 for (size_t ispec = 0; ispec != pman.specie_count(); ++ispec)
 {
-   particle::specie & spcobj = pman.get_specie(ispec);
-   // only solute species exist when using IGCMC
-   double actual_concentration = means[ispec].mean()*core::constants::to_SI()/sysreg.volume( spcobj.radius() );
-   if (not utility::feq(actual_concentration,0.0))
-   {
-      double chempi = spcobj.excess_potential() + (spcobj.concentration() > actual_concentration? this->delta : -this->delta);
-      spcobj.set_excess_potential( chempi );
-   }
+  particle::specie & spcobj = pman.get_specie(ispec);
+  // only solute species exist when using IGCMC
+  double actual_concentration = means.mean(ispec)*core::constants::to_SI()/sysreg.volume( spcobj.radius() );
+  if (not utility::feq(actual_concentration,0.0))
+  {
+    double chempi = spcobj.excess_potential() + (spcobj.concentration() > actual_concentration? this->delta : -this->delta);
+    spcobj.set_excess_potential( chempi );
+  }
 }
 !!!218160.cpp!!!	do_write_part_document(inout wr : input_document, in ix : size_t) : void
 wr[ ix ].add_entry( "delta", this->delta );

@@ -1,9 +1,9 @@
 class chemical_potential_update
-!!!2098480.cpp!!!	prepare(inout sim : simulator) : void
+!!!2098480.cpp!!!	prepare(inout sim : simulation) : void
 this->chemical_potentials_.clear();
-this->chemical_potentials_.resize( sim.specie_count() );
+this->chemical_potentials_.resize( sim.particles().specie_count() );
 this->do_prepare( sim );
-!!!2098480.python!!!	prepare(inout sim : simulator) : void
+!!!2098480.python!!!	prepare(inout sim : simulation) : void
 # Set up chemex estimator
 from estimater import estimater
 self.chem_potential_ = []
@@ -11,21 +11,21 @@ for i in range( sim.specie_count() ):
   self.chem_potential_.append( estimater() )
 !!!2099120.cpp!!!	update(inout sys : simulation, inout oslog : ostream) : void
 // Save existing chemical potentials.
-std::vector< double > old_cpx_list;
-std::vector< double > new_cpx_list;
 auto const& pman = sys.particles();
-for (auto const& spc : pman.get_species() )
+std::vector< double > old_cpx_list( pman.specie_count() );
+std::vector< double > new_cpx_list( pman.specie_count() );
+for(std::size_t ispec = 0; ispec != pman.specie_count(); ++ispec )
 {
-  old_cpx_list.push_back(spc.excess_potential());
+  old_cpx_list[ ispec ] = pman.get_specie( ispec ).excess_potential();
 }
 
 // Call derived class to update excess potentials
 this->do_update( sys, oslog );
 
 // update statistics
-for (auto const& spc : pman.get_species() )
+for(std::size_t ispec = 0; ispec != pman.specie_count(); ++ispec )
 {
-  new_cpx_list.push_back(spc.excess_potential());
+  new_cpx_list[ ispec ] = pman.get_specie( ispec ).excess_potential();
 }
 this->chemical_potentials_.append( new_cpx_list );
 
@@ -112,7 +112,7 @@ for (std::size_t ispec = 0; ispec != this->chemical_potentials_.size(); ++ispec)
 
 dset.write( filename, sim.report().get_sink(), 1 == loopindex );
 
-!!!542897.cpp!!!	charge_correction_factor(in sim : simulator) : double
+!!!542897.cpp!!!	charge_correction_factor(in sim : simulation) : double
 //namespace cc = core::constants;
 //static const double csloth { ( 6*std::log( 2 + std::sqrt(3.0)) - cc::pi() )
 //  / (16 * cc::pi() * cc::eps0() * cc.dsi() ) };
