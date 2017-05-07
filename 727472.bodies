@@ -1,0 +1,169 @@
+class imc_convergence_test
+!!!2165168.cpp!!!	malasics_simulation_main_test() : void
+const std::string input_filename{ "malasics.inp" };
+if( boost::filesystem::exists( "0005" ) )
+{
+  boost::filesystem::remove_all( "0005" );
+}
+if( boost::filesystem::exists( input_filename ) )
+{
+  boost::filesystem::remove( input_filename );
+}
+{
+  {
+    const std::string input_file_contents{ 
+"\nsimulator\ntype imc\nupdate malasics\nniter 100\ninner 2500\nname Test simulation\nnstep 5000\nnaver 1000\nisave 100\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n\nrun\ntype standard\noutputdir \"\%1$04d\"\nend\n\nevaluator\ntype coulomb\nend\n\nsampler\ntype specie-count\nend\n\nsampler\ntype widom\niwidom 10\nend\n\nregion\ntype cube\nname centre\nwidth 5\norigin 2.5 2.5 2.5\nend\n\nspecie\nname Ka\nz 1\nd 1.41\nctarg 0.05\nchex 0.0\nend\n\nspecie\nname Na\nz 1\nd 1.01\nctarg 0.05\nchex 0.0\nend\n\nspecie\nname Cl\nz -1\nd 1.78\nctarg 0.1\nchex 0.0\nend\n\ntrial\nrate 0.5\ntype move\ndelta 1.0\nend\n\ntrial\nrate 0.5\ntype jump\nend\n\ntrial\nrate 0.5\ntype \"individual\"\nend\n"
+ };
+    std::ofstream out( "malasics.inp" );
+    out.write( input_file_contents.data(), input_file_contents.size() );
+  }
+  boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+  boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+  stor->set_log( slog );
+  boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
+
+  char a1[] { "ionch" };
+  char a2[] { "--input" };
+  // char a3[] { input_filename };
+  char a4[] { "--run" };
+  char a5[] { "5" };
+  const char* argv[] { &a1[0], &a2[0], input_filename.c_str(), &a4[0], &a5[0] };
+  int argc = 5;
+
+  try
+  {
+    BOOST_CHECK( sim->main( argc, argv ) );
+  }
+  catch( std::exception const& err )
+  {
+    std::cout << err.what() << "\n";
+    BOOST_ERROR( std::string( "Unexpected exception thrown by \"sim.main(...)\": " ) + err.what() );
+  }
+}
+{
+  BOOST_REQUIRE( boost::filesystem::exists( "0005" ) );
+  BOOST_REQUIRE( boost::filesystem::is_directory( "0005" ) );
+  BOOST_REQUIRE( boost::filesystem::exists( "0005/checkpoint.arc" ) );
+  BOOST_REQUIRE( boost::filesystem::exists( "0005/output.dbm" ) );
+  try
+  {
+    utility::gdbm_sink db( "0005/output.dbm", utility::base_sink::READ_ONLY );
+    BOOST_REQUIRE( db.exists( "igcmc.dat" ) );
+    BOOST_REQUIRE( db.exists( "specie-count.dat" ) );
+    BOOST_REQUIRE( db.exists( "widom.dat" ) );
+    const std::string speciecount( "# TITLE: \"Time series specie counts\" \n# FIELDS: INDEX SPC[0]_MEAN SPC[0]_VAR SPC[1]_MEAN SPC[1]_VAR SPC[2]_MEAN SPC[2]_VAR " );
+    const std::string uuidlabel( "# UUID:" );
+    const std::string widom( "# TITLE: \"Series of Widom method chemical potential estimates\" \n# FIELDS: INDEX Ka_EXCESS0 Ka_POTENTIAL Ka_EXCESS Ka_COUNT Na_EXCESS0 Na_POTENTIAL Na_EXCESS Na_COUNT Cl_EXCESS0 Cl_POTENTIAL Cl_EXCESS Cl_COUNT " );
+    std::string buffer;
+    BOOST_REQUIRE( db.read( "igcmc.dat", buffer ) );
+    BOOST_CHECK_EQUAL( buffer.find( uuidlabel ), 0ul );
+    //std::cout << buffer;
+    BOOST_REQUIRE( db.read( "specie-count.dat", buffer ) );
+    BOOST_CHECK_EQUAL( buffer.find( speciecount ), 42ul );
+    BOOST_CHECK_EQUAL( buffer.find( uuidlabel ), 0ul );
+    //std::cout << buffer;
+    BOOST_REQUIRE( db.read( "widom.dat", buffer ) );
+    BOOST_CHECK_EQUAL( buffer.find( widom ), 42ul );
+    BOOST_CHECK_EQUAL( buffer.find( uuidlabel ), 0ul );
+    //std::cout << buffer;
+  }
+  catch( std::exception const& err )
+  {
+    std::cout << err.what() << "\n";
+    BOOST_ERROR( std::string( "Unexpected exception working on db \"0005/output.dbm\": " ) + err.what() );
+  }
+}
+//if( boost::filesystem::exists( "0005" ) )
+//{
+//  boost::filesystem::remove_all( "0005" );
+//}
+if( boost::filesystem::exists( input_filename ) )
+{
+  boost::filesystem::remove( input_filename );
+}
+
+!!!2165296.cpp!!!	lamperski_simulation_main_test() : void
+const std::string input_filename{ "lamperski.inp" };
+if( boost::filesystem::exists( "0006" ) )
+{
+  boost::filesystem::remove_all( "0006" );
+}
+if( boost::filesystem::exists( input_filename ) )
+{
+  boost::filesystem::remove( input_filename );
+}
+{
+  {
+    const std::string input_file_contents{
+"\nsimulator\ntype imc\nupdate lamperski\ndelta 0.2\nniter 100\ninner 250:0\nname Test simulation\nnstep 2000\nnaver 100\nisave 100\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n\nrun\ntype standard\noutputdir \"\%1$04d\"\nend\n\nevaluator\ntype coulomb\nend\n\nsampler\ntype specie-count\nend\n\nsampler\ntype widom\niwidom 10\nend\n\nregion\ntype cube\nname centre\nwidth 5\norigin 2.5 2.5 2.5\nend\n\nspecie\nname Ka\nz 1\nd 1.41\nctarg 0.05\nchex 0.0\nend\n\nspecie\nname Na\nz 1\nd 1.01\nctarg 0.05\nchex 0.0\nend\n\nspecie\nname Cl\nz -1\nd 1.78\nctarg 0.1\nchex 0.0\nend\n\ntrial\nrate 0.5\ntype move\ndelta 1.0\nend\n\ntrial\nrate 0.5\ntype jump\nend\n\ntrial\nrate 0.5\ntype \"individual\"\nend\n"
+ };
+    std::ofstream out( input_filename );
+    out.write( input_file_contents.data(), input_file_contents.size() );
+  }
+  boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+  boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+  stor->set_log( slog );
+  boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
+
+  char a1[] { "ionch" };
+  char a2[] { "--input" };
+  // char a3[] { "lamperski.inp" };
+  char a4[] { "--run" };
+  char a5[] { "4" };
+  const char* argv[] { &a1[0], &a2[0], input_filename.c_str(), &a4[0], &a5[0] };
+  int argc = 5;
+
+  try
+  {
+    BOOST_CHECK( sim->main( argc, argv ) );
+  }
+  catch( std::exception const& err )
+  {
+    std::cout << err.what() << "\n";
+    BOOST_ERROR( std::string( "Unexpected exception thrown by \"sim.main(...)\": " ) + err.what() );
+  }
+}
+{
+  BOOST_REQUIRE( boost::filesystem::exists( "0006" ) );
+  BOOST_REQUIRE( boost::filesystem::is_directory( "0006" ) );
+  BOOST_REQUIRE( boost::filesystem::exists( "0006/checkpoint.arc" ) );
+  BOOST_REQUIRE( boost::filesystem::exists( "0006/output.dbm" ) );
+  try
+  {
+    utility::gdbm_sink db( "0006/output.dbm", utility::base_sink::READ_ONLY );
+    BOOST_REQUIRE( db.exists( "igcmc.dat" ) );
+    BOOST_REQUIRE( db.exists( "specie-count.dat" ) );
+    BOOST_REQUIRE( db.exists( "widom.dat" ) );
+    const std::string speciecount( "# TITLE: \"Time series specie counts\" \n# FIELDS: INDEX SPC[0]_MEAN SPC[0]_VAR SPC[1]_MEAN SPC[1]_VAR SPC[2]_MEAN SPC[2]_VAR " );
+    const std::string uuidlabel( "# UUID:" );
+    const std::string widom( "# TITLE: \"Series of Widom method chemical potential estimates\" \n# FIELDS: INDEX Ka_EXCESS0 Ka_POTENTIAL Ka_EXCESS Ka_COUNT Na_EXCESS0 Na_POTENTIAL Na_EXCESS Na_COUNT Cl_EXCESS0 Cl_POTENTIAL Cl_EXCESS Cl_COUNT " );
+    std::string buffer;
+    BOOST_REQUIRE( db.read( "igcmc.dat", buffer ) );
+    BOOST_CHECK_EQUAL( buffer.find( uuidlabel ), 0ul );
+    //std::cout << buffer;
+    BOOST_REQUIRE( db.read( "specie-count.dat", buffer ) );
+    BOOST_CHECK_EQUAL( buffer.find( speciecount ), 42ul );
+    BOOST_CHECK_EQUAL( buffer.find( uuidlabel ), 0ul );
+    //std::cout << buffer;
+    BOOST_REQUIRE( db.read( "widom.dat", buffer ) );
+    BOOST_CHECK_EQUAL( buffer.find( widom ), 42ul );
+    BOOST_CHECK_EQUAL( buffer.find( uuidlabel ), 0ul );
+    //std::cout << buffer;
+  }
+  catch( std::exception const& err )
+  {
+    std::cout << err.what() << "\n";
+    BOOST_ERROR( std::string( "Unexpected exception working on db \"0006/output.dbm\": " ) + err.what() );
+  }
+}
+//if( boost::filesystem::exists( "0006" ) )
+//{
+//  boost::filesystem::remove_all( "0006" );
+//}
+if( boost::filesystem::exists( input_filename ) )
+{
+  boost::filesystem::remove( input_filename );
+}
+
