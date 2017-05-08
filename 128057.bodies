@@ -24,14 +24,17 @@ for (size_t ispec = 0; ispec != pman.specie_count(); ++ispec)
   double actual_concentration = means.mean(ispec)*core::constants::to_SI()/sysreg.volume( spcobj.radius() );
   if (not utility::feq(actual_concentration,0.0))
   {
-    double chempi = spcobj.excess_potential() + (spcobj.concentration() > actual_concentration? this->delta : -this->delta);
+    const double change = (this->use_random_ ? this->delta_ * sys.get_random().uniform(): this->delta_ );
+    const double chempi = spcobj.excess_potential() + (spcobj.concentration() > actual_concentration? change : -change);
     spcobj.set_excess_potential( chempi );
   }
 }
 !!!218160.cpp!!!	do_write_part_document(inout wr : input_document, in ix : size_t) : void
-wr[ ix ].add_entry( "delta", this->delta );
+wr[ ix ].add_entry( "delta", this->delta_ );
+wr[ ix ].add_entry( "use-random", this->use_random_ );
 !!!2113072.cpp!!!	add_to_definition(inout defn : simulation_definition) : string
 defn.add_definition( { "delta", "number", ">0", "0.1", "(lamperski update) The magnitude of the change in chemical potential to use in updates." } );
+defn.add_definition( { "use-random", "boolean", "", "false", "(lamperski update) Scale the magnitude of the change in chemical potential by a random factor during updates.." } );
 return type_label_();
 !!!2113200.cpp!!!	make_updater(in params : string) : imc_update
 std::unique_ptr< lamperski_igcmc > smplr(new lamperski_igcmc);
@@ -42,7 +45,13 @@ for (auto const& item : params)
   {
     double delta{ 0.0 };
     core::input_base_reader::float_input( item.first, item.second, "Lamperski IMC", core::strngs::simulator_label(), delta, true, false );
-    smplr->delta = delta;
+    smplr->delta_ = delta;
+  }
+  else if (item.first == "use-random")
+  {
+    bool do_random{ false };
+    core::input_base_reader::bool_input( item.first, item.second, "Lamperski IMC", core::strngs::simulator_label(), do_random, true, false );
+    smplr->use_random_ = do_random;
   }
   else
   {
