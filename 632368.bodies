@@ -409,13 +409,20 @@ if (this->report_interval_ == 0)
 {
   this->report_interval_ = std::max(1ul, loopcount / 5);
 }
-
+const std::size_t inner_loop_size{ std::max( this->inner_loop_size_, this->compute_degrees_of_freedom() ) };
+if( inner_loop_size != this->inner_loop_size_ )
+{
+  this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n\n";
+  this->fstype_->get_log() << "    NOTE\n\n";
+  this->fstype_->get_log() << "    The degrees of freedom of the simulation (" << inner_loop_size << ") is larger than\n    the requested inner loop size (" << this->inner_loop_size_ << "). Using the degrees of\n    freedom for the inner loop.\n\n";
+  this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n\n";
+}
 // Run the simulation
 auto const& ens = this->pman_->get_ensemble();
 for (size_t d9m8h2 = 0; d9m8h2 != loopcount; ++d9m8h2)
 {
   this->outer_loop_index_ += 1;
-  for ( size_t t1b6b8 = 0; t1b6b8 != this->inner_loop_size_; ++t1b6b8 )
+  for ( size_t t1b6b8 = 0; t1b6b8 != inner_loop_size; ++t1b6b8 )
   {
     // select a move
     double sofar = this->ranf_.uniform( 0.0, 1.0 );
