@@ -694,3 +694,43 @@ this->description( this->fstype_->get_log() );
  
 // Run the simulation
 return this->simtype_->run( *this, this->fstype_->get_log() );
+!!!2171952.cpp!!!	compute_degrees_of_freedom() : size_t
+std::size_t dof{ 0 };
+std::size_t number_of_particles{ this->pman_->get_ensemble().count() };
+//  The number of degrees of freedom is calculated from
+//  the following parameters.
+// 
+//  * Each energy evaluator contributes 1 DoF.
+
+dof = this->eman_->size();
+
+//  * If the system is Grand Canonical then:
+// 
+if( this->cman_->is_grand_canonical() )
+{
+  const std::size_t target_count{ this->pman_->target_count() };
+  //  ** The number of particles for calculating DoF 
+  //  is target_count + sqrt(target_count). This comes
+  //  from our expectation that the particle number will
+  //  form a (semi-)uniform distribution around the 
+  //  target count with a standard deviation of 
+  //  sqrt(target_count).
+  std::size_t number_of_solute{ target_count };
+  number_of_solute += static_cast< std::size_t >( std::sqrt( target_count ) );
+  number_of_particles = ( number_of_particles > target_count ? number_of_particles - target_count : 0ul );
+  //  ** Each non-solute particle contributes
+  //  3 DoF.
+  //  ** Each solute particle contributes 3+1 DoF
+  //  from being able to have different specie type.
+  dof += number_of_particles * 3 + number_of_solute * 4;
+  //  ** Each solute specie type contributes 1 DoF. 
+  dof += this->pman_->specie_count();
+}
+else
+{
+  //  * The position of the particles contribute
+  //  3 DoF / particle.
+  dof += number_of_particles * 3;
+}
+// Return degrees of freedom
+return dof;
