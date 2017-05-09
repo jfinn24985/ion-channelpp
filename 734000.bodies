@@ -1,0 +1,53 @@
+class trial_observer
+!!!2178992.cpp!!!	add_definition(inout meta : sampler_meta) : void
+std::string desc( "Record the outcome of every trial. This is used to monitor the simulation and is not an outcome of the simulation." );
+std::unique_ptr< tracked_definition > result( new tracked_definition( type_label_(), desc, &trial_observer::make_sampler ) );
+// no extra parameters
+meta.add_tracked_type( result );
+
+!!!2179120.cpp!!!	description(inout out : ostream) : void
+out << " " << this->type_label_() << "\n";
+out << " " << std::string( this->type_label_().size(), '-' ) << "\n";
+out << "    Record each trial\n";
+!!!2179376.cpp!!!	get_value() : boost::any
+boost::any result = std::make_pair( &this->buffer_, this->index_ );
+return result;
+!!!2179504.cpp!!!	make_sampler(in param_set : string) : tracked_observable
+UTILITY_INPUT(param_set.empty(),"The "+type_label_()+" sampler requires no parameters.",core::strngs::sampler_label(), nullptr);
+boost::shared_ptr< tracked_observable > smplr(new trial_observer);
+return smplr;
+!!!2179632.cpp!!!	on_trial_end(in trial : change_set) : void
+if( this->index_ == this->buffer_.size() )
+{
+  this->buffer_.resize( this->buffer_.size() + 64 );
+}
+this->buffer_[ this->index_ ].set( trial );
+++this->index_;
+!!!2179888.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
+if( this->index_ != 0ul )
+{
+  std::stringstream os;
+  for( std::size_t idx = 0ul; idx != this->index_ ; ++idx )
+  {
+    os << this->buffer_[ idx ];
+  }
+
+  std::string filename = this->type_label_() + ".dat";
+  if( not sink.exists( filename ) )
+  {
+    std::stringstream title;
+    title << "# UUID: " << sink.uuid() << "\n"; 
+    title << "# TITLE: \"Record of each trial\"";
+    title << "# FIELDS: CHANGE_ID ENERGY PROB_FACTOR EXP_FACTOR FAIL ACCEPT\n";
+    title << "# UNITS: (A,B,C,D) ENERGY NUMBER NUMBER BOOLEAN BOOLEAN\n";
+    sink.write( filename, title.str() );
+  }
+  sink.append( filename, os.str() );
+}
+// Reset index.
+this->index_ = 0ul;
+
+!!!2180016.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
+this->index_ = 0ul;
+!!!2180272.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
