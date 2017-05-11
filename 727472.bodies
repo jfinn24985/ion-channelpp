@@ -137,3 +137,71 @@ if( boost::filesystem::exists( input_filename ) )
 //  boost::filesystem::remove( input_filename );
 //}
 
+!!!2195120.cpp!!!	trial_log_simulation_test() : void
+const std::string input_filename{ "trial-log.inp" };
+if( boost::filesystem::exists( "0007" ) )
+{
+  boost::filesystem::remove_all( "0007" );
+}
+if( boost::filesystem::exists( input_filename ) )
+{
+  boost::filesystem::remove( input_filename );
+}
+{
+  {
+    const std::string input_file_contents{ 
+"\nsimulator\ntype standard\ninner 250\nname Test simulation\nnstep 1000\nnaver 100\nisave 100\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n\nrun\ntype standard\noutputdir \"\%1$04d\"\nend\n\nevaluator\ntype coulomb\nend\n\nsampler\ntype specie-count\nend\n\nsampler\ntype trial-log\nend\n\nregion\ntype cube\nname centre\nwidth 5\norigin 2.5 2.5 2.5\nend\n\nspecie\nname Ka\nz 1\nd 1.41\nctarg 0.05\nchex 0.0\nend\n\nspecie\nname Na\nz 1\nd 1.01\nctarg 0.05\nchex 0.0\nend\n\nspecie\nname Cl\nz -1\nd 1.78\nctarg 0.1\nchex 0.0\nend\n\ntrial\nrate 0.5\ntype move\ndelta 1.0\nend\n\ntrial\nrate 0.5\ntype jump\nend\n\ntrial\nrate 0.5\ntype \"individual\"\nend\n"
+ };
+    std::ofstream out( input_filename );
+    out.write( input_file_contents.data(), input_file_contents.size() );
+  }
+  boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+  boost::shared_ptr< std::ostream > slog( new std::ofstream( input_filename + ".log" ) );
+  stor->set_log( slog );
+  boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
+
+  char a1[] { "ionch" };
+  char a2[] { "--input" };
+  // char a3[] { input_filename };
+  char a4[] { "--run" };
+  char a5[] { "7" };
+  const char* argv[] { &a1[0], &a2[0], input_filename.c_str(), &a4[0], &a5[0] };
+  int argc = 5;
+
+  try
+  {
+    BOOST_CHECK( sim->main( argc, argv ) );
+  }
+  catch( std::exception const& err )
+  {
+    std::cout << err.what() << "\n";
+    BOOST_ERROR( std::string( "Unexpected exception thrown by \"sim.main(...)\": " ) + err.what() );
+  }
+}
+{
+  BOOST_REQUIRE( boost::filesystem::exists( "0007" ) );
+  BOOST_REQUIRE( boost::filesystem::is_directory( "0007" ) );
+  BOOST_REQUIRE( boost::filesystem::exists( "0007/checkpoint.arc" ) );
+  BOOST_REQUIRE( boost::filesystem::exists( "0007/output.dbm" ) );
+  try
+  {
+    utility::gdbm_sink db( "0007/output.dbm", utility::base_sink::READ_ONLY );
+    BOOST_REQUIRE( db.exists( "trial-log.dat" ) );
+    BOOST_REQUIRE( db.exists( "specie-count.dat" ) );
+  }
+  catch( std::exception const& err )
+  {
+    std::cout << err.what() << "\n";
+    BOOST_ERROR( std::string( "Unexpected exception working on db \"0007/output.dbm\": " ) + err.what() );
+  }
+}
+//if( boost::filesystem::exists( "0007" ) )
+//{
+//  boost::filesystem::remove_all( "0007" );
+//}
+//if( boost::filesystem::exists( input_filename ) )
+//{
+//  boost::filesystem::remove( input_filename );
+//}
+
