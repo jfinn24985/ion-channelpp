@@ -1,6 +1,6 @@
 format 75
 "platform_build" // build_files::platform_build
-  revision 15
+  revision 16
   modified_by 48 "finnerty"
   // class settings
   //class diagram settings
@@ -91,7 +91,7 @@ $(eval $(call do_install,libionch_platform_mpi$(suflib),LIB))
 #Butter version 1.2beta.175
 ##END:version
 ##START:date
-#Thu May 4 13:19:30 2017
+#Fri May 12 17:08:55 2017
 ##END:date
 ##START:preamble
 ALL_LOCATE_TARGET = $(BASE_LOCATE_TARGET)$(SLASH)src$(SLASH)platform ;
@@ -101,7 +101,7 @@ SubDir TOP src platform ;
 ##END:preamble
 ##START:target libionch_platform
 PLATFORM_LIBIONCH_PLATFORM_SRC =
-	<src!platform>cube_application.cpp
+	<src!platform>ionch_main.cpp
 	<src!platform>simulator.cpp
 	<src!platform>simulator_meta.cpp
 	;
@@ -114,14 +114,14 @@ InstallLib $(LIBDIR) : <src!platform>libionch_platform$(SUFLIB) ;
 ##END:target libionch_platform
 ##START:target libionch_platform_mpi
 PLATFORM_LIBIONCH_PLATFORM_MPI_SRC =
-	<src!platform>mpi_application.cpp
+	<src!platform>mpi_storage.cpp
 	;
 
 Library <src!platform>libionch_platform_mpi$(SUFLIB) :
 	$(PLATFORM_LIBIONCH_PLATFORM_MPI_SRC) ;
 
 PLATFORM_LIBIONCH_PLATFORM_MPI_LDFLAGS =  ;
-ObjectHdrs <src!platform>mpi_application.cpp : $(MPI_INC) ;
+ObjectC++Flags <src!platform>mpi_storage.cpp : $(MPI_INC) ;
 
 InstallLib $(LIBDIR) : <src!platform>libionch_platform_mpi$(SUFLIB) ;
 ##END:target libionch_platform_mpi
@@ -148,16 +148,16 @@ PLATFORM_LIBIONCH_NEWPLATFORM_LDFLAGS = $(BOOST_LIB) -lboost_program_options -lb
 ObjectHdrs $(PLATFORM_LIBIONCH_NEWPLATFORM_SRC) : $(BOOST_INC) ;
 InstallLib $(LIBDIR) : <src!platform>libionch_newplatform$(SUFLIB) ;
 ##END:target libionch_newplatform
-##START:target csccube
-PLATFORM_CSCCUBE_SRC =
-	<src!platform>cube_application.cpp
+##START:target ionch
+PLATFORM_IONCH_SRC =
+	<src!platform>ionch_main.cpp
 	;
 
-Main <src!platform>csccube$(SUFEXE) :
-	$(PLATFORM_CSCCUBE_SRC) ;
+Main <src!platform>ionch$(SUFEXE) :
+	$(PLATFORM_IONCH_SRC) ;
 
-LINKLIBS on <src!platform>csccube$(SUFEXE) += $(BOOST_LIB) -lboost_date_time -lboost_filesystem -lgdbm $(CORE_LIBIONCH_CORE_LDFLAGS)  $(EVALUATOR_LIBIONCH_EVALUATOR_LDFLAGS)  $(UTILITY_LIBIONCH_GDBM_SINK_LDFLAGS)  $(GEOMETRY_LIBIONCH_GEOMETRY_LDFLAGS)  $(PLATFORM_LIBIONCH_NEWPLATFORM_LDFLAGS)  $(OBSERVABLE_LIBIONCH_OBSERVABLE_LDFLAGS)  $(PARTICLE_LIBIONCH_PARTICLE_LDFLAGS)  $(TRIAL_LIBIONCH_TRIAL_LDFLAGS)  $(UTILITY_LIBIONCH_UTILITY_LDFLAGS)  $(UTILITY_LIBIONCH_ZIP_SINK_LDFLAGS)  -lboost_program_options -lboost_system -lboost_random -lboost_regex -lboost_serialization -luuid -lzip ;
-LinkLibraries <src!platform>csccube$(SUFEXE) :
+LINKLIBS on <src!platform>ionch$(SUFEXE) += $(BOOST_LIB) -lboost_date_time -lboost_filesystem -lgdbm $(CORE_LIBIONCH_CORE_LDFLAGS)  $(EVALUATOR_LIBIONCH_EVALUATOR_LDFLAGS)  $(UTILITY_LIBIONCH_GDBM_SINK_LDFLAGS)  $(GEOMETRY_LIBIONCH_GEOMETRY_LDFLAGS)  $(PLATFORM_LIBIONCH_NEWPLATFORM_LDFLAGS)  $(OBSERVABLE_LIBIONCH_OBSERVABLE_LDFLAGS)  $(PARTICLE_LIBIONCH_PARTICLE_LDFLAGS)  $(TRIAL_LIBIONCH_TRIAL_LDFLAGS)  $(UTILITY_LIBIONCH_UTILITY_LDFLAGS)  $(UTILITY_LIBIONCH_ZIP_SINK_LDFLAGS)  -lboost_program_options -lboost_system -lboost_random -lboost_regex -lboost_serialization -luuid -lzip ;
+LinkLibraries <src!platform>ionch$(SUFEXE) :
 	 <src!core>libionch_core$(SUFLIB) 
 	 <src!evaluator>libionch_evaluator$(SUFLIB) 
 	 <src!utility>libionch_gdbm_sink$(SUFLIB) 
@@ -169,9 +169,38 @@ LinkLibraries <src!platform>csccube$(SUFEXE) :
 	 <src!utility>libionch_utility$(SUFLIB) 
 	 <src!utility>libionch_zip_sink$(SUFLIB) 
 	;
-ObjectHdrs $(PLATFORM_CSCCUBE_SRC) : $(BOOST_INC) ;
-InstallBin $(BINDIR) : <src!platform>csccube$(SUFEXE) ;
-##END:target csccube
+ObjectHdrs $(PLATFORM_IONCH_SRC) : $(BOOST_INC) ;
+InstallBin $(BINDIR) : <src!platform>ionch$(SUFEXE) ;
+##END:target ionch
+##START:target ionch_mpi
+PLATFORM_IONCH_MPI_SRC =
+	<src!platform>mpi_main.cpp
+	<src!platform>mpi_storage.cpp
+	;
+
+Main <src!platform>ionch_mpi$(SUFEXE) :
+	$(PLATFORM_IONCH_MPI_SRC) ;
+
+LINKLIBS on <src!platform>ionch_mpi$(SUFEXE) += $(BOOST_LIB) -lboost_date_time -lboost_filesystem -lgdbm $(CORE_LIBIONCH_CORE_LDFLAGS)  $(EVALUATOR_LIBIONCH_EVALUATOR_LDFLAGS)  $(UTILITY_LIBIONCH_GDBM_SINK_LDFLAGS)  $(GEOMETRY_LIBIONCH_GEOMETRY_LDFLAGS)  $(PLATFORM_LIBIONCH_NEWPLATFORM_LDFLAGS)  $(OBSERVABLE_LIBIONCH_OBSERVABLE_LDFLAGS)  $(PARTICLE_LIBIONCH_PARTICLE_LDFLAGS)  $(TRIAL_LIBIONCH_TRIAL_LDFLAGS)  $(UTILITY_LIBIONCH_UTILITY_LDFLAGS)  $(UTILITY_LIBIONCH_ZIP_SINK_LDFLAGS)  -lboost_mpi $(MPI_LIB) -lmpi -lmpi_cxx -lboost_program_options -lboost_system -lboost_random -lboost_serialization -luuid -lzip ;
+LinkLibraries <src!platform>ionch_mpi$(SUFEXE) :
+	 <src!core>libionch_core$(SUFLIB) 
+	 <src!evaluator>libionch_evaluator$(SUFLIB) 
+	 <src!utility>libionch_gdbm_sink$(SUFLIB) 
+	 <src!geometry>libionch_geometry$(SUFLIB) 
+	 <src!platform>libionch_newplatform$(SUFLIB) 
+	 <src!observable>libionch_observable$(SUFLIB) 
+	 <src!particle>libionch_particle$(SUFLIB) 
+	 <src!trial>libionch_trial$(SUFLIB) 
+	 <src!utility>libionch_utility$(SUFLIB) 
+	 <src!utility>libionch_zip_sink$(SUFLIB) 
+	;
+ObjectHdrs $(PLATFORM_IONCH_MPI_SRC) : $(BOOST_INC) $(MPI_INC) ;
+ObjectHdrs <src!platform>mpi_main.cpp : $(MPI_INC) ;
+ObjectC++Flags <src!platform>mpi_main.cpp : $(MPI_INC) ;
+ObjectC++Flags <src!platform>mpi_storage.cpp : $(MPI_INC) ;
+
+InstallBin $(BINDIR) : <src!platform>ionch_mpi$(SUFEXE) ;
+##END:target ionch_mpi
 "
     end
   end

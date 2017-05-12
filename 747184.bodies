@@ -1,0 +1,190 @@
+class mpi_storage
+!!!2209328.python!!!	do_description(inout os : ostream) : void
+from constants import constants
+constants.description( os )
+print >>os, "[simulation]"
+print >>os, "        volume :", self.cell_region_.volume(-1), "Anstrom{3}"
+print >>os, "  permittivity :", self.cell_region_.permittivity()
+print >>os, " beta (1/k_BT) :", (1.0/(constants.boltzmann_constant()*self.temperature_kelvin_)), " J{-1}"
+print >>os, "  temperature :", self.temperature_kelvin_, " K"
+print >>os, " specie count :", self.specie_count()
+print >>os, " - loop sizes"
+print >>os, "       thermal :", self.equilibration_interval_
+print >>os, "    production :", self.production_interval_
+print >>os, "         inner :", self.inner_loop_size_
+print >>os, " current index :", self.outer_loop_index_
+print >>os, " - other parameters"
+print >>os, " starting particle count :", self.target_number_of_particles()
+print >>os, "          ionic strength :", self.ionic_strength()
+print >>os, "             trial rates :", self.rates_
+print >>os, "              move delta :", self.delta
+for spc in self.species_:
+  spc.description( os )
+print >>os, "[choices] trial types and rates"
+print >>os, " %6s %4s %7s" % ( "type", "spc.", "rate(%)" )
+for choice in self.choices_:
+  print >>os, " %6s %4s %7.2f" % ( choice.label(), self.species_[choice.specie_key()].label(), choice.probability()*100.0 )
+for observable in self.observables_:
+  observable.description( os )
+for potl in self.evaluators_:
+  potl.description( os )
+self.ensemble_.description( os )
+
+!!!2209456.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
+!!!2209712.cpp!!!	compute_output_dir() : string
+boost::format res( this->output_dir_fmt() + "/\%2$03d" );
+// Ignore error of too many arguments.
+res.exceptions( boost::io::all_error_bits ^ boost::io::too_many_args_bit );
+res % this->run_number() % this->rank_;
+return res.str();
+!!!2209840.cpp!!!	ensure_output_dir() : path
+const boost::filesystem::path dpath( this->compute_output_dir() );
+if( not boost::filesystem::exists( dpath ) )
+{
+  boost::filesystem::create_directories( dpath );
+}
+else
+{
+  UTILITY_INPUT( boost::filesystem::is_directory( dpath ), "Filesystem object at target output directory path ["+dpath.native()+"] is not a directory", core::strngs::simulator_label(), nullptr );
+}
+return dpath;
+!!!2209968.cpp!!!	find_input_filename() : std::string
+// Filenames to generate
+//   input.%03d.inp % run_index
+//   input.inp
+std::string result;
+std::string errmsg( "Unable to find input file(s) named:" );
+
+auto test_fn = [](std::string fn)->bool{
+ return boost::filesystem::exists( fn )
+   and boost::filesystem::is_regular_file( fn )
+   and std::ifstream( fn );
+};
+  
+if( not this->filename_base().empty() )
+{
+  // Check for '%' to see if filename base is a format string
+  if( std::string::npos != this->filename_base().find( '%' ) )
+  {
+    // TRY ONE : filename base is format string
+    // -------
+    // Assume filename_base is a format string.
+    boost::format res( this->filename_base() );
+    // Ignore error of too many arguments.
+    res.exceptions( boost::io::all_error_bits ^ boost::io::too_many_args_bit );
+    res % this->run_number();
+    result = res.str();
+    // Check if file exists
+    if( test_fn( result ) )
+    {
+      return result;
+    }
+    else
+    {
+      // Filename not found
+      errmsg.append( " " );
+      errmsg.append( result );
+    }
+    // TRY TWO : remove format code from filename base
+    // -------
+    result.assign( this->filename_base() );
+    // Remove everything from the '%' to the next '.'
+    std::size_t pos1 = result.find( '%' ); // We know this is not npos!
+    std::size_t pos2 = result.find( '.', pos1 );
+    if( std::string::npos != pos2 )
+    {
+      result.erase( pos1, pos2 - pos1 + 1 );
+    }
+    else
+    {
+      result.erase( pos1 );
+    }
+    // Check if file exists
+    if( test_fn( result ) )
+    {
+      return result;
+    }
+    else
+    {
+      // Filename not found
+      errmsg.append( " " );
+      errmsg.append( result );
+    }
+  }
+  else
+  {
+    // TRY THREE : filename base is simple string
+    // ---------
+    result = this->filename_base();
+    // Check if file exists
+    if( test_fn( result ) )
+    {
+      return result;
+    }
+    else
+    {
+      // Filename not found
+      errmsg.append( " " );
+      errmsg.append( result );
+    }
+  }
+}
+// If we got here no files where found.
+const bool input_file_found = false;
+UTILITY_INPUT( input_file_found, errmsg, core::strngs::simulator_label(), nullptr );
+result.clear(); // To stop compiler complaints
+return result;
+!!!2210224.cpp!!!	open_output() : base_sink
+this->ensure_output_dir();
+const std::string fn( this->output_path() );
+{
+  // attempt to open file in 
+  std::ofstream test( fn );
+  UTILITY_ALWAYS( test, "Problem openning output file "+fn );
+}
+return this->open_sink_by_extension( fn, "dbm" );
+!!!2210352.cpp!!!	open_input() : input_base_reader
+namespace mpi = boost::mpi;
+std::stringstream store;
+boost::shared_ptr< core::input_base_reader > reader;
+if (this->rank_ == 0)
+{
+  const std::string inputfn = this->find_input_filename();
+  reader.reset( new core::input_preprocess );
+  reader->add_include( inputfn );
+  // write class instance to archive
+  boost::archive::text_oarchive oa( store );
+  oa << reader;
+}
+mpi::communicator world;
+std::string buf{ store.str() };
+mpi::broadcast( world, buf, 0 );
+
+if (this->rank_ != 0)
+{
+  store.str( buf );
+  // read class instance from archive
+  boost::archive::text_iarchive ia( store );
+  ia >> reader;
+}
+return reader;
+!!!2210480.cpp!!!	open_checkpoint() : ostream
+this->ensure_output_dir();
+const std::string fn( this->checkpoint_path() );
+boost::shared_ptr< std::ostream > result( new std::ofstream( fn ) );
+UTILITY_ALWAYS( *(result), "Problem openning checkpoint file "+fn );
+return result;
+!!!2210608.cpp!!!	open_log() : ostream
+this->ensure_output_dir();
+std::string fn { this->compute_output_dir() + "/log" };
+boost::shared_ptr< std::ostream > result( new std::ofstream( fn.c_str(), std::ios_base::trunc ) );
+return result;
+!!!2210736.cpp!!!	add_definition(inout meta : storage_meta) : void
+std::string desc( "Use local storage for MPI parallel execution." );
+std::unique_ptr< storage_definition > result( new storage_definition( type_label_(), desc ) );
+// no extra parameters
+meta.add_type( result );
+!!!2210864.cpp!!!	type_label_() : string
+const std::string result( "mpi" );
+return result;
