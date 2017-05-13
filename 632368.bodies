@@ -14,11 +14,6 @@ ar & ranf_;
 ar & report_interval_;
 ar & rgen_;
 ar & run_title_;
-!!!1762608.cpp!!!	random_seed_value() : uint
-// Get random seed value from system's random device:
-// requires #include <boost/random/random_device.hpp>
-boost::random::random_device seedgenr;
-return seedgenr() - seedgenr.min();
 !!!1761840.cpp!!!	set_random_seed(in seedval : uint) : void
 this->rgen_->seed( seedval );
 !!!1635888.cpp!!!	build_input_delegater(inout delegate : input_delegater) : void
@@ -196,6 +191,49 @@ this->eman_->write_document( wr );
 this->gman_->write_document( wr );
 this->pman_->write_document( wr );
 this->cman_->write_document( wr );
+!!!2171952.cpp!!!	compute_degrees_of_freedom() : size_t
+std::size_t dof{ 0 };
+std::size_t number_of_particles{ this->pman_->get_ensemble().count() };
+//  The number of degrees of freedom is calculated from
+//  the following parameters.
+// 
+//  * Each energy evaluator contributes 1 DoF.
+
+dof = this->eman_->size();
+
+//  * If the system is Grand Canonical then:
+// 
+if( this->cman_->is_grand_canonical() )
+{
+  const std::size_t target_count{ this->pman_->target_count() };
+  //  ** The number of particles for calculating DoF 
+  //  is target_count + sqrt(target_count). This comes
+  //  from our expectation that the particle number will
+  //  form a (semi-)uniform distribution around the 
+  //  target count with a standard deviation of 
+  //  sqrt(target_count).
+  std::size_t number_of_solute{ target_count };
+  if( target_count != 0ul )
+  {
+    number_of_solute += static_cast< std::size_t >( std::sqrt( target_count ) );
+    number_of_particles = ( number_of_particles > target_count ? number_of_particles - target_count : 0ul );
+  }
+  //  ** Each non-solute particle contributes
+  //  3 DoF.
+  //  ** Each solute particle contributes 3+1 DoF
+  //  from being able to have different specie type.
+  dof += number_of_particles * 3 + number_of_solute * 4;
+  //  ** Each solute specie type contributes 1 DoF. 
+  dof += this->pman_->specie_count();
+}
+else
+{
+  //  * The position of the particles contribute
+  //  3 DoF / particle.
+  dof += number_of_particles * 3;
+}
+// Return degrees of freedom
+return dof;
 !!!1763504.cpp!!!	description(inout os : ostream) : void
 UTILITY_REQUIRE( this->has_manager(), "Can not get description before setting simulation manager." );
 // File/directory names etc.
@@ -573,120 +611,7 @@ for ii in range( len( self.ensemble_ ) ):
     for potl in self.evaluators_:
       potl.compute_potential(self, dummy, ii);
     self.energy_ -= dummy.energy ()
-!!!1877296.cpp!!!	main(in argc : int, in argv : char) : bool
-// NOTE: The input decoders are not required to check that
-// the final system is valid.
-if( argc > 1 )
-{
-  namespace po = boost::program_options;
-  po::options_description cmdln_opts( "Allowed Options" );
-  cmdln_opts.add_options()
-  ( "run", po::value<unsigned int>(), "Simulation run number (positive integer)." )
-  ( core::strngs::inputpattern_label().c_str(), po::value<std::string>(), "Plain or printf style format string for generating input filename" )
-  ( "seed", po::value<unsigned int>(), "Simulation random seed value (positive integer)." )
-  ( "restart", po::value<std::string>(), "Check point file for simulation restart" )
-  ( "help", "Produce help message" );
-  po::variables_map vm;
-  try
-  {
-    po::store( po::parse_command_line( argc, argv, cmdln_opts ), vm );
-    po::notify( vm );
-  }
-  catch( std::exception &err )
-  {
-    this->fstype_->get_log() << "Error : " << err.what() << "\n"
-                             << cmdln_opts << "\n";
-    return false;
-  }
-  // After here, 'vm' will contain typed values as
-  // specified via po::value<> statement or an error
-  // would have been raised.
-  if( vm.count( "help" ) )
-  {
-    this->fstype_->get_log() << cmdln_opts << "\n";
-    return false;
-  }
-
-  if( vm.count( "restart" ) )
-  {
-    if( vm.count( "seed" ) )
-    {
-      this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n"
-                               << "Random seed value on command line is ignored with restart.\n";
-    }
-    if( vm.count( core::strngs::inputpattern_label() ) )
-    {
-      this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n"
-                               << "Input filename on command line is ignored with restart.\n";
-    }
-    if( vm.count( "run" ) )
-    {
-      this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n"
-                               << "Run number on command line is ignored with restart.\n";
-    }
-    const std::string fn { vm["restart"].as<std::string>() };
-    UTILITY_INPUT( boost::filesystem::exists( fn ), "Filename \"" + fn + "\" does not exist.", core::strngs::simulator_label(), nullptr );
-    std::ifstream store( fn );
-    UTILITY_INPUT( store, "Filename \"" + fn + "\" is not readable.", core::strngs::simulator_label(), nullptr );
-    boost::archive::text_iarchive ia( store );
-    ia >> *this;
-    if( not utility::fp_env::env_.no_except() )
-    {
-      this->fstype_->get_log() << " Floating point exception during deserialization ignored : "
-                               << utility::fp_env::env_.error_message() << "\n";
-      utility::fp_env::env_.reset();
-    }
-    this->fstype_->on_restart();
-  }
-  else
-  {
-    if( vm.count( core::strngs::inputpattern_label() ) )
-    {
-      this->fstype_->set_filename_base( vm[core::strngs::inputpattern_label()].as<std::string>() );
-    }
-    if( vm.count( "run" ) )
-    {
-      this->fstype_->set_run_number( vm["run"].as<unsigned int>() );
-    }
-
-    // set random generator seed
-    const unsigned int seedval( vm.count( "seed" ) ? this->fstype_->compute_seed( vm["seed"].as<unsigned int>() ) : this->random_seed_value() );
-    this->fstype_->get_log() << core::strngs::horizontal_bar()
-                             << "\nRandom seed value : " << seedval << ".\n";
-    this->set_random_seed( seedval );
-
-    auto reader = this->fstype_->open_input();
-    this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n"
-                             << "Reading input file '"
-                             << reader->current_filename() << "'\n";
-    this->read_input( *reader );
-
-    this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n";
-
-    this->pman_->generate_simulation( *(this->gman_), this->get_random(), this->fstype_->get_log() );
-  }
-}
-else
-{
-  // set random generator seed
-  const unsigned int seedval( this->random_seed_value() );
-  this->fstype_->get_log() << core::strngs::horizontal_bar()
-                           << "\nRandom seed value : " << seedval << ".\n";
-  this->set_random_seed( seedval );
-
-  // initialize system from defaults
-  auto reader = this->fstype_->open_input();
-  this->fstype_->get_log() << core::strngs::horizontal_bar()
-                           << "\nReading input file '" << reader->current_filename() << "'\n";
-  this->read_input( *reader );
-
-  this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n";
-
-  this->pman_->generate_simulation( *(this->gman_), this->get_random(), this->fstype_->get_log() );
-}
-
-this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n";
-
+!!!2243888.cpp!!!	main() : bool
 // Output settings
 this->description( this->fstype_->get_log() );
 
@@ -698,49 +623,24 @@ this->description( this->fstype_->get_log() );
   wr.write( this->fstype_->get_log() );
   this->fstype_->get_log() << core::strngs::horizontal_bar() << "\n";
 }
- 
+
 // Run the simulation
 return this->simtype_->run( *this, this->fstype_->get_log() );
-!!!2171952.cpp!!!	compute_degrees_of_freedom() : size_t
-std::size_t dof{ 0 };
-std::size_t number_of_particles{ this->pman_->get_ensemble().count() };
-//  The number of degrees of freedom is calculated from
-//  the following parameters.
-// 
-//  * Each energy evaluator contributes 1 DoF.
-
-dof = this->eman_->size();
-
-//  * If the system is Grand Canonical then:
-// 
-if( this->cman_->is_grand_canonical() )
+!!!2257456.cpp!!!	restart(inout log : ostream) : bool
+const std::string chpt_path{ this->fstype_->checkpoint_path() };
+if( not boost::filesystem::exists( chpt_path ) )
 {
-  const std::size_t target_count{ this->pman_->target_count() };
-  //  ** The number of particles for calculating DoF 
-  //  is target_count + sqrt(target_count). This comes
-  //  from our expectation that the particle number will
-  //  form a (semi-)uniform distribution around the 
-  //  target count with a standard deviation of 
-  //  sqrt(target_count).
-  std::size_t number_of_solute{ target_count };
-  if( target_count != 0ul )
-  {
-    number_of_solute += static_cast< std::size_t >( std::sqrt( target_count ) );
-    number_of_particles = ( number_of_particles > target_count ? number_of_particles - target_count : 0ul );
-  }
-  //  ** Each non-solute particle contributes
-  //  3 DoF.
-  //  ** Each solute particle contributes 3+1 DoF
-  //  from being able to have different specie type.
-  dof += number_of_particles * 3 + number_of_solute * 4;
-  //  ** Each solute specie type contributes 1 DoF. 
-  dof += this->pman_->specie_count();
+  log << "Error: Checkpoint filename \"" << chpt_path
+      << "\" does not exist.\n";
+  return false;
 }
-else
+std::ifstream chpt{ chpt_path };
+if( not chpt )
 {
-  //  * The position of the particles contribute
-  //  3 DoF / particle.
-  dof += number_of_particles * 3;
+  log << "Error: Checkpoint filename \"" << chpt_path
+      << "\" is not readable.\n";
+  return false;
 }
-// Return degrees of freedom
-return dof;
+boost::archive::text_iarchive ia( chpt );
+ia >> *this;
+return true;

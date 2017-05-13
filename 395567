@@ -1,6 +1,6 @@
 format 75
 "platform" // platform
-  revision 321
+  revision 326
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -3627,30 +3627,6 @@ ${docstring}${body}
 	comment " Get the simulations set of particles (non-constant)."
       end
 
-      operation 1762608 "random_seed_value"
-	class_operation public explicit_return_type "uint"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Generate a random value to seed the random number generator.
-
- This uses an operating system provided random source to generate
- a single random unsigned int suitable to seed the psuedo-random
- number generator. 
-"
-      end
-
       operation 1956144 "regions"
 	stereotype "const"
 	const public return_type class_ref 452656 // geometry_manager
@@ -4016,6 +3992,7 @@ ${docstring}${body}
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
 {
   this->pman_->generate_simulation( *(this->gman_), this->get_random(), this->fstype_->get_log() );
+  this->fstype_->get_log() << core::strngs::horizontal_bar() << \"\\n\";
 }
 "
 	
@@ -4087,6 +4064,48 @@ ${docstring}${body}
 	php ""
 	python ""
 	idl ""
+      end
+
+      operation 2171952 "compute_degrees_of_freedom"
+	public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate the degrees of freedom of the simulation.  This
+ gives meaningful results only after the simulation has been generated
+ and prepared.
+
+ The number of degrees of freedom is calculated from the
+ following parameters.
+
+ * Each energy evaluator contributes 1 DoF.
+
+ * The position of the particles contribute 3 DoF / particle.
+
+ * If the system is Grand Canonical then:
+
+ ** The number of particles for calculating DoF is target_count
+ + sqrt(target_count). This comes from our expectation that
+ the particle number will form a (semi-)uniform distribution
+ around the target count with a standard deviation of
+ sqrt(target_count).
+
+ ** Each solute particle contributes 1 more DoF from being
+ able to different species.
+
+ ** Each solute specie type contributes 1 DoF.
+"
       end
 
       operation 1763504 "description"
@@ -4233,26 +4252,6 @@ ${docstring}${body}
 	comment " Methods that involve modifying and/or querying attributes."
       end
 
-      operation 1877296 "main"
-	public explicit_return_type "bool"
-	nparams 2
-	  param in name "argc" explicit_type "int"
-	  param in name "argv" explicit_type "char"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, const ${t1} ** ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, const ${t1} ** ${p1}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
       extra_member 682288 "TODO"
 	
 	cpp "" ""
@@ -4262,8 +4261,8 @@ ${docstring}${body}
 	idl ""
       end
 
-      operation 2171952 "compute_degrees_of_freedom"
-	public explicit_return_type "size_t"
+      operation 2243888 "main"
+	public explicit_return_type "bool"
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
 "
@@ -4278,31 +4277,27 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Calculate the degrees of freedom of the simulation.  This
- gives meaningful results only after the simulation has been generated
- and prepared.
-
- The number of degrees of freedom is calculated from the
- following parameters.
-
- * Each energy evaluator contributes 1 DoF.
-
- * The position of the particles contribute 3 DoF / particle.
-
- * If the system is Grand Canonical then:
-
- ** The number of particles for calculating DoF is target_count
- + sqrt(target_count). This comes from our expectation that
- the particle number will form a (semi-)uniform distribution
- around the target count with a standard deviation of
- sqrt(target_count).
-
- ** Each solute particle contributes 1 more DoF from being
- able to different species.
-
- ** Each solute specie type contributes 1 DoF.
-"
       end
+
+      operation 2257456 "restart"
+	public explicit_return_type "bool"
+	nparams 1
+	  param inout name "log" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
     end
 
     class 659760 "simulation_manager"
@@ -5165,6 +5160,18 @@ the three digit run number string and the UUID is not used."
 Defaults to 1."
       end
 
+      attribute 886704 "seed_value_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " A number to initialise the random number generator."
+      end
+
       attribute 762032 "log_"
 	private explicit_type "ostream"
 	multiplicity "0..1"
@@ -5199,6 +5206,7 @@ Defaults to 1."
 , output_dir_fmt_( ${class}::default_output_dir_fmt() )
 , output_name_( ${class}::default_output_name() )
 , run_number_( ${class}::default_run_number() )
+, seed_value_()
 , log_()
 {}"
 	
@@ -5421,6 +5429,25 @@ ${docstring}${body}
 	comment " The name of the checkpoint file."
       end
 
+      operation 2217520 "compute_seed"
+	abstract const cpp_virtual public explicit_return_type "size_t"
+	nparams 1
+	  param in name "seed" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Make a unique seed for a simulation based on the given seed value.
+
+ For serial simulations this method should be a no-op. For 
+ parallel simulations it should produce a unique and
+ reproducable seed value for each simulation."
+      end
+
       operation 1940400 "description"
 	const public explicit_return_type "void"
 	nparams 1
@@ -5509,6 +5536,23 @@ ${docstring}${body}
  Therefore this may throw any exception as open_log."
       end
 
+      operation 2230704 "main"
+	abstract cpp_virtual public explicit_return_type "bool"
+	nparams 3
+	  param in name "argc" explicit_type "int"
+	  param inout name "argv" explicit_type "char"
+	  param inout name "sim" type class_ref 632368 // simulation
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ** ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The main function"
+      end
+
       operation 1758128 "output_dir_fmt"
 	const public explicit_return_type "string"
 	nparams 0
@@ -5539,6 +5583,30 @@ ${docstring}${body}
 	comment " The target file name of the output file."
       end
 
+      operation 1762608 "random_seed_value"
+	class_operation public explicit_return_type "uint"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Generate a random value to seed the random number generator.
+
+ This uses an operating system provided random source to generate
+ a single random unsigned int suitable to seed the psuedo-random
+ number generator. 
+"
+      end
+
       operation 1759024 "run_number"
 	const public explicit_return_type "size_t"
 	nparams 0
@@ -5554,6 +5622,27 @@ ${docstring}${body}
 "
 	
 	comment "Get the index (default=1) of the current application run"
+      end
+
+      operation 2243760 "system_log"
+	const public explicit_return_type "ostream"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} & ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  return std::cerr;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Return a reference to the system error log.
+
+ On UNIX systems this will be the standard error stream."
       end
 
       operation 1928624 "write_document"
@@ -5832,25 +5921,6 @@ ${docstring}${body}
 "
       end
 
-      operation 1877424 "on_restart"
-	abstract cpp_virtual public explicit_return_type "void"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " When restarting a simulation from a checkpoint file the
- previous invocation may have been a parallel execution. In
- this case the storage_manager class must reconnect to
- the parallel subjobs and restart them from the subjob's
- checkpoint files.
-"
-      end
-
       operation 1841840 "output_path"
 	const cpp_virtual public explicit_return_type "std::string"
 	nparams 0
@@ -5955,11 +6025,18 @@ ${docstring}${body}
  the input file."
       end
 
-      operation 2217520 "compute_seed"
-	abstract const cpp_virtual public explicit_return_type "size_t"
-	nparams 1
-	  param in name "seed" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+      operation 2257072 "process_command_line"
+	protected explicit_return_type "int"
+	nparams 3
+	  param in name "argc" explicit_type "int"
+	  param in name "argv" explicit_type "char"
+	  param inout name "log" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ** ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ** ${p1}, ${t2} & ${p2}${)}${const}${throw}
+{
+  ${body}
+}
 "
 	
 	
@@ -5967,11 +6044,52 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Make a unique seed for a simulation based on the given seed value.
+	comment " Process the command line.
 
- For serial simulations this method should be a no-op. For 
- parallel simulations it should produce a unique and
- reproducable seed value for each simulation."
+ return is one of:
+
+ * bad options (0)
+
+ * help (1)
+
+ * input (2)
+
+ * restart (3)
+ 
+"
+      end
+
+      operation 2257200 "get_seed_value"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->seed_value_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 2257328 "set_seed_value"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "seed" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->seed_value_ = ${p0};
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
       end
     end
 
@@ -6332,13 +6450,18 @@ ${docstring}${body}
 "
       end
 
-      operation 1877552 "on_restart"
-	cpp_virtual public explicit_return_type "void"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
+      operation 1877296 "main"
+	cpp_virtual public explicit_return_type "bool"
+	nparams 3
+	  param in name "argc" explicit_type "int"
+	  param in name "argv" explicit_type "char"
+	  param inout name "sim" type class_ref 632368 // simulation
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ** ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ** ${p1}, ${t2} & ${p2}${)}${const}${throw}
+{
+  ${body}
+}
 "
 	
 	
@@ -6346,12 +6469,6 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " When restarting a simulation from a checkpoint file the
- previous invocation may have been a parallel execution. In
- this case the storage_manager class must reconnect to
- the parallel subjobs and restart them from the subjob's
- checkpoint files. This serial version does nothing.
-"
       end
 
       operation 1838896 "open_output"
@@ -6478,6 +6595,12 @@ ${docstring}${body}
 	comment " The string \"local\" used to identify this storage
  manager in the input file."
       end
+
+    end
+
+    classdiagram 358960 "MPI relationships"
+      draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
+      size A4
     end
 
     class 747184 "mpi_storage"
@@ -6526,7 +6649,20 @@ ${docstring}${members}
 	python_decl "${comment}${self}${name} = ${value}
 "
 	idl_decl ""
-	comment " The MPI rank of this instance."
+	comment " The MPI rank of this instance.  ** NOT SERIALIZED **"
+      end
+
+      classrelation 1204400 // world_ (<directional composition>)
+	relation 1203504 *-->
+	  stereotype "shared_ptr"
+	  a role_name "world_" multiplicity "0..1" private
+	    comment " The main communicator. ** NOT SERIALIZED **"
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+"
+	    python "${comment}${self}${name} = ${stereotype}()
+"
+	    classrelation_ref 1204400 // world_ (<directional composition>)
+	  b parent class_ref 334000 // communicator
       end
 
       extra_member 775600 "LIFETIME"
@@ -6655,7 +6791,6 @@ ${docstring}${body}
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
   {
     ar & boost::serialization::base_object< platform::storage_manager >( *this );
-    ar & rank_;
   }"
 	
 	
@@ -6867,28 +7002,6 @@ ${docstring}${body}
 "
       end
 
-      operation 2210096 "on_restart"
-	cpp_virtual public explicit_return_type "void"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " When restarting a simulation from a checkpoint file the
- previous invocation may have been a parallel execution. In
- this case the storage_manager class must reconnect to
- the parallel subjobs and restart them from the subjob's
- checkpoint files. This serial version does nothing.
-"
-      end
-
       operation 2210224 "open_output"
 	public return_type class_ref 313520 // base_sink
 	nparams 0
@@ -7012,6 +7125,27 @@ ${docstring}${body}
 	
 	comment " The string \"local\" used to identify this storage
  manager in the input file."
+      end
+
+      operation 2250544 "main"
+	cpp_virtual public explicit_return_type "bool"
+	nparams 3
+	  param in name "argc" explicit_type "int"
+	  param in name "argv" explicit_type "char"
+	  param inout name "sim" type class_ref 632368 // simulation
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ** ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ** ${p1}, ${t2} & ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
       end
     end
   end
@@ -10688,10 +10822,8 @@ ${includes}
 #include \"utility/fuzzy_equals.hpp\"
 #include \"utility/machine.hpp\"
 // -
-#include <boost/program_options.hpp>
-#include <boost/random/random_device.hpp>
 #include <fstream>
-// -
+//-
 ${namespace_start}
 ${members}
 ${namespace_end}"
@@ -10891,6 +11023,9 @@ ${includes}
 #include \"utility/base_sink.hpp\"
 #include \"utility/gdbm_sink.hpp\"
 #include \"utility/memory_sink.hpp\"
+// -
+#include <boost/program_options.hpp>
+#include <boost/random/random_device.hpp>
 // -
 ${namespace_start}
 ${members}

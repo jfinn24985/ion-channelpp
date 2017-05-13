@@ -5,6 +5,7 @@ ar & filename_base_;
 ar & output_dir_fmt_;
 ar & output_name_;
 ar & run_number_;
+ar & seed_value_;
 !!!1940400.cpp!!!	description(inout os : ostream) : void
 os << core::strngs::horizontal_bar() << "\n";
 os << " Simulation Runtime Settings\n";
@@ -82,6 +83,11 @@ if( not this->log_ )
   this->log_ = this->open_log();
 }
 return *(this->log_);
+!!!1762608.cpp!!!	random_seed_value() : uint
+// Get random seed value from system's random device:
+// requires #include <boost/random/random_device.hpp>
+boost::random::random_device seedgenr;
+return seedgenr() - seedgenr.min();
 !!!1928624.cpp!!!	write_document(inout wr : input_document) : void
 // Add storage information section
 std::size_t ix = wr.add_section( platform::storage_meta::storage_label() );
@@ -143,3 +149,96 @@ platform::serial_storage::add_definition( *fsmeta );
 
 
 delegate.add_input_delegate( fsmeta );
+!!!2257072.cpp!!!	process_command_line(in argc : int, in argv : char, inout log : ostream) : int
+if( argc > 1 )
+{
+  namespace po = boost::program_options;
+  po::options_description cmdln_opts( "Allowed Options" );
+  cmdln_opts.add_options()
+  ( "run", po::value<unsigned int>(), "Simulation run number (positive integer)." )
+  ( core::strngs::inputpattern_label().c_str(), po::value<std::string>(), "Plain or printf style format string for generating input filename" )
+  ( "seed", po::value<unsigned int>(), "Simulation random seed value (positive integer)." )
+  ( "restart", "Restart simulation (from checkpoint)" )
+  ( core::strngs::outputdir_label().c_str(), po::value<std::string>(), "Output directory (may be name or format string)" )
+  ( "help", "Produce help message" );
+  po::variables_map vm;
+  try
+  {
+    po::store( po::parse_command_line( argc, argv, cmdln_opts ), vm );
+    po::notify( vm );
+  }
+  catch( std::exception &err )
+  {
+    log << "Error : " << err.what() << "\n"
+                       << cmdln_opts << "\n";
+    return 0;
+  }
+
+  // After here, 'vm' will contain typed values as
+  // specified via po::value<> statement or an error
+  // would have been raised.
+  if( vm.count( "help" ) )
+  {
+    log << cmdln_opts << "\n";
+    return 1;
+  }
+
+  if( vm.count( "restart" ) )
+  {
+    // Restart, ignore all other options.
+    // ----------------------------------
+    if( vm.count( "seed" ) )
+    {
+      log << core::strngs::horizontal_bar() << "\n"
+          << "Random seed value on command line is ignored with restart.\n";
+    }
+    if( vm.count( core::strngs::inputpattern_label() ) )
+    {
+      log << core::strngs::horizontal_bar() << "\n"
+          << "Input filename on command line is ignored with restart.\n";
+    }
+    if( vm.count( core::strngs::outputdir_label() ) )
+    {
+      this->set_output_dir_fmt( vm[core::strngs::outputdir_label()].as<std::string>() );
+    }
+    if( vm.count( "run" ) )
+    {
+      this->set_run_number( vm["run"].as<unsigned int>() );
+    }
+    return 3;
+  }
+  else
+  {
+    // Process command line options.
+    // -----------------------------
+    if( vm.count( core::strngs::inputpattern_label() ) )
+    {
+      this->set_filename_base( vm[core::strngs::inputpattern_label()].as<std::string>() );
+    }
+    if( vm.count( "run" ) )
+    {
+      this->set_run_number( vm["run"].as<unsigned int>() );
+    }
+    if( vm.count( core::strngs::outputdir_label() ) )
+    {
+      this->set_output_dir_fmt( vm[core::strngs::outputdir_label()].as<std::string>() );
+    }
+
+    // set random generator seed
+    this->set_seed_value( vm.count( "seed" ) ? this->compute_seed( vm["seed"].as<unsigned int>() ) : this->random_seed_value() );
+    log << core::strngs::horizontal_bar()
+        << "\nRandom seed value : " << this->get_seed_value() << ".\n";
+    return 2;
+  }
+}
+else
+{
+  // No command line arguments, using defaults.
+  // ------------------------------------------
+
+  // set random generator seed
+  this->set_seed_value( this->random_seed_value() );
+  log << core::strngs::horizontal_bar()
+      << "\nRandom seed value : " << this->get_seed_value() << ".\n";
+  return 2;
+}

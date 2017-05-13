@@ -188,3 +188,75 @@ meta.add_type( result );
 !!!2210864.cpp!!!	type_label_() : string
 const std::string result( "mpi" );
 return result;
+!!!2250544.cpp!!!	main(in argc : int, in argv : char, inout sim : simulation) : bool
+// NOTE: The input decoders are not required to check that
+// the final system is valid.
+std::stringstream log;
+namespace mpi = boost::mpi;
+const bool abort_on_exception{ true };
+mpi::environment env( argc, argv, abort_on_exception );
+this->world_.reset( new mpi::communicator );
+this->rank_ = this->world_->rank();
+try
+{
+  switch( this->process_command_line( argc, argv, log ) )
+  {
+  case 0:
+    // Bad command line options.
+    this->system_log() << log.rdbuf();
+    this->world_->abort( 1 );
+    return false;
+  case 1:
+    // Help message requested.
+    this->system_log() << log.rdbuf();
+    this->world_->abort( 0 );
+    return true;
+  case 2:
+    // Read input file.
+  {
+    auto reader = this->open_input();
+    log << core::strngs::horizontal_bar() << "\n"
+        << "Reading input file \""
+        << reader->current_filename() << "\"\n";
+    sim.read_input( *reader );
+    log << core::strngs::horizontal_bar() << "\n";
+    // Now our log is well defined, so write temporary log out.
+    this->get_log() << log.rdbuf();
+    sim.set_random_seed( this->get_seed_value() );
+    sim.generate_simulation();
+
+    break;
+  }
+  case 3:
+    // Restart from checkpoint
+  {
+    if( not sim.restart( log ) )
+    {
+      this->system_log() << log.rdbuf() << "\n";
+      this->world_->abort( 1 );
+      return false;
+    }
+    log << core::strngs::horizontal_bar() << "\n";
+    // Now our log is well defined, so write temporary log out.
+    this->get_log() << log.rdbuf();
+    break;
+  }
+  default:
+    // Logic error
+  {
+    bool logic_error{ false };
+    UTILITY_CHECK( logic_error, "Should never get here!" );
+    break;
+  }
+  }
+}
+catch(const std::runtime_error &err)
+{
+  // Crashing...
+  this->system_log() << log.rdbuf() << "\n" << err.what() << "\n";
+  this->world_->abort( 1 );
+  return false;
+}
+// Initialisation from input complete. (We should not get any
+// input errors after this point.
+return sim.main();
