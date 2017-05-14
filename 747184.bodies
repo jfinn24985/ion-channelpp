@@ -135,59 +135,6 @@ const bool input_file_found = false;
 UTILITY_INPUT( input_file_found, errmsg, core::strngs::simulator_label(), nullptr );
 result.clear(); // To stop compiler complaints
 return result;
-!!!2210224.cpp!!!	open_output() : base_sink
-this->ensure_output_dir();
-const std::string fn( this->output_path() );
-{
-  // attempt to open file in 
-  std::ofstream test( fn );
-  UTILITY_ALWAYS( test, "Problem openning output file "+fn );
-}
-return this->open_sink_by_extension( fn, "dbm" );
-!!!2210352.cpp!!!	open_input() : input_base_reader
-namespace mpi = boost::mpi;
-std::stringstream store;
-boost::shared_ptr< core::input_base_reader > reader;
-if (this->rank_ == 0)
-{
-  const std::string inputfn = this->find_input_filename();
-  reader.reset( new core::input_preprocess );
-  reader->add_include( inputfn );
-  // write class instance to archive
-  boost::archive::text_oarchive oa( store );
-  oa << reader;
-}
-mpi::communicator world;
-std::string buf{ store.str() };
-mpi::broadcast( world, buf, 0 );
-
-if (this->rank_ != 0)
-{
-  store.str( buf );
-  // read class instance from archive
-  boost::archive::text_iarchive ia( store );
-  ia >> reader;
-}
-return reader;
-!!!2210480.cpp!!!	open_checkpoint() : ostream
-this->ensure_output_dir();
-const std::string fn( this->checkpoint_path() );
-boost::shared_ptr< std::ostream > result( new std::ofstream( fn ) );
-UTILITY_ALWAYS( *(result), "Problem openning checkpoint file "+fn );
-return result;
-!!!2210608.cpp!!!	open_log() : ostream
-this->ensure_output_dir();
-std::string fn { this->compute_output_dir() + "/log" };
-boost::shared_ptr< std::ostream > result( new std::ofstream( fn.c_str(), std::ios_base::trunc ) );
-return result;
-!!!2210736.cpp!!!	add_definition(inout meta : storage_meta) : void
-std::string desc( "Use local storage for MPI parallel execution." );
-std::unique_ptr< storage_definition > result( new storage_definition( type_label_(), desc ) );
-// no extra parameters
-meta.add_type( result );
-!!!2210864.cpp!!!	type_label_() : string
-const std::string result( "mpi" );
-return result;
 !!!2250544.cpp!!!	main(in argc : int, in argv : char, inout sim : simulation) : bool
 // NOTE: The input decoders are not required to check that
 // the final system is valid.
@@ -197,6 +144,7 @@ const bool abort_on_exception{ true };
 mpi::environment env( argc, argv, abort_on_exception );
 this->world_.reset( new mpi::communicator );
 this->rank_ = this->world_->rank();
+this->sibling_count_ = this->world_->size();
 try
 {
   switch( this->process_command_line( argc, argv, log ) )
@@ -244,8 +192,7 @@ try
   default:
     // Logic error
   {
-    bool logic_error{ false };
-    UTILITY_CHECK( logic_error, "Should never get here!" );
+    UTILITY_CHECK( false, "Should never get here!" );
     break;
   }
   }
@@ -260,3 +207,63 @@ catch(const std::runtime_error &err)
 // Initialisation from input complete. (We should not get any
 // input errors after this point.
 return sim.main();
+!!!2210224.cpp!!!	open_output() : base_sink
+this->ensure_output_dir();
+const std::string fn( this->output_path() );
+{
+  // attempt to open file in 
+  std::ofstream test( fn );
+  UTILITY_ALWAYS( test, "Problem openning output file "+fn );
+}
+return this->open_sink_by_extension( fn, "dbm" );
+!!!2210352.cpp!!!	open_input() : input_base_reader
+boost::shared_ptr< core::input_base_reader > reader;
+if( this->rank_ == 0 )
+{
+  const std::string inputfn = this->find_input_filename();
+  reader.reset( new core::input_preprocess );
+  reader->add_include( inputfn );
+}
+if( this->sibling_count_ > 1 )
+{
+  // Only broadcast input file if we have siblings.
+  namespace mpi = boost::mpi;
+  std::string buf;
+  if( this->rank_ == 0 )
+  {
+    std::stringstream store;
+    // write class instance to archive
+    boost::archive::text_oarchive oa( store );
+    oa << reader;
+    buf.assign( std::move( store.str() ) );
+  }
+  mpi::broadcast( *this->world_, buf, 0 );
+
+  if (this->rank_ != 0)
+  {
+    std::stringstream store( buf );
+    // read class instance from archive
+    boost::archive::text_iarchive ia( store );
+    ia >> reader;
+  }
+}
+return reader;
+!!!2210480.cpp!!!	open_checkpoint() : ostream
+this->ensure_output_dir();
+const std::string fn( this->checkpoint_path() );
+boost::shared_ptr< std::ostream > result( new std::ofstream( fn ) );
+UTILITY_ALWAYS( *(result), "Problem openning checkpoint file "+fn );
+return result;
+!!!2210608.cpp!!!	open_log() : ostream
+this->ensure_output_dir();
+std::string fn { this->compute_output_dir() + "/log" };
+boost::shared_ptr< std::ostream > result( new std::ofstream( fn.c_str(), std::ios_base::trunc ) );
+return result;
+!!!2210736.cpp!!!	add_definition(inout meta : storage_meta) : void
+std::string desc( "Use local storage for MPI parallel execution." );
+std::unique_ptr< storage_definition > result( new storage_definition( type_label_(), desc ) );
+// no extra parameters
+meta.add_type( result );
+!!!2210864.cpp!!!	type_label_() : string
+const std::string result( "mpi" );
+return result;

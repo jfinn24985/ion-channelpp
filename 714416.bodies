@@ -32,6 +32,67 @@ self.ensemble_.description( os )
 
 !!!2126640.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
 wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
+!!!2264112.cpp!!!	main(in argc : int, in argv : char, inout sim : simulation) : bool
+// NOTE: The input decoders are not required to check that
+// the final system is valid.
+std::stringstream log;
+try
+{
+  switch( this->process_command_line( argc, argv, log ) )
+  {
+  case 0:
+    // Bad command line options.
+    this->system_log() << log.rdbuf();
+    return false;
+  case 1:
+    // Help message requested.
+    this->system_log() << log.rdbuf();
+    return true;
+  case 2:
+    // Read input file.
+  {
+    auto reader = this->open_input();
+    log << core::strngs::horizontal_bar() << "\n"
+        << "Reading input file \""
+        << reader->current_filename() << "\"\n";
+    sim.read_input( *reader );
+    log << core::strngs::horizontal_bar() << "\n";
+    // Now our log is well defined, so write temporary log out.
+    this->get_log() << log.rdbuf();
+    sim.set_random_seed( this->get_seed_value() );
+    sim.generate_simulation();
+    break;
+  }
+  case 3:
+  // Restart from checkpoint
+  {
+    if( not sim.restart( log ) )
+    {
+      this->system_log() << log.rdbuf() << "\n";
+      return false;
+    }
+    log << core::strngs::horizontal_bar() << "\n";
+    // Now our log is well defined, so write temporary log out.
+    this->get_log() << log.rdbuf();
+    break;
+  }
+  default:
+    // Logic error
+    {
+      UTILITY_CHECK( false, "Should never get here!" );
+      break;
+    }
+  }
+}
+catch(const std::runtime_error &err)
+{
+  // Crashing...
+  this->system_log() << log.rdbuf() << "\n" << err.what() << "\n";
+  return false;
+}
+// Initialisation from input complete. (We should not get any
+// input errors after this point.
+return sim.main();
 !!!2128304.cpp!!!	add_definition(inout meta : storage_meta) : void
 std::string desc( "Test storage manager." );
 std::unique_ptr< storage_definition > result( new storage_definition( type_label_(), desc ) );

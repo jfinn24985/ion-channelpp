@@ -1,6 +1,6 @@
 format 75
 "platform" // platform
-  revision 326
+  revision 327
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -3295,11 +3295,26 @@ ${docstring}${body}
       end
 
       operation 1999664 "simulation"
-	public explicit_return_type ""
+	private explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
 "
-	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Deserialisation only"
+      end
+
+      operation 2264240 "simulation"
+	protected explicit_return_type ""
+	nparams 1
+	  param in name "test" explicit_type "bool"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}${)}${volatile}${throw}
 : simulation( boost::shared_ptr< geometry::base_region >( new geometry::periodic_cube_region( \"cell\", 10.0 ) ), boost::shared_ptr< platform::storage_manager >( new platform::serial_storage ) )
 {}
 "
@@ -4252,15 +4267,6 @@ ${docstring}${body}
 	comment " Methods that involve modifying and/or querying attributes."
       end
 
-      extra_member 682288 "TODO"
-	
-	cpp "" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
       operation 2243888 "main"
 	public explicit_return_type "bool"
 	nparams 0
@@ -4298,6 +4304,14 @@ ${docstring}${body}
 	
       end
 
+      extra_member 682288 "TODO"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
     end
 
     class 659760 "simulation_manager"
@@ -6595,7 +6609,6 @@ ${docstring}${body}
 	comment " The string \"local\" used to identify this storage
  manager in the input file."
       end
-
     end
 
     classdiagram 358960 "MPI relationships"
@@ -6652,6 +6665,19 @@ ${docstring}${members}
 	comment " The MPI rank of this instance.  ** NOT SERIALIZED **"
       end
 
+      attribute 893232 "sibling_count_"
+	private explicit_type "size_t"
+	init_value "1"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The number of MPI jobs."
+      end
+
       classrelation 1204400 // world_ (<directional composition>)
 	relation 1203504 *-->
 	  stereotype "shared_ptr"
@@ -6675,12 +6701,15 @@ ${docstring}${members}
       end
 
       operation 2208432 "mpi_storage"
-	private explicit_return_type ""
+	public explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
 "
 	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
 : storage_manager()
+, rank_(0)
+, sibling_count_(1)
+, world_()
 {}"
 	
 	
@@ -6691,7 +6720,7 @@ ${docstring}${body}
       end
 
       operation 2217392 "mpi_storage"
-	public explicit_return_type ""
+	private explicit_return_type ""
 	nparams 1
 	  param in name "rank" explicit_type "size_t"
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw};
@@ -6903,6 +6932,26 @@ ${docstring}${body}
 	idl ""
       end
 
+      operation 2263984 "abort"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "err_num" explicit_type "int"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  this->world_->abort( ${p0} );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Abort the MPI system with the given error code."
+      end
+
       operation 2217776 "compute_seed"
 	const cpp_virtual public explicit_return_type "size_t"
 	nparams 1
@@ -7000,6 +7049,27 @@ ${docstring}${body}
 
  \\post exists(return val)
 "
+      end
+
+      operation 2250544 "main"
+	cpp_virtual public explicit_return_type "bool"
+	nparams 3
+	  param in name "argc" explicit_type "int"
+	  param in name "argv" explicit_type "char"
+	  param inout name "sim" type class_ref 632368 // simulation
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ** ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ** ${p1}, ${t2} & ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
       end
 
       operation 2210224 "open_output"
@@ -7125,27 +7195,6 @@ ${docstring}${body}
 	
 	comment " The string \"local\" used to identify this storage
  manager in the input file."
-      end
-
-      operation 2250544 "main"
-	cpp_virtual public explicit_return_type "bool"
-	nparams 3
-	  param in name "argc" explicit_type "int"
-	  param in name "argv" explicit_type "char"
-	  param inout name "sim" type class_ref 632368 // simulation
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ** ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract} override;
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ** ${p1}, ${t2} & ${p2}${)}${const}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
       end
     end
   end
@@ -10523,11 +10572,12 @@ int main( int argc, char ** argv )
 
   try
   {
-    if (not sim->main( argc, const_cast< const char ** >(argv) )) result = 1;
+    if( not stor->main( argc, argv, *sim ) ) result = 1;
   }
   catch( std::exception const& err )
   {
-    std::cout << \"Unexpected exception thrown\\n\" << err.what() << \"\\n\";
+    stor->system_log() << \"Unexpected exception thrown\\n\" << err.what() << \"\\n\";
+    result = 1;
   }
   return result;
 }
@@ -11179,7 +11229,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Default to a periodic cube base region. This can be
 // overridden in the input file.
 #include \"geometry/periodic_cube_region.hpp\"
-// Default to serial storage for serial execution.
+// Use MPI storage for this execution.
 #include \"platform/mpi_storage.hpp\"
 #include \"platform/simulation.hpp\"
 
@@ -11188,22 +11238,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 int main( int argc, char ** argv )
 {
   int result = 0;
-  namespace mpi = boost::mpi;
-  mpi::environment env( argc, argv );
-  mpi::communicator world;
-
   boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( \"cell\", 10.0 ) );
-  boost::shared_ptr< platform::storage_manager > stor( new platform::mpi_storage( world.rank() ) );
+  boost::shared_ptr< platform::mpi_storage > stor( new platform::mpi_storage );
   boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
   try
   {
-    if (not sim->main( argc, const_cast< const char ** >(argv) )) result = 1;
+    if( not sim->main( argc, argv, *sim ) ) result = 1;
   }
   catch( std::exception const& err )
   {
-    std::cerr << \"Unexpected exception thrown\\n\" << err.what() << \"\\n\";
-    env.abort(1);
+    stor->system_log() << \"Unexpected exception thrown\\n\" << err.what() << \"\\n\";
+    stor->abort( 1 );
   }
   return result;
 }
@@ -11321,6 +11367,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 332080 // libionch_zip_sink
 	artifact_ref 332208 // libionch_gdbm_sink
 	artifact_ref 334257 // uuid
+	artifact_ref 345264 // libionch_platform_mpi
 	artifact_ref 371376 // gdbm
 	artifact_ref 449840 // libionch_geometry
 	artifact_ref 597040 // libionch_newplatform
@@ -11328,7 +11375,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 609327 // libionch_core
 	artifact_ref 617391 // libionch_particle
 	artifact_ref 651439 // random
-	artifact_ref 683312 // mpi_storage
 	artifact_ref 694959 // libionch_trial
 	artifact_ref 716335 // libionch_evaluator
 	artifact_ref 769583 // libionch_observable

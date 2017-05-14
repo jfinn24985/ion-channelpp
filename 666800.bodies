@@ -79,14 +79,18 @@ return result;
 !!!1948592.cpp!!!	simulation_lifetime_test() : void
 {
   // Test for non-virtual no-copy object pattern
-  BOOST_CHECK( std::is_default_constructible< platform::simulation >::type {} );
+  BOOST_CHECK( not std::is_default_constructible< platform::simulation >::type {} );
   BOOST_CHECK( not std::is_copy_constructible< platform::simulation >::type {} );
   BOOST_CHECK( not std::is_move_constructible< platform::simulation >::type {} );
   BOOST_CHECK( not ( std::is_assignable< platform::simulation, platform::simulation >::type {} ) );
   BOOST_CHECK( not std::has_virtual_destructor< platform::simulation >::type {} );
 }
 {
-  boost::shared_ptr< platform::simulation > var( new platform::simulation );
+  boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+  boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+  stor->set_log( slog );
+  boost::shared_ptr< platform::simulation > var( new platform::simulation( regn, stor ) );
   BOOST_CHECK_EQUAL( var->energy(), 0.0 );
   BOOST_CHECK_EQUAL( var->inner_loop_size(), 0ul );
   BOOST_CHECK_EQUAL( var->get_outer_loop_index(), 0ul );
@@ -110,7 +114,12 @@ const double tmptr( 305.0 );
   simtype->set_production_interval( prod );
   simtype->set_equilibration_interval( therm );
 
-  boost::shared_ptr< platform::simulation > var( new platform::simulation );
+  boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+  boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+  stor->set_log( slog );
+  boost::shared_ptr< platform::simulation > var( new platform::simulation( regn, stor ) );
+
   BOOST_CHECK_EQUAL( var->energy(), 0.0 );
   BOOST_CHECK_EQUAL( var->inner_loop_size(), 0ul );
   BOOST_CHECK_EQUAL( var->get_outer_loop_index(), 0ul );
@@ -142,7 +151,7 @@ const double tmptr( 305.0 );
   oa << var;
 }
 {
-   boost::shared_ptr< platform::simulation > var( new platform::simulation );
+   boost::shared_ptr< platform::simulation > var;
    // read class instance from archive
   boost::archive::text_iarchive ia( store );
   ia >> var;
@@ -173,7 +182,11 @@ const double tmptr( 305.0 );
   simtype->set_production_interval( prod );
   simtype->set_equilibration_interval( therm );
 
-  boost::shared_ptr< platform::simulation > var( new platform::simulation );
+  boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+  boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+  stor->set_log( slog );
+  boost::shared_ptr< platform::simulation > var( new platform::simulation( regn, stor ) );
   BOOST_CHECK_EQUAL( var->energy(), 0.0 );
   BOOST_CHECK_EQUAL( var->inner_loop_size(), 0ul );
   BOOST_CHECK_EQUAL( var->get_outer_loop_index(), 0ul );
@@ -221,7 +234,11 @@ const double tmptr( 305.0 );
   BOOST_CHECK_EQUAL( var->manager().production_interval(), prod );
 }
 !!!1986608.cpp!!!	simulation_program_description_test() : void
-boost::shared_ptr< platform::simulation > var( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > var( new platform::simulation( regn, stor ) );
 std::stringstream os;
 var->program_description( os );
 const std::string lic( os.str() );
@@ -262,8 +279,13 @@ BOOST_CHECK( lic.find( "compiled version" ) < lic.size() );
   BOOST_CHECK( std::has_virtual_destructor< platform::simulator_meta >::type {} );
 }
 {
-  platform::simulation dummy;
-  boost::shared_ptr< platform::simulator_meta > var( new platform::simulator_meta( dummy ) );
+  boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+  boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+  stor->set_log( slog );
+  boost::shared_ptr< platform::simulation > dummy( new platform::simulation( regn, stor ) );
+
+  boost::shared_ptr< platform::simulator_meta > var( new platform::simulator_meta( *dummy ) );
   BOOST_CHECK_EQUAL( var->section_label(), "simulator" );
   BOOST_CHECK_EQUAL( var->multiple(), false );
   BOOST_CHECK_EQUAL( var->required(), true );
@@ -271,7 +293,11 @@ BOOST_CHECK( lic.find( "compiled version" ) < lic.size() );
   BOOST_CHECK( var->empty() );
 }
 !!!1955120.cpp!!!	simulator_meta_input_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -319,7 +345,11 @@ BOOST_CHECK_EQUAL( sim->evaluators().permittivity(), epsw );
 
 
 !!!1965104.cpp!!!	simulator_input_type_no_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -353,7 +383,11 @@ catch( std::exception const& err )
 
 
 !!!1825072.cpp!!!	simulator_input_duplicate_type_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -387,7 +421,11 @@ catch( std::exception const& err )
 
 
 !!!1825200.cpp!!!	simulator_input_type_bad_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -422,7 +460,12 @@ catch( std::exception const& err )
 
 
 !!!1825328.cpp!!!	simulator_input_inner_no_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
+
 
 core::input_delegater dg( 1 );
 {
@@ -457,7 +500,11 @@ catch( std::exception const& err )
 
 
 !!!1962928.cpp!!!	simulator_input_inner_bad_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -491,7 +538,11 @@ catch( std::exception const& err )
 
 
 !!!1966256.cpp!!!	simulator_input_name_no_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -525,7 +576,11 @@ catch( std::exception const& err )
 
 
 !!!1824944.cpp!!!	simulator_input_name_empty_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -559,7 +614,11 @@ catch( std::exception const& err )
 
 
 !!!1963184.cpp!!!	simulator_input_nstep_no_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -594,7 +653,11 @@ catch( std::exception const& err )
 
 
 !!!1963056.cpp!!!	simulator_input_nstep_bad_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -628,7 +691,11 @@ catch( std::exception const& err )
 
 
 !!!1963440.cpp!!!	simulator_input_naver_no_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -663,7 +730,11 @@ catch( std::exception const& err )
 
 
 !!!1963312.cpp!!!	simulator_input_naver_bad_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -697,7 +768,11 @@ catch( std::exception const& err )
 
 
 !!!1963696.cpp!!!	simulator_input_isave_no_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -732,7 +807,11 @@ catch( std::exception const& err )
 
 
 !!!1963568.cpp!!!	simulator_input_isave_bad_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -766,7 +845,11 @@ catch( std::exception const& err )
 
 
 !!!1963952.cpp!!!	simulator_input_ntarg_no_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -801,7 +884,11 @@ catch( std::exception const& err )
 
 
 !!!1963824.cpp!!!	simulator_input_ntarg_bad_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -835,7 +922,11 @@ catch( std::exception const& err )
 
 
 !!!1964208.cpp!!!	simulator_input_epsw_no_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -870,7 +961,11 @@ catch( std::exception const& err )
 
 
 !!!1964080.cpp!!!	simulator_input_epsw_bad_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -904,7 +999,11 @@ catch( std::exception const& err )
 
 
 !!!1964336.cpp!!!	simulator_input_epsw_negative_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -939,7 +1038,11 @@ catch( std::exception const& err )
 
 
 !!!1964464.cpp!!!	simulator_input_epsw_zero_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -974,7 +1077,11 @@ catch( std::exception const& err )
 
 
 !!!1964976.cpp!!!	simulator_input_kelvin_no_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -1009,7 +1116,11 @@ catch( std::exception const& err )
 
 
 !!!1964848.cpp!!!	simulator_input_kelvin_bad_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -1043,7 +1154,11 @@ catch( std::exception const& err )
 
 
 !!!1964720.cpp!!!	simulator_input_kelvin_negative_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -1078,7 +1193,11 @@ catch( std::exception const& err )
 
 
 !!!1964592.cpp!!!	simulator_input_kelvin_zero_value_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -1113,7 +1232,11 @@ catch( std::exception const& err )
 
 
 !!!1966128.cpp!!!	simulator_input_no_type_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -1147,7 +1270,11 @@ catch( std::exception const& err )
 
 
 !!!1966000.cpp!!!	simulator_input_no_inner_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -1182,7 +1309,11 @@ catch( std::exception const& err )
 
 
 !!!1966384.cpp!!!	simulator_input_no_nstep_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -1217,7 +1348,11 @@ catch( std::exception const& err )
 
 
 !!!1965744.cpp!!!	simulator_input_no_naver_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -1252,7 +1387,11 @@ catch( std::exception const& err )
 
 
 !!!1965616.cpp!!!	simulator_input_no_isave_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -1287,7 +1426,11 @@ catch( std::exception const& err )
 
 
 !!!1965488.cpp!!!	simulator_input_no_ntarg_test_PASS() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -1314,7 +1457,11 @@ catch( std::exception const& err )
 
 
 !!!1965360.cpp!!!	simulator_input_no_epsw_test_PASS() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -1341,7 +1488,11 @@ catch( std::exception const& err )
 
 
 !!!1965232.cpp!!!	simulator_input_no_kelvin_test_PASS() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -1368,7 +1519,11 @@ catch( std::exception const& err )
 
 
 !!!1965872.cpp!!!	simulator_input_no_name_test_PASS() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( 1 );
 {
@@ -1395,7 +1550,11 @@ catch( std::exception const& err )
 
 
 !!!1825584.cpp!!!	full_simulation_build_input_delegate_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_delegater dg( platform::simulation::get_max_input_version() );
 BOOST_REQUIRE_EQUAL( dg.max_version(), 1ul );
@@ -1415,7 +1574,11 @@ BOOST_REQUIRE( dg.has_section( platform::storage_meta::storage_label() ) );
 //  hlp.write( std::cout );
 //}
 !!!2020144.cpp!!!	full_simulation_read_input_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 const std::string title( "Test simulation" );
 const std::size_t inner( 100ul );
@@ -1480,7 +1643,11 @@ BOOST_CHECK( sim->choices().has_chooser( "move" ) );
 BOOST_CHECK( sim->choices().has_chooser( "jump" ) );
 BOOST_CHECK( sim->choices().empty() );
 !!!1979696.cpp!!!	full_simulation_generate_sim_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 const std::size_t ntarg( 50ul );
 core::input_preprocess reader;
 reader.add_buffer( "dummy", platform_test::canon_input() );
@@ -1510,7 +1677,11 @@ catch( std::exception const& err )
   BOOST_ERROR( "Unexpected exception." );
 }
 !!!1979824.cpp!!!	full_simulation_echo_input_test() : void
-boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+stor->set_log( slog );
+boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
 core::input_preprocess reader;
 reader.add_buffer( "dummy", platform_test::canon_input() );
@@ -1670,7 +1841,11 @@ catch( std::exception const& err )
 !!!1993136.cpp!!!	full_simulation_read_echo_test() : void
 std::stringstream echoinput;
 {
-  boost::shared_ptr< platform::simulation > sim( new platform::simulation );
+  boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
+  boost::shared_ptr< std::stringstream > slog( new std::stringstream );
+  stor->set_log( slog );
+  boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
   core::input_preprocess reader;
   reader.add_buffer( "dummy", platform_test::canon_input() );
@@ -2354,24 +2529,36 @@ catch( std::exception const& err )
   BOOST_CHECK( expect == found );
 }
 !!!2019504.cpp!!!	full_simulation_main_test() : void
+char a1[] { "ionch" };
+char a2[] { "--input" };
+char a3[] { "test.inp" };
+char a4[] { "--run" };
+char a5[] { "2" };
+char* argv[] { &a1[0], &a2[0], &a3[0], &a4[0], &a5[0] };
+int argc = 5;
+
 if( boost::filesystem::exists( "0002" ) )
 {
   boost::filesystem::remove_all( "0002" );
 }
+if( boost::filesystem::exists( a3 ) )
 {
+  boost::filesystem::remove( a3 );
+}
+{
+  {
+    const std::string input_file_contents
+    {
+      "simulator\ntype standard\ninner 100\nname Test simulation\nnstep 2000\nnaver 100\nisave 500\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n\nrun\ntype standard\noutputdir \"\%1$04d\"\nend\n\nevaluator\ntype coulomb\nend\n\nsampler\ntype specie-count\nend\n\nsampler\ntype metropolis\nend\n\nsampler\ntype widom\niwidom 10\nend\n\nregion\ntype cube\nname centre\nwidth 5\norigin 2.5 2.5 2.5\nend\n\nspecie\nname Na\nz 1\nd 1.01\nctarg 0.1\nend\n\nspecie\nname Cl\nz -1\nd 1.78\nctarg 0.1\nend\n\ntrial\nrate 0.5\ntype move\ndelta 1.0\nend\n\ntrial\nrate 0.5\ntype jump\nend\n"
+    };
+    std::ofstream out( a3 );
+    out.write( input_file_contents.data(), input_file_contents.size() );
+  }
   boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
   boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
   boost::shared_ptr< std::stringstream > slog( new std::stringstream );
   stor->set_log( slog );
   boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
-
-  char a1[] { "ionch" };
-  char a2[] { "--input" };
-  char a3[] { "test.inp" };
-  char a4[] { "--run" };
-  char a5[] { "2" };
-  const char* argv[] { &a1[0], &a2[0], &a3[0], &a4[0], &a5[0] };
-  int argc = 5;
 
   if( boost::filesystem::exists( "0002" ) )
   {
@@ -2379,7 +2566,7 @@ if( boost::filesystem::exists( "0002" ) )
   }
   try
   {
-    BOOST_CHECK( sim->main( argc, argv ) );
+    BOOST_CHECK( stor->main( argc, argv, *sim ) );
   }
   catch( std::exception const& err )
   {
@@ -2422,4 +2609,8 @@ if( boost::filesystem::exists( "0002" ) )
 if( boost::filesystem::exists( "0002" ) )
 {
   boost::filesystem::remove_all( "0002" );
+}
+if( boost::filesystem::exists( a3 ) )
+{
+  boost::filesystem::remove( a3 );
 }

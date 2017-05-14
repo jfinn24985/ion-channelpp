@@ -5,7 +5,7 @@ return result;
 !!!2220336.cpp!!!	mpi_storage_lifetime_test() : void
 {
   // Test for virtual noncopy pattern
-  BOOST_CHECK( not std::is_default_constructible< platform::mpi_storage >::type {} );
+  BOOST_CHECK( std::is_default_constructible< platform::mpi_storage >::type {} );
   BOOST_CHECK( not std::is_copy_constructible< platform::mpi_storage >::type {} );
   BOOST_CHECK( not std::is_move_constructible< platform::mpi_storage >::type {} );
   BOOST_CHECK( not( std::is_assignable< platform::mpi_storage, platform::mpi_storage >::type {} ) );
@@ -15,7 +15,6 @@ return result;
 const std::string cname( "checkpoint.arc" );
 const std::string fbase( "input.\%1$03d.inp" );
 const std::string dbase( "\%1$03d" );
-const std::string dbase_pll( "\%1$03d/\%1$03d" );
 const std::string oname( "output.dbm" );
 const std::size_t runnum( 1ul );
 {
@@ -28,10 +27,10 @@ const std::size_t runnum( 1ul );
 }
 {
   // Public ctor that inherits from base storage_manager
-  boost::shared_ptr< platform::mpi_storage > var1( new platform::mpi_storage( 0 ) );
+  boost::shared_ptr< platform::mpi_storage > var1( new platform::mpi_storage );
   BOOST_CHECK_EQUAL( var1->checkpoint_name(), cname );
   BOOST_CHECK_EQUAL( var1->filename_base(), fbase );
-  BOOST_CHECK_EQUAL( var1->output_dir_fmt(), dbase_pll );
+  BOOST_CHECK_EQUAL( var1->output_dir_fmt(), dbase );
   BOOST_CHECK_EQUAL( var1->output_name(), oname );
   BOOST_CHECK_EQUAL( var1->run_number(), runnum );
 }
@@ -71,12 +70,11 @@ const std::string test_cname( "check.dat" );
 const std::string fbase( "input.\%1$03d.inp" );
 const std::string test_fbase( "channel.\%1$04d.inp" );
 const std::string dbase( "\%1$03d" );
-const std::string dbase_pll( "\%1$03d/\%2$03d" );
-const std::string outpath( "001" );
-const std::string outdir( "001/001" );
+const std::string outpath( "001/000" );
+const std::string outdir( "001/000/" );
 const std::string test_dbase( "\%1$04d.dat" );
-const std::string test_outpath( "5999.dat" );
-const std::string test_outdir( "5999.dat/" );
+const std::string test_outpath( "5999.dat/000" );
+const std::string test_outdir( "5999.dat/000/" );
 const std::string oname( "output.dbm" );
 const std::string test_oname( "result.zip" );
 const std::size_t runnum( 1ul );
@@ -85,15 +83,15 @@ const std::size_t test_runnum( 5999ul );
 std::stringstream store;
 {
   // Public ctor 1
-  boost::shared_ptr< platform::mpi_storage > var1( new platform::mpi_storage( 0 ) );
+  boost::shared_ptr< platform::mpi_storage > var1( new platform::mpi_storage );
   BOOST_CHECK_EQUAL( var1->get_label(), "mpi" );
   BOOST_CHECK_EQUAL( var1->checkpoint_name(), cname );
   BOOST_CHECK_EQUAL( var1->filename_base(), fbase );
   BOOST_CHECK_EQUAL( var1->output_dir_fmt(), dbase );
-  BOOST_CHECK_EQUAL( var1->output_dir_fmt(), dbase_pll );
+  BOOST_CHECK_EQUAL( var1->output_dir_fmt(), dbase );
   BOOST_CHECK_EQUAL( var1->output_name(), oname );
   BOOST_CHECK_EQUAL( var1->run_number(), runnum );
-  // compute_output_dir gives "001"
+  // compute_output_dir gives "001/000"
   BOOST_CHECK_EQUAL( var1->compute_output_dir(), outpath );
   BOOST_CHECK_EQUAL( var1->checkpoint_path(), outdir + cname );
   BOOST_CHECK_EQUAL( var1->output_path(), outdir + oname );
@@ -109,7 +107,7 @@ std::stringstream store;
   BOOST_CHECK_EQUAL( var1->output_dir_fmt(), test_dbase );
   BOOST_CHECK_EQUAL( var1->output_name(), test_oname );
   BOOST_CHECK_EQUAL( var1->run_number(), test_runnum );
-  // compute_output_dir gives "5999.dat"
+  // compute_output_dir gives "5999.dat/000"
   BOOST_CHECK_EQUAL( var1->compute_output_dir(), test_outpath );
   BOOST_CHECK_EQUAL( var1->checkpoint_path(), test_outdir + test_cname );
   BOOST_CHECK_EQUAL( var1->output_path(), test_outdir + test_oname );
@@ -192,9 +190,9 @@ std::stringstream store;
     var2->set_output_dir_fmt( spath );
     BOOST_CHECK_EQUAL( var2->output_dir_fmt(), spath );
     const std::string gen_cpath = var2->checkpoint_path();
-    BOOST_CHECK_EQUAL( gen_cpath, spath + "/" + test_cname );
+    BOOST_CHECK_EQUAL( gen_cpath, spath + "/000/" + test_cname );
     const std::string gen_opath = var2->output_path();
-    BOOST_CHECK_EQUAL( gen_opath, spath + "/" + test_oname );
+    BOOST_CHECK_EQUAL( gen_opath, spath + "/000/" + test_oname );
     // Path should not be created until we open a file.
     BOOST_CHECK( not boost::filesystem::exists( ipath ) );
     try
@@ -251,7 +249,7 @@ std::stringstream store;
 }
 
 !!!2220592.cpp!!!	mpi_storage_input_filename_noexist() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
   auto ipath( boost::filesystem::unique_path( "input%%%%%.inp" ) );
   const std::string spath( ipath.native() );
@@ -280,7 +278,7 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
 }
 !!!2220720.cpp!!!	mpi_storage_input_filename_is_dir() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
   auto ipath( boost::filesystem::unique_path( "input%%%%%.inp" ) );
   const std::string spath( ipath.native() );
@@ -314,7 +312,7 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
 }
 
 !!!2220848.cpp!!!	mpi_storage_input_filename_is_not_accessible() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
   auto ipath( boost::filesystem::unique_path( "input%%%%%.inp" ) );
   const std::string spath( ipath.native() );
@@ -351,7 +349,7 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
 }
 !!!2220976.cpp!!!	mpi_storage_input_filename_is_not_readable() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
   auto ipath( boost::filesystem::unique_path( "input%%%%%.inp" ) );
   const std::string spath( ipath.native() );
@@ -388,9 +386,9 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
 }
 !!!2221104.cpp!!!	mpi_storage_open_output_output_directory_is_not_directory() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
-  auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
+  auto ipath( boost::filesystem::unique_path( "output\%\%\%\%\%" ) );
   const std::string spath( ipath.native() );
 
   // USE PATH AS OUTPUT DIR NAME
@@ -402,7 +400,8 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   try
   {
     {
-      std::ofstream tmp( spath );
+      boost::filesystem::create_directory( ipath );
+      std::ofstream tmp( spath + "/000" );
       tmp << "\n";
     }
     auto os_str = sman_ptr->open_output();
@@ -412,8 +411,8 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   catch( std::runtime_error const& err )
   {
     const std::string msg( err.what() );
-    // std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Filesystem object at target output directory path [" + spath + "] is not a directory" ) < msg.size() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Filesystem object at target output directory path [" + spath + "/000] is not a directory" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -421,13 +420,13 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
   if( boost::filesystem::exists( ipath ) )
   {
-    boost::filesystem::remove( ipath );
+    boost::filesystem::remove_all( ipath );
   }
 }
 !!!2221232.cpp!!!	mpi_storage_open_output_output_directory_is_not_accessible() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
-  auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
+  auto ipath( boost::filesystem::unique_path( "output\%\%\%\%\%" ) );
   const std::string spath( ipath.native() );
 
   // USE PATH AS OUTPUT DIR NAME
@@ -438,8 +437,8 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   // Try to get directory after generating file with same name
   try
   {
-    boost::filesystem::create_directories( ipath );
-    boost::filesystem::permissions( ipath, boost::filesystem::no_perms );
+    boost::filesystem::create_directories( ipath / "000" );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::no_perms );
     auto os_str = sman_ptr->open_output();
     BOOST_REQUIRE( os_str );
     BOOST_ERROR( "Unexpected \"sman_ptr->open_output()\" found file named " + spath );
@@ -447,8 +446,8 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   catch( std::runtime_error const& err )
   {
     const std::string msg( err.what() );
-    // std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Problem openning output file " + spath + "/" + sman_ptr->output_name() ) < msg.size() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Problem openning output file " + spath + "/000/" + sman_ptr->output_name() ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -456,11 +455,12 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
   if( boost::filesystem::exists( ipath ) )
   {
-    boost::filesystem::remove( ipath );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::owner_all );
+    boost::filesystem::remove_all( ipath );
   }
 }
 !!!2221360.cpp!!!	mpi_storage_open_output_output_directory_is_0W0() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
   const std::string spath( ipath.native() );
@@ -473,8 +473,8 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   // Try to get directory after generating file with same name
   try
   {
-    boost::filesystem::create_directories( ipath );
-    boost::filesystem::permissions( ipath, boost::filesystem::owner_write );
+    boost::filesystem::create_directories( ipath / "000" );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::owner_write );
     auto os_str = sman_ptr->open_output();
     BOOST_REQUIRE( os_str );
     BOOST_ERROR( "Unexpected \"sman_ptr->open_output()\" found file named " + spath );
@@ -483,7 +483,7 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   {
     const std::string msg( err.what() );
     // std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Problem openning output file " + spath + "/" + sman_ptr->output_name() ) < msg.size() );
+    BOOST_CHECK( msg.find( "Problem openning output file " + spath + "/000/" + sman_ptr->output_name() ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -491,11 +491,12 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
   if( boost::filesystem::exists( ipath ) )
   {
-    boost::filesystem::remove( ipath );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::owner_all );
+    boost::filesystem::remove_all( ipath );
   }
 }
 !!!2221488.cpp!!!	mpi_storage_open_output_output_directory_is_RW0() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
   const std::string spath( ipath.native() );
@@ -508,8 +509,8 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   // Try to get directory after generating file with same name
   try
   {
-    boost::filesystem::create_directories( ipath );
-    boost::filesystem::permissions( ipath, boost::filesystem::owner_write | boost::filesystem::owner_read );
+    boost::filesystem::create_directories( ipath / "000" );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::owner_write | boost::filesystem::owner_read );
     auto os_str = sman_ptr->open_output();
     BOOST_REQUIRE( os_str );
     BOOST_ERROR( "Unexpected \"sman_ptr->open_output()\" found file named " + spath );
@@ -518,7 +519,7 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   {
     const std::string msg( err.what() );
     // std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Problem openning output file " + spath + "/" + sman_ptr->output_name() ) < msg.size() );
+    BOOST_CHECK( msg.find( "Problem openning output file " + spath + "/000/" + sman_ptr->output_name() ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -526,11 +527,11 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
   if( boost::filesystem::exists( ipath ) )
   {
-    boost::filesystem::remove( ipath );
+    boost::filesystem::remove_all( ipath );
   }
 }
 !!!2221616.cpp!!!	mpi_storage_open_output_output_directory_is_0WX() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
   const std::string spath( ipath.native() );
@@ -543,8 +544,8 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   // Try to get directory after generating file with same name
   try
   {
-    boost::filesystem::create_directories( ipath );
-    boost::filesystem::permissions( ipath, boost::filesystem::owner_write | boost::filesystem::owner_exe );
+    boost::filesystem::create_directories( ipath / "000" );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::owner_write | boost::filesystem::owner_exe );
     auto os_str = sman_ptr->open_output();
     BOOST_REQUIRE( os_str );
   }
@@ -554,12 +555,12 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
   if( boost::filesystem::exists( ipath ) )
   {
-    boost::filesystem::permissions( ipath, boost::filesystem::owner_read | boost::filesystem::owner_write | boost::filesystem::owner_exe );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::owner_read | boost::filesystem::owner_write | boost::filesystem::owner_exe );
     boost::filesystem::remove_all( ipath );
   }
 }
 !!!2221744.cpp!!!	mpi_storage_open_output_output_directory_is_R0X() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
   const std::string spath( ipath.native() );
@@ -572,8 +573,8 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   // Try to get directory after generating file with same name
   try
   {
-    boost::filesystem::create_directories( ipath );
-    boost::filesystem::permissions( ipath, boost::filesystem::owner_exe | boost::filesystem::owner_read );
+    boost::filesystem::create_directories( ipath / "000" );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::owner_exe | boost::filesystem::owner_read );
     auto os_str = sman_ptr->open_output();
     BOOST_REQUIRE( os_str );
     BOOST_ERROR( "Unexpected \"sman_ptr->open_output()\" found file named " + spath );
@@ -582,7 +583,7 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   {
     const std::string msg( err.what() );
     // std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Problem openning output file " + spath + "/" + sman_ptr->output_name() ) < msg.size() );
+    BOOST_CHECK( msg.find( "Problem openning output file " + spath + "/000/" + sman_ptr->output_name() ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -590,11 +591,11 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
   if( boost::filesystem::exists( ipath ) )
   {
-    boost::filesystem::remove( ipath );
+    boost::filesystem::remove_all( ipath );
   }
 }
 !!!2221872.cpp!!!	mpi_storage_open_checkpoint_output_directory_is_not_directory() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
   const std::string spath( ipath.native() );
@@ -608,7 +609,8 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   try
   {
     {
-      std::ofstream tmp( spath );
+      boost::filesystem::create_directory( ipath );
+      std::ofstream tmp( spath + "/000" );
       tmp << "\n";
     }
     auto os_str = sman_ptr->open_checkpoint();
@@ -619,7 +621,7 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   {
     const std::string msg( err.what() );
     // std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Filesystem object at target output directory path [" + spath + "] is not a directory" ) < msg.size() );
+    BOOST_CHECK( msg.find( "Filesystem object at target output directory path [" + spath + "/000] is not a directory" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -627,11 +629,11 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
   if( boost::filesystem::exists( ipath ) )
   {
-    boost::filesystem::remove( ipath );
+    boost::filesystem::remove_all( ipath );
   }
 }
 !!!2222000.cpp!!!	mpi_storage_open_checkpoint_output_directory_is_not_accessible() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
   const std::string spath( ipath.native() );
@@ -644,8 +646,8 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   // Try to get directory after generating file with same name
   try
   {
-    boost::filesystem::create_directories( ipath );
-    boost::filesystem::permissions( ipath, boost::filesystem::no_perms );
+    boost::filesystem::create_directories( ipath / "000" );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::no_perms );
     auto os_str = sman_ptr->open_checkpoint();
     BOOST_REQUIRE( *(os_str) );
     BOOST_ERROR( "Unexpected \"sman_ptr->open_checkpoint()\" found file named " + spath );
@@ -654,7 +656,7 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   {
     const std::string msg( err.what() );
     // std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Problem openning checkpoint file " + spath + "/" + sman_ptr->checkpoint_name() ) < msg.size() );
+    BOOST_CHECK( msg.find( "Problem openning checkpoint file " + spath + "/000/" + sman_ptr->checkpoint_name() ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -662,11 +664,12 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
   if( boost::filesystem::exists( ipath ) )
   {
-    boost::filesystem::remove( ipath );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::owner_all );
+    boost::filesystem::remove_all( ipath );
   }
 }
 !!!2222128.cpp!!!	mpi_storage_open_checkpoint_output_directory_is_0W0() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
   const std::string spath( ipath.native() );
@@ -679,8 +682,8 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   // Try to get directory after generating file with same name
   try
   {
-    boost::filesystem::create_directories( ipath );
-    boost::filesystem::permissions( ipath, boost::filesystem::owner_write );
+    boost::filesystem::create_directories( ipath / "000" );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::owner_write );
     auto os_str = sman_ptr->open_checkpoint();
     BOOST_REQUIRE( *(os_str) );
     BOOST_ERROR( "Unexpected \"sman_ptr->open_checkpoint()\" found file named " + spath );
@@ -689,7 +692,7 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   {
     const std::string msg( err.what() );
     // std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Problem openning checkpoint file " + spath + "/" + sman_ptr->checkpoint_name() ) < msg.size() );
+    BOOST_CHECK( msg.find( "Problem openning checkpoint file " + spath + "/000/" + sman_ptr->checkpoint_name() ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -697,11 +700,12 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
   if( boost::filesystem::exists( ipath ) )
   {
-    boost::filesystem::remove( ipath );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::owner_all );
+    boost::filesystem::remove_all( ipath );
   }
 }
 !!!2222256.cpp!!!	mpi_storage_open_checkpoint_output_directory_is_RW0() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
   const std::string spath( ipath.native() );
@@ -714,8 +718,8 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   // Try to get directory after generating file with same name
   try
   {
-    boost::filesystem::create_directories( ipath );
-    boost::filesystem::permissions( ipath, boost::filesystem::owner_write | boost::filesystem::owner_read );
+    boost::filesystem::create_directories( ipath / "000" );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::owner_write | boost::filesystem::owner_read );
     auto os_str = sman_ptr->open_checkpoint();
     BOOST_REQUIRE( *(os_str) );
     BOOST_ERROR( "Unexpected \"sman_ptr->open_checkpoint()\" found file named " + spath );
@@ -724,7 +728,7 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   {
     const std::string msg( err.what() );
     // std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Problem openning checkpoint file " + spath + "/" + sman_ptr->checkpoint_name() ) < msg.size() );
+    BOOST_CHECK( msg.find( "Problem openning checkpoint file " + spath + "/000/" + sman_ptr->checkpoint_name() ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -732,11 +736,11 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
   if( boost::filesystem::exists( ipath ) )
   {
-    boost::filesystem::remove( ipath );
+    boost::filesystem::remove_all( ipath );
   }
 }
 !!!2222384.cpp!!!	mpi_storage_open_checkpoint_output_directory_is_0WX() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
   const std::string spath( ipath.native() );
@@ -749,8 +753,8 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   // Try to get directory after generating file with same name
   try
   {
-    boost::filesystem::create_directories( ipath );
-    boost::filesystem::permissions( ipath, boost::filesystem::owner_write | boost::filesystem::owner_exe );
+    boost::filesystem::create_directories( ipath / "000" );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::owner_write | boost::filesystem::owner_exe );
     auto os_str = sman_ptr->open_checkpoint();
     BOOST_REQUIRE( *(os_str) );
   }
@@ -760,12 +764,12 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
   if( boost::filesystem::exists( ipath ) )
   {
-    boost::filesystem::permissions( ipath, boost::filesystem::owner_read | boost::filesystem::owner_write | boost::filesystem::owner_exe );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::owner_read | boost::filesystem::owner_write | boost::filesystem::owner_exe );
     boost::filesystem::remove_all( ipath );
   }
 }
 !!!2222512.cpp!!!	mpi_storage_open_checkpoint_output_directory_is_R0X() : void
-boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage );
 {
   auto ipath( boost::filesystem::unique_path( "output%%%%%" ) );
   const std::string spath( ipath.native() );
@@ -778,8 +782,8 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   // Try to get directory after generating file with same name
   try
   {
-    boost::filesystem::create_directories( ipath );
-    boost::filesystem::permissions( ipath, boost::filesystem::owner_exe | boost::filesystem::owner_read );
+    boost::filesystem::create_directories( ipath / "000" );
+    boost::filesystem::permissions( ipath / "000", boost::filesystem::owner_exe | boost::filesystem::owner_read );
     auto os_str = sman_ptr->open_checkpoint();
     BOOST_REQUIRE( *(os_str) );
     BOOST_ERROR( "Unexpected \"sman_ptr->open_checkpoint()\" found file named " + spath );
@@ -788,7 +792,7 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   {
     const std::string msg( err.what() );
     // std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Problem openning checkpoint file " + spath + "/" + sman_ptr->checkpoint_name() ) < msg.size() );
+    BOOST_CHECK( msg.find( "Problem openning checkpoint file " + spath + "/000/" + sman_ptr->checkpoint_name() ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -796,7 +800,7 @@ boost::shared_ptr< platform::mpi_storage > sman_ptr( new platform::mpi_storage( 
   }
   if( boost::filesystem::exists( ipath ) )
   {
-    boost::filesystem::remove( ipath );
+    boost::filesystem::remove_all( ipath );
   }
 }
 !!!2222896.cpp!!!	run_input_test() : void
@@ -815,7 +819,7 @@ const std::string test_outdir( "5999.dat/" );
 const std::string oname( "output.dbm" );
 const std::string test_oname( "result.zip" );
 boost::shared_ptr< std::stringstream > log( new std::stringstream );
-boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage );
 fstype->set_log( log );
 {
   boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
@@ -856,7 +860,7 @@ BOOST_CHECK( slog.find( test_fbase ) < slog.size() );
 //std::cout << "\n" << slog << "\n";
 !!!2223024.cpp!!!	run_input_type_no_value_test() : void
 core::input_delegater dg( 1 );
-boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage );
 {
   boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
   platform::mpi_storage::add_definition( *meta );
@@ -885,7 +889,7 @@ catch( std::exception const& err )
 }
 !!!2223152.cpp!!!	run_input_type_bad_value_test() : void
 core::input_delegater dg( 1 );
-boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage );
 {
   boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
   platform::mpi_storage::add_definition( *meta );
@@ -914,7 +918,7 @@ catch( std::exception const& err )
 }
 !!!2223280.cpp!!!	run_input_duplicate_type_test() : void
 core::input_delegater dg( 1 );
-boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage );
 {
   boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
   platform::mpi_storage::add_definition( *meta );
@@ -922,7 +926,7 @@ boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage
 }
 // Type is repeated
 /////////////////////////////
-std::string canon_input( "run\ntype \"test\"\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
+std::string canon_input( "run\ntype \"mpi\"\ntype \"mpi\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
 core::input_preprocess reader;
 reader.add_buffer( "dummy", canon_input );
 
@@ -934,7 +938,7 @@ try
 catch( std::runtime_error const& err )
 {
   const std::string msg( err.what() );
-  // std::cout << msg << "\n";
+  //std::cout << msg << "\n";
   BOOST_CHECK( msg.find( "Run \"type\" parameter appears more than once" ) < msg.size() );
 }
 catch( std::exception const& err )
@@ -943,7 +947,7 @@ catch( std::exception const& err )
 }
 !!!2223408.cpp!!!	run_input_checkname_no_value_test() : void
 core::input_delegater dg( 1 );
-boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage );
 {
   boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
   platform::mpi_storage::add_definition( *meta );
@@ -951,7 +955,7 @@ boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage
 }
 // Checkname is hidden by comment character
 /////////////////////////////
-std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname #check.dat\noutname result.zip\nend\n\n" );
+std::string canon_input( "run\ntype \"mpi\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname #check.dat\noutname result.zip\nend\n\n" );
 core::input_preprocess reader;
 reader.add_buffer( "dummy", canon_input );
 
@@ -972,7 +976,7 @@ catch( std::exception const& err )
 }
 !!!2223536.cpp!!!	run_input_outname_no_value_test() : void
 core::input_delegater dg( 1 );
-boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage );
 {
   boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
   platform::mpi_storage::add_definition( *meta );
@@ -980,7 +984,7 @@ boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage
 }
 // Type is hidden by comment character
 /////////////////////////////
-std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname #result.zip\nend\n\n" );
+std::string canon_input( "run\ntype \"mpi\"\ninput \"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname #result.zip\nend\n\n" );
 core::input_preprocess reader;
 reader.add_buffer( "dummy", canon_input );
 
@@ -1003,7 +1007,7 @@ catch( std::exception const& err )
 
 !!!2223664.cpp!!!	run_input_outdir_no_value_test() : void
 core::input_delegater dg( 1 );
-boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage );
 {
   boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
   platform::mpi_storage::add_definition( *meta );
@@ -1011,7 +1015,7 @@ boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage
 }
 // Type is hidden by comment character
 /////////////////////////////
-std::string canon_input( "run\ntype \"test\"\ninput \"channel.\%1$04d.inp\"\noutputdir #\"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
+std::string canon_input( "run\ntype \"mpi\"\ninput \"channel.\%1$04d.inp\"\noutputdir #\"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
 core::input_preprocess reader;
 reader.add_buffer( "dummy", canon_input );
 
@@ -1032,7 +1036,7 @@ catch( std::exception const& err )
 }
 !!!2223792.cpp!!!	run_input_inputpattern_no_value_test() : void
 core::input_delegater dg( 1 );
-boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage( 0 ) );
+boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage );
 {
   boost::shared_ptr< platform::storage_meta > meta( new platform::storage_meta( fstype ) );
   platform::mpi_storage::add_definition( *meta );
@@ -1040,7 +1044,7 @@ boost::shared_ptr< platform::storage_manager > fstype( new platform::mpi_storage
 }
 // Type is hidden by comment character
 /////////////////////////////
-std::string canon_input( "run\ntype \"test\"\ninput #\"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
+std::string canon_input( "run\ntype \"mpi\"\ninput #\"channel.\%1$04d.inp\"\noutputdir \"\%1$04d.dat\"\ncheckname check.dat\noutname result.zip\nend\n\n" );
 core::input_preprocess reader;
 reader.add_buffer( "dummy", canon_input );
 
