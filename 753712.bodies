@@ -1063,3 +1063,118 @@ catch( std::exception const& err )
 {
   BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
 }
+!!!2271024.cpp!!!	full_simulation_main_test() : void
+char a1[] { "ionch" };
+char a2[] { "--input" };
+char a3[] { "test.inp" };
+char a4[] { "--run" };
+char a5[] { "2" };
+char a6[] { "--seed" };
+char a7[] { "212121" };
+char* argv[] { &a1[0], &a2[0], &a3[0], &a4[0], &a5[0], &a6[0], &a7[0] };
+int argc = 7;
+
+auto getseed = [](std::string logname)->size_t
+{
+  std::ifstream is( logname );
+  for (std::string line; std::getline(is, line); )
+  {
+    if( line.find("Random seed value :") != std::string::npos )
+    {
+      std::string l{ line.substr(line.find(':') + 1) };
+      return std::stoul( l );
+    }
+  }
+  return 0ul;
+};
+
+
+if( boost::filesystem::exists( "0002" ) )
+{
+  boost::filesystem::remove_all( "0002" );
+}
+if( boost::filesystem::exists( a3 ) )
+{
+  boost::filesystem::remove( a3 );
+}
+boost::shared_ptr< platform::mpi_storage > stor( new platform::mpi_storage );
+{
+  {
+    const std::string input_file_contents
+    {
+      "simulator\ntype standard\ninner 10\nname Test simulation\nnstep 200\nnaver 100\nisave 50\nntarg 50\nepsw 70.0\nkelvin 305.0\nend\n\nrun\ntype standard\noutputdir \"\%1$04d\"\nend\n\nevaluator\ntype coulomb\nend\n\nsampler\ntype specie-count\nend\n\nsampler\ntype metropolis\nend\n\nsampler\ntype widom\niwidom 10\nend\n\nregion\ntype cube\nname centre\nwidth 5\norigin 2.5 2.5 2.5\nend\n\nspecie\nname Na\nz 1\nd 1.01\nctarg 0.1\nend\n\nspecie\nname Cl\nz -1\nd 1.78\nctarg 0.1\nend\n\ntrial\nrate 0.5\ntype move\ndelta 1.0\nend\n\ntrial\nrate 0.5\ntype jump\nend\n"
+    };
+    std::ofstream out( a3 );
+    out.write( input_file_contents.data(), input_file_contents.size() );
+  }
+  boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 10.0 ) );
+  boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
+
+  if( boost::filesystem::exists( "0002" ) )
+  {
+    boost::filesystem::remove_all( "0002" );
+  }
+  try
+  {
+    BOOST_CHECK( stor->main( argc, argv, *sim ) );
+  }
+  catch( std::exception const& err )
+  {
+    std::cout << err.what() << "\n";
+    BOOST_ERROR( std::string( "Unexpected exception thrown by \"sim.main(...)\": " ) + err.what() );
+  }
+}
+{
+  BOOST_REQUIRE( boost::filesystem::exists( "0002" ) );
+  BOOST_REQUIRE( boost::filesystem::is_directory( "0002" ) );
+  BOOST_REQUIRE( boost::filesystem::exists( "0002/000/checkpoint.arc" ) );
+  BOOST_REQUIRE( boost::filesystem::exists( "0002/000/output.dbm" ) );
+  BOOST_REQUIRE( boost::filesystem::exists( "0002/000/log" ) );
+  if( stor->size() > 1 )
+  {
+    BOOST_REQUIRE( boost::filesystem::exists( "0002/001/checkpoint.arc" ) );
+    BOOST_REQUIRE( boost::filesystem::exists( "0002/001/output.dbm" ) );
+    BOOST_REQUIRE( boost::filesystem::exists( "0002/001/log" ) );
+    std::size_t sd1, sd2;
+    sd1 = getseed( "0002/000/log" );
+    sd2 = getseed( "0002/001/log" );
+    BOOST_CHECK_EQUAL( sd1 + 1, sd2 );
+  }
+  try
+  {
+    utility::gdbm_sink db( "0002/000/output.dbm", utility::base_sink::READ_ONLY );
+    BOOST_REQUIRE( db.exists( "metropolis.dat" ) );
+    BOOST_REQUIRE( db.exists( "specie-count.dat" ) );
+    BOOST_REQUIRE( db.exists( "widom.dat" ) );
+    const std::string speciecount( "# TITLE: \"Time series specie counts\" \n# FIELDS: INDEX SPC[0]_MEAN SPC[0]_VAR SPC[1]_MEAN SPC[1]_VAR \n# UNITS: ORDINAL COUNT COUNT COUNT COUNT \n" );
+    const std::string uuidlabel( "# UUID:" );
+    const std::string widom( "# TITLE: \"Series of Widom method chemical potential estimates\" \n# FIELDS: INDEX Na_EXCESS0 Na_POTENTIAL Na_EXCESS Na_COUNT Cl_EXCESS0 Cl_POTENTIAL Cl_EXCESS Cl_COUNT \n# UNITS: ORDINAL ENERGY ENERGY ENERGY COUNT ENERGY ENERGY ENERGY COUNT \n" );
+    const std::string metropolis( "# TITLE: \"Energy distribution histogram\" \n# FIELDS: EMIN EMAX EMID PMEAN PVAR \n# UNITS: e^-E e^-E e^-E COUNT COUNT**2" );
+    std::string buffer;
+    BOOST_REQUIRE( db.read( "specie-count.dat", buffer ) );
+    BOOST_CHECK_EQUAL( buffer.find( speciecount ), 42ul );
+    BOOST_CHECK_EQUAL( buffer.find( uuidlabel ), 0ul );
+    BOOST_REQUIRE( db.read( "metropolis.dat", buffer ) );
+    BOOST_CHECK_EQUAL( buffer.find( metropolis ), 42ul );
+    BOOST_CHECK_EQUAL( buffer.find( uuidlabel ), 0ul );
+    BOOST_REQUIRE( db.read( "widom.dat", buffer ) );
+    BOOST_CHECK_EQUAL( buffer.find( widom ), 42ul );
+    BOOST_CHECK_EQUAL( buffer.find( uuidlabel ), 0ul );
+  }
+  catch( std::exception const& err )
+  {
+    std::cout << err.what() << "\n";
+    BOOST_ERROR( std::string( "Unexpected exception working on db \"0002/output.dbm\": " ) + err.what() );
+  }
+}
+if( stor->rank() == 0 )
+{
+  if( boost::filesystem::exists( "0002" ) )
+  {
+    boost::filesystem::remove_all( "0002" );
+  }
+  if( boost::filesystem::exists( a3 ) )
+  {
+    boost::filesystem::remove( a3 );
+  }
+}
