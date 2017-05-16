@@ -1142,7 +1142,8 @@ boost::shared_ptr< platform::mpi_storage > stor( new platform::mpi_storage );
   }
   try
   {
-    utility::gdbm_sink db( "0002/000/output.dbm", utility::base_sink::READ_ONLY );
+    std::cout << "RANK " << stor->rank() << "\n";
+    utility::gdbm_sink db( stor->compute_output_dir() + "/output.dbm", utility::base_sink::READ_ONLY );
     BOOST_REQUIRE( db.exists( "metropolis.dat" ) );
     BOOST_REQUIRE( db.exists( "specie-count.dat" ) );
     BOOST_REQUIRE( db.exists( "widom.dat" ) );
@@ -1164,9 +1165,10 @@ boost::shared_ptr< platform::mpi_storage > stor( new platform::mpi_storage );
   catch( std::exception const& err )
   {
     std::cout << err.what() << "\n";
-    BOOST_ERROR( std::string( "Unexpected exception working on db \"0002/output.dbm\": " ) + err.what() );
+    BOOST_ERROR( std::string( "Unexpected exception working on db \"0002/000/output.dbm\": " ) + err.what() );
   }
 }
+stor->barrier();
 if( stor->rank() == 0 )
 {
   if( boost::filesystem::exists( "0002" ) )

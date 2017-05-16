@@ -140,11 +140,14 @@ return result;
 // the final system is valid.
 std::stringstream log;
 namespace mpi = boost::mpi;
-const bool abort_on_exception{ true };
-mpi::environment env( argc, argv, abort_on_exception );
-this->world_.reset( new mpi::communicator );
-this->rank_ = this->world_->rank();
-this->sibling_count_ = this->world_->size();
+if( std::getenv( "OMPI_COMM_WORLD_SIZE" ) )
+{
+  const bool abort_on_exception{ true };
+  this->env_.reset( new mpi::environment( argc, argv, abort_on_exception ) );
+  this->world_.reset( new mpi::communicator );
+  this->rank_ = this->world_->rank();
+  this->sibling_count_ = this->world_->size();
+}
 try
 {
   switch( this->process_command_line( argc, argv, log ) )

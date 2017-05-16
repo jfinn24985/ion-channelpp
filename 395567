@@ -1,6 +1,6 @@
 format 75
 "platform" // platform
-  revision 328
+  revision 329
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -6678,6 +6678,19 @@ ${docstring}${members}
 	comment " The number of MPI jobs."
       end
 
+      classrelation 1210928 // env_ (<directional composition>)
+	relation 1210032 *-->
+	  stereotype "shared_ptr"
+	  a role_name "env_" multiplicity "0..1" private
+	    comment "MPI environment"
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+"
+	    python "${comment}${self}${name} = ${stereotype}()
+"
+	    classrelation_ref 1210928 // env_ (<directional composition>)
+	  b parent class_ref 333872 // environment
+      end
+
       classrelation 1204400 // world_ (<directional composition>)
 	relation 1203504 *-->
 	  stereotype "shared_ptr"
@@ -6709,6 +6722,7 @@ ${docstring}${members}
 : storage_manager()
 , rank_(0)
 , sibling_count_(1)
+, env_()
 , world_()
 {}"
 	
@@ -6950,6 +6964,25 @@ ${docstring}${body}
 "
 	
 	comment " Abort the MPI system with the given error code."
+      end
+
+      operation 2277552 "barrier"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  if( this->world_ ) this->world_->barrier();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Wait for all other MPI jobs"
       end
 
       operation 2217776 "compute_seed"
@@ -11344,6 +11377,7 @@ ${includes}
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/traits.hpp>
 #include <boost/mpi.hpp>
+#include <cstdlib>
 #include <fstream>
 // -
 ${namespace_start}
