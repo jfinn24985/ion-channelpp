@@ -22,57 +22,57 @@ return tmp;
 if( not this->data_.empty() )
 {
 // CHECK ALL COUNTS ARE EQUAL
-UTILITY_ENSURE_OLD( const std::size_t check_counter = this->data_.begin()->second.first.count() );
-const static boost::format title_str( " %14s %10s %10s %10s %10s" );
-out << boost::format( title_str ) % "Trial" % "Accept.av" % "Accept.var" % "Trial.av" % "Trial.var" << "\n";
-const static boost::format format_str( " %14s %10.8f %10.8f %10.8f %10.8f" );
-typedef boost::tuple< std::string, double, double, double, double > datum_t;
-std::vector< datum_t > dataset;
-for( auto const& entry : this->data_ )
-{
-  std::stringstream hashval;
-  hashval << entry.first;
-  dataset.push_back( { hashval.str(), entry.second.first.mean(), entry.second.first.variance(), entry.second.second.mean(), entry.second.second.variance() } );
-  out << boost::format( format_str ) % hashval.str() % entry.second.first.mean() % entry.second.first.variance() % entry.second.second.mean() % entry.second.second.variance() << "\n";
-  UTILITY_ENSURE( check_counter == entry.second.first.count(), "Serious error, estimater counters should all be equal" );
-  UTILITY_ENSURE( check_counter == entry.second.second.count(), "Serious error, estimater counters should all be equal" );
-}
-{
-  // Write out trial acceptance data
-
-  const std::string filename { "acceptance.dat" }; 
-  const std::size_t sz { this->data_.size() };
-
-  core::output_dataset dset { sink.uuid(), [sz](){ return sz; } };
-  dset.set_title( "Trial acceptance and rate data." );
-
-  dset.push_back_entry( core::output_field( "TRIAL", "CHANGE_HASH", [&dataset]( std::ostream& os, std::size_t ii )
+  UTILITY_ENSURE_OLD( const std::size_t check_counter = this->data_.begin()->second.first.count() );
+  const static boost::format title_str( " %14s %10s %10s %10s %10s" );
+  out << boost::format( title_str ) % "Trial" % "Accept.av" % "Accept.var" % "Trial.av" % "Trial.var" << "\n";
+  const static boost::format format_str( " %14s %10.8f %10.8f %10.8f %10.8f" );
+  typedef boost::tuple< std::string, double, double, double, double > datum_t;
+  std::vector< datum_t > dataset;
+  for( auto const& entry : this->data_ )
   {
-    os << boost::tuples::get< 0 >( dataset[ii] );
-  } ) );
-
-  dset.push_back_entry( core::output_field( "ACCEPT.MEAN", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
+    std::stringstream hashval;
+    hashval << entry.first;
+    dataset.push_back( { hashval.str(), entry.second.first.mean(), entry.second.first.variance(), entry.second.second.mean(), entry.second.second.variance() } );
+    out << boost::format( format_str ) % hashval.str() % entry.second.first.mean() % entry.second.first.variance() % entry.second.second.mean() % entry.second.second.variance() << "\n";
+    UTILITY_ENSURE( check_counter == entry.second.first.count(), "Serious error, estimater counters should all be equal" );
+    UTILITY_ENSURE( check_counter == entry.second.second.count(), "Serious error, estimater counters should all be equal" );
+  }
   {
-    os << boost::tuples::get< 1 >( dataset[ii] );
-  } ) );
+    // Write out trial acceptance data
 
-  dset.push_back_entry( core::output_field( "ACCEPT.VAR", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
-  {
-    os << boost::tuples::get< 2 >( dataset[ii] );
-  } ) );
+    const std::string filename { "acceptance.dat" };
+    const std::size_t sz { this->data_.size() };
 
-  dset.push_back_entry( core::output_field( "ATTEMPT.MEAN", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
-  {
-    os << boost::tuples::get< 3 >( dataset[ii] );
-  } ) );
+    output_dataset dset { [sz]() { return sz; } };
+    dset.set_title( "Trial acceptance and rate data." );
 
-  dset.push_back_entry( core::output_field( "ATTEMPT.VARIANCE", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
-  {
-    os << boost::tuples::get< 4 >( dataset[ii] );
-  } ) );
+    dset.push_back_entry( observable::output_field( "TRIAL", "CHANGE_HASH", [&dataset]( std::ostream& os, std::size_t ii )
+    {
+      os << boost::tuples::get< 0 >( dataset[ii] );
+    } ) );
 
-  dset.write( filename, sink );
-}
+    dset.push_back_entry( observable::output_field( "ACCEPT.MEAN", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
+    {
+      os << boost::tuples::get< 1 >( dataset[ii] );
+    } ) );
+
+    dset.push_back_entry( observable::output_field( "ACCEPT.VAR", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
+    {
+      os << boost::tuples::get< 2 >( dataset[ii] );
+    } ) );
+
+    dset.push_back_entry( observable::output_field( "ATTEMPT.MEAN", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
+    {
+      os << boost::tuples::get< 3 >( dataset[ii] );
+    } ) );
+
+    dset.push_back_entry( observable::output_field( "ATTEMPT.VARIANCE", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
+    {
+      os << boost::tuples::get< 4 >( dataset[ii] );
+    } ) );
+
+    dset.write( filename, sink );
+  }
 }
 !!!1485104.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
 // If we have a vary rare trial it might not appear in the

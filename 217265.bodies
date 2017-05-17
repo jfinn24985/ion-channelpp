@@ -2154,867 +2154,6 @@ const std::string label( "name" );
   }
 
 }
-!!!477616.cpp!!!	output_field_test() : void
-{
-  // Static Lifetime method tests
-  BOOST_CHECK( std::is_default_constructible< core::output_field >::type{} );
-  BOOST_CHECK( std::is_copy_constructible< core::output_field >::type{} );
-  BOOST_CHECK( std::is_move_constructible< core::output_field >::type{} );
-  BOOST_CHECK( ( std::is_assignable< core::output_field, core::output_field >::type{} ) );
-  BOOST_CHECK( not std::has_virtual_destructor< core::output_field >::type{} );
-}
-// CTOR TESTS
-// ----------
-std::string emptr_str;
-const std::string label1( "name" );
-const std::string label2( "day" );
-const std::string label3( "month" );
-const std::string label4( "year" );
-const std::string unit1( "label" );
-const std::string unit2( "ordinal1" );
-const std::string unit3( "ordinal2" );
-const std::string unit4( "ordinal3" );
-
-{
-  core::output_field aset;
-  BOOST_CHECK_EQUAL( aset.label(), emptr_str );
-  BOOST_CHECK_EQUAL( aset.unit(), emptr_str );
-  BOOST_CHECK_EQUAL( aset.valid(), false );
-  {
-    // Output error if no entries
-    core::output_field copy( aset );
-    try
-    {
-      copy.write( std::cout, 0 );
-      BOOST_ERROR( "expected \"copy.write( std::cout, 0 )\" exception not thrown" );
-    }
-    catch( std::runtime_error const& err )
-    {
-      const std::string msg( err.what() );
-      //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Can not write incomplete field" ) < msg.size() );
-    }
-    catch( std::exception const& err )
-    {
-      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-    }
-  }
-
-  aset.set_label( label1 );
-  BOOST_CHECK_EQUAL( aset.label(), label1 );
-  BOOST_CHECK_EQUAL( aset.unit(), emptr_str );
-  BOOST_CHECK_EQUAL( aset.valid(), false );
-
-  aset.set_unit( unit1 );
-  BOOST_CHECK_EQUAL( aset.unit(), unit1 );
-  BOOST_CHECK_EQUAL( aset.label(), label1 );
-  BOOST_CHECK_EQUAL( aset.valid(), false );
-
-  aset.set_format_function( []( std::ostream& os, std::size_t i )
-  {
-    os << i;
-  } );
-  BOOST_CHECK_EQUAL( aset.unit(), unit1 );
-  BOOST_CHECK_EQUAL( aset.label(), label1 );
-  BOOST_CHECK_EQUAL( aset.valid(), true );
-  {
-    // Output should work
-    std::stringstream store;
-    BOOST_CHECK_NO_THROW( aset.write( store, 0 ) );
-    const std::string output( store.str() );
-    BOOST_CHECK( not output.empty() );
-    BOOST_CHECK_EQUAL( output.size(), 1 );
-    BOOST_CHECK_EQUAL( output, "0" );
-  }
-  {
-    // Output should work
-    std::stringstream store;
-    BOOST_CHECK_NO_THROW( aset.write( store, 101 ) );
-    const std::string output( store.str() );
-    BOOST_CHECK( not output.empty() );
-    BOOST_CHECK_EQUAL( output.size(), 3 );
-    BOOST_CHECK_EQUAL( output, "101" );
-  }
-  core::output_field bset;
-  BOOST_CHECK_EQUAL( bset.label(), emptr_str );
-  BOOST_CHECK_EQUAL( bset.unit(), emptr_str );
-  BOOST_CHECK_EQUAL( bset.valid(), false );
-
-  bset = aset;
-  BOOST_CHECK_EQUAL( bset.unit(), unit1 );
-  BOOST_CHECK_EQUAL( bset.label(), label1 );
-  BOOST_CHECK_EQUAL( bset.valid(), true );
-
-  BOOST_CHECK_EQUAL( aset.unit(), unit1 );
-  BOOST_CHECK_EQUAL( aset.label(), label1 );
-  BOOST_CHECK_EQUAL( aset.valid(), true );
-
-  core::output_field cset( aset );
-  BOOST_CHECK_EQUAL( cset.unit(), unit1 );
-  BOOST_CHECK_EQUAL( cset.label(), label1 );
-  BOOST_CHECK_EQUAL( cset.valid(), true );
-
-  BOOST_CHECK_EQUAL( aset.unit(), unit1 );
-  BOOST_CHECK_EQUAL( aset.label(), label1 );
-  BOOST_CHECK_EQUAL( aset.valid(), true );
-
-  aset = aset;
-  BOOST_CHECK_EQUAL( aset.unit(), unit1 );
-  BOOST_CHECK_EQUAL( aset.label(), label1 );
-  BOOST_CHECK_EQUAL( aset.valid(), true );
-
-  core::output_field dset( std::move( aset ) );
-  BOOST_CHECK_EQUAL( dset.unit(), unit1 );
-  BOOST_CHECK_EQUAL( dset.label(), label1 );
-  BOOST_CHECK_EQUAL( dset.valid(), true );
-
-  BOOST_CHECK_EQUAL( aset.unit(), emptr_str );
-  BOOST_CHECK_EQUAL( aset.label(), emptr_str );
-  BOOST_CHECK_EQUAL( aset.valid(), false );
-
-  core::output_field eset;
-  BOOST_CHECK_EQUAL( eset.label(), emptr_str );
-  BOOST_CHECK_EQUAL( eset.unit(), emptr_str );
-  BOOST_CHECK_EQUAL( eset.valid(), false );
-
-  std::swap( eset, bset );
-  BOOST_CHECK_EQUAL( eset.unit(), unit1 );
-  BOOST_CHECK_EQUAL( eset.label(), label1 );
-  BOOST_CHECK_EQUAL( eset.valid(), true );
-
-  BOOST_CHECK_EQUAL( bset.unit(), emptr_str );
-  BOOST_CHECK_EQUAL( bset.label(), emptr_str );
-  BOOST_CHECK_EQUAL( bset.valid(), false );
-}
-!!!484912.cpp!!!	output_series_test() : void
-{
-  // Static Lifetime method tests
-  BOOST_CHECK( std::is_default_constructible< core::output_series >::type{} );
-  BOOST_CHECK( std::is_copy_constructible< core::output_series >::type{} );
-  BOOST_CHECK( std::is_move_constructible< core::output_series >::type{} );
-  BOOST_CHECK( ( std::is_assignable< core::output_series, core::output_series >::type{} ) );
-  BOOST_CHECK( not std::has_virtual_destructor< core::output_series >::type{} );
-}
-// CTOR TESTS
-// ----------
-std::string emptr_str;
-const std::string test_fname
-{ "result.dat"
-};
-const std::string test_uuid
-{ "1a2b3c4d"
-};
-const std::string test_title
-{ "Something or other."
-};
-{
-  core::output_series aset;
-  BOOST_CHECK_EQUAL( aset.title(), emptr_str );
-  BOOST_CHECK_EQUAL( aset.uuid(), emptr_str );
-  BOOST_CHECK_EQUAL( aset.size(), 0 );
-  BOOST_CHECK_EQUAL( aset.empty(), true );
-  BOOST_CHECK( aset.begin() == aset.end() );
-
-  aset.set_uuid( test_uuid );
-  BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
-  BOOST_CHECK_EQUAL( aset.title(), emptr_str );
-
-  aset.set_title( test_title );
-  BOOST_CHECK_EQUAL( aset.title(), test_title );
-  BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
-  BOOST_CHECK_EQUAL( aset.size(), 0 );
-  BOOST_CHECK_EQUAL( aset.empty(), true );
-  BOOST_CHECK( aset.begin() == aset.end() );
-
-  core::output_series bset;
-  BOOST_CHECK_EQUAL( bset.title(), emptr_str );
-  BOOST_CHECK_EQUAL( bset.uuid(), emptr_str );
-  BOOST_CHECK_EQUAL( aset.size(), 0 );
-  BOOST_CHECK_EQUAL( aset.empty(), true );
-  BOOST_CHECK( aset.begin() == aset.end() );
-
-  bset = aset;
-  BOOST_CHECK_EQUAL( bset.title(), test_title );
-  BOOST_CHECK_EQUAL( bset.uuid(), test_uuid );
-  BOOST_CHECK_EQUAL( aset.size(), 0 );
-  BOOST_CHECK_EQUAL( aset.empty(), true );
-  BOOST_CHECK( aset.begin() == aset.end() );
-
-  core::output_series cset( aset );
-  BOOST_CHECK_EQUAL( cset.title(), test_title );
-  BOOST_CHECK_EQUAL( cset.uuid(), test_uuid );
-  BOOST_CHECK_EQUAL( aset.size(), 0 );
-  BOOST_CHECK_EQUAL( aset.empty(), true );
-  BOOST_CHECK( aset.begin() == aset.end() );
-
-  aset = aset;
-  BOOST_CHECK_EQUAL( aset.title(), test_title );
-  BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
-  BOOST_CHECK_EQUAL( aset.size(), 0 );
-  BOOST_CHECK_EQUAL( aset.empty(), true );
-  BOOST_CHECK( aset.begin() == aset.end() );
-
-  core::output_series dset( std::move( aset ) );
-  BOOST_CHECK_EQUAL( dset.title(), test_title );
-  BOOST_CHECK_EQUAL( dset.uuid(), test_uuid );
-  BOOST_CHECK_EQUAL( aset.size(), 0 );
-  BOOST_CHECK_EQUAL( aset.empty(), true );
-  BOOST_CHECK( aset.begin() == aset.end() );
-
-  // Output error if no entries
-  {
-    core::output_series dsetcp( dset );
-    try
-    {
-      dsetcp.do_header( std::cout );
-      BOOST_ERROR( "expected \"dsetcp.do_header( std::cout )\" exception not thrown" );
-    }
-    catch( std::runtime_error const& err )
-    {
-      const std::string msg( err.what() );
-      //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
-    }
-    catch( std::exception const& err )
-    {
-      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-    }
-  }
-  {
-    core::output_series dsetcp( dset );
-    try
-    {
-      dsetcp.do_body( std::cout );
-      BOOST_ERROR( "expected \"dsetcp.do_body( std::cout )\" exception not thrown" );
-    }
-    catch( std::runtime_error const& err )
-    {
-      const std::string msg( err.what() );
-      //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
-    }
-    catch( std::exception const& err )
-    {
-      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-    }
-  }
-  {
-    utility::memory_sink sink;
-    core::output_series dsetcp( dset );
-    try
-    {
-      dsetcp.write( test_fname, sink, true );
-      BOOST_ERROR( "expected \"dsetcp.write( test_fname, sink, true )\" exception not thrown" );
-    }
-    catch( std::runtime_error const& err )
-    {
-      const std::string msg( err.what() );
-      //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
-    }
-    catch( std::exception const& err )
-    {
-      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-    }
-  }
-  {
-    utility::memory_sink sink;
-    core::output_series dsetcp( dset );
-    try
-    {
-      dsetcp.write( test_fname, sink, false );
-      BOOST_ERROR( "expected \"dsetcp.write( test_fname, sink, false )\" exception not thrown" );
-    }
-    catch( std::runtime_error const& err )
-    {
-      const std::string msg( err.what() );
-      //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
-    }
-    catch( std::exception const& err )
-    {
-      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-    }
-  }
-}
-struct person
-{
-  std::string name;
-  std::size_t day_of_birth;
-  std::size_t month_of_birth;
-  std::size_t year_of_birth;
-};
-
-struct family
-{
-  std::vector< person > ppl;
-  std::size_t day( std::size_t i ) const
-  {
-    return ppl[ i ].day_of_birth;
-  }
-  std::size_t month( std::size_t i ) const
-  {
-    return ppl[ i ].month_of_birth;
-  }
-  std::size_t year( std::size_t i ) const
-  {
-    return ppl[ i ].year_of_birth;
-  }
-  std::string name( std::size_t i ) const
-  {
-    return ppl[ i ].name;
-  }
-  std::size_t size() const
-  {
-    return ppl.size();
-  }
-};
-
-const std::string label1( "name" );
-const std::string label2( "day" );
-const std::string label3( "month" );
-const std::string label4( "year" );
-const std::string unit1( "label" );
-const std::string unit2( "ordinal1" );
-const std::string unit3( "ordinal2" );
-const std::string unit4( "ordinal3" );
-{
-  person me { "justin", 17, 4, 1965 };
-
-  core::output_series dset( test_uuid );
-  dset.set_title( test_title );
-  dset.push_back_entry( core::output_field( label1, unit1, [&me]( std::ostream& os, std::size_t )
-  {
-    os << me.name;
-  } ) );
-  dset.push_back_entry( core::output_field( label2, unit2, [&me]( std::ostream& os, std::size_t )
-  {
-    os << me.day_of_birth;
-  } ) );
-  dset.push_back_entry( core::output_field( label3, unit3, [&me]( std::ostream& os, std::size_t )
-  {
-    os << me.month_of_birth;
-  } ) );
-  dset.push_back_entry( core::output_field( label4, unit4, [&me]( std::ostream& os, std::size_t )
-  {
-    os << me.year_of_birth;
-  } ) );
-
-  {
-    std::stringstream store;
-    dset.do_header( store );
-    const std::string output
-    {
-      store.str()
-    };
-    BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
-    BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
-    BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
-    BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
-  }
-  {
-    std::stringstream store;
-    dset.do_body( store );
-    const std::string output
-    {
-      store.str()
-    };
-    BOOST_CHECK_EQUAL( output.find( test_uuid ), std::string::npos );
-    BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
-    BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
-    BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
-  }
-}
-!!!471728.cpp!!!	output_dataset_test() : void
-// CTOR TESTS
-// ----------
-std::string emptr_str;
-const std::string test_fname { "result.dat" };
-const std::string test_uuid { "1a2b3c4d" };
-const std::string test_title { "Something or other." };
-{
-  core::output_dataset aset;
-  BOOST_CHECK_EQUAL( aset.title(), emptr_str );
-  BOOST_CHECK_EQUAL( aset.uuid(), emptr_str );
-  BOOST_CHECK_EQUAL( aset.size(), 0 );
-  BOOST_CHECK_EQUAL( aset.empty(), true );
-  BOOST_CHECK( aset.begin() == aset.end() );
-
-  aset.set_uuid( test_uuid );
-  BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
-  BOOST_CHECK_EQUAL( aset.title(), emptr_str );
-
-  aset.set_title( test_title );
-  BOOST_CHECK_EQUAL( aset.title(), test_title );
-  BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
-  BOOST_CHECK_EQUAL( aset.size(), 0 );
-  BOOST_CHECK_EQUAL( aset.empty(), true );
-  BOOST_CHECK( aset.begin() == aset.end() );
-
-  core::output_dataset bset;
-  BOOST_CHECK_EQUAL( bset.title(), emptr_str );
-  BOOST_CHECK_EQUAL( bset.uuid(), emptr_str );
-  BOOST_CHECK_EQUAL( aset.size(), 0 );
-  BOOST_CHECK_EQUAL( aset.empty(), true );
-  BOOST_CHECK( aset.begin() == aset.end() );
-
-  bset = aset;
-  BOOST_CHECK_EQUAL( bset.title(), test_title );
-  BOOST_CHECK_EQUAL( bset.uuid(), test_uuid );
-  BOOST_CHECK_EQUAL( aset.size(), 0 );
-  BOOST_CHECK_EQUAL( aset.empty(), true );
-  BOOST_CHECK( aset.begin() == aset.end() );
-
-  core::output_dataset cset( aset );
-  BOOST_CHECK_EQUAL( cset.title(), test_title );
-  BOOST_CHECK_EQUAL( cset.uuid(), test_uuid );
-  BOOST_CHECK_EQUAL( aset.size(), 0 );
-  BOOST_CHECK_EQUAL( aset.empty(), true );
-  BOOST_CHECK( aset.begin() == aset.end() );
-
-  aset = aset;
-  BOOST_CHECK_EQUAL( aset.title(), test_title );
-  BOOST_CHECK_EQUAL( aset.uuid(), test_uuid );
-  BOOST_CHECK_EQUAL( aset.size(), 0 );
-  BOOST_CHECK_EQUAL( aset.empty(), true );
-  BOOST_CHECK( aset.begin() == aset.end() );
-
-  core::output_dataset dset( std::move( aset ) );
-  BOOST_CHECK_EQUAL( dset.title(), test_title );
-  BOOST_CHECK_EQUAL( dset.uuid(), test_uuid );
-  BOOST_CHECK_EQUAL( aset.size(), 0 );
-  BOOST_CHECK_EQUAL( aset.empty(), true );
-  BOOST_CHECK( aset.begin() == aset.end() );
-
-  // Output error if no entries
-  {
-    core::output_dataset dsetcp( dset );
-    try
-    {
-      dsetcp.do_header( std::cout );
-      BOOST_ERROR( "expected \"dsetcp.do_header( std::cout )\" exception not thrown" );
-    }
-    catch( std::runtime_error const& err )
-    {
-      const std::string msg( err.what() );
-      //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
-    }
-    catch( std::exception const& err )
-    {
-      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-    }
-  }
-  {
-    core::output_dataset dsetcp( dset );
-    try
-    {
-      dsetcp.do_body( std::cout );
-      BOOST_ERROR( "expected \"dsetcp.do_body( std::cout )\" exception not thrown" );
-    }
-    catch( std::runtime_error const& err )
-    {
-      const std::string msg( err.what() );
-      //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Can not write data set without any fields" ) < msg.size() );
-    }
-    catch( std::exception const& err )
-    {
-      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-    }
-  }
-  {
-    utility::memory_sink sink;
-    core::output_dataset dsetcp( dset );
-    try
-    {
-      dsetcp.write( test_fname, sink );
-      BOOST_ERROR( "expected \"dsetcp.write( test_fname, sink )\" exception not thrown" );
-    }
-    catch( std::runtime_error const& err )
-    {
-      const std::string msg( err.what() );
-      //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Can not write data set without any fields" ) < msg.size() );
-    }
-    catch( std::exception const& err )
-    {
-      BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-    }
-  }
-}
-struct person
-{
-  std::string name;
-  std::size_t day_of_birth;
-  std::size_t month_of_birth;
-  std::size_t year_of_birth;
-};
-
-struct family
-{
-  std::vector< person > ppl;
-  std::size_t day( std::size_t i ) const
-  {
-    return ppl[ i ].day_of_birth;
-  }
-  std::size_t month( std::size_t i ) const
-  {
-    return ppl[ i ].month_of_birth;
-  }
-  std::size_t year( std::size_t i ) const
-  {
-    return ppl[ i ].year_of_birth;
-  }
-  std::string name( std::size_t i ) const
-  {
-    return ppl[ i ].name;
-  }
-  std::size_t size() const
-  {
-    return ppl.size();
-  }
-};
-
-const std::string label1( "name" );
-const std::string label2( "day" );
-const std::string label3( "month" );
-const std::string label4( "year" );
-const std::string unit1( "label" );
-const std::string unit2( "ordinal1" );
-const std::string unit3( "ordinal2" );
-const std::string unit4( "ordinal3" );
-{
-  person me { "justin", 17, 4, 1965 };
-
-  core::output_dataset dset( { test_uuid }, []()
-  {
-    return 1;
-  } );
-  dset.set_title( test_title );
-  dset.push_back_entry( core::output_field( label1, unit1, [&me]( std::ostream& os, std::size_t )
-  {
-    os << me.name;
-  } ) );
-  dset.push_back_entry( core::output_field( label2, unit2, [&me]( std::ostream& os, std::size_t )
-  {
-    os << me.day_of_birth;
-  } ) );
-  dset.push_back_entry( core::output_field( label3, unit3, [&me]( std::ostream& os, std::size_t )
-  {
-    os << me.month_of_birth;
-  } ) );
-  dset.push_back_entry( core::output_field( label4, unit4, [&me]( std::ostream& os, std::size_t )
-  {
-    os << me.year_of_birth;
-  } ) );
-
-  {
-    std::stringstream store;
-    dset.do_header( store );
-    const std::string output
-    {
-      store.str()
-    };
-    BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
-    BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
-    BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
-    BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
-  }
-  {
-    std::stringstream store;
-    dset.do_body( store );
-    const std::string output
-    {
-      store.str()
-    };
-    BOOST_CHECK_EQUAL( output.find( test_uuid ), std::string::npos );
-    BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
-    BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
-    BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
-  }
-}
-
-{
-  family myfamily;
-  myfamily.ppl.push_back( { "justin", 17, 4, 1965 } );
-  myfamily.ppl.push_back( { "sean", 15, 4, 1969 } );
-  myfamily.ppl.push_back( { "debi", 8, 2, 1963 } );
-  myfamily.ppl.push_back( { "susan", 19, 6, 1953 } );
-  myfamily.ppl.push_back( { "peabody", 1, 1, 2012 } );
-  core::output_dataset dset( { test_uuid }, [&myfamily]()
-  {
-    return myfamily.size();
-  } );
-  dset.push_back_entry( core::output_field( label1, unit1, [&myfamily]( std::ostream& os, std::size_t i )
-  {
-    os << myfamily.name( i );
-  } ) );
-  dset.push_back_entry( core::output_field( label2, unit2, [&myfamily]( std::ostream& os, std::size_t i )
-  {
-    os << myfamily.ppl[ i ].day_of_birth;
-  } ) );
-  dset.push_back_entry( core::output_field( label3, unit3, [&myfamily]( std::ostream& os, std::size_t i )
-  {
-    os << myfamily.month( i );
-  } ) );
-  dset.push_back_entry( core::output_field( label4, unit4, [&myfamily]( std::ostream& os, std::size_t i )
-  {
-    os << myfamily.year( i );
-  } ) );
-
-  {
-    std::stringstream store;
-    dset.do_header( store );
-    const std::string output
-    {
-      store.str()
-    };
-    BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
-    BOOST_CHECK_EQUAL( output.find( "TITLE" ), std::string::npos );
-    BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
-    BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
-    BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
-  }
-  dset.set_title( test_title );
-  {
-    std::stringstream store;
-    dset.do_header( store );
-    const std::string output
-    {
-      store.str()
-    };
-    BOOST_CHECK_NE( output.find( test_uuid ), std::string::npos );
-    BOOST_CHECK_NE( output.find( "TITLE" ), std::string::npos );
-    BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
-    BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
-    BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
-  }
-  {
-    std::stringstream store;
-    dset.do_body( store );
-    const std::string output
-    {
-      store.str()
-    };
-    BOOST_CHECK_EQUAL( output.find( test_uuid ), std::string::npos );
-    BOOST_CHECK_EQUAL( output.find( "TITLE" ), std::string::npos );
-    BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
-    BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
-    BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
-    BOOST_CHECK_NE( output.find( "peabody" ), std::string::npos );
-    BOOST_CHECK_EQUAL( std::count( output.begin(), output.end(), '\n' ), 5 );
-  }
-}
-
-!!!1694256.cpp!!!	output_filter_lifetime_test() : void
-{
-  // Static Lifetime method tests
-  BOOST_CHECK( not std::is_default_constructible< core::fixed_width_output_filter >::type{} );
-  BOOST_CHECK( std::is_copy_constructible< core::fixed_width_output_filter >::type{} );
-  BOOST_CHECK( std::is_move_constructible< core::fixed_width_output_filter >::type{} );
-  BOOST_CHECK( ( std::is_assignable< core::fixed_width_output_filter, core::fixed_width_output_filter >::type{} ) );
-  BOOST_CHECK( not std::has_virtual_destructor< core::fixed_width_output_filter >::type{} );
-}
-// CTOR TESTS
-// ----------
-{
-  core::fixed_width_output_filter aset( 0, 0, 0 );
-  BOOST_CHECK_EQUAL( aset.text_width(), 0ul );
-  BOOST_CHECK_EQUAL( aset.depth(), 0ul );
-  BOOST_CHECK_EQUAL( aset.indent_size(), 0ul );
-}
-{
-  core::fixed_width_output_filter aset( 2, 1, 40 );
-  BOOST_CHECK_EQUAL( aset.text_width(), 40ul );
-  BOOST_CHECK_EQUAL( aset.depth(), 1ul );
-  BOOST_CHECK_EQUAL( aset.indent_size(), 2ul );
-  {
-    core::fixed_width_output_filter aset1( aset );
-    BOOST_CHECK_EQUAL( aset1.text_width(), 40ul );
-    BOOST_CHECK_EQUAL( aset1.depth(), 1ul );
-    BOOST_CHECK_EQUAL( aset1.indent_size(), 2ul );
-  }
-  {
-    core::fixed_width_output_filter aset2( aset );
-    core::fixed_width_output_filter aset1( std::move( aset2 ) );
-    BOOST_CHECK_EQUAL( aset1.text_width(), 40ul );
-    BOOST_CHECK_EQUAL( aset1.depth(), 1ul );
-    BOOST_CHECK_EQUAL( aset1.indent_size(), 2ul );
-  }
-}
-!!!1694640.cpp!!!	output_filter_method_test() : void
-// USAGE TESTS
-// ----------
-{
-  core::fixed_width_output_filter aset( 2, 1, 10 );
-  namespace io = boost::iostreams;
-  {
-    std::stringstream result;
-    const std::string input( "This is some text that I want to format." );
-    const std::string output( "  This is \n  some \n  text \n  that I \n  want to \n  format." );
-    {
-      io::filtering_ostream out;
-      out.push( aset );
-      out.push( result );
-      io::write( out, input.data(), input.size() );
-    }
-    const std::string resultstr( result.str() );
-    //std::cout << "\n--\n" << resultstr << "\n--\n";
-    //std::cout << "\n**\n" << output << "\n**\n";
-    BOOST_CHECK_EQUAL( resultstr, output );
-    if( resultstr != output )
-    {
-      const std::size_t minsz = std::min( resultstr.size(), output.size() );
-      for( std::size_t ii = 0; ii != minsz; ++ii )
-      {
-        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
-      }
-    }
-  }
-  {
-    std::stringstream result;
-    const std::string input( "Now for some exceedingly elongated words." );
-    const std::string output( "  Now for \n  some \n  exceedin\n  gly \n  elongate\n  d words." );
-    {
-      io::filtering_ostream out;
-      out.push( aset );
-      out.push( result );
-      io::write( out, input.data(), input.size() );
-    }
-    const std::string resultstr( result.str() );
-    //std::cout << "\n--\n" << resultstr << "\n--\n";
-    //std::cout << "\n**\n" << output << "\n**\n";
-    BOOST_CHECK_EQUAL( resultstr, output );
-    if( resultstr != output )
-    {
-      const std::size_t minsz = std::min( resultstr.size(), output.size() );
-      for( std::size_t ii = 0; ii != minsz; ++ii )
-      {
-        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
-      }
-    }
-  }
-  {
-    std::stringstream result;
-    const std::string input( "Now to change the indenting." );
-    const std::string output( "    Now to\n    change\n    the \n    indent\n    ing." );
-    {
-      aset.increment_depth();
-      io::filtering_ostream out;
-      out.push( aset );
-      out.push( result );
-      io::write( out, input.data(), input.size() );
-    }
-    const std::string resultstr( result.str() );
-    //std::cout << "\n--\n" << resultstr << "\n--\n";
-    //std::cout << "\n**\n" << output << "\n**\n";
-    BOOST_CHECK_EQUAL( resultstr, output );
-    if( resultstr != output )
-    {
-      const std::size_t minsz = std::min( resultstr.size(), output.size() );
-      for( std::size_t ii = 0; ii != minsz; ++ii )
-      {
-        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
-      }
-    }
-  }
-  {
-    std::stringstream result;
-    const std::string input( " a b c  d e f g h i j k l m n o p" );
-    const std::string output( "  a b c  d\n  e f g h \n  i j k l \n  m n o p" );
-    {
-      aset.decrement_depth();
-      io::filtering_ostream out;
-      out.push( aset );
-      out.push( result );
-      io::write( out, input.data(), input.size() );
-    }
-    const std::string resultstr( result.str() );
-    //std::cout << "\n--\n" << resultstr << "\n--\n";
-    //std::cout << "\n**\n" << output << "\n**\n";
-    BOOST_CHECK_EQUAL( resultstr, output );
-    if( resultstr != output )
-    {
-      const std::size_t minsz = std::min( resultstr.size(), output.size() );
-      for( std::size_t ii = 0; ii != minsz; ++ii )
-      {
-        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
-      }
-    }
-  }
-  {
-    std::stringstream result;
-    const std::string input( " 1234567890 1234567890" );
-    const std::string output( "  12345678\n  90 \n  12345678\n  90" );
-    {
-      io::filtering_ostream out;
-      out.push( aset );
-      out.push( result );
-      io::write( out, input.data(), input.size() );
-    }
-    const std::string resultstr( result.str() );
-    //std::cout << "\n--\n" << resultstr << "\n--\n";
-    //std::cout << "\n**\n" << output << "\n**\n";
-    BOOST_CHECK_EQUAL( resultstr, output );
-    if( resultstr != output )
-    {
-      const std::size_t minsz = std::min( resultstr.size(), output.size() );
-      for( std::size_t ii = 0; ii != minsz; ++ii )
-      {
-        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
-      }
-    }
-  }
-  {
-    std::stringstream result;
-    const std::string input( " 1234567890 1234567890" );
-    const std::string output( "1234567890\n1234567890" );
-    {
-      aset.decrement_depth();
-      io::filtering_ostream out;
-      out.push( aset );
-      out.push( result );
-      io::write( out, input.data(), input.size() );
-    }
-    const std::string resultstr( result.str() );
-    //std::cout << "\n--\n" << resultstr << "\n--\n";
-    //std::cout << "\n**\n" << output << "\n**\n";
-    BOOST_CHECK_EQUAL( resultstr, output );
-    if( resultstr != output )
-    {
-      const std::size_t minsz = std::min( resultstr.size(), output.size() );
-      for( std::size_t ii = 0; ii != minsz; ++ii )
-      {
-        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
-      }
-    }
-  }
-  {
-    std::stringstream result;
-    const std::string input( " -12.34567890 1234.567890" );
-    const std::string output( "-12.345678\n90 \n1234.56789\n0" );
-    {
-      aset.decrement_depth();
-      io::filtering_ostream out;
-      out.push( aset );
-      out.push( result );
-      io::write( out, input.data(), input.size() );
-    }
-    const std::string resultstr( result.str() );
-    //std::cout << "\n--\n" << resultstr << "\n--\n";
-    //std::cout << "\n**\n" << output << "\n**\n";
-    BOOST_CHECK_EQUAL( resultstr, output );
-    if( resultstr != output )
-    {
-      const std::size_t minsz = std::min( resultstr.size(), output.size() );
-      for( std::size_t ii = 0; ii != minsz; ++ii )
-      {
-        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
-      }
-    }
-  }
-}
 !!!1710640.cpp!!!	indent_guard_lifetime_test() : void
 {
   // Static Lifetime method tests
@@ -3446,5 +2585,213 @@ std::stringstream store;
     hsection.write( filt, os );
     //std::cout << "--\n" << os.str() << "--\n";
     BOOST_CHECK_EQUAL( os.str(), output );
+  }
+}
+!!!1694256.cpp!!!	output_filter_lifetime_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( not std::is_default_constructible< core::fixed_width_output_filter >::type{} );
+  BOOST_CHECK( std::is_copy_constructible< core::fixed_width_output_filter >::type{} );
+  BOOST_CHECK( std::is_move_constructible< core::fixed_width_output_filter >::type{} );
+  BOOST_CHECK( ( std::is_assignable< core::fixed_width_output_filter, core::fixed_width_output_filter >::type{} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< core::fixed_width_output_filter >::type{} );
+}
+// CTOR TESTS
+// ----------
+{
+  core::fixed_width_output_filter aset( 0, 0, 0 );
+  BOOST_CHECK_EQUAL( aset.text_width(), 0ul );
+  BOOST_CHECK_EQUAL( aset.depth(), 0ul );
+  BOOST_CHECK_EQUAL( aset.indent_size(), 0ul );
+}
+{
+  core::fixed_width_output_filter aset( 2, 1, 40 );
+  BOOST_CHECK_EQUAL( aset.text_width(), 40ul );
+  BOOST_CHECK_EQUAL( aset.depth(), 1ul );
+  BOOST_CHECK_EQUAL( aset.indent_size(), 2ul );
+  {
+    core::fixed_width_output_filter aset1( aset );
+    BOOST_CHECK_EQUAL( aset1.text_width(), 40ul );
+    BOOST_CHECK_EQUAL( aset1.depth(), 1ul );
+    BOOST_CHECK_EQUAL( aset1.indent_size(), 2ul );
+  }
+  {
+    core::fixed_width_output_filter aset2( aset );
+    core::fixed_width_output_filter aset1( std::move( aset2 ) );
+    BOOST_CHECK_EQUAL( aset1.text_width(), 40ul );
+    BOOST_CHECK_EQUAL( aset1.depth(), 1ul );
+    BOOST_CHECK_EQUAL( aset1.indent_size(), 2ul );
+  }
+}
+!!!1694640.cpp!!!	output_filter_method_test() : void
+// USAGE TESTS
+// ----------
+{
+  core::fixed_width_output_filter aset( 2, 1, 10 );
+  namespace io = boost::iostreams;
+  {
+    std::stringstream result;
+    const std::string input( "This is some text that I want to format." );
+    const std::string output( "  This is \n  some \n  text \n  that I \n  want to \n  format." );
+    {
+      io::filtering_ostream out;
+      out.push( aset );
+      out.push( result );
+      io::write( out, input.data(), input.size() );
+    }
+    const std::string resultstr( result.str() );
+    //std::cout << "\n--\n" << resultstr << "\n--\n";
+    //std::cout << "\n**\n" << output << "\n**\n";
+    BOOST_CHECK_EQUAL( resultstr, output );
+    if( resultstr != output )
+    {
+      const std::size_t minsz = std::min( resultstr.size(), output.size() );
+      for( std::size_t ii = 0; ii != minsz; ++ii )
+      {
+        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
+      }
+    }
+  }
+  {
+    std::stringstream result;
+    const std::string input( "Now for some exceedingly elongated words." );
+    const std::string output( "  Now for \n  some \n  exceedin\n  gly \n  elongate\n  d words." );
+    {
+      io::filtering_ostream out;
+      out.push( aset );
+      out.push( result );
+      io::write( out, input.data(), input.size() );
+    }
+    const std::string resultstr( result.str() );
+    //std::cout << "\n--\n" << resultstr << "\n--\n";
+    //std::cout << "\n**\n" << output << "\n**\n";
+    BOOST_CHECK_EQUAL( resultstr, output );
+    if( resultstr != output )
+    {
+      const std::size_t minsz = std::min( resultstr.size(), output.size() );
+      for( std::size_t ii = 0; ii != minsz; ++ii )
+      {
+        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
+      }
+    }
+  }
+  {
+    std::stringstream result;
+    const std::string input( "Now to change the indenting." );
+    const std::string output( "    Now to\n    change\n    the \n    indent\n    ing." );
+    {
+      aset.increment_depth();
+      io::filtering_ostream out;
+      out.push( aset );
+      out.push( result );
+      io::write( out, input.data(), input.size() );
+    }
+    const std::string resultstr( result.str() );
+    //std::cout << "\n--\n" << resultstr << "\n--\n";
+    //std::cout << "\n**\n" << output << "\n**\n";
+    BOOST_CHECK_EQUAL( resultstr, output );
+    if( resultstr != output )
+    {
+      const std::size_t minsz = std::min( resultstr.size(), output.size() );
+      for( std::size_t ii = 0; ii != minsz; ++ii )
+      {
+        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
+      }
+    }
+  }
+  {
+    std::stringstream result;
+    const std::string input( " a b c  d e f g h i j k l m n o p" );
+    const std::string output( "  a b c  d\n  e f g h \n  i j k l \n  m n o p" );
+    {
+      aset.decrement_depth();
+      io::filtering_ostream out;
+      out.push( aset );
+      out.push( result );
+      io::write( out, input.data(), input.size() );
+    }
+    const std::string resultstr( result.str() );
+    //std::cout << "\n--\n" << resultstr << "\n--\n";
+    //std::cout << "\n**\n" << output << "\n**\n";
+    BOOST_CHECK_EQUAL( resultstr, output );
+    if( resultstr != output )
+    {
+      const std::size_t minsz = std::min( resultstr.size(), output.size() );
+      for( std::size_t ii = 0; ii != minsz; ++ii )
+      {
+        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
+      }
+    }
+  }
+  {
+    std::stringstream result;
+    const std::string input( " 1234567890 1234567890" );
+    const std::string output( "  12345678\n  90 \n  12345678\n  90" );
+    {
+      io::filtering_ostream out;
+      out.push( aset );
+      out.push( result );
+      io::write( out, input.data(), input.size() );
+    }
+    const std::string resultstr( result.str() );
+    //std::cout << "\n--\n" << resultstr << "\n--\n";
+    //std::cout << "\n**\n" << output << "\n**\n";
+    BOOST_CHECK_EQUAL( resultstr, output );
+    if( resultstr != output )
+    {
+      const std::size_t minsz = std::min( resultstr.size(), output.size() );
+      for( std::size_t ii = 0; ii != minsz; ++ii )
+      {
+        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
+      }
+    }
+  }
+  {
+    std::stringstream result;
+    const std::string input( " 1234567890 1234567890" );
+    const std::string output( "1234567890\n1234567890" );
+    {
+      aset.decrement_depth();
+      io::filtering_ostream out;
+      out.push( aset );
+      out.push( result );
+      io::write( out, input.data(), input.size() );
+    }
+    const std::string resultstr( result.str() );
+    //std::cout << "\n--\n" << resultstr << "\n--\n";
+    //std::cout << "\n**\n" << output << "\n**\n";
+    BOOST_CHECK_EQUAL( resultstr, output );
+    if( resultstr != output )
+    {
+      const std::size_t minsz = std::min( resultstr.size(), output.size() );
+      for( std::size_t ii = 0; ii != minsz; ++ii )
+      {
+        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
+      }
+    }
+  }
+  {
+    std::stringstream result;
+    const std::string input( " -12.34567890 1234.567890" );
+    const std::string output( "-12.345678\n90 \n1234.56789\n0" );
+    {
+      aset.decrement_depth();
+      io::filtering_ostream out;
+      out.push( aset );
+      out.push( result );
+      io::write( out, input.data(), input.size() );
+    }
+    const std::string resultstr( result.str() );
+    //std::cout << "\n--\n" << resultstr << "\n--\n";
+    //std::cout << "\n**\n" << output << "\n**\n";
+    BOOST_CHECK_EQUAL( resultstr, output );
+    if( resultstr != output )
+    {
+      const std::size_t minsz = std::min( resultstr.size(), output.size() );
+      for( std::size_t ii = 0; ii != minsz; ++ii )
+      {
+        BOOST_CHECK_EQUAL( resultstr[ii], output[ii] );
+      }
+    }
   }
 }

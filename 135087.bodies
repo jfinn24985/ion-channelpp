@@ -79,36 +79,36 @@ return result;
 {
   const std::string filename { "widom.dat" };
 
-  core::output_series dset { sink.uuid() };
+  output_series dset {};
   dset.set_title( "Series of Widom method chemical potential estimates" );
   const std::size_t loopindex = this->loop_count_;
 
-  dset.push_back_entry( core::output_field( "INDEX", "ORDINAL", [loopindex]( std::ostream& os, std::size_t )
+  dset.push_back_entry( observable::output_field( "INDEX", "ORDINAL", [loopindex]( std::ostream& os, std::size_t )
   {
     os << loopindex;
   } ) );
 
   for( widom_datum const& datum : this->data_ )
   {
-    dset.push_back_entry( core::output_field( datum.label_ + "_EXCESS0" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
+    dset.push_back_entry( observable::output_field( datum.label_ + "_EXCESS0" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
     {
       os << datum.excess_potential_;
     } ) );
-    dset.push_back_entry( core::output_field( datum.label_ + "_POTENTIAL" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
+    dset.push_back_entry( observable::output_field( datum.label_ + "_POTENTIAL" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
     {
       if( datum.exp_potential_.mean() == 0.0 )
         os << 0.0;
       else
         os << -std::log( datum.exp_potential_.mean() );
     } ) );
-    dset.push_back_entry( core::output_field( datum.label_ + "_EXCESS" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
+    dset.push_back_entry( observable::output_field( datum.label_ + "_EXCESS" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
     {
       if( datum.exp_potential_.mean() == 0.0 or datum.volume_ == 0.0 )
         os << 0.0;
       else
         os << -std::log( datum.exp_potential_.mean() ) - std::log( core::constants::to_SI() * datum.specie_count_.mean() / datum.volume_ );
     } ) );
-    dset.push_back_entry( core::output_field( datum.label_ + "_COUNT" , "COUNT", [&datum]( std::ostream& os, std::size_t )
+    dset.push_back_entry( observable::output_field( datum.label_ + "_COUNT" , "COUNT", [&datum]( std::ostream& os, std::size_t )
     {
       os << datum.exp_potential_.count();
     } ) );
