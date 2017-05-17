@@ -285,41 +285,57 @@ except ValueError, err:
   # ignore ValueError, just return what we have so far
   pass
 return result
-!!!552496.cpp!!!	read_as_bool(in astr : string) : bool
-astr = dequote (astr);
-boost::trim (astr);
-boost::to_upper(astr);
+!!!552496.cpp!!!	read_as_bool(in astr : string, inout target : bool) : bool
+astr = dequote( astr );
+boost::trim( astr );
+boost::to_upper( astr );
 switch (astr.size())
 {
+case 1:
+  if (astr == "1")
+  {
+    target = true;
+    return true;
+  }
+  else if (astr == "0")
+  {
+    target = false;
+    return true;
+  }
+  break;
 case 4:
   if (astr == "TRUE")
   {
+    target = true;
     return true;
   }
   break;
 case 5:
   if (astr == "FALSE")
   {
-    return false;
+    target = false;
+    return true;
   }
   break;
 case 6:
   if (astr == ".TRUE.")
   {
-   return true;
+    target = true;
+    return true;
   }
   break;
 case 7:
   if (astr == ".FALSE.")
   {
-    return false;
+    target = false;
+    return true;
   }
   break;
 default:
   break;
 }
-return boost::lexical_cast< bool > (astr);
-!!!552496.python!!!	read_as_bool(in astr : string) : bool
+return false;
+!!!552496.python!!!	read_as_bool(in astr : string, inout target : bool) : bool
 astr = line.upper()
 astr = input_reader.dequote (astr)
 astr = astr.strip()
@@ -347,104 +363,213 @@ else:
     raise ValueError, "invalid literal for conversion to boolean: '"+astr+"'"
 
 
-!!!1097008.cpp!!!	float_input(in name : string, in value : string, in title : string, in section_name : string, inout target : double, in above_zero : bool, in equal_zero : bool) : void
-UTILITY_INPUT( not value.empty(), title + " \"" + name + "\" parameter requires a value.", section_name, nullptr );
-double result{ 0.0 };
-try
-{
-  result = boost::lexical_cast< double >( value );
-}
-catch( std::bad_cast const& err )
-{
-  const bool value_is_a_number = false;
-  UTILITY_INPUT( value_is_a_number, title + " \"" + name + "\" parameter value (" + value + ") is not a number: " + err.what(), section_name, nullptr );
-}
-if( above_zero )
-{
-  if( equal_zero )
-  {
-    UTILITY_INPUT( result >= 0.0, title + " \"" + name + "\" parameter value (" + value + ") must be greater than or equal to zero.", section_name, nullptr );
-  }
-  else
-  {
-    UTILITY_INPUT( result > 0.0, title + " \"" + name + "\" parameter value (" + value + ") must be greater than zero.", section_name, nullptr );
-  }
-}
-target = result;
-!!!1097264.cpp!!!	bool_input(in name : string, in value : string, in title : string, in section_name : string, inout target : bool, in has_default : bool, in default_value : bool) : void
-bool result = false;
+!!!1097264.cpp!!!	bool_input(in name : string, in value : string, in title : string, in section_name : string, inout target : bool, in has_default : bool, in default_value : bool, in reader : input_base_reader) : void
 if( value.empty() )
 {
   if( has_default )
   {
-    result = default_value;
+    target = default_value;
+    return;
   }
   else
   {
-    UTILITY_INPUT( not value.empty(), title + " \"" + name + "\" parameter requires a value.", section_name, nullptr );
+    UTILITY_INPUT( not value.empty(), title + " \"" + name + "\" parameter requires a value.", section_name, reader );
   }
 }
 else
 {
-  try
+  std::string astr{ dequote( value ) };
+  boost::trim( astr );
+  boost::to_upper( astr );
+  if( astr.empty() )
   {
-    result = core::input_base_reader::read_as_bool( value );
+    if( has_default )
+    {
+      target = default_value;
+      return;
+    }
+    else
+    {
+      UTILITY_INPUT( not astr.empty(), title + " \"" + name + "\" parameter requires a non-empty value.", section_name, reader );
+    }
   }
-  catch( std::bad_cast const& err )
+  switch (astr.size())
   {
-    const bool value_is_a_boolean = false;
-    UTILITY_INPUT( value_is_a_boolean, title + " \"" + name + "\" parameter value (" + value + ") is not a boolean: " + err.what(), section_name, nullptr );
+  case 1:
+    if (astr == "1")
+    {
+      target = true;
+      return;
+    }
+    else if (astr == "0")
+    {
+      target = false;
+      return;
+    }
+    else if (astr == "F")
+    {
+      target = false;
+      return;
+    }
+    else if (astr == "T")
+    {
+      target = true;
+      return;
+    }
+    break;
+  case 3:
+    if (astr == ".F.")
+    {
+      target = false;
+      return;
+    }
+    else if (astr == ".T.")
+    {
+      target = true;
+      return;
+    }
+    break;
+  case 4:
+    if (astr == "TRUE")
+    {
+      target = true;
+      return;
+    }
+    break;
+  case 5:
+    if (astr == "FALSE")
+    {
+      target = false;
+      return;
+    }
+    break;
+  case 6:
+    if (astr == ".TRUE.")
+    {
+      target = true;
+      return;
+    }
+    break;
+  case 7:
+    if (astr == ".FALSE.")
+    {
+      target = false;
+      return;
+    }
+    break;
+  default:
+    break;
   }
+  const bool value_is_boolean{ false };
+  UTILITY_INPUT( value_is_boolean, title + " \"" + name + "\" parameter value (" + value + ") is not a boolean", section_name, reader );
 }
-target = result;
-
-!!!1628848.cpp!!!	ordinal_input(in name : string, in value : string, in title : string, in section_name : string, inout target : size_t) : void
+!!!1097008.cpp!!!	float_input(in name : string, in value : string, in title : string, in section_name : string, inout target : double, in above_zero : bool, in equal_zero : bool, inout reader : input_base_reader) : void
+std::replace(value.begin(), value.end(), 'D', 'E');
+std::replace(value.begin(), value.end(), 'd', 'E');
 const char *start = value.c_str();
 // Move past any whitespace
 while( not *start == '\0' and std::isspace( *start ) ) ++start;
-UTILITY_INPUT( *start != '\0', title + " \"" + name + "\" parameter requires a value.", section_name, nullptr );
+UTILITY_INPUT( *start != '\0', title + " \"" + name + "\" parameter requires a value.", section_name, reader );
+char *end;
+double result;
+errno = 0;
+result = std::strtod(start, &end);
+UTILITY_INPUT( errno != ERANGE, title + " \"" + name + "\" parameter value ("+value+") outside numeric range.", section_name, reader );
+UTILITY_INPUT( not std::isnan( result ), title + " \"" + name + "\" parameter value ("+value+") can not be not-a-number (NAN).", section_name, reader );
+UTILITY_INPUT( not std::isinf( result ), title + " \"" + name + "\" parameter value ("+value+") can not be an infinity.", section_name, reader );
+UTILITY_INPUT( *end == '\0' or std::isspace( *end ), title + " \"" + name + "\" parameter value ("+value+") is not a number.", section_name, reader );
+if( above_zero )
+{
+  if( equal_zero )
+  {
+    UTILITY_INPUT( result >= 0.0, title + " \"" + name + "\" parameter value (" + value + ") must be greater than or equal to zero.", section_name, reader );
+  }
+  else
+  {
+    UTILITY_INPUT( result > 0.0, title + " \"" + name + "\" parameter value (" + value + ") must be greater than zero.", section_name, reader );
+  }
+}
+target = result;
+!!!2298928.cpp!!!	floats_input(in name : string, in value : string, in title : string, in section_name : string, inout target : double, inout reader : input_base_reader) : void
+std::replace(value.begin(), value.end(), 'D', 'E');
+std::replace(value.begin(), value.end(), 'd', 'E');
+const char *start = value.c_str();
+std::vector< double > rlist;
+// Move past any whitespace
+while( not *start == '\0' and std::isspace( *start ) ) ++start;
+UTILITY_INPUT( *start != '\0', title + " \"" + name + "\" parameter requires a value.", section_name, reader );
+char *end;
+errno = 0;
+for (double result = std::strtod(start, &end); start != end; result = std::strtod(start, &end))
+{
+  start = end;
+  UTILITY_INPUT( errno != ERANGE, title + " \"" + name + "\" parameter value ("+value+") outside numeric range.", section_name, reader );
+  UTILITY_INPUT( not std::isnan( result ), title + " \"" + name + "\" parameter value ("+value+") can not be not-a-number (NAN).", section_name, reader );
+  UTILITY_INPUT( not std::isinf( result ), title + " \"" + name + "\" parameter value ("+value+") can not be an infinity.", section_name, reader );
+  UTILITY_INPUT( *end == '\0' or std::isspace( *end ), title + " \"" + name + "\" parameter value ("+value+") is not a number.", section_name, reader );
+  rlist.push_back( result );
+}
+UTILITY_INPUT( *end == '\0' or std::isspace( *end ), title + " \"" + name + "\" parameter value ("+value+") is not a number.", section_name, reader );
+std::swap( rlist, target );
+!!!2290864.cpp!!!	key_input(in name : string, in value : string, in title : string, in section_name : string, inout target : size_t, in keylist : string, in reader : input_base_reader) : void
+UTILITY_INPUT( not value.empty(), title + " \"" + name + "\" parameter requires a value.", section_name, reader );
+std::stringstream os;
+os << "(";
+// Remove quotes and outer whitespace.
+value = input_base_reader::dequote( value );
+boost::algorithm::trim( value );
+UTILITY_INPUT( not value.empty(), title + " \"" + name + "\" parameter requires a non-empty value.", section_name, reader );
+for( std::size_t idx = 0; idx != keylist.size(); ++idx)
+{
+  os << keylist[ idx ] << ",";
+  if( keylist[ idx ].find( value ) == 0 )
+  {
+    target = idx;
+    return;
+  }
+}
+std::string list{ os.str() };
+list.back() = ')';
+UTILITY_INPUT( false, title + " \"" + name + "\" parameter value ("+value+") is not in list " + list + ".", section_name, reader );
+!!!1628848.cpp!!!	ordinal_input(in name : string, in value : string, in title : string, in section_name : string, inout target : size_t, in reader : input_base_reader) : void
+const char *start = value.c_str();
+// Move past any whitespace
+while( not *start == '\0' and std::isspace( *start ) ) ++start;
+UTILITY_INPUT( *start != '\0', title + " \"" + name + "\" parameter requires a value.", section_name, reader );
 // Check for negative sign
-UTILITY_INPUT( *start != '-', title + " \"" + name + "\" parameter value ("+value+") cannot be negative.", section_name, nullptr );
+UTILITY_INPUT( *start != '-', title + " \"" + name + "\" parameter value ("+value+") cannot be negative.", section_name, reader );
 char *end;
 std::size_t result;
 errno = 0;
 // Expect base ten.
 result = std::strtoul(start, &end, 0);
-UTILITY_INPUT( errno != ERANGE, title + " \"" + name + "\" parameter value ("+value+") outside numeric range.", section_name, nullptr );
-UTILITY_INPUT( *end == '\0' or std::isspace( *end ), title + " \"" + name + "\" parameter value ("+value+") is not a number.", section_name, nullptr );
+UTILITY_INPUT( errno != ERANGE, title + " \"" + name + "\" parameter value ("+value+") outside numeric range.", section_name, reader );
+UTILITY_INPUT( *end == '\0' or std::isspace( *end ), title + " \"" + name + "\" parameter value ("+value+") is not a number.", section_name, reader );
+target = result;
+!!!2290736.cpp!!!	text_input(in name : string, in value : string, in title : string, in section_name : string, inout target : string, in reader : input_base_reader) : void
+UTILITY_INPUT( not value.empty(), title + " \"" + name + "\" parameter requires a value.", section_name, reader );
+std::string result = input_base_reader::dequote( value );
+UTILITY_INPUT( not result.empty(), title + " \"" + name + "\" parameter requires a non-empty value.", section_name, reader );
 target = result;
 !!!1938736.cpp!!!	get_ordinal(in title : string, in section_name : string) : size_t
 std::size_t result{ 0 };
-ordinal_input( this->name(), this->value(), title, section_name, result );
+ordinal_input( this->name(), this->value(), title, section_name, result, this );
 return result;
 !!!1938864.cpp!!!	get_bool(in name : string, in title : string, in section_name : string, in has_default : bool, in default_value : bool) : bool
-bool result = false;
-if( this->value().empty() )
-{
-  if( has_default )
-  {
-    result = default_value;
-  }
-  else
-  {
-    UTILITY_INPUT( not this->value().empty(), title + " \"" + name + "\" parameter requires a value.", section_name, this );
-  }
-}
-else
-{
-  try
-  {
-    result = core::input_base_reader::read_as_bool( this->value() );
-  }
-  catch( std::bad_cast const& err )
-  {
-    const bool value_is_a_boolean = false;
-    UTILITY_INPUT( value_is_a_boolean, title + " \"" + name + "\" parameter value (" + this->value() + ") is not a boolean: " + err.what(), section_name, this );
-  }
-}
+bool result { false };
+bool_input( this->name(), this->value(), title, section_name, result, has_default, default_value, this );
 return result;
-
 !!!1938992.cpp!!!	get_float(in title : string, in section_name : string, in above_zero : bool, in equal_zero : bool) : double
 double result{ 0 };
-float_input( this->name(), this->value(), title, section_name, result, above_zero, equal_zero );
+float_input( this->name(), this->value(), title, section_name, result, above_zero, equal_zero, this );
 return result;
+!!!2290992.cpp!!!	get_text(in title : string, in section_name : string) : string
+std::string result;
+text_input( this->name(), this->value(), title, section_name, result, this );
+return result;
+!!!2291120.cpp!!!	get_key(in title : string, in section_name : string, in keylist : string) : size_t
+std::size_t result{0};
+key_input( this->name(), this->value(), title, section_name, result, keylist, this );
+return result;
+!!!2299184.cpp!!!	get_floats(in title : string, in section_name : string, inout target : double) : void
+floats_input( this->name(), this->value(), title, section_name, target, this );
