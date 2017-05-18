@@ -1,6 +1,6 @@
 format 75
 "core" // core
-  revision 201
+  revision 202
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -5508,6 +5508,9 @@ ${docstring}${body}
 	comment " Attempt to read an input value as a textual key. Sets target
  to matching index in key list.
 
+ NOTES
+  * an empty string is an error (ie no value or \"\")
+
  \\param name : input parameter name
  \\param value : value in input file
  \\param title : text giving class context for error, should start with capital.
@@ -5572,6 +5575,9 @@ ${docstring}${body}
 	
 	comment " Attempt to read an input value as a text value
 
+ NOTES:
+ *  dequotes the string but does not trim the dequoted string
+
  \\param name : input parameter name
  \\param value : value in input file
  \\param title : text giving class context for error, should start with capital.
@@ -5600,6 +5606,8 @@ ${docstring}${body}
 	
 	comment " Attempt to read input value as a positive integer number. Throw consistently
  formatted error message on failure.
+
+ see ordinal_input (which is used internally)
 
  \\param title : text giving class context for error, should start with capital.
  \\param section_name : section context for error
@@ -5630,6 +5638,8 @@ ${docstring}${body}
 	
 	comment " Attempt to read input value as a boolean. Throw consistently
  formatted error message on failure. 
+
+ see bool_input (which is used internally)
 
  \\param name : input parameter name
  \\param title : text giving class context for error, should start with capital.
@@ -5662,6 +5672,8 @@ ${docstring}${body}
 	comment " Attempt to read an input value as a floating point number. Throw consistently
  formatted error message on failure.
 
+ see float_input (which is used internally)
+
  \\param name : input parameter name
  \\param title : text giving class context for error, should start with capital.
  \\param section_name : section context for error
@@ -5691,6 +5703,8 @@ ${docstring}${body}
 	comment " Attempt to read input value as a text value, an empty string is an error. Throw consistently
  formatted error message on failure.
 
+ see text_input (which is used internally)
+
  \\param title : text giving class context for error, should start with capital.
  \\param section_name : section context for error
  \\return : the resulting text
@@ -5716,8 +5730,11 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Attempt to read input value as a text value, an empty string is an error. Throw consistently
+	comment " Attempt to read input value as a key value matching a list of valid keys. The
+ index of the matching key in the list is returned. Throw consistently
  formatted error message on failure.
+
+ see key_input (which is used internally)
 
  \\param title : text giving class context for error, should start with capital.
  \\param section_name : section context for error
@@ -5744,8 +5761,43 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Attempt to read an input value as a floating point number. Throw consistently
+	comment " Attempt to read an input value as a series of floating point numbers. Throw 
+ consistently formatted error message on failure.
+
+ see floats_input (which is used internally)
+
+ \\param name : input parameter name
+ \\param title : text giving class context for error, should start with capital.
+ \\param section_name : section context for error
+ \\parma above_zero : whether value should be positive
+ \\param equal_zero : if above_zero is true, allows value to also equal zero 
+"
+      end
+
+      operation 2305712 "get_line_as_floats"
+	public explicit_return_type "void"
+	nparams 4
+	  param in name "name" explicit_type "string"
+	  param in name "title" explicit_type "string"
+	  param in name "section_name" explicit_type "string"
+	  param inout name "target" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, std::vector< ${t3} >& ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, std::vector< ${t3} >& ${p3}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Attempt to read an input line as a series of floating point numbers. Throw consistently
  formatted error message on failure.
+
+ see floats_input (which is used internally)
 
  \\param name : input parameter name
  \\param title : text giving class context for error, should start with capital.
@@ -7912,9 +7964,10 @@ ${docstring}${body}
 	
 	comment " HOw many parameter definitions are there?"
       end
+
     end
 
-    class 572720 "input_error_messages"
+    class 572720 "input_error"
       visibility package 
       cpp_decl "${comment}${template}class ${name}${inherit}
  {
@@ -7930,38 +7983,259 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
-      comment " Input error message format templates."
-      operation 1372592 "bad_boolean_value"
-	class_operation preserve_cpp_body_indent public return_type class_ref 204463 // format
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  static boost::format fmt( \"Parameter \\\"%1%\\\" value (%2%) is not an expected boolean value in a %3% section.\" );
-  return fmt;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${)}:
-${docstring}return \"mobk\"
-"
-	
-	comment " Message to indicate a value to a parameter was not recognised in the input file.
+      comment " Exception to indicate a malformed input file.
 
- Format takes (1) parameter name, (2) the non-boolean value and (3) section name as args."
+ * Includes standard error message format templates.
+
+ The standard input error message should follow the 
+ form:
+
+   XYZ parameter \"name\" in section \"secname\" of
+   input file \"filename\" line \"123\"
+     >>line of text<<
+   ** requires a value **
+   ** value (ABC) should be a positive integer **
+
+
+   
+"
+      classrelation 1224624 // <generalisation>
+	relation 1223728 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 1224624 // <generalisation>
+	  b parent class_ref 276015 // runtime_error
       end
 
-      operation 1372464 "bad_number_value"
-	class_operation preserve_cpp_body_indent public return_type class_ref 204463 // format
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+      attribute 899760 "parameter_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The parameter name at the error (may be empty string)."
+      end
+
+      attribute 899888 "section_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The input section name where the error occured."
+      end
+
+      extra_member 789296 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 2307888 "input_error"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "msg" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
+: std::runtime_error( ${p0} )
+, parameter_()
+, section_()
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 2308528 "input_error"
+	public explicit_return_type ""
+	nparams 3
+	  param in name "param" explicit_type "string"
+	  param in name "section" explicit_type "string"
+	  param in name "msg" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw}
+: std::runtime_error( ${p2} )
+, parameter_( ${p0} )
+, section_( ${p1} )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 2308016 "~input_error"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} = default;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 2308144 "input_error"
+	stereotype "move"
+	public explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 572720 // input_error
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
+: std::runtime_error( std::move( ${p0} ) )
+, parameter_( std::move( ${p0}.parameter_ ) )
+, section_( std::move( ${p0}.section_ ) )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 2308272 "input_error"
+	stereotype "copy"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 572720 // input_error
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
+: std::runtime_error( ${p0} )
+, parameter_( ${p0}.parameter_ )
+, section_( ${p0}.section_ )
+{}
+
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 2308400 "operator="
+	public return_type class_ref 572720 // input_error
+	nparams 1
+	  param in name "source" type class_ref 572720 // input_error
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
 {
-  static boost::format fmt( \"Parameter \\\"%1%\\\" value (%2%) is not an expected numerical value in a %3% section.\" );
-  return fmt;
+  this->swap( ${p0} );
+  return *this;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 2308656 "swap"
+	public explicit_return_type "void"
+	nparams 1
+	  param inout name "source" type class_ref 572720 // input_error
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  std::swap( static_cast< std::runtime_error>(this), static_cast< std::runtime_error>(${p0}) );
+  std::swap( this->parameter_, ${p0}.parameter_ );
+  std::swap( this->section_, ${p0}.section_ );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 789680 "METHODS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 2306096 "parameter"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->parameter_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The name (if any) of the parameter where the error occured."
+      end
+
+      operation 2307760 "section"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->section_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The name of the input file section where the error occured."
+      end
+
+      extra_member 789424 "GENERATORS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 2309168 "parameter_value_error"
+	class_operation preserve_cpp_body_indent public return_type class_ref 572720 // input_error
+	nparams 8
+	  param in name "title" explicit_type "string"
+	  param in name "section" explicit_type "string"
+	  param in name "name" explicit_type "string"
+	  param in name "value" explicit_type "string"
+	  param in name "line" explicit_type "string"
+	  param in name "filename" explicit_type "string"
+	  param in name "linenum" explicit_type "size_t"
+	  param in name "msg" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}, ${t5} ${p5}${v5}, ${t6} ${p6}${v6}, ${t7} ${p7}${v7}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}, ${t4} ${p4}, ${t5} ${p5}, ${t6} ${p6}, ${t7} ${p7}${)}${const}${throw}
+{
+  ${body}
 }
 "
 	
@@ -7970,9 +8244,331 @@ ${docstring}return \"mobk\"
 ${docstring}return \"mobk\"
 "
 	
-	comment " Message to indicate a value to a parameter was not recognised in the input file.
+	comment " Build a standard input error message about a parameter value error.
 
- Format takes (1) parameter name, (2) the non-numerical value and (3) section name as args."
+ \\param title : A title phrase for the parameter (Should begin with a capital).
+ \\param section : Name of the input file section.
+ \\param name : Name of the parameter.
+ \\param value : The incorrect parameter value.
+ \\param line : The complete input file line.
+ \\param filename : Name of the input file.
+ \\param linenum : Line number in the input file.
+ \\param msg : A short sentence describing the problem.
+"
+      end
+
+      operation 2308912 "parameter_value_error"
+	class_operation preserve_cpp_body_indent public return_type class_ref 572720 // input_error
+	nparams 4
+	  param in name "title" explicit_type "string"
+	  param in name "section" explicit_type "string"
+	  param in name "reader" type class_ref 313392 // input_base_reader
+	  param in name "msg" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, const ${t2} & ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract}
+{
+  return parameter_value_error( title, section, reader.name(), reader.value(), reader.line(), reader.current_filename(), reader.current_line_number(), msg );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}return \"mobk\"
+"
+	
+	comment " Build a standard input error message about a parameter value error.
+
+ (see parameter_value_error)"
+      end
+
+      operation 1371696 "missing_value_error"
+	class_operation preserve_cpp_body_indent public return_type class_ref 572720 // input_error
+	nparams 7
+	  param in name "title" explicit_type "string"
+	  param in name "section" explicit_type "string"
+	  param in name "name" explicit_type "string"
+	  param in name "line" explicit_type "string"
+	  param in name "filename" explicit_type "string"
+	  param in name "linenum" explicit_type "size_t"
+	  param in name "msg" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}, ${t5} ${p5}${v5}, ${t6} ${p6}${v6}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}, ${t4} ${p4}, ${t5} ${p5}, ${t6} ${p6}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}return \"mobk\"
+"
+	
+	comment " input_error to indicate a parameter was missing a required value in input file.
+
+ \\param title : A title phrase for the parameter (Should begin with a capital).
+ \\param section : Name of the input file section.
+ \\param name : Name of the parameter.
+ \\param line : The complete input file line.
+ \\param filename : Name of the input file.
+ \\param linenum : Line number in the input file.
+ \\param msg : A short sentence describing the problem.
+
+ "
+      end
+
+      operation 2309936 "empty_value_error"
+	class_operation preserve_cpp_body_indent public return_type class_ref 572720 // input_error
+	nparams 7
+	  param in name "title" explicit_type "string"
+	  param in name "section" explicit_type "string"
+	  param in name "name" explicit_type "string"
+	  param in name "line" explicit_type "string"
+	  param in name "filename" explicit_type "string"
+	  param in name "linenum" explicit_type "size_t"
+	  param in name "msg" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}, ${t5} ${p5}${v5}, ${t6} ${p6}${v6}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}, ${t4} ${p4}, ${t5} ${p5}, ${t6} ${p6}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}return \"mobk\"
+"
+	
+	comment " input_error to indicate a parameter was missing a non-empty (eg \"\") value in input file.
+
+ \\param title : A title phrase for the parameter (Should begin with a capital).
+ \\param section : Name of the input file section.
+ \\param name : Name of the parameter.
+ \\param line : The complete input file line.
+ \\param filename : Name of the input file.
+ \\param linenum : Line number in the input file.
+
+ "
+      end
+
+      operation 1371312 "missing_parameters_error"
+	class_operation preserve_cpp_body_indent public return_type class_ref 572720 // input_error
+	nparams 5
+	  param in name "title" explicit_type "string"
+	  param in name "section" explicit_type "string"
+	  param in name "params" explicit_type "string"
+	  param in name "filename" explicit_type "string"
+	  param in name "linenum" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, const std::vector< ${t2} >& ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, const std::vector< ${t2} >& ${p2}, ${t3} ${p3}, ${t4} ${p4}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}return \"mobk\"
+"
+	
+	comment " Message to indicate a required parameter was missing in input file.
+
+ \\param title : A title phrase for the section.
+ \\param section : Name of the input file section.
+ \\param params : List of missing parameters.
+ \\param filename : Name of the input file.
+ \\param linenum : Line number in the input file."
+      end
+
+      operation 1371440 "invalid_parameter"
+	class_operation preserve_cpp_body_indent public return_type class_ref 572720 // input_error
+	nparams 5
+	  param in name "section" explicit_type "string"
+	  param in name "name" explicit_type "string"
+	  param in name "line" explicit_type "string"
+	  param in name "filename" explicit_type "string"
+	  param in name "linenum" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}, ${t4} ${p4}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}return \"mobk\"
+"
+	
+	comment " Message to indicate a parameter was not valid for this section in input file.
+
+ \\param section : Name of the input file section.
+ \\param name : Name of the unknown parameter.
+ \\param line : The complete input file line.
+ \\param filename : Name of the input file.
+ \\param linenum : Line number in the input file."
+      end
+
+      operation 1372208 "invalid_parameter_subtype"
+	class_operation preserve_cpp_body_indent public return_type class_ref 572720 // input_error
+	nparams 6
+	  param in name "section" explicit_type "string"
+	  param in name "subtype" explicit_type "string"
+	  param in name "name" explicit_type "string"
+	  param in name "line" explicit_type "string"
+	  param in name "filename" explicit_type "string"
+	  param in name "linenum" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}, ${t5} ${p5}${v5}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} ${p3}, ${t4} ${p4}, ${t5} ${p5}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}return \"mobk\"
+"
+	
+	comment " Message to indicate a parameter was not valid for this section and subtype in input file.
+
+ \\param section : Name of the input file section.
+ \\param subtype : Name of the section subtype.
+ \\param name : Name of the unknown parameter.
+ \\param line : The complete input file line.
+ \\param filename : Name of the input file.
+ \\param linenum : Line number in the input file."
+      end
+
+      extra_member 789808 "MESSAGE STRINGS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 2309040 "bad_boolean_message"
+	class_operation preserve_cpp_body_indent public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return \"Value is not recognised as a boolean value (ie. true|false).\";
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}return \"mobk\"
+"
+	
+	comment " Message to indicate a value to a parameter was not recognised boolean."
+      end
+
+      operation 1372464 "number_outside_range_message"
+	class_operation preserve_cpp_body_indent public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return \"Numeric value is outside numeric range.\";
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}return \"mobk\"
+"
+	
+	comment " Message that number was outside allowed range."
+      end
+
+      operation 2309296 "number_nan_message"
+	class_operation preserve_cpp_body_indent public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return \"Not-a-number (NaN) values are not allowed in input.\";
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}return \"mobk\"
+"
+	
+	comment " Message that number was outside allowed range."
+      end
+
+      operation 2309424 "number_inf_message"
+	class_operation preserve_cpp_body_indent public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return \"Infinity (inf) values are not allowed in input.\";
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}return \"mobk\"
+"
+	
+	comment " Message that number was outside allowed range."
+      end
+
+      operation 2309552 "number_negative_message"
+	class_operation preserve_cpp_body_indent public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return \"Parameter value must be greater than zero.\";
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}return \"mobk\"
+"
+	
+	comment " Message that number was outside allowed range."
+      end
+
+      operation 2309680 "number_zero_message"
+	class_operation preserve_cpp_body_indent public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return \"Parameter value must be greater than zero.\";
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}return \"mobk\"
+"
+	
+	comment " Message that number was outside allowed range."
+      end
+
+      operation 2309808 "number_bad_message"
+	class_operation preserve_cpp_body_indent public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return \"Parameter value is not recognised as a numeric value.\";
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${)}:
+${docstring}return \"mobk\"
+"
+	
+	comment " Message that number was outside allowed range."
       end
 
       operation 1372336 "bad_subtype_value"
@@ -8041,14 +8637,14 @@ ${docstring}return \"mobk\"
  Format takes (1) parameter name and (2) section name as args."
       end
 
-      operation 1371312 "missing_parameter"
+      operation 2305840 "non_empty_value"
 	class_operation preserve_cpp_body_indent public return_type class_ref 204463 // format
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
 {
-  static boost::format fmt( \"Required parameter \\\"%1%\\\" was not found in a %2% section.\" );
+  static boost::format fmt( \"Parameter \\\"%1%\\\" requires a non-empty value in a %2% section.\" );
   return fmt;
 }
 "
@@ -8058,98 +8654,11 @@ ${docstring}return \"mobk\"
 ${docstring}return \"mobk\"
 "
 	
-	comment " Message to indicate a required parameter was missing in input file.
+	comment " Message to indicate a value for a parameter can not be an empty string in input file.
 
  Format takes (1) parameter name and (2) section name as args."
       end
 
-      operation 1371184 "missing_parameters"
-	class_operation preserve_cpp_body_indent public return_type class_ref 204463 // format
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  static boost::format fmt( \"Required parameters were not found in a %1% section.\" );
-  return fmt;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${)}:
-${docstring}return \"mobk\"
-"
-	
-	comment " Message to indicate (unnamed) required parameters were missing in input file.
-
- Format takes (1) section name as args."
-      end
-
-      operation 1371696 "missing_value"
-	class_operation preserve_cpp_body_indent public return_type class_ref 204463 // format
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  static boost::format fmt( \"Parameter \\\"%1%\\\" requires a value in a %2% section.\" );
-  return fmt;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${)}:
-${docstring}return \"mobk\"
-"
-	
-	comment " Message to indicate a parameter was missing a required value in input file.
-
- Format takes (1) parameter name and (2) section name as args."
-      end
-
-      operation 1371440 "invalid_parameter"
-	class_operation preserve_cpp_body_indent public return_type class_ref 204463 // format
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  static boost::format fmt( \"Parameter \\\"%1%\\\" is not valid in a %2% section.\" );
-  return fmt;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${)}:
-${docstring}return \"mobk\"
-"
-	
-	comment " Message to indicate a parameter was not valid for this section and subtype in input file.
-
- Format takes (1) parameter name and (2) section name as args."
-      end
-
-      operation 1372208 "invalid_parameter_subtype"
-	class_operation preserve_cpp_body_indent public return_type class_ref 204463 // format
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  static boost::format fmt( \"Parameter \\\"%1%\\\" is not valid in a %2% \\\"%3%\\\" type section.\" );
-  return fmt;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${)}:
-${docstring}return \"mobk\"
-"
-	
-	comment " Message to indicate a parameter was not valid for this section and subtype in input file.
-
- Format takes (1) parameter name, (2) section name and (3) subtype name as args."
-      end
     end
 
     classdiagram 148016 "input file write"
@@ -9202,6 +9711,7 @@ ${docstring}${body}
 "
       end
     end
+
   end
 
   deploymentview 328239 "core deployment"
@@ -9652,7 +10162,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
-    artifact 543664 "input_error_messages"
+    artifact 543664 "input_error"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
 #define @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -9679,7 +10189,7 @@ ${namespace_end}"
 ${import}
 ${definition}"
       associated_classes
-	class_ref 572720 // input_error_messages
+	class_ref 572720 // input_error
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
@@ -10035,7 +10545,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 288432 // input_base_reader
 	artifact_ref 430256 // input_node
 	artifact_ref 523696 // input_definition
-	artifact_ref 543664 // input_error_messages
+	artifact_ref 543664 // input_error
 	artifact_ref 577711 // constants
 	artifact_ref 579119 // input_reader
 	artifact_ref 583344 // help_entry
