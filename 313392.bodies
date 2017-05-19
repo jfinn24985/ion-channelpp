@@ -373,7 +373,10 @@ if( value.empty() )
   }
   else
   {
-    UTILITY_INPUT( not value.empty(), title + " \"" + name + "\" parameter requires a value.", section_name, reader );
+    if( value.empty() )
+    {
+      throw input_error::missing_value_error( title, section_name, name, reader );
+    }
   }
 }
 else
@@ -390,7 +393,10 @@ else
     }
     else
     {
-      UTILITY_INPUT( not astr.empty(), title + " \"" + name + "\" parameter requires a non-empty value.", section_name, reader );
+      if( astr.empty() )
+      {
+        throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::non_empty_value_message() );
+      }
     }
   }
   switch (astr.size())
@@ -460,96 +466,180 @@ else
   default:
     break;
   }
-  const bool value_is_boolean{ false };
-  UTILITY_INPUT( value_is_boolean, title + " \"" + name + "\" parameter value (" + value + ") is not a boolean", section_name, reader );
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::bad_boolean_message() );
 }
+
 !!!1097008.cpp!!!	float_input(in name : string, in value : string, in title : string, in section_name : string, inout target : double, in above_zero : bool, in equal_zero : bool, inout reader : input_base_reader) : void
+if( value.empty() )
+{
+  throw input_error::missing_value_error( title, section_name, name, reader );
+}
 std::replace(value.begin(), value.end(), 'D', 'E');
 std::replace(value.begin(), value.end(), 'd', 'E');
 const char *start = value.c_str();
 // Move past any whitespace
 while( not *start == '\0' and std::isspace( *start ) ) ++start;
-UTILITY_INPUT( *start != '\0', title + " \"" + name + "\" parameter requires a value.", section_name, reader );
+if( *start == '\0')
+{
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::non_empty_value_message() );
+}
 char *end;
 double result;
 errno = 0;
 result = std::strtod(start, &end);
-UTILITY_INPUT( errno != ERANGE, title + " \"" + name + "\" parameter value ("+value+") outside numeric range.", section_name, reader );
-UTILITY_INPUT( not std::isnan( result ), title + " \"" + name + "\" parameter value ("+value+") can not be not-a-number (NAN).", section_name, reader );
-UTILITY_INPUT( not std::isinf( result ), title + " \"" + name + "\" parameter value ("+value+") can not be an infinity.", section_name, reader );
-UTILITY_INPUT( *end == '\0' or std::isspace( *end ), title + " \"" + name + "\" parameter value ("+value+") is not a number.", section_name, reader );
+if( errno == ERANGE )
+{
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::number_outside_range_message() );
+}
+if( std::isnan( result ) )
+{
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::number_nan_message() );
+}
+if( std::isinf( result ) )
+{
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::number_inf_message() );
+}
+if( *end != '\0' and not std::isspace( *end ) )
+{
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::number_bad_message() );
+}
 if( above_zero )
 {
   if( equal_zero )
   {
-    UTILITY_INPUT( result >= 0.0, title + " \"" + name + "\" parameter value (" + value + ") must be greater than or equal to zero.", section_name, reader );
+    if ( result < 0.0 )
+    {
+      throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::number_negative_message() );
+    }
   }
-  else
+  else if ( result <= 0.0 )
   {
-    UTILITY_INPUT( result > 0.0, title + " \"" + name + "\" parameter value (" + value + ") must be greater than zero.", section_name, reader );
+    throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::number_zero_message() );
   }
 }
 target = result;
 !!!2298928.cpp!!!	floats_input(in name : string, in value : string, in title : string, in section_name : string, inout target : double, inout reader : input_base_reader) : void
+if( value.empty() )
+{
+  throw input_error::missing_value_error( title, section_name, name, reader );
+}
 std::replace(value.begin(), value.end(), 'D', 'E');
 std::replace(value.begin(), value.end(), 'd', 'E');
 const char *start = value.c_str();
 std::vector< double > rlist;
 // Move past any whitespace
 while( not *start == '\0' and std::isspace( *start ) ) ++start;
-UTILITY_INPUT( *start != '\0', title + " \"" + name + "\" parameter requires a value.", section_name, reader );
+if( *start == '\0')
+{
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::non_empty_value_message() );
+}
 char *end;
 errno = 0;
 for (double result = std::strtod(start, &end); start != end; result = std::strtod(start, &end))
 {
+  if( errno == ERANGE )
+  {
+    while( not *start == '\0' and std::isspace( *start ) ) ++start;
+    std::string element( start, std::size_t(end - start) );
+    throw input_error::parameter_value_error( title, section_name, name, value, reader, "Element " + element + ": " + input_error::number_outside_range_message() );
+  }
+  if( std::isnan( result ) )
+  {
+    while( not *start == '\0' and std::isspace( *start ) ) ++start;
+    std::string element( start, std::size_t(end - start) );
+    throw input_error::parameter_value_error( title, section_name, name, value, reader, "Element " + element + ": " + input_error::number_nan_message() );
+  }
+  if( std::isinf( result ) )
+  {
+    while( not *start == '\0' and std::isspace( *start ) ) ++start;
+    std::string element( start, std::size_t(end - start) );
+    throw input_error::parameter_value_error( title, section_name, name, value, reader, "Element " + element + ": " + input_error::number_inf_message() );
+  }
   start = end;
-  UTILITY_INPUT( errno != ERANGE, title + " \"" + name + "\" parameter value ("+value+") outside numeric range.", section_name, reader );
-  UTILITY_INPUT( not std::isnan( result ), title + " \"" + name + "\" parameter value ("+value+") can not be not-a-number (NAN).", section_name, reader );
-  UTILITY_INPUT( not std::isinf( result ), title + " \"" + name + "\" parameter value ("+value+") can not be an infinity.", section_name, reader );
-  UTILITY_INPUT( *end == '\0' or std::isspace( *end ), title + " \"" + name + "\" parameter value ("+value+") is not a number.", section_name, reader );
+  while( not *start == '\0' and std::isspace( *start ) ) ++start;
   rlist.push_back( result );
+  errno = 0;
 }
-UTILITY_INPUT( *end == '\0' or std::isspace( *end ), title + " \"" + name + "\" parameter value ("+value+") is not a number.", section_name, reader );
+if( *end != '\0' and not std::isspace( *end ) )
+{
+  std::string element( start ); // may be list but only want first element.
+  std::stringstream s( element );
+  s >> element;
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, "Element " + element + ": " + input_error::number_bad_message() );
+}
 std::swap( rlist, target );
 !!!2290864.cpp!!!	key_input(in name : string, in value : string, in title : string, in section_name : string, inout target : size_t, in keylist : string, in reader : input_base_reader) : void
-UTILITY_INPUT( not value.empty(), title + " \"" + name + "\" parameter requires a value.", section_name, reader );
-std::stringstream os;
-os << "(";
+if( value.empty() )
+{
+  throw input_error::missing_value_error( title, section_name, name, reader );
+}
 // Remove quotes and outer whitespace.
-value = input_base_reader::dequote( value );
-boost::algorithm::trim( value );
-UTILITY_INPUT( not value.empty(), title + " \"" + name + "\" parameter requires a non-empty value.", section_name, reader );
+std::string protokey = input_base_reader::dequote( value );
+boost::algorithm::trim( protokey );
+if( protokey.empty() )
+{
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::non_empty_value_message() );
+}
 for( std::size_t idx = 0; idx != keylist.size(); ++idx)
 {
-  os << keylist[ idx ] << ",";
-  if( keylist[ idx ].find( value ) == 0 )
+  if( keylist[ idx ].find( protokey ) == 0 )
   {
     target = idx;
     return;
   }
 }
+// If here then key not found.
+std::stringstream os;
+os << "(";
+for( auto key : keylist )
+{
+  os << key << ",";
+}
 std::string list{ os.str() };
 list.back() = ')';
-UTILITY_INPUT( false, title + " \"" + name + "\" parameter value ("+value+") is not in list " + list + ".", section_name, reader );
+throw input_error::parameter_value_error( title, section_name, name, value, reader, (input_error::bad_key_message_format() % list).str() );
 !!!1628848.cpp!!!	ordinal_input(in name : string, in value : string, in title : string, in section_name : string, inout target : size_t, in reader : input_base_reader) : void
+if( value.empty() )
+{
+  throw input_error::missing_value_error( title, section_name, name, reader );
+}
 const char *start = value.c_str();
 // Move past any whitespace
 while( not *start == '\0' and std::isspace( *start ) ) ++start;
-UTILITY_INPUT( *start != '\0', title + " \"" + name + "\" parameter requires a value.", section_name, reader );
+if( *start == '\0')
+{
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::non_empty_value_message() );
+}
 // Check for negative sign
-UTILITY_INPUT( *start != '-', title + " \"" + name + "\" parameter value ("+value+") cannot be negative.", section_name, reader );
+if( *start == '-' )
+{
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::number_negative_message() );
+}
 char *end;
 std::size_t result;
 errno = 0;
 // Expect base ten.
 result = std::strtoul(start, &end, 0);
-UTILITY_INPUT( errno != ERANGE, title + " \"" + name + "\" parameter value ("+value+") outside numeric range.", section_name, reader );
-UTILITY_INPUT( *end == '\0' or std::isspace( *end ), title + " \"" + name + "\" parameter value ("+value+") is not a number.", section_name, reader );
+if( errno == ERANGE )
+{
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::number_outside_range_message() );
+}
+if( *end != '\0' and not std::isspace( *end ) )
+{
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::number_bad_message() );
+}
 target = result;
 !!!2290736.cpp!!!	text_input(in name : string, in value : string, in title : string, in section_name : string, inout target : string, in reader : input_base_reader) : void
-UTILITY_INPUT( not value.empty(), title + " \"" + name + "\" parameter requires a value.", section_name, reader );
+if( value.empty() )
+{
+  throw input_error::missing_value_error( title, section_name, name, reader );
+}
+// Remove quotes.
 std::string result = input_base_reader::dequote( value );
-UTILITY_INPUT( not result.empty(), title + " \"" + name + "\" parameter requires a non-empty value.", section_name, reader );
+if( result.empty() )
+{
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::non_empty_value_message() );
+}
 target = result;
 !!!1938736.cpp!!!	get_ordinal(in title : string, in section_name : string) : size_t
 std::size_t result{ 0 };

@@ -331,26 +331,45 @@ BOOST_CHECK_EQUAL( core::strngs::fswidm(), "calwid" );
 // Z
 BOOST_CHECK_EQUAL( core::strngs::fsz(),    "z" );
 
-!!!1372080.cpp!!!	input_error_message_test() : void
-BOOST_CHECK_EQUAL( str( core::input_error_messages::bad_boolean_value() % "type" % "green" % "world" ), "Parameter \"type\" value (green) is not an expected boolean value in a world section." );
+!!!2317360.cpp!!!	input_error_lifetime_test() : void
+// Static Lifetime method tests
 
-BOOST_CHECK_EQUAL( str( core::input_error_messages::bad_number_value() % "type" % "green" % "world" ), "Parameter \"type\" value (green) is not an expected numerical value in a world section." );
+// NOTE, not default constructible because it is an abstract class
+BOOST_CHECK( not std::is_default_constructible< core::input_error >::type{} );
+BOOST_CHECK( std::is_copy_constructible< core::input_error >::type{} );
+BOOST_CHECK( std::is_move_constructible< core::input_error >::type{} );
+BOOST_CHECK( (std::is_assignable< core::input_error, core::input_error >::type{}) );
+BOOST_CHECK( std::has_virtual_destructor< core::input_error >::type{} );
+!!!1372080.cpp!!!	input_error_test() : void
+BOOST_CHECK_EQUAL( core::input_error::bad_boolean_message(), "Expected a boolean value (ie. true|false)." );
 
-BOOST_CHECK_EQUAL( str( core::input_error_messages::bad_subtype_value() % "type" % "green" % "world" ), "Parameter \"type\" value (green) does not name a valid world subtype (see documentation)." );
+BOOST_CHECK_EQUAL( str( core::input_error::bad_key_message_format() % "(a, b, c, d)" ), "A value from the list (a, b, c, d) was expected." );
 
-BOOST_CHECK_EQUAL( str( core::input_error_messages::bad_value() % "type" % "green" % "world" ), "Parameter \"type\" value (green) is not valid in a world section." );
+BOOST_CHECK_EQUAL( core::input_error::non_empty_value_message(), "Expected a non-empty value." );
 
-BOOST_CHECK_EQUAL( str( core::input_error_messages::duplicate_parameter() % "green" % "world" ), "Parameter \"green\" appears more than once in a world section." );
+BOOST_CHECK_EQUAL( core::input_error::number_outside_range_message(), "Numeric value given is outside numeric range." );
 
-BOOST_CHECK_EQUAL( str( core::input_error_messages::missing_parameter() % "green" % "world" ), "Required parameter \"green\" was not found in a world section." );
+BOOST_CHECK_EQUAL( core::input_error::number_nan_message(), "Not-a-number (NaN) values are not allowed in input." );
 
-BOOST_CHECK_EQUAL( str( core::input_error_messages::missing_parameters() % "world" ), "Required parameters were not found in a world section." );
+BOOST_CHECK_EQUAL( core::input_error::number_inf_message(), "Infinity (inf) values are not allowed in input." );
 
-BOOST_CHECK_EQUAL( str( core::input_error_messages::missing_value() % "green" % "world" ), "Parameter \"green\" requires a value in a world section." );
+BOOST_CHECK_EQUAL( core::input_error::number_negative_message(), "Input value must be greater than or equal to zero." );
 
-BOOST_CHECK_EQUAL( str( core::input_error_messages::invalid_parameter() % "green" % "world" ), "Parameter \"green\" is not valid in a world section." );
+BOOST_CHECK_EQUAL( core::input_error::number_zero_message(), "Input value must be greater than zero." );
 
-BOOST_CHECK_EQUAL( str( core::input_error_messages::invalid_parameter_subtype() % "green" %  "world" % "colour" ), "Parameter \"green\" is not valid in a world \"colour\" type section." );
+BOOST_CHECK_EQUAL( core::input_error::number_bad_ordinal_message(), "A positive integer value was expected." );
+
+BOOST_CHECK_EQUAL( core::input_error::number_bad_message(), "A numeric value was expected." );
+
+{
+  const std::string msg{ "Title parameter \"name\" in section \"section\" with value (value).\n** message **" };
+  core::input_error err{ core::input_error::parameter_value_error( "Title", "section", "name", "value", nullptr, "message" ) };
+  BOOST_CHECK_EQUAL( err.parameter(), "name" );
+  BOOST_CHECK_EQUAL( err.section(), "section" );
+
+  //std::cout << err.what() << "\n";
+  BOOST_CHECK( std::string( err.what() ).find( msg ) != std::string::npos );
+}
 !!!899504.cpp!!!	strngs_has_spaces_test() : void
 std::vector< std::pair< std::string, std::size_t > > words;
 words.push_back( std::make_pair( "test case", true ) );
@@ -761,7 +780,7 @@ const std::string sec( "core" );
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Test Base Reader \"choice\" parameter value (Fa) is not a boolean" ) < msg.size() );
+    BOOST_CHECK( msg.find( "Test Base Reader parameter \"choice\" in section \"core\" with value (Fa).\n** Expected a boolean value (ie. true|false). **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -778,7 +797,7 @@ const std::string sec( "core" );
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Test Base Reader \"choice\" parameter requires a non-empty value." ) < msg.size() );
+    BOOST_CHECK( msg.find( "Test Base Reader parameter \"choice\" in section \"core\" with value (\"\").\n** Expected a non-empty value. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -795,7 +814,7 @@ const std::string sec( "core" );
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Test Base Reader \"choice\" parameter requires a value." ) < msg.size() );
+    BOOST_CHECK( msg.find( "Test Base Reader parameter \"choice\" in section \"core\".\n** Expected a value. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -812,7 +831,7 @@ const std::string sec( "core" );
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Test Base Reader \"choice\" parameter requires a non-empty value." ) < msg.size() );
+    BOOST_CHECK( msg.find( "Test Base Reader parameter \"choice\" in section \"core\" with value ( \t\n).\n** Expected a non-empty value. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -836,7 +855,7 @@ const std::string sec( "core" );
     BOOST_CHECK_EQUAL( targ, 31.0 );
     BOOST_CHECK_NO_THROW( core::input_base_reader::float_input( name, "184.125", title, sec, targ, false, false, nullptr ) );
     BOOST_CHECK_EQUAL( targ, 184.125 );
-    BOOST_CHECK_NO_THROW( core::input_base_reader::float_input( name, "0", title, sec, targ, true, true, nullptr ) );
+    BOOST_CHECK_NO_THROW( core::input_base_reader::float_input( name, "0", title, sec, targ, false, false, nullptr ) );
     BOOST_CHECK_EQUAL( targ, 0.0 );
     // Zero is not an eror
     BOOST_CHECK_NO_THROW( core::input_base_reader::float_input( name, "0", title, sec, targ, true, true, nullptr ) );
@@ -859,7 +878,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measure\" parameter requires a value." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measure\" in section \"core\".\n** Expected a value. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -869,7 +888,7 @@ const std::string sec( "core" );
     {
       // NEGATIVE when disallowed
       double targ{ 0 };
-      core::input_base_reader::float_input( name, "-1", title, sec, targ, true, false, nullptr );
+      core::input_base_reader::float_input( name, "-1", title, sec, targ, true, true, nullptr );
       BOOST_CHECK_EQUAL( targ, -1.0 );
       BOOST_ERROR( "expected \"core::input_base_reader::float_input\" exception on NEGATIVE input not thrown" );
     }
@@ -877,7 +896,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measure\" parameter value (-1) must be greater than zero." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measure\" in section \"core\" with value (-1).\n** Input value must be greater than or equal to zero. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -895,7 +914,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measure\" parameter value (0) must be greater than zero." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measure\" in section \"core\" with value (0).\n** Input value must be greater than zero. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -914,7 +933,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measure\" parameter value (184467440737.09E551616) outside numeric range." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measure\" in section \"core\" with value (184467440737.09E551616).\n** Numeric value given is outside numeric range. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -932,7 +951,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measure\" parameter value (1KL) is not a number." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measure\" in section \"core\" with value (1KL).\n** A numeric value was expected. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -950,7 +969,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measure\" parameter requires a value." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measure\" in section \"core\" with value ( \t\n).\n** Expected a non-empty value. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -968,7 +987,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measure\" parameter value (K1) is not a number." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measure\" in section \"core\" with value (K1).\n** A numeric value was expected. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -986,7 +1005,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measure\" parameter value (ten) is not a number." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measure\" in section \"core\" with value (ten).\n** A numeric value was expected. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1004,7 +1023,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measure\" parameter value (-INF) can not be an infinity." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measure\" in section \"core\" with value (-INF).\n** Infinity (inf) values are not allowed in input. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1023,7 +1042,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measure\" parameter value (NAN) can not be not-a-number (NAN)." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measure\" in section \"core\" with value (NAN).\n** Not-a-number (NaN) values are not allowed in input. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1069,7 +1088,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measures\" parameter requires a value." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measures\" in section \"core\".\n** Expected a value. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1079,7 +1098,7 @@ const std::string sec( "core" );
     {
       std::vector< double > targ{};
       // OVERFLOW
-      core::input_base_reader::floats_input( name, "0 184467440737.09E551616", title, sec, targ, nullptr );
+      core::input_base_reader::floats_input( name, "0 184467440737.09E551616 1 2 3", title, sec, targ, nullptr );
       BOOST_CHECK_EQUAL( targ.size(), 0ul );
       BOOST_ERROR( "expected \"core::input_base_reader::floats_input\" exception on OVERFLOW input not thrown" );
     }
@@ -1087,7 +1106,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measures\" parameter value (0 184467440737.09E551616) outside numeric range." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measures\" in section \"core\" with value (0 184467440737.09E551616 1 2 3).\n** Element 184467440737.09E551616: Numeric value given is outside numeric range. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1097,7 +1116,7 @@ const std::string sec( "core" );
     {
       std::vector< double > targ{};
       // TRAILING CHARACTERS
-      core::input_base_reader::floats_input( name, "4 1KL", title, sec, targ, nullptr );
+      core::input_base_reader::floats_input( name, "4 1KL 1 2 3", title, sec, targ, nullptr );
       BOOST_CHECK_EQUAL( targ.size(), 0ul );
       BOOST_ERROR( "expected \"core::input_base_reader::floats_input\" exception on TRAILING CHARACTERS input not thrown" );
     }
@@ -1105,7 +1124,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measures\" parameter value (4 1KL) is not a number." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measures\" in section \"core\" with value (4 1KL 1 2 3).\n** Element KL: A numeric value was expected. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1123,7 +1142,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measures\" parameter requires a value." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measures\" in section \"core\" with value ( \t\n).\n** Expected a non-empty value. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1133,7 +1152,7 @@ const std::string sec( "core" );
     {
       std::vector< double > targ{};
       // LEADING CHARACTERS
-      core::input_base_reader::floats_input( name, "K1", title, sec, targ, nullptr );
+      core::input_base_reader::floats_input( name, "K1 1 2 3", title, sec, targ, nullptr );
       BOOST_CHECK_EQUAL( targ.size(), 0ul );
       BOOST_ERROR( "expected \"core::input_base_reader::floats_input\" exception on LEADING CHARACTERS input not thrown" );
     }
@@ -1141,7 +1160,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measures\" parameter value (K1) is not a number." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measures\" in section \"core\" with value (K1 1 2 3).\n** Element K1: A numeric value was expected. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1151,7 +1170,7 @@ const std::string sec( "core" );
     {
       std::vector< double > targ{};
       // NOT A NUMBER
-      core::input_base_reader::floats_input( name, "ten", title, sec, targ, nullptr );
+      core::input_base_reader::floats_input( name, "0 ten 1 2 3", title, sec, targ, nullptr );
       BOOST_CHECK_EQUAL( targ.size(), 0ul );
       BOOST_ERROR( "expected \"core::input_base_reader::floats_input\" exception on NOT A NUMBER input not thrown" );
     }
@@ -1159,7 +1178,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measures\" parameter value (ten) is not a number." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measures\" in section \"core\" with value (0 ten 1 2 3).\n** Element ten: A numeric value was expected. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1169,7 +1188,7 @@ const std::string sec( "core" );
     {
       std::vector< double > targ{};
       // INFINITY
-      core::input_base_reader::floats_input( name, "-INF", title, sec, targ, nullptr );
+      core::input_base_reader::floats_input( name, "0 -INF 1 2 3", title, sec, targ, nullptr );
       BOOST_CHECK_EQUAL( targ.size(), 0ul );
       BOOST_ERROR( "expected \"core::input_base_reader::floats_input\" exception on INFINITY input not thrown" );
     }
@@ -1177,7 +1196,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measures\" parameter value (-INF) can not be an infinity." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measures\" in section \"core\" with value (0 -INF 1 2 3).\n** Element -INF: Infinity (inf) values are not allowed in input. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1187,8 +1206,8 @@ const std::string sec( "core" );
     try
     {
       std::vector< double > targ{};
-      // NON NUMERIC TEXT
-      core::input_base_reader::floats_input( name, "NAN", title, sec, targ, nullptr );
+      // NAN TEXT
+      core::input_base_reader::floats_input( name, "0 NAN 1 2 3", title, sec, targ, nullptr );
       BOOST_CHECK_EQUAL( targ.size(), 0ul );
       BOOST_ERROR( "expected \"core::input_base_reader::floats_input\" exception on NON NUMERIC TEXT input not thrown" );
     }
@@ -1196,7 +1215,7 @@ const std::string sec( "core" );
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"measures\" parameter value (NAN) can not be not-a-number (NAN)." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"measures\" in section \"core\" with value (0 NAN 1 2 3).\n** Element NAN: Not-a-number (NaN) values are not allowed in input. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1252,7 +1271,7 @@ std::vector< std::string > keylist { { "a", "b", "c", "d" } };
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter value (f) is not in list (a,b,c,d)." ) < msg.size() );
+    BOOST_CHECK( msg.find( "Test Base Reader parameter \"label\" in section \"core\" with value (f).\n** A value from the list (a,b,c,d) was expected. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -1270,7 +1289,7 @@ std::vector< std::string > keylist { { "a", "b", "c", "d" } };
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter requires a non-empty value." ) < msg.size() );
+    BOOST_CHECK( msg.find( "Test Base Reader parameter \"label\" in section \"core\" with value ( \t\n).\n** Expected a non-empty value. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -1288,7 +1307,7 @@ std::vector< std::string > keylist { { "a", "b", "c", "d" } };
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter requires a value." ) < msg.size() );
+    BOOST_CHECK( msg.find( "Test Base Reader parameter \"label\" in section \"core\".\n** Expected a value. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -1306,7 +1325,7 @@ std::vector< std::string > keylist { { "a", "b", "c", "d" } };
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter requires a non-empty value." ) < msg.size() );
+    BOOST_CHECK( msg.find( "Test Base Reader parameter \"label\" in section \"core\" with value (\"\").\n** Expected a non-empty value. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -1353,7 +1372,7 @@ std::vector< std::string > keylist { { "a", "b", "c", "d" } };
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter value (-1) cannot be negative." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"label\" in section \"core\" with value (-1).\n** Input value must be greater than or equal to zero. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1371,7 +1390,7 @@ std::vector< std::string > keylist { { "a", "b", "c", "d" } };
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter value (18446744073709551616) outside numeric range." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"label\" in section \"core\" with value (18446744073709551616).\n** Numeric value given is outside numeric range. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1389,7 +1408,7 @@ std::vector< std::string > keylist { { "a", "b", "c", "d" } };
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter value (1KL) is not a number." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"label\" in section \"core\" with value (1KL).\n** A numeric value was expected. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1407,7 +1426,7 @@ std::vector< std::string > keylist { { "a", "b", "c", "d" } };
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter requires a value." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"label\" in section \"core\" with value ( \t\n).\n** Expected a non-empty value. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1425,7 +1444,7 @@ std::vector< std::string > keylist { { "a", "b", "c", "d" } };
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter value (K1) is not a number." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"label\" in section \"core\" with value (K1).\n** A numeric value was expected. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1443,7 +1462,7 @@ std::vector< std::string > keylist { { "a", "b", "c", "d" } };
     {
       const std::string msg( err.what() );
       //std::cout << msg << "\n";
-      BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter value (ten) is not a number." ) < msg.size() );
+      BOOST_CHECK( msg.find( "Test Base Reader parameter \"label\" in section \"core\" with value (ten).\n** A numeric value was expected. **" ) < msg.size() );
     }
     catch( std::exception const& err )
     {
@@ -1489,7 +1508,7 @@ const std::string sec( "core" );
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter requires a value." ) < msg.size() );
+    BOOST_CHECK( msg.find( "Test Base Reader parameter \"label\" in section \"core\".\n** Expected a value. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -1506,7 +1525,7 @@ const std::string sec( "core" );
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Test Base Reader \"label\" parameter requires a non-empty value." ) < msg.size() );
+    BOOST_CHECK( msg.find( "Test Base Reader parameter \"label\" in section \"core\" with value (\"\").\n** Expected a non-empty value. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
