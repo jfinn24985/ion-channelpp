@@ -104,7 +104,7 @@ std::swap(this->type_, other.type_);
 UTILITY_REQUIRE( not this->has_parameter( name ),
       "Can not change value of an existing parameter." );
 this->parameter_set_.insert( std::make_pair( name, value ) );
-!!!204464.cpp!!!	string_to_specie_type(in val : string, out set : bool) : specie::specie_type
+!!!2331440.cpp!!!	string_to_specie_type(in val : string, out set : bool) : specie::specie_type
 set = true;
 if (val == core::strngs::fsmobl()) return specie::MOBILE;
 if (val == core::strngs::fsflxd()) return specie::FLEXIBLE;
@@ -112,6 +112,16 @@ if (val == core::strngs::fschon()) return specie::CHANNEL_ONLY;
 if (val == core::strngs::fsfree()) return specie::SOLUTE;
 set = false;
 return specie::INVALID;
+!!!204464.cpp!!!	specie_type_list() : string
+// INVALID value is always highest key value.
+std::vector< std::string > result( specie::INVALID );
+
+result[ specie::MOBILE ] = core::strngs::fsmobl();
+result[ specie::FLEXIBLE ] = core::strngs::fsflxd();
+result[ specie::CHANNEL_ONLY ] = core::strngs::fschon();
+result[ specie::SOLUTE ] = core::strngs::fsfree();
+
+return result;
 !!!1704879.cpp!!!	write_document(inout wr : input_document) : void
 std::size_t ix = wr.add_section( core::strngs::fsspec() );
 auto &sec = wr[ ix ];
@@ -185,19 +195,21 @@ if ( this->type_ == INVALID )
 {
   this->type_ = MOBILE;
 }
-UTILITY_INPUT( this->type_ == MOBILE or this->type_ == FLEXIBLE,
-      "Only specie type MOBILE and FLEXIBLE require centre/localization information",
-      core::strngs::fsspec(), nullptr );
-UTILITY_REQUIRE( this->locations_.size() == this->localize_data_.size(),
-      "Error in location cache, different sizes for position and centre information." );
+if( not ( this->type_ == MOBILE or this->type_ == FLEXIBLE ) or this->locations_.size() != this->localize_data_.size() )
+{
+  std::stringstream ss;
+  ss << pos;
+  throw core::input_error::parameter_value_error( "Particle position", core::strngs::fsspec(), "n", ss.str(), nullptr, "Non-mobile or flexible type species do not require centre information (ie 3 numbers per position definition.)" );
+}
 this->locations_.push_back( pos );
 this->localize_data_.push_back( cntr );
 !!!284208.cpp!!!	append_position(in pos : coordinate) : void
-UTILITY_INPUT( this->type_ != MOBILE and this->type_ != FLEXIBLE,
-      "Specie type MOBILE and FLEXIBLE require centre information",
-      core::strngs::fsspec(), nullptr );
-UTILITY_REQUIRE( this->localize_data_.empty(),
-      "Error in location cache, appending only the position requires no centre information." );
+if( this->type_ == MOBILE or this->type_ == FLEXIBLE or not this->localize_data_.empty() )
+{
+  std::stringstream ss;
+  ss << pos;
+  throw core::input_error::parameter_value_error( "Particle position", core::strngs::fsspec(), "n", ss.str(), nullptr, "Mobile or flexible type species require centre information (ie 4 or 7 numbers per position definition.)" );
+}
 this->locations_.push_back( pos );
 !!!284464.cpp!!!	get_position(in lidx : size_t) : coordinate
 return this->locations_.at( lidx );

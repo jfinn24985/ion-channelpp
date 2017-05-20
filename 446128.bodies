@@ -279,8 +279,21 @@ else
             nonsolute += this->species_[ idx ].get_position_size();
           }
         }
-        UTILITY_INPUT( not has_solute, "All solute species are without predefined particles or target concentration in the simulation input.", core::strngs::fsspec(), nullptr );
-        UTILITY_INPUT( nonsolute > 0, "No particles defined in the simulation input", core::strngs::fsspec(), nullptr );
+        if( has_solute )
+        {
+          std::stringstream ss;
+          ss << "Unable to automatically determine initial particle count. Add predefined particles (parameter \""
+             << core::strngs::fsn() << "\") or target concentration (parameter \""
+             << core::strngs::fsctrg() << "\") to solute species.";
+          throw core::input_error::input_logic_error( "Initial per-specie particle counts", core::strngs::fsspec(), ss.str() );
+        }
+        if( nonsolute == 0 )
+        {
+          std::stringstream ss;
+          ss << "Unable to automatically determine initial particle count. Add predefined particles (parameter \""
+             << core::strngs::fsn() << "\") non-solute species.";
+           throw core::input_error::input_logic_error( "Initial per-specie particles", core::strngs::fsspec(), ss.str() );
+        }
       }
     }
   }

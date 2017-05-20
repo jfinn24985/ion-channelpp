@@ -5,6 +5,13 @@ this->type_to_object_.push_back( defn.release() );
 !!!1371952.cpp!!!	add_definition(inout defn : evaluator_definition) : void
 UTILITY_REQUIRE( 0 == this->has_definition( defn->label() ), ( "Attempt to add more than one evaluator factory for type \"" + defn->label() + "\"." ) );
 this->type_to_object_.push_back( defn.release() );
+!!!2330672.cpp!!!	definition_key_list() : string
+std::vector< std::string > result;
+for( auto const& entry : this->type_to_object_ )
+{
+  result.push_back( entry.label() );
+}
+return result;
 !!!1686320.cpp!!!	get_definition(in label : string) : evaluator_definition
 for( auto const& defn : this->type_to_object_ )
 {
@@ -48,26 +55,25 @@ if( reader.name().find( core::strngs::fstype() ) == 0 )
 {
   // --------------------
   // Evaluator type
-  UTILITY_INPUT( this->missing_required_tags_[ EVALUATOR_TYPE ], str( core::input_error_messages::duplicate_parameter() % core::strngs::fstype() % this->section_label() ), this->section_label(), &reader );
-  UTILITY_INPUT( not reader.value().empty(), str( core::input_error_messages::missing_value() % core::strngs::fstype() % this->section_label() ), this->section_label(), &reader );
-  std::string val( reader.dequote( reader.value() ) );
-  UTILITY_INPUT( this->has_definition( val ), str( core::input_error_messages::bad_subtype_value() % core::strngs::fstype() % val % this->section_label() ), this->section_label(), &reader );
-  this->type_ = val;
-  missing_required_tags_.reset( EVALUATOR_TYPE );
+  reader.duplicate_test( this->type_.empty(), this->section_label() );
+  const std::vector< std::string > keys{ this->definition_key_list() };
+  std::size_t idx = reader.get_key( "Evaluator selection", this->section_label(), keys );
+  this->type_ = keys.at( idx );
 }
 else
 {
   // --------------------
   // Choice specific parameters
-  UTILITY_INPUT( 0 == this->parameter_set_.count( reader.name() ), str( core::input_error_messages::duplicate_parameter() % reader.name() % this->section_label() ), this->section_label(), &reader );
+  reader.duplicate_test( 0 == this->parameter_set_.count( reader.name() ), this->section_label() );
   this->parameter_set_.insert( std::make_pair( reader.name(), reader.value() ) );
 }
 return true;
 
-!!!203952.cpp!!!	do_read_end() : void
-UTILITY_INPUT( not this->missing_required_tags_[ EVALUATOR_TYPE ], str( core::input_error_messages::missing_parameter() % core::strngs::fstype() % this->section_label() ), this->section_label(), nullptr );
-UTILITY_INPUT(not this->missing_required_tags_.any(), str( core::input_error_messages::missing_parameters() % this->section_label() ), this->section_label(), nullptr );
-
+!!!203952.cpp!!!	do_read_end(in reader : input_base_reader) : void
+if( this->type_.empty() )
+{
+  reader.missing_parameters_error( "Energy function",  this->section_label(), core::strngs::fstype() );
+}
 // Call functor method to create evaluator
 for( const auto& defn : this->type_to_object_ )
 {
@@ -76,10 +82,12 @@ for( const auto& defn : this->type_to_object_ )
     // check parameters are in definition
     for( const auto& entry : this->parameter_set_ )
     {
-      UTILITY_INPUT( defn.has_definition( entry.first ), str( core::input_error_messages::invalid_parameter_subtype() % entry.first % this->section_label() % this->type_ ), this->section_label(), nullptr );
-    } 
-
-    this->manager_->add_evaluator( defn( this->parameter_set_ ) );
+      if( not defn.has_definition( entry.first ) )
+      {
+        reader.invalid_parameter_subtype_error( this->section_label(), this->type_, entry.first );
+      }
+    }
+    this->manager_->add_evaluator( defn( this->parameter_set_, reader ) );
     return;
   }
 }
@@ -87,6 +95,5 @@ for( const auto& defn : this->type_to_object_ )
 UTILITY_CHECK( false, "should never reach this point in the code." );
 !!!1362352.cpp!!!	do_reset() : void
 // Reset meta data
-this->missing_required_tags_.set();
 this->parameter_set_.clear();
 this->type_.clear();

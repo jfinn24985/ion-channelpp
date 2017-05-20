@@ -4,6 +4,13 @@ UTILITY_REQUIRE( not this->has_trial_type( ctor->label() ), ("Attempt to add mor
 this->type_to_object_.push_back( ctor.release() );
 
 
+!!!2331312.cpp!!!	definition_key_list() : string
+std::vector< std::string > result;
+for( auto const& entry : this->type_to_object_ )
+{
+  result.push_back( entry.label() );
+}
+return result;
 !!!826544.cpp!!!	has_trial_type(in trial_label : string) : bool
 for( auto const& defn : this->type_to_object_ )
 {
@@ -49,47 +56,42 @@ if( reader.name().find( core::strngs::rate_label() ) == 0 )
 {
   // --------------------
   // Choice rate
-  double rate = 0.0;
-  UTILITY_INPUT( this->missing_required_tags_[ CHOICE_RATE ], "Trial \"" + core::strngs::rate_label() + "\" parameter appears more than once in a single " + this->section_label() + " section.", this->section_label(), &reader );
-
-  core::input_base_reader::float_input( core::strngs::rate_label(), reader.value(), "Trial", core::strngs::rate_label(), rate, true, false );
-  this->rate_ = rate;
+  reader.duplicate_test( this->missing_required_tags_[ CHOICE_RATE ], this->section_label() );
+  this->rate_ = reader.get_float( "Trial likelihood", this->section_label(), true, false );
   this->missing_required_tags_.reset( CHOICE_RATE );
 }
 else if( reader.name().find( core::strngs::fstype() ) == 0 )
 {
   // --------------------
   // Trial type
-  UTILITY_INPUT( this->missing_required_tags_[ CHOICE_TYPE ], "Trial \"" + core::strngs::fstype() + "\" parameter appears more than once in a single " + this->section_label() + " section.", this->section_label(), &reader );
-  UTILITY_INPUT( not reader.value().empty(), "Trial \"" + core::strngs::fstype() + "\" parameter requires a value.", this->section_label(), &reader );
-  std::string val( reader.dequote( reader.value() ) );
-  UTILITY_INPUT( this->has_trial_type( val ), "Trial \"" + core::strngs::fstype() + "\" parameter value (" + val + ") is not a valid " + this->section_label() + " type for this application (see documentation).", this->section_label(), &reader );
-  this->type_ = val;
+  reader.duplicate_test( this->missing_required_tags_[ CHOICE_TYPE ], this->section_label() );
+  std::vector< std::string > keys{ this->definition_key_list() };
+  const std::size_t idx = reader.get_key( "Trial subtype ", this->section_label(), keys );
+  this->type_ = keys.at( idx );
   this->missing_required_tags_.reset( CHOICE_TYPE );
 }
 else if( reader.name().find( core::strngs::fsspec() ) == 0 )
 {
   // --------------------
   // Allowed/disallowed specie list
-  UTILITY_INPUT( this->specie_list_.empty(), "Trial \"" + core::strngs::fsspec() + "\" parameter appears more than once in a single " + this->section_label() + " section.", this->section_label(), &reader );
-  UTILITY_INPUT( not reader.value().empty(), "Trial \"" + core::strngs::fsspec() + "\" parameter requires a value.", this->section_label(), &reader );
-  this->specie_list_ = reader.dequote( reader.value() );
+  reader.duplicate_test( this->specie_list_.empty(), this->section_label() );
+  this->specie_list_ = reader.get_text( "Specie inclusion list", this->section_label() );
 }
 else
 {
   // --------------------
   // Assume choice specific parameters
-  UTILITY_INPUT( 0 == this->parameter_set_.count( reader.name() ), ( "Trial \""+reader.name()+"\" parameter appears more than once in a single \""+this->section_label()+"\" section" ), this->section_label(), &reader );
+  reader.duplicate_test( 0 == this->parameter_set_.count( reader.name() ), this->section_label() );
   this->parameter_set_.insert( std::make_pair( reader.name(), reader.value() ) );
 }
 return true;
 
-!!!204720.cpp!!!	do_read_end() : void
+!!!204720.cpp!!!	do_read_end(in reader : input_base_reader) : void
 if( this->missing_required_tags_.any() )
 {
   // Not all required tags were present.
-  UTILITY_INPUT( not this->missing_required_tags_[ CHOICE_RATE ], "Trial section requires \"" + core::strngs::rate_label() + "\" parameter.", this->section_label(), nullptr );
-  UTILITY_INPUT( not this->missing_required_tags_[ CHOICE_TYPE ], "Trial section requires \"" + core::strngs::fstype() + "\" parameter.", this->section_label(), nullptr );
+  UTILITY_INPUT( not this->missing_required_tags_[ CHOICE_RATE ], "Trial section requires \"" + core::strngs::rate_label() + "\" parameter.", this->section_label(), &reader );
+  UTILITY_INPUT( not this->missing_required_tags_[ CHOICE_TYPE ], "Trial section requires \"" + core::strngs::fstype() + "\" parameter.", this->section_label(), &reader );
 }
 // find definition
 std::size_t idx = 0;
@@ -107,7 +109,7 @@ if( not this->parameter_set_.empty() )
 {
   for( auto const& entry : this->parameter_set_ )
   {
-    UTILITY_INPUT( defn.has_definition( entry.first ) != 0, "Trial \"" + entry.first + "\" parameter with value (" + entry.second + ") is not understood by " + this->type_ + " " + this->section_label() + ".", this->section_label(), nullptr );
+    UTILITY_INPUT( defn.has_definition( entry.first ) != 0, "Trial \"" + entry.first + "\" parameter with value (" + entry.second + ") is not understood by " + this->type_ + " " + this->section_label() + ".", this->section_label(), &reader );
   }
 }
 

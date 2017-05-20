@@ -134,152 +134,89 @@ core::help_section &sect = helper.get_section( seclabel );
 }
 !!!203312.cpp!!!	do_read_entry(inout reader : input_base_reader) : bool
 // process entries
-
 if( reader.name() == core::strngs::fsname() )
 {
   // --------------------
   // Specie label (required)
-  UTILITY_INPUT( not reader.value().empty(), "Specie label must have a value.", this->section_label(), &reader );
-  std::string label( reader.dequote( reader.value() ) );
+  reader.duplicate_test( this->missing_required_tags_[ SPECIE_LABEL ], this->section_label() );
+  std::string label = reader.get_text( "Specie label", this->section_label() );
   boost::algorithm::trim( label );
   UTILITY_INPUT( label.size() == 2, "Specie label must have exactly two letters.", this->section_label(), &reader );
   this->specie_obj_.set_label( label );
-  missing_required_tags_.reset( SPECIE_LABEL );
+  this->missing_required_tags_.reset( SPECIE_LABEL );
 }
 else if( reader.name() == core::strngs::fstype() )
 {
   // --------------------
   // Specie type
-  UTILITY_INPUT( not reader.value().empty(), "Specie type must have a value.", this->section_label(), &reader );
-  bool valid_type;
-  std::string value( reader.dequote( reader.value() ) );
-  boost::algorithm::trim( value );
-  const std::size_t subtype = this->specie_obj_.string_to_specie_type( value, valid_type );
-  UTILITY_INPUT( valid_type, "Specie type must be one of allowed values.", this->section_label(), &reader );
-  if( valid_type )
-  {
-    this->specie_obj_.set_type( subtype );
-    missing_required_tags_.reset( SPECIE_TYPE );
-  }
+  reader.duplicate_test( this->missing_required_tags_[ SPECIE_TYPE ], this->section_label() );
+  const std::size_t subtype = reader.get_key( "Specie subtype", this->section_label(), this->specie_obj_.specie_type_list() );
+  this->specie_obj_.set_type( subtype );
+  this->missing_required_tags_.reset( SPECIE_TYPE );
 }
 else if( reader.name() == core::strngs::rate_label() )
 {
   // --------------------
   // Specie (relative) rate
-  const double rate = reader.get_float( "Specie relative trial ", this->section_label(), true, true );
-  this->specie_obj_.set_rate( rate );}
-
+  // (can not test for duplicate entry [note rate_label and fsrtsp both call set_rate].)
+  const double rate = reader.get_float( "Specie relative trial rate", this->section_label(), true, true );
+  this->specie_obj_.set_rate( rate );
+}
 else if( reader.name() == core::strngs::fsrtsp() )
 {
   // --------------------
   // Specie relative rate (optional)
-  UTILITY_INPUT( not reader.value().empty(), "Relative rate parameter for a specie must have a value.", this->section_label(), &reader );
-  double rate = 0.0;
-  try
-  {
-    rate = boost::lexical_cast< double >( reader.value() );
-  }
-  catch( std::bad_cast const& err )
-  {
-    const bool value_is_a_number = false;
-    UTILITY_INPUT( value_is_a_number, std::string( "Specie rate parameter not a number: " ) + err.what(), this->section_label(), &reader );
-  }
-  UTILITY_INPUT( rate >= 0.0, "Specie rate parameter must be greater or equal to zero.", this->section_label(), &reader );
+  // (can not test for duplicate entry [note rate_label and fsrtsp both call set_rate].)
+  const double rate = reader.get_float( "Specie relative trial rate", this->section_label(), true, true );
   this->specie_obj_.set_rate( rate );
 }
 else if( reader.name() == core::strngs::fsd() )
 {
   // --------------------
   // Specie diameter
-  UTILITY_INPUT( not reader.value().empty(), "Specie diameter must have a value.", this->section_label(), &reader );
-  double diameter = 0.0;
-  try
-  {
-    diameter = boost::lexical_cast< double >( reader.value() );
-  }
-  catch( std::bad_cast const& err )
-  {
-    const bool value_is_a_number = false;
-    UTILITY_INPUT( value_is_a_number, std::string( "Specie diameter parameter not a number: " ) + err.what(), this->section_label(), &reader );
-  }
-  UTILITY_INPUT( diameter >= 0.0, "Specie diameter must be greater than (or in special cases equal to) zero.", this->section_label(), &reader );
+  reader.duplicate_test( this->missing_required_tags_[ SPECIE_DIAMETER ], this->section_label() );
+  const double diameter = reader.get_float( "Specie diameter", this->section_label(), true, true );
   this->specie_obj_.set_radius( diameter / 2 );
-  missing_required_tags_.reset( SPECIE_DIAMETER );
+  this->missing_required_tags_.reset( SPECIE_DIAMETER );
 }
 else if( reader.name() == core::strngs::fsz() )
 {
   // --------------------
   // Specie valency
-  UTILITY_INPUT( not reader.value().empty(), "Specie valency must have a value.", this->section_label(), &reader );
-  double valency = 0.0;
-  try
-  {
-    valency = boost::lexical_cast< double >( reader.value() );
-  }
-  catch( std::bad_cast const& err )
-  {
-    const bool value_is_a_number = false;
-    UTILITY_INPUT( value_is_a_number, std::string( "Specie valency parameter not a number: " ) + err.what(), this->section_label(), &reader );
-  }
+  reader.duplicate_test( this->missing_required_tags_[ SPECIE_VALENCY ], this->section_label() );
+  const double valency = reader.get_float( "Specie valency", this->section_label(), false, false );
   this->specie_obj_.set_valency( valency );
-  missing_required_tags_.reset( SPECIE_VALENCY );
+  this->missing_required_tags_.reset( SPECIE_VALENCY );
 }
 else if( reader.name() == core::strngs::fsctrg() )
 {
   // --------------------
   // Specie concentration
-  UTILITY_INPUT( not reader.value().empty(), "Specie concentration must have a value.", this->section_label(), &reader );
-  double conc = 0.0;
-  try
-  {
-    conc = boost::lexical_cast< double >( reader.value() );
-  }
-  catch( std::bad_cast const& err )
-  {
-    const bool value_is_a_number = false;
-    UTILITY_INPUT( value_is_a_number, std::string( "Specie concentration parameter not a number: " ) + err.what(), this->section_label(), &reader );
-  }
-  UTILITY_INPUT( conc > 0.0, "Target concentration must be greater than zero.", this->section_label(), &reader );
+  // (can not test for duplicate entry.)
+  const double conc = reader.get_float( "Specie target concentration", this->section_label(), true, false );
   this->specie_obj_.set_concentration( conc );
 }
 else if( reader.name() == core::strngs::fschex() )
 {
   // --------------------
   // Specie chemical excess
-  UTILITY_INPUT( not reader.value().empty(), "Specie excess chemical potential must have a value.", this->section_label(), &reader );
-  double chex = 0.0;
-  try
-  {
-    chex = boost::lexical_cast< double >( reader.value() );
-  }
-  catch( std::bad_cast const& err )
-  {
-    const bool value_is_a_number = false;
-    UTILITY_INPUT( value_is_a_number, std::string( "Specie excess chemical potential parameter not a number: " ) + err.what(), this->section_label(), &reader );
-  }
+  // (can not test for duplicate entry.)
+  const double chex = reader.get_float( "Specie excess chemical potential", this->section_label(), false, false );
   this->specie_obj_.set_excess_potential( chex );
 }
 else if( reader.name() == core::strngs::fsn() )
-
 {
   // --------------------
   // Initial particle positions of this specie
-  std::size_t initial_count( 0 );
-  try
-  {
-    initial_count = boost::lexical_cast < std::size_t >( reader.value() );
-  }
-  catch( std::bad_cast const& err )
-  {
-    const bool value_is_a_number = false;
-    UTILITY_INPUT( value_is_a_number, std::string( "Predefined particle \"n\" value not a number: " ) + err.what(), this->section_label(), &reader );
-  }
+  reader.duplicate_test( this->specie_obj_.get_position_size() == 0, this->section_label() );
+  
+
+  std::size_t initial_count{ reader.get_ordinal( "Defined positions", this->section_label() ) };
+  std::vector< double > values;
   for( std::size_t cursor_ = 0; cursor_ != initial_count; ++cursor_ )
   {
     reader.next();
-    std::string line_( reader.line() );
-    std::vector< double > values;
-    UTILITY_INPUT( reader.read_as_floats( line_, values ), "Bad values in position data line", this->section_label(), &reader );
+    reader.get_line_as_floats( core::strngs::fsn(), "Position definition", this->section_label(), values );
     // Non-position line data should begin with a keyword so should give no values
     UTILITY_INPUT( not values.empty(), "Fewer position data lines than expected", this->section_label(), &reader );
     UTILITY_INPUT( values.size() == 3 or values.size() == 4 or values.size() == 7, "Position data should have 3, 4 or 7 values", this->section_label(), &reader );
@@ -316,7 +253,7 @@ else
   // --------------------
   // Other (usually) evaluator specific specie parameters
   UTILITY_INPUT( 0 != this->known_keywords_.count( reader.name() ), ( "keyword \""+reader.name()+"\" is not valid in specie section" ), this->section_label(), &reader );
-  UTILITY_INPUT( not this->specie_obj_.has_parameter( reader.name() ), ( "keyword \""+reader.name()+"\" appears more than once in the same specie section" ), this->section_label(), &reader );
+  reader.duplicate_test( not this->specie_obj_.has_parameter( reader.name() ), this->section_label() );
   this->specie_obj_.set_parameter( reader.name(), reader.value() );
   // We leave the user's of these parameters to check whether all the
   // required parameters are present
@@ -325,7 +262,7 @@ return true;
 
 
 
-!!!203440.cpp!!!	do_read_end() : void
+!!!203440.cpp!!!	do_read_end(in reader : input_base_reader) : void
 if ( this->missing_required_tags_[ SPECIE_TYPE ] )
 {
   UTILITY_CHECK( not this->specie_obj_.is_valid(), "Type flag not set but type assigned." );
@@ -339,7 +276,7 @@ if ( this->missing_required_tags_[ SPECIE_TYPE ] )
   // We allow only free/SOLUTE subtype to be deduced
 }
 
-UTILITY_INPUT( this->missing_required_tags_.none(), "Not all required tags were present.", this->section_label(), nullptr);
+UTILITY_INPUT( this->missing_required_tags_.none(), "Not all required tags were present.", this->section_label(), &reader);
 
 this->manager_->add_specie( this->specie_obj_ );
 !!!944688.cpp!!!	do_reset() : void

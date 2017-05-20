@@ -124,7 +124,7 @@ std::stringstream store;
 const std::string defn_label( "evaluator" );
 const std::string defn_desc( "blah blech blab." );
 {
-  evaluator::evaluator_definition defn( defn_label, defn_desc, [](std::map<std::string, std::string>)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; });
+  evaluator::evaluator_definition defn( defn_label, defn_desc, [](std::map<std::string, std::string>, core::input_base_reader const&)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; });
   BOOST_CHECK_EQUAL( defn.label(), defn_label );
   BOOST_CHECK_EQUAL( defn.description(), defn_desc );
   BOOST_CHECK_EQUAL( defn.size(), 0 );
@@ -150,7 +150,7 @@ const std::string meta_label( "evaluator" );
   BOOST_CHECK_EQUAL( meta.size(), 0 );
   BOOST_CHECK( meta.empty() );
 
-  meta.add_definition( std::unique_ptr< evaluator::evaluator_definition >( new evaluator::evaluator_definition( "coloumb", "blah blab blech.", [](std::map<std::string, std::string>)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; }) ) );
+  meta.add_definition( std::unique_ptr< evaluator::evaluator_definition >( new evaluator::evaluator_definition( "coloumb", "blah blab blech.", [](std::map<std::string, std::string>, const core::input_base_reader&)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; }) ) );
   
   BOOST_CHECK_EQUAL( meta.size(), 1 );
   BOOST_CHECK( not meta.empty() );
@@ -181,7 +181,7 @@ try
 catch( std::runtime_error const& err )
 {
   const std::string msg( err.what() );
-  //std::cout << msg << "\n";
+  std::cout << msg << "\n";
   BOOST_CHECK( msg.find( "Parameter \"mobk\" is not valid in a evaluator \"coulomb\" type section." ) < msg.size() );
 }
 catch( std::exception const& err )
@@ -304,7 +304,9 @@ const std::string defn_label( "coulomb" );
   BOOST_CHECK_EQUAL( evaluator::coulomb::type_label_(), defn_label );
 
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::coulomb::make_evaluator( {} ) );
+
+  core::input_preprocess reader;
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::coulomb::make_evaluator( {}, reader ) );
   BOOST_REQUIRE( eval_ptr );
   evaluator::coulomb *clmb_ptr = dynamic_cast< evaluator::coulomb* >( eval_ptr.get() );
   BOOST_REQUIRE( clmb_ptr != nullptr );
@@ -616,7 +618,8 @@ const std::string defn_label( "hard-sphere" );
 const std::string defn_label( "hard-sphere" );
 {
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::hard_sphere_overlap::make_evaluator( {} ) );
+  core::input_preprocess reader;
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::hard_sphere_overlap::make_evaluator( {}, reader ) );
   BOOST_REQUIRE( eval_ptr );
   evaluator::hard_sphere_overlap *clmb_ptr = dynamic_cast< evaluator::hard_sphere_overlap* >( eval_ptr.get() );
   BOOST_REQUIRE( clmb_ptr != nullptr );
@@ -672,7 +675,8 @@ evaluator::evaluator_manager eman;
 
 std::stringstream store;
 {
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::hard_sphere_overlap::make_evaluator( {} ) );
+  core::input_preprocess reader;
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::hard_sphere_overlap::make_evaluator( {}, reader ) );
   evaluator::hard_sphere_overlap* llp = dynamic_cast< evaluator::hard_sphere_overlap* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -895,7 +899,8 @@ geometry::geometry_manager gman( sys_rgn );
 evaluator::evaluator_manager eman;
 
 {
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::hard_sphere_overlap::make_evaluator( {} ) );
+  core::input_preprocess reader;
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::hard_sphere_overlap::make_evaluator( {}, reader ) );
   evaluator::hard_sphere_overlap* llp = dynamic_cast< evaluator::hard_sphere_overlap* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -1156,7 +1161,8 @@ const std::string defn_label( "object-overlap" );
 const std::string defn_label( "object-overlap" );
 {
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::object_overlap::make_evaluator( {} ) );
+  core::input_preprocess reader;
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::object_overlap::make_evaluator( {}, reader ) );
   BOOST_REQUIRE( eval_ptr );
   evaluator::object_overlap *clmb_ptr = dynamic_cast< evaluator::object_overlap* >( eval_ptr.get() );
   BOOST_REQUIRE( clmb_ptr != nullptr );
@@ -1212,7 +1218,8 @@ evaluator::evaluator_manager eman;
 
 std::stringstream store;
 {
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::object_overlap::make_evaluator( {} ) );
+  core::input_preprocess reader;
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::object_overlap::make_evaluator( {}, reader ) );
   evaluator::object_overlap* llp = dynamic_cast< evaluator::object_overlap* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -1376,8 +1383,8 @@ for( std::size_t idx = 0; idx != pman.get_ensemble().size(); ++idx )
 
 evaluator::evaluator_manager eman;
 
-
-std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::object_overlap::make_evaluator( {} ) );
+core::input_preprocess reader;
+std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::object_overlap::make_evaluator( {}, reader ) );
 evaluator::object_overlap* llp = dynamic_cast< evaluator::object_overlap* >( eval_ptr.get() );
 BOOST_REQUIRE( nullptr != llp );
 
@@ -1527,7 +1534,8 @@ const std::string defn_label( core::strngs::localizer_label() );
   BOOST_CHECK_EQUAL( evaluator::localizer::type_label_(), defn_label );
 
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( {} ) );
+  core::input_preprocess reader;
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( {}, reader ) );
   BOOST_REQUIRE( eval_ptr );
   evaluator::localizer *clmb_ptr = dynamic_cast< evaluator::localizer* >( eval_ptr.get() );
   BOOST_REQUIRE( clmb_ptr != nullptr );
@@ -1633,7 +1641,8 @@ const double spring_factor( 2.0 );
   params[ core::strngs::fskmob() ] = "1.0";
   // One arg list with "mobk"
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  BOOST_CHECK_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( params ) );
+  core::input_preprocess reader;
+  BOOST_CHECK_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( params, reader ) );
 
   evaluator::localizer* llp = dynamic_cast< evaluator::localizer* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
@@ -1716,7 +1725,8 @@ evaluator::evaluator_manager eman;
   std::map< std::string, std::string > params;
   params.insert( std::make_pair( core::strngs::fskmob(), "1.0" ) );
   std::unique_ptr< base_evaluator > eval_ptr;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( params ) );
+  core::input_preprocess reader;
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( params, reader ) );
 
   double energy = 0.0;
 
@@ -1916,7 +1926,8 @@ const std::string defn_label( "lennard-jones" );
   std::map< std::string, std::string > params;
   params[ "epsilon" ] = "Na 1.0 Cl 1.0";
   params[ "sigma" ] = "Na 1.0 Cl 1.0";
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params ) );
+  core::input_preprocess reader;
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params, reader ) );
   BOOST_REQUIRE( eval_ptr );
   evaluator::lennard_jones *lj_ptr = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( lj_ptr != nullptr );
@@ -1977,9 +1988,10 @@ evaluator::evaluator_manager eman;
   std::map< std::string, std::string > params;
   params[ "epsilon" ] = "Na 1.0";
   params[ "sigma" ] = "Na 1.0 Cl 1.0";
+  core::input_preprocess reader;
   try
   {
-    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
+    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
     BOOST_ERROR( "expected \"evaluator::lennard_jones::make_evaluator\" exception not thrown" );
   }
   catch( std::runtime_error const& err )
@@ -2041,9 +2053,10 @@ evaluator::evaluator_manager eman;
   std::map< std::string, std::string > params;
   // params[ "epsilon" ] = "Na 1.0 Cl 1.0";
   params[ "sigma" ] = "Na 1.0 Cl 1.0";
+  core::input_preprocess reader;
   try
   {
-    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
+    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
     BOOST_ERROR( "expected \"evaluator::lennard_jones::make_evaluator\" exception not thrown" );
   }
   catch( std::runtime_error const& err )
@@ -2105,9 +2118,10 @@ evaluator::evaluator_manager eman;
   std::map< std::string, std::string > params;
   params[ "epsilon" ] = "Na 1.0 Cl 1.0";
   // params[ "sigma" ] = "Na 1.0 Cl 1.0";
+  core::input_preprocess reader;
   try
   {
-    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
+    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
     BOOST_ERROR( "expected \"evaluator::lennard_jones::make_evaluator\" exception not thrown" );
   }
   catch( std::runtime_error const& err )
@@ -2169,9 +2183,10 @@ evaluator::evaluator_manager eman;
   std::map< std::string, std::string > params;
   params[ "epsilon" ] = "Na 1.0 Cl 1.0";
   params[ "sigma" ] = "Ca 1.0 Cl 1.0";
+  core::input_preprocess reader;
   try
   {
-    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
+    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
     BOOST_ERROR( "expected \"evaluator::lennard_jones::make_evaluator\" exception not thrown" );
   }
   catch( std::runtime_error const& err )
@@ -2233,8 +2248,9 @@ evaluator::evaluator_manager eman;
   std::map< std::string, std::string > params;
   params[ "epsilon" ] = "Ca 1.0 Cl 1.0";
   params[ "sigma" ] = "Ca 1.0 Cl 1.0";
+  core::input_preprocess reader;
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params ) );
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params, reader ) );
   try
   {
     eval_ptr->prepare( pman, gman, eman );
@@ -2297,8 +2313,9 @@ evaluator::evaluator_manager eman;
   std::map< std::string, std::string > params;
   params[ "epsilon" ] = "Ca 1.0 Na 1.0 Cl 1.0";
   params[ "sigma" ] = "Ca 1.0 Na 1.0 Cl 1.0";
+  core::input_preprocess reader;
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params ) );
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params, reader ) );
   try
   {
     eval_ptr->prepare( pman, gman, eman );
@@ -2362,7 +2379,8 @@ evaluator::evaluator_manager eman;
   params[ "epsilon" ] = "Cl 1.0";
   params[ "sigma" ] = "Cl 1.0";
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params ) );
+  core::input_preprocess reader;
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params, reader ) );
   try
   {
     eval_ptr->prepare( pman, gman, eman );
@@ -2427,7 +2445,8 @@ double expected_value = 0.0;
   std::map< std::string, std::string > params;
   params[ "epsilon" ] = "Na 1.0 Cl 1.0";
   params[ "sigma" ] = "Na 1.0 Cl 1.0";
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
+  core::input_preprocess reader;
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
   evaluator::lennard_jones* llp = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -2500,7 +2519,8 @@ double expected_value = 0.0;
   std::map< std::string, std::string > params;
   params[ "epsilon" ] = "Na 1.0 Cl 1.0";
   params[ "sigma" ] = "Na 2.0 Cl 3.0";
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
+  core::input_preprocess reader;
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
   evaluator::lennard_jones* llp = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -2582,7 +2602,8 @@ double expected_value = 0.0;
   std::map< std::string, std::string > params;
   params[ "epsilon" ] = "Na 0.5 Cl 0.3";
   params[ "sigma" ] = "Na 1.0 Cl 1.0";
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
+  core::input_preprocess reader;
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
   evaluator::lennard_jones* llp = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -2657,7 +2678,8 @@ double expected_value = 0.0;
   std::map< std::string, std::string > params;
   params[ "epsilon" ] = "Na 0.5 Cl 0.3";
   params[ "sigma" ] = "Na 2.0 Cl 3.0";
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
+  core::input_preprocess reader;
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
   evaluator::lennard_jones* llp = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 

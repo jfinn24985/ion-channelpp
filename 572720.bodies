@@ -34,22 +34,17 @@ return input_error( name, section, os.str() );
 !!!1371312.cpp!!!	missing_parameters_error(in title : string, in section : string, in params : string, in reader : input_base_reader) : input_error
 std::stringstream os;
 os << title << " section \"" << section
-  << "\" is missing required parameters";
+  << "\" is missing some required parameters";
 if( reader )
 {
   os << " at input file \"" << reader->current_filename()
-     << "\" line " << reader->current_line_number() << ".\n";
+     << "\" in section ending at line " << reader->current_line_number() << ".\n";
 }
 else
 {
   os << ".\n";
 }
-os << ".\n** Missing parameters : ";
-for( auto param : params )
-{
-  os << param << " ";
-}
-os  << "**\n";
+os << ".\n** The following parameters are required : " << params << " **\n";
 return input_error( "", section, os.str() );
 !!!1371440.cpp!!!	invalid_parameter_error(in section : string, in name : string, in reader : input_base_reader) : input_error
 std::stringstream os;
@@ -57,9 +52,17 @@ os << "Unknown parameter \"" << name << "\" in section \""
    << section << "\"";
 if( reader )
 {
-  os << " at input file \"" << reader->current_filename()
-     << "\" line " << reader->current_line_number()
-     << ".\n   >>" << reader->line() << "<<\n";
+  if( reader->name() == name )
+  { 
+    os << " at input file \"" << reader->current_filename()
+       << "\" line " << reader->current_line_number()
+       << ".\n   >>" << reader->line() << "<<\n";
+  }
+  else
+  {
+    os << " detected at input file \"" << reader->current_filename()
+       << "\" line " << reader->current_line_number() << ".\n"; 
+  }
 }
 else
 {
@@ -73,9 +76,17 @@ os << "Unknown parameter \"" << name << "\" in section \""
   << section << "\" subtype \"" << subtype << "\"";
 if( reader )
 {
-  os  << " at input file \""
-      << reader->current_filename() << "\" line " << reader->current_line_number()
-      << ".\n   >>" << reader->line() << "<<\n";
+  if( reader->name() == name )
+  {
+    os << " at input file \"" << reader->current_filename()
+       << "\" line " << reader->current_line_number()
+       << ".\n   >>" << reader->line() << "<<\n";
+  }
+  else
+  {
+    os << " detected at input file \"" << reader->current_filename()
+       << "\" line " << reader->current_line_number() << ".\n";
+  }
 }
 else
 {
@@ -98,4 +109,24 @@ else
   os << ".\n";
 }
 os << "** Parameter \"" << name << "\" can only appear once per section. **\n";
+return input_error( "", section, os.str() );
+!!!2323888.cpp!!!	input_file_error(in name : string, in reader : input_base_reader, in msg : string) : input_error
+std::stringstream os;
+os << "Problem including file \"" << name << "\" using keyword \""
+   << core::strngs::fsincl() << "\"";
+if( reader )
+{
+  os  << " at input file \""
+      << reader->current_filename() << "\" line " << reader->current_line_number()
+      << ".\n   >>" << reader->line() << "<<\n";
+}
+else
+{
+  os << ".\n";
+}
+os << "** " << msg << " **\n";
+return input_error( core::strngs::fsincl(), "", os.str() );
+!!!2324016.cpp!!!	input_logic_error(in title : string, in section : string, in msg : string) : input_error
+std::stringstream os;
+os << title << " in section \"" << section << "\".\n" << msg << "\n";
 return input_error( "", section, os.str() );

@@ -5,22 +5,40 @@ std::unique_ptr< evaluator_definition > defn( new evaluator_definition( localize
 // Add parameter definitions.
 defn->add_definition( { core::strngs::fskmob(), "number", ">0", "4.5", "The spring factor of the harmonic localization force. The default value is 4.5. This value when paired with R values equal to 2 x X-ray B-factor/RMSD give a force field that should produce an atom distribution similar to that of the X-ray or atomic simulation." } );
 meta.add_definition( defn );
-!!!276016.cpp!!!	make_evaluator(in param_set : string) : base_evaluator
+!!!276016.cpp!!!	make_evaluator(in param_set : string, in reader : input_base_reader) : base_evaluator
 // Evaluator meta should ensure only valid parameters were
 // set.
-UTILITY_CHECK( param_set.size() == 0 or param_set.count( core::strngs::fskmob() ) == 1, "Invalid parameter set passed as argument." );
-
-double spring_factor;
-
 std::unique_ptr< localizer > cc( new localizer );
-if( param_set.count( core::strngs::fskmob() ) == 1 )
+if( not param_set.empty() )
 {
-  core::input_base_reader::float_input( core::strngs::fskmob(), param_set.at( core::strngs::fskmob() ), type_label_(), core::strngs::evaluator_label(), spring_factor, false, false );
-  cc->spring_factor( spring_factor );
+  std::string bad_params;
+  for( auto& entry : param_set )
+  {
+    if( entry.first.find( core::strngs::fskmob() ) == 0 )
+    {
+      double spring_factor;
+      reader.float_input( core::strngs::fskmob(), entry.second, "Harmonic potential factor", core::strngs::evaluator_label(), spring_factor, true, true, &reader );
+      cc->spring_factor( spring_factor );
+    }
+    else
+    {
+      if( bad_params.empty() )
+      {
+        bad_params = entry.first;
+      }
+      else
+      {
+        bad_params += " " + entry.first;
+      }
+    }
+  }
+  if( not bad_params.empty() )
+  {
+    reader.invalid_parameter_subtype_error( core::strngs::evaluator_label(), type_label_(), bad_params );
+  }
 }
 std::unique_ptr< base_evaluator > result( cc.release() );
 return result;
-
 !!!276272.cpp!!!	type_label_() : string
   return core::strngs::localizer_label();
 !!!275376.cpp!!!	compute_potential(in pman : particle_manager, in gman : geometry_manager, inout changes : change_set) : void

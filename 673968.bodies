@@ -16,15 +16,15 @@ if( reader.name().find( core::strngs::outputdir_label() ) == 0 )
 {
   // --------------------
   // Output/data directory name "outputdir 'abc/def'"
-  UTILITY_INPUT( not reader.value().empty(), (core::input_error_messages::missing_value() % core::strngs::outputdir_label() % this->section_label() ).str(), this->section_label(), &reader );
-  this->fstype_->set_output_dir_fmt( reader.dequote( reader.value() ) );
+  // (can not test for duplicate entry)
+  this->fstype_->set_output_dir_fmt( reader.get_text( "Output directory", this->section_label() ) );
 }
 else if( reader.name().find( core::strngs::inputpattern_label() ) == 0 )
 {
   // --------------------
   // Input file recognition pattern "inputpattern 'abc.%03d.def'"
-  UTILITY_INPUT( not reader.value().empty(), (core::input_error_messages::missing_value() % core::strngs::inputpattern_label() % this->section_label() ).str(), this->section_label(), &reader );
-  const std::string fbase = reader.dequote( reader.value() );
+  // (can not test for duplicate entry)
+  const std::string fbase = reader.get_text( "Input file pattern", this->section_label() );
   if( this->fstype_->filename_base() != fbase )
   {
     // TODO: issue warning.
@@ -51,36 +51,35 @@ else if( reader.name().find( this->output_name_label() ) == 0 )
 {
   // --------------------
   // outname {path} : output filename
-  UTILITY_INPUT( not reader.value().empty(), (core::input_error_messages::missing_value() % this->output_name_label() % this->section_label() ).str(), this->section_label(), &reader );
-  this->fstype_->set_output_name( reader.dequote( reader.value() ) );
+  // (can not test for duplicate entry)
+  this->fstype_->set_output_name( reader.get_text( "Output filename", this->section_label() ) );
 }
 else if( reader.name().find( this->checkpoint_name_label() ) == 0 )
 {
   // --------------------
   // checkname {path} : checkpoint filename
-  UTILITY_INPUT( not reader.value().empty(), (core::input_error_messages::missing_value() % this->checkpoint_name_label() % this->section_label() ).str(), this->section_label(), &reader );
-  this->fstype_->set_checkpoint_name( reader.dequote( reader.value() ) );
+  // (can not test for duplicate entry)
+  this->fstype_->set_checkpoint_name( reader.get_text( "Checkpoint filename", this->section_label() ) );
 }
 else if( reader.name().find( core::strngs::fstype() ) == 0 )
 {
   // --------------------
   // Storage manager subtype
-  UTILITY_INPUT( this->type_.empty(), ( "Run \"type\" parameter appears more than once." ), this->section_label(), &reader );
-  UTILITY_INPUT( not reader.value().empty(), (core::input_error_messages::missing_value() % core::strngs::fstype() % this->section_label() ).str(), this->section_label(), &reader );
-  std::string val( reader.dequote( reader.value() ) );
-  UTILITY_INPUT( this->has_type( val ), "Run \"type\" parameter value (" + val + ") does not name a valid storage manager subtype for this application (see documentation).", this->section_label(), &reader );
-  this->type_ = val;
+  reader.duplicate_test( this->type_.empty(), this->section_label() );
+  std::vector< std::string > keys{ this->definition_key_list() };
+  const std::size_t idx = reader.get_key( "Run subtype", this->section_label(), keys );
+  this->type_ = keys.at( idx );
 }
 else
 {
   // --------------------
   // Choice specific parameters
-  UTILITY_INPUT( 0 == this->parameter_set_.count( reader.name() ), ( "Sampler \""+reader.name()+"\" parameter appears more than once in a single in section" ), this->section_label(), &reader );
+  reader.duplicate_test( 0 == this->parameter_set_.count( reader.name() ), this->section_label() );
   this->parameter_set_.insert( std::make_pair( reader.name(), reader.value() ) );
 }
 return true;
-!!!1884336.cpp!!!	do_read_end() : void
-UTILITY_INPUT( not this->type_.empty(), "Storage manager \""+core::strngs::fstype()+"\" missing in input file.", this->section_label(), nullptr);
+!!!1884336.cpp!!!	do_read_end(in reader : input_base_reader) : void
+UTILITY_INPUT( not this->type_.empty(), "Storage manager \""+core::strngs::fstype()+"\" missing in input file.", this->section_label(), &reader);
 // Call functor method to create sampler and add to simulator
 for( const auto& defn : this->types_ )
 {
@@ -89,7 +88,7 @@ for( const auto& defn : this->types_ )
     // check parameters.
     for( auto const& entry : this->parameter_set_ )
     {
-      UTILITY_INPUT( defn.has_definition( entry.first ), str( core::input_error_messages::invalid_parameter_subtype() % entry.first % this->section_label() % this->type_ ), this->section_label(), nullptr );
+      UTILITY_INPUT( defn.has_definition( entry.first ), str( core::input_error_messages::invalid_parameter_subtype() % entry.first % this->section_label() % this->type_ ), this->section_label(), &reader );
     }
     this->fstype_->set_parameters( this->parameter_set_ );
     return;
