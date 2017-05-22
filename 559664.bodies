@@ -10,7 +10,7 @@ boost::shared_ptr< particle::particle_manager > pman( new particle::particle_man
   spc1.set_valency( 1.0 );
   spc1.set_excess_potential( 0.123 );
   spc1.set_type( particle::specie::MOBILE );
-  spc1.append_position( particle::coordinate( 2.0, 2.0, 0.0 ), particle::centroid( 3.0, 2.0, 2.0, 0.0 ) );
+  spc1.append_position( geometry::coordinate( 2.0, 2.0, 0.0 ), geometry::centroid( 3.0, 2.0, 2.0, 0.0 ) );
   pman->add_specie( spc1 );
 }
 {
@@ -22,7 +22,7 @@ boost::shared_ptr< particle::particle_manager > pman( new particle::particle_man
   spc1.set_valency( -1.0 );
   spc1.set_excess_potential( 0.123 );
   spc1.set_type( particle::specie::FLEXIBLE );
-  spc1.append_position( particle::coordinate( 0.0, 0.0, 2.0 ), particle::centroid( 3.0, 0.0, 0.0, 2.0 ) );
+  spc1.append_position( geometry::coordinate( 0.0, 0.0, 2.0 ), geometry::centroid( 3.0, 0.0, 0.0, 2.0 ) );
   pman->add_specie( spc1 );
 }
 {
@@ -34,7 +34,7 @@ boost::shared_ptr< particle::particle_manager > pman( new particle::particle_man
   spc1.set_valency( -1.0 );
   spc1.set_excess_potential( 0.123 );
   spc1.set_type( particle::specie::CHANNEL_ONLY );
-  spc1.append_position( particle::coordinate( 2.0, 0.0, 2.0 ) );
+  spc1.append_position( geometry::coordinate( 2.0, 0.0, 2.0 ) );
   pman->add_specie( spc1 );
 }
 {
@@ -46,8 +46,8 @@ boost::shared_ptr< particle::particle_manager > pman( new particle::particle_man
   spc1.set_valency( 1.0 );
   spc1.set_excess_potential( 0.123 );
   spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( particle::coordinate( 0.0, 0.0, 0.0 ) );
-  spc1.append_position( particle::coordinate( 2.0, 0.0, 0.0 ) );
+  spc1.append_position( geometry::coordinate( 0.0, 0.0, 0.0 ) );
+  spc1.append_position( geometry::coordinate( 2.0, 0.0, 0.0 ) );
   pman->add_specie( spc1 );
 }
 {
@@ -59,7 +59,7 @@ boost::shared_ptr< particle::particle_manager > pman( new particle::particle_man
   spc1.set_valency( -1.0 );
   spc1.set_excess_potential( 0.3123 );
   spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( particle::coordinate( 0.0, 2.0, 0.0 ) );
+  spc1.append_position( geometry::coordinate( 0.0, 2.0, 0.0 ) );
   pman->add_specie( spc1 );
 }
 pman->add_predefined_particles();
@@ -68,14 +68,15 @@ return pman;
 boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( "cell", 5.0 ) );
 boost::shared_ptr< geometry::geometry_manager > gman( new geometry::geometry_manager( regn ) );
 {
-  boost::shared_ptr< geometry::base_region > bulk( new geometry::cube_region( "bulk", 4.0, particle::coordinate( 0.0, 0.0, 0.0 ), true ) );
+  boost::shared_ptr< geometry::base_region > bulk( new geometry::cube_region( "bulk", 4.0, geometry::coordinate( 0.0, 0.0, 0.0 ), true ) );
   gman->add_region( bulk );
 }
 return gman;
 !!!1622192.cpp!!!	mockup_evaluator_manager() : evaluator_manager
 boost::shared_ptr< evaluator::evaluator_manager > eman( new evaluator::evaluator_manager );
 std::map< std::string, std::string > param;
-eman->add_evaluator( evaluator::coulomb::make_evaluator( param ) );
+core::input_preprocess reader;
+eman->add_evaluator( evaluator::coulomb::make_evaluator( param, reader ) );
 return eman;
 !!!1484848.cpp!!!	base_observable_method_test(inout obs : base_observable, in label : string) : void
 std::stringstream store;
@@ -931,138 +932,6 @@ const std::vector< std::string > filenames { { "gz-CA.dat", "gz-CO.dat", "gz-OX.
       BOOST_CHECK_LT( buf.find( canon_titles[ idx ] ), buf.size() );
       BOOST_CHECK_LT( buf.find( interesting_rows[ idx ] ), buf.size() );
       //std::cout << buf << "\n";
-    }
-  }
-}
-!!!1615152.cpp!!!	digitizer_3d_lifetime_test() : void
-{
-  // Static Lifetime method tests: canonical pattern
-
-  BOOST_CHECK( std::is_default_constructible< observable::digitizer_3d >::type{} );
-  BOOST_CHECK( std::is_copy_constructible< observable::digitizer_3d >::type{} );
-  BOOST_CHECK( std::is_move_constructible< observable::digitizer_3d >::type{} );
-  BOOST_CHECK( ( std::is_assignable< observable::digitizer_3d, observable::digitizer_3d >::type{} ) );
-  BOOST_CHECK( not std::has_virtual_destructor< observable::digitizer_3d >::type{} );
-}
-const particle::coordinate pzero{ 0.0, 0.0, 0.0 };
-const particle::coordinate pminusone{ -1.0, -1.0, -1.0 };
-const particle::coordinate pone{ 1.0, 1.0, 1.0 };
-
-{
-  // Default ctor
-  observable::digitizer_3d var;
-  BOOST_CHECK_EQUAL( var.minimum(), pzero );
-  BOOST_CHECK_EQUAL( var.maximum(), pzero );
-  BOOST_CHECK_EQUAL( var.size(), 0ul );
-  for( int x = -10; x != 11; ++x )
-  {
-    const particle::coordinate pos{ double( x )/5.0, double( x )/4.0, double( x )/6.0 };
-    BOOST_REQUIRE( not var.in_range( pos ) );
-  }
-}
-std::stringstream store;
-{
-  // Min/Max/Count ctor
-  observable::digitizer_3d var( pminusone, pone, 0.2 );
-  BOOST_CHECK_EQUAL( var.minimum(), pminusone );
-  BOOST_CHECK_EQUAL( var.maximum(), pone );
-  BOOST_CHECK_EQUAL( var.size(), 1000ul );
-  const particle::coordinate bwidth{ var.bin_width() };
-  BOOST_CHECK( utility::feq( bwidth.x, 0.2 ) );
-  BOOST_CHECK( utility::feq( bwidth.y, 0.2 ) );
-  BOOST_CHECK( utility::feq( bwidth.z, 0.2 ) );
-
-  boost::archive::text_oarchive oa(store);
-  // write class instances to archive
-  oa << var;
-
-  {
-    // copy
-    observable::digitizer_3d var2( var );
-    BOOST_CHECK_EQUAL( var2.minimum(), pminusone );
-    BOOST_CHECK_EQUAL( var2.maximum(), pone );
-    BOOST_CHECK_EQUAL( var2.size(), 1000ul );
-    const particle::coordinate bwidth{ var2.bin_width() };
-    BOOST_CHECK( utility::feq( bwidth.x, 0.2 ) );
-    BOOST_CHECK( utility::feq( bwidth.y, 0.2 ) );
-    BOOST_CHECK( utility::feq( bwidth.z, 0.2 ) );
-    BOOST_CHECK( var == var2 );
-  }
-  {
-    // assign
-    observable::digitizer_3d var2;
-    BOOST_CHECK_EQUAL( var2.minimum(), pzero );
-    BOOST_CHECK_EQUAL( var2.maximum(), pzero );
-    var2 = var;
-    BOOST_CHECK_EQUAL( var2.minimum(), pminusone );
-    BOOST_CHECK_EQUAL( var2.maximum(), pone );
-    BOOST_CHECK_EQUAL( var2.size(), 1000ul );
-    const particle::coordinate bwidth{ var2.bin_width() };
-    BOOST_CHECK( utility::feq( bwidth.x, 0.2 ) );
-    BOOST_CHECK( utility::feq( bwidth.y, 0.2 ) );
-    BOOST_CHECK( utility::feq( bwidth.z, 0.2 ) );
-    BOOST_CHECK( var == var2 );
-  }
-  {
-    // move
-    observable::digitizer_3d var1( var );
-    BOOST_CHECK_EQUAL( var1.minimum(), pminusone );
-    BOOST_CHECK_EQUAL( var1.maximum(), pone );
-    observable::digitizer_3d var2( std::move( var1 ) );
-    BOOST_CHECK_EQUAL( var2.minimum(), pminusone );
-    BOOST_CHECK_EQUAL( var2.maximum(), pone );
-    BOOST_CHECK_EQUAL( var2.size(), 1000ul );
-    const particle::coordinate bwidth{ var2.bin_width() };
-    BOOST_CHECK( utility::feq( bwidth.x, 0.2 ) );
-    BOOST_CHECK( utility::feq( bwidth.y, 0.2 ) );
-    BOOST_CHECK( utility::feq( bwidth.z, 0.2 ) );
-    BOOST_CHECK( var == var2 );
-  }
-}
-{
-  observable::digitizer_3d var;
- 
-  boost::archive::text_iarchive ia(store);
-  // read class instances from archive
-  ia >> var;
-  BOOST_CHECK_EQUAL( var.minimum(), pminusone );
-  BOOST_CHECK_EQUAL( var.maximum(), pone );
-  BOOST_CHECK_EQUAL( var.size(), 1000ul );
-  const particle::coordinate bwidth{ var.bin_width() };
-  BOOST_CHECK( utility::feq( bwidth.x, 0.2 ) );
-  BOOST_CHECK( utility::feq( bwidth.y, 0.2 ) );
-  BOOST_CHECK( utility::feq( bwidth.z, 0.2 ) );
-} 
-
-!!!1615024.cpp!!!	digitizer_3d_method_test() : void
-{
-  // Min/Max/step ctor
-  observable::digitizer_3d var( {-1.0, -1.0, -1.0 }, { 1.0, 1.0, 1.0 }, 0.2 );
-  BOOST_CHECK_EQUAL( var.size(), 1000ul );
-  const particle::coordinate bwidth{ var.bin_width() };
-  BOOST_CHECK( utility::feq( bwidth.x, 0.2 ) );
-  BOOST_CHECK( utility::feq( bwidth.y, 0.2 ) );
-  BOOST_CHECK( utility::feq( bwidth.z, 0.2 ) );
-  for( int x = -10; x != 11; ++x )
-  {
-    particle::coordinate pos{ double( x )/5.0, double( x )/4.0, double( x )/6.0 };
-    if( not var.in_range( pos ) )
-    {
-      if( -4 <= x and x < 4 )
-      {
-        std::stringstream ss;
-        ss << pos << " should be in range!";
-        BOOST_ERROR( ss.str() );
-      }
-    }
-    else
-    {
-      if( -4 > x or 4 >= 5 )
-      {
-        std::stringstream ss;
-        ss << pos << " should NOT be in range!";
-        BOOST_ERROR( ss.str() );
-      }
     }
   }
 }
