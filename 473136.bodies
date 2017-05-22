@@ -81,18 +81,21 @@ bool isopen { true }; // default is true
 const std::string width_label { "width" };
 const std::string origin_label { "origin" };
 const std::string isopen_label { "open" };
-
 // check for required parameters.
-UTILITY_INPUT( params.count( width_label ) == 1, "Cube region \""+width_label+"\" parameter missing in input.", core::strngs::fsregn(), &reader );
-UTILITY_INPUT( params.count( origin_label ) == 1, "Cube region \""+origin_label+"\" parameter missing in input.", core::strngs::fsregn(), &reader );
+{
+  std::string miss_params;
+  if( params.count( width_label ) == 0 ) miss_params = width_label;
+  if( params.count( origin_label ) == 0 ) miss_params += ( miss_params.empty() ? "" : " " ) + origin_label;
+  if( not miss_params.empty() ) reader.missing_parameters_error( "Cube", core::strngs::fsregn(), miss_params );
+}
 
-core::input_base_reader::float_input( width_label, params.at( width_label ), "Cube region", core::strngs::fsregn(), width, true, false, &reader );
+core::input_base_reader::float_input( width_label, params.at( width_label ), "Cube size", core::strngs::fsregn(), width, true, false, &reader );
 
-particle::coordinate::coordinate_input( origin_label, params.at( origin_label ), "Cube region", core::strngs::fsregn(), origin );
+geometry::coordinate::coordinate_input( origin_label, params.at( origin_label ), "Cube location", core::strngs::fsregn(), origin, &reader );
 
 if ( params.count( isopen_label ) == 1 )
 {
-  core::input_base_reader::bool_input( isopen_label, params.at( isopen_label ), "Cube region", core::strngs::fsregn(), isopen, true, true, &reader );
+  core::input_base_reader::bool_input( isopen_label, params.at( isopen_label ), "Cube wall permeability", core::strngs::fsregn(), isopen, true, true, &reader );
 }
 
 // build region object.

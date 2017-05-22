@@ -107,32 +107,15 @@ wr[ix].add_entry( width_label, this->length() );
 double width {};
 
 const std::string width_label { "width" };
+// check for required parameter.
+if( params.count( width_label ) == 0 ) reader.missing_parameters_error( "Periodic cube", core::strngs::fsregn(), width_label );
 
-// check for required parameters.
-UTILITY_INPUT( params.count( width_label ) == 1, "Periodic cube region \""+width_label+"\" parameter missing in input.", core::strngs::fsregn(), &reader );
+core::input_base_reader::float_input( width_label, params.at( width_label ), "Periodic cube size", core::strngs::fsregn(), width, true, false, &reader );
 
-{
-  // --------------------
-  // Cube width
-  UTILITY_INPUT( not params.at( width_label ).empty(), "Periodic cube region \""+width_label+"\" parameter requires a value.", core::strngs::fsregn(), &reader );
-  try
-  {
-    width = boost::lexical_cast< double >( params.at( width_label ) );
-  }
-  catch( std::bad_cast const& err )
-  {
-    const bool value_is_a_number = false;
-    UTILITY_INPUT( value_is_a_number, "Periodic cube region \""+width_label+"\" parameter value (" + params.at( width_label ) + ") is not a number: " + err.what(), core::strngs::fsregn(), &reader );
-  }
-  UTILITY_INPUT( width >= 0.0, "Periodic cube region \""+width_label+"\" parameter value (" + params.at( width_label ) + ") must be greater than zero.", core::strngs::fsregn(), &reader );
-}
 // build region object.
 boost::shared_ptr< geometry::base_region > current;
 current.reset( new periodic_cube_region( label, width ) );
 return current;
-
-
-
 !!!1085104.cpp!!!	add_definition(inout meta : region_meta) : void
 std::string desc( "A cube with periodic boundaries with the origin at one corner. Can be used as a system region." );
 std::unique_ptr< region_definition > cube_defn( new region_definition( type_label(), desc, &periodic_cube_region::region_factory ) );

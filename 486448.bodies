@@ -212,13 +212,15 @@ const std::string radius_label { "radius" };
 const std::string offset_label { "channel-half-length" };
 const std::string tube_radius_label { "channel-radius" };
 const std::string arc_label { "arc" };
-
-// check for required parameters.
-UTILITY_INPUT( params.count( half_length_label ) == 1, "Cell membrane region \""+half_length_label+"\" parameter missing in input.", core::strngs::fsregn(), &reader );
-UTILITY_INPUT( params.count( radius_label ) == 1, "Cell membrane region \""+radius_label+"\" parameter missing in input.", core::strngs::fsregn(), &reader );
-UTILITY_INPUT( params.count( offset_label ) == 1, "Cell membrane region \""+offset_label+"\" parameter missing in input.", core::strngs::fsregn(), &reader );
-UTILITY_INPUT( params.count( tube_radius_label ) == 1, "Cell membrane region \""+tube_radius_label+"\" parameter missing in input.", core::strngs::fsregn(), &reader );
-UTILITY_INPUT( params.count( arc_label ) == 1, "Cell membrane region \""+arc_label+"\" parameter missing in input.", core::strngs::fsregn(), &reader );
+{
+  std::string bad_params;
+  // check for required parameters.
+  if( params.count( half_length_label ) == 0 ) bad_params = half_length_label;
+  if( params.count( radius_label ) == 0 ) bad_params += (bad_params.empty() ? "": " ") + radius_label;
+  if( params.count( offset_label ) == 0 ) bad_params += (bad_params.empty() ? "": " ") + offset_label;
+  if( params.count( arc_label ) == 0 ) bad_params += (bad_params.empty() ? "": " ") + arc_label;
+  if( not bad_params.empty() ) reader.missing_parameters_error( "Membrane cell", core::strngs::fsregn(), bad_params );
+}
 
 core::input_base_reader::float_input( half_length_label, params.at( half_length_label ), "Cell membrane region", core::strngs::fsregn(), half_length, true, false, &reader );
 

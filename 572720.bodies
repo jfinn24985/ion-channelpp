@@ -1,13 +1,20 @@
 class input_error
 !!!2309168.cpp!!!	parameter_value_error(in title : string, in section : string, in name : string, in value : string, in reader : input_base_reader, in msg : string) : input_error
 std::stringstream os;
-os << title << " parameter \"" << name << "\" in section \""
-   << section << "\" with value (" << value << ")";
+os << title << " parameter \"" << name << "\" with value ("
+   << value << ") in section \"" << section << "\"";
 if( reader )
 {
-  os  << " at input file \""
-      << reader->current_filename() << "\" line " << reader->current_line_number()
-      << ".\n   >>" << reader->line() << "<<\n";
+  if( reader->name() == name )
+  {
+    os << " at input file \"" << reader->current_filename() << "\" line "
+       << reader->current_line_number() << ".\n   >>" << reader->line() << "<<\n";
+  }
+  else
+  {
+    os << " ending at input file \"" << reader->current_filename() << "\" line "
+       << reader->current_line_number() << ".\n";
+  }
 }
 else
 {
@@ -20,10 +27,17 @@ std::stringstream os;
 os << title << " parameter \"" << name << "\" in section \""
   << section << "\"";
 if( reader )
-{
-  os  << " at input file \""
-      << reader->current_filename() << "\" line " << reader->current_line_number()
-      << ".\n   >>" << reader->line() << "<<\n";
+{ 
+  if( reader->name().find( name ) == 0 )
+  {
+    os << " at input file \"" << reader->current_filename() << "\" line "
+       << reader->current_line_number() << ".\n   >>" << reader->line() << "<<\n";
+  }
+  else
+  {
+    os << " ending at input file \"" << reader->current_filename() << "\" line "
+       << reader->current_line_number() << ".\n";
+  }
 }
 else
 {
@@ -44,7 +58,7 @@ else
 {
   os << ".\n";
 }
-os << ".\n** The following parameters are required : " << params << " **\n";
+os << "** Add the following parameters to the section: " << params << " **\n";
 return input_error( "", section, os.str() );
 !!!1371440.cpp!!!	invalid_parameter_error(in section : string, in name : string, in reader : input_base_reader) : input_error
 std::stringstream os;

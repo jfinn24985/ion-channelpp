@@ -73,22 +73,22 @@ double radius {};
 
 const std::string half_length_label { "half-length" };
 const std::string radius_label { "radius" };
+{
+  std::string bad_params;
+  // check for required parameters.
+  if( params.count( half_length_label ) == 0 ) bad_params = half_length_label;
+  if( params.count( radius_label ) == 0 ) bad_params += (bad_params.empty() ? "": " ") + radius_label;
+  if( not bad_params.empty() ) reader.missing_parameters_error( "Open cylinder", core::strngs::fsregn(), bad_params );
+}
 
-// check for required parameters.
-UTILITY_INPUT( params.count( half_length_label ) == 1, "Open cylinder region \""+half_length_label+"\" parameter missing in input.", core::strngs::fsregn(), &reader );
-UTILITY_INPUT( params.count( radius_label ) == 1, "Open cylinder region \""+radius_label+"\" parameter missing in input.", core::strngs::fsregn(), &reader );
+core::input_base_reader::float_input( half_length_label, params.at( half_length_label ), "Open cylinder size", core::strngs::fsregn(), half_length, true, false, &reader );
 
-core::input_base_reader::float_input( half_length_label, params.at( half_length_label ), "Open cylinder region", core::strngs::fsregn(), half_length, true, false, &reader );
-
-core::input_base_reader::float_input( radius_label, params.at( radius_label ), "Open cylinder region", core::strngs::fsregn(), radius, true, false, &reader );
+core::input_base_reader::float_input( radius_label, params.at( radius_label ), "Open cylinder size", core::strngs::fsregn(), radius, true, false, &reader );
 
 // build region object.
 boost::shared_ptr< geometry::base_region > current;
 current.reset( new open_cylinder_region( label, radius, half_length ) );
 return current;
-
-
-
 !!!1093424.cpp!!!	add_definition(inout meta : region_meta) : void
 std::string desc( "A cylindrical region centred on the origin with linear axis in z direction. The curved wall is considered a hard wall but the cylinder ends are not when considering valid positions." );
 std::unique_ptr< region_definition > cylinder_defn( new region_definition( type_label(), desc, &open_cylinder_region::region_factory ) );
