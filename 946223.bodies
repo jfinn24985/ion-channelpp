@@ -141,7 +141,10 @@ if( reader.name() == core::strngs::fsname() )
   reader.duplicate_test( this->missing_required_tags_[ SPECIE_LABEL ], this->section_label() );
   std::string label = reader.get_text( "Specie label", this->section_label() );
   boost::algorithm::trim( label );
-  UTILITY_INPUT( label.size() == 2, "Specie label must have exactly two letters.", this->section_label(), &reader );
+  if( label.size() != 2 )
+  {
+    reader.parameter_value_error( "Specie label", this->section_label(), "The specie label must have exactly two letters." );
+  }
   this->specie_obj_.set_label( label );
   this->missing_required_tags_.reset( SPECIE_LABEL );
 }
@@ -209,21 +212,73 @@ else if( reader.name() == core::strngs::fsn() )
   // --------------------
   // Initial particle positions of this specie
   reader.duplicate_test( this->specie_obj_.get_position_size() == 0, this->section_label() );
-  
-
   std::size_t initial_count{ reader.get_ordinal( "Defined positions", this->section_label() ) };
   std::vector< double > values;
+  // STATES
+  //  0 = undefined, don't know which type
+  //  1 = XYZ only (channel only or solute)
+  //  2 = XYZR or XYZRxyz (mobile or flexible)
+  std::size_t state{ 0 };
+  switch( this->specie_obj_.sub_type() )
+  {
+  case specie::MOBILE:
+  case specie::FLEXIBLE:
+    state = 2;
+    break;
+  case specie::CHANNEL_ONLY:
+  case specie::SOLUTE:
+    state = 1;
+    break;
+  default: // INVALID (currently undefined)
+    state = 0;
+    break;
+  }
+ 
   for( std::size_t cursor_ = 0; cursor_ != initial_count; ++cursor_ )
   {
     reader.next();
-    reader.get_line_as_floats( core::strngs::fsn(), "Position definition", this->section_label(), values );
+    try
+    {
+      reader.get_line_as_floats( core::strngs::fsn(), "Expecting a position definition", this->section_label(), values );
+    }
+    catch( core::input_error const& err )
+    {
+      std::string name = reader.name();
+      if( not name.empty() )
+      {
+        const char* start{ name.c_str() };
+        char* end{};
+        std::strtod(start, &end);
+        if( start == end )
+        {
+          // probably ran out of position definitions 
+          throw core::input_error::parameter_value_error( "Position definition", this->section_label(), core::strngs::fsn(), reader.line(), &reader, "First element was not a number or not as many position definitions ("+std::to_string(cursor_)+") as indicated ("+std::to_string(initial_count)+")." );
+        }
+      }
+      throw err;
+    }
     // Non-position line data should begin with a keyword so should give no values
-    UTILITY_INPUT( not values.empty(), "Fewer position data lines than expected", this->section_label(), &reader );
-    UTILITY_INPUT( values.size() == 3 or values.size() == 4 or values.size() == 7, "Position data should have 3, 4 or 7 values", this->section_label(), &reader );
+    UTILITY_CHECK( not values.empty(), "Should never have empty position definition as this should raise an exception in get_line_as_floats" );
+    if( not ( values.size() == 3 or values.size() == 4 or values.size() == 7) )
+    {
+      throw core::input_error::parameter_value_error( "Position definition", this->section_label(), core::strngs::fsn(), reader.line(), &reader, "A position definition should have 3, 4 or 7 values." );
+    }
     geometry::coordinate pos { values[0], values[1], values[2] };
     if( values.size() > 3 )
     {
-      UTILITY_INPUT( values[3] > 0.0, "Localization radius must be greater than zero", this->section_label(), &reader );
+      // state must be 0 or 2
+      if( 1 == state )
+      {
+        throw core::input_error::parameter_value_error( "Position definition", this->section_label(), core::strngs::fsn(), reader.line(), &reader, "Specie type does not match position definition, only expecting x, y and z coordinates." );
+      }
+      if( 0 == state )
+      {
+        state = 2;
+      }
+      if( values[3] <= 0.0 )
+      {
+        throw core::input_error::parameter_value_error( "Position definition", this->section_label(), core::strngs::fsn(), reader.line(), &reader, "The fourth value (localization radius: " + std::to_string( values[3] ) + " must be greater than zero." );
+      }
       geometry::centroid cntr;
       cntr.r = values[3]; // = update radius
       if( values.size() == 7 )
@@ -244,7 +299,15 @@ else if( reader.name() == core::strngs::fsn() )
     else
     {
       // append only location.
-      this->specie_obj_.append_position( pos );
+      if( 0 == state )
+      {
+        state = 1;
+      }
+      if( 1 != state )
+      {
+        throw core::input_error::parameter_value_error( "Position definition", this->section_label(), core::strngs::fsn(), reader.line(), &reader, "Specie type does not match position definition, expecting more than just x, y and z coordinates." );
+      }
+       this->specie_obj_.append_position( pos );
     }
   }
 }
@@ -252,7 +315,10 @@ else
 {
   // --------------------
   // Other (usually) evaluator specific specie parameters
-  UTILITY_INPUT( 0 != this->known_keywords_.count( reader.name() ), ( "keyword \""+reader.name()+"\" is not valid in specie section" ), this->section_label(), &reader );
+  if( 0 == this->known_keywords_.count( reader.name() ) )
+  {
+    reader.invalid_parameter_error( this->section_label(), reader.name() );
+  }
   reader.duplicate_test( not this->specie_obj_.has_parameter( reader.name() ), this->section_label() );
   this->specie_obj_.set_parameter( reader.name(), reader.value() );
   // We leave the user's of these parameters to check whether all the
@@ -275,9 +341,17 @@ if ( this->missing_required_tags_[ SPECIE_TYPE ] )
   }
   // We allow only free/SOLUTE subtype to be deduced
 }
-
-UTILITY_INPUT( this->missing_required_tags_.none(), "Not all required tags were present.", this->section_label(), &reader);
-
+if( not this->missing_required_tags_.none() )
+{
+  std::stringstream mss;
+  if( this->missing_required_tags_[ SPECIE_LABEL ] ) mss << " " << core::strngs::fsname();
+  if( this->missing_required_tags_[ SPECIE_TYPE ] ) mss << " " << core::strngs::fstype();
+  if( this->missing_required_tags_[ SPECIE_DIAMETER ] ) mss << " " << core::strngs::fsd();
+  if( this->missing_required_tags_[ SPECIE_VALENCY ] ) mss << " " << core::strngs::fsz();
+  std::string msg{ mss.str() };
+  msg.erase( 0, 1 );
+  reader.missing_parameters_error( "Particle type definition", this->section_label(), msg);
+}
 this->manager_->add_specie( this->specie_obj_ );
 !!!944688.cpp!!!	do_reset() : void
 // Reset state

@@ -2,11 +2,13 @@ class input_base_meta
 !!!186160.cpp!!!	read_section(inout reader : input_base_reader) : void
 // Process the section header
 UTILITY_REQUIRE( 0 == reader.name().find( this->section_label() ), "Input section label \""+reader.name()+"\" was not the expected label \""+this->section_label()+"\"" );
-UTILITY_INPUT( reader.value().empty(), "Section start entries can have no arguments.", this->section_label(), &reader );
-
+if( not reader.value().empty() )
+{
+  reader.parameter_value_error( "Section start entry", this->section_label(), "Remove or comment text after section start keyword \"" + reader.name() + "\"." );
+}
 // Reset state at start of read
 this->do_reset();
-// Process section 
+// Process section
 while ( reader.next() )
 {
   if ( reader.name().find(core::strngs::fsend()) == 0) break;

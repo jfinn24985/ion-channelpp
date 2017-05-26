@@ -527,6 +527,7 @@ if( value.empty() )
 {
   throw input_error::missing_value_error( title, section_name, name, reader );
 }
+const std::string original{ value };
 std::replace(value.begin(), value.end(), 'D', 'E');
 std::replace(value.begin(), value.end(), 'd', 'E');
 const char *start = value.c_str();
@@ -535,7 +536,7 @@ std::vector< double > rlist;
 while( not *start == '\0' and std::isspace( *start ) ) ++start;
 if( *start == '\0')
 {
-  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::non_empty_value_message() );
+  throw input_error::parameter_value_error( title, section_name, name, original, reader, input_error::non_empty_value_message() );
 }
 char *end;
 errno = 0;
@@ -545,19 +546,19 @@ for (double result = std::strtod(start, &end); start != end; result = std::strto
   {
     while( not *start == '\0' and std::isspace( *start ) ) ++start;
     std::string element( start, std::size_t(end - start) );
-    throw input_error::parameter_value_error( title, section_name, name, value, reader, "Element " + element + ": " + input_error::number_outside_range_message() );
+    throw input_error::parameter_value_error( title, section_name, name, original, reader, "Element " + element + ": " + input_error::number_outside_range_message() );
   }
   if( std::isnan( result ) )
   {
     while( not *start == '\0' and std::isspace( *start ) ) ++start;
     std::string element( start, std::size_t(end - start) );
-    throw input_error::parameter_value_error( title, section_name, name, value, reader, "Element " + element + ": " + input_error::number_nan_message() );
+    throw input_error::parameter_value_error( title, section_name, name, original, reader, "Element " + element + ": " + input_error::number_nan_message() );
   }
   if( std::isinf( result ) )
   {
     while( not *start == '\0' and std::isspace( *start ) ) ++start;
     std::string element( start, std::size_t(end - start) );
-    throw input_error::parameter_value_error( title, section_name, name, value, reader, "Element " + element + ": " + input_error::number_inf_message() );
+    throw input_error::parameter_value_error( title, section_name, name, original, reader, "Element " + element + ": " + input_error::number_inf_message() );
   }
   start = end;
   while( not *start == '\0' and std::isspace( *start ) ) ++start;
@@ -569,7 +570,7 @@ if( *end != '\0' and not std::isspace( *end ) )
   std::string element( start ); // may be list but only want first element.
   std::stringstream s( element );
   s >> element;
-  throw input_error::parameter_value_error( title, section_name, name, value, reader, "Element " + element + ": " + input_error::number_bad_message() );
+  throw input_error::parameter_value_error( title, section_name, name, original, reader, "Element " + element + ": " + input_error::number_bad_message() );
 }
 std::swap( rlist, target );
 !!!2290864.cpp!!!	key_input(in name : string, in value : string, in title : string, in section_name : string, inout target : size_t, in keylist : string, in reader : input_base_reader) : void

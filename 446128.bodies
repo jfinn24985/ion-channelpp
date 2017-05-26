@@ -282,17 +282,17 @@ else
         if( has_solute )
         {
           std::stringstream ss;
-          ss << "Unable to automatically determine initial particle count. Add predefined particles (parameter \""
+          ss << "Add predefined particles (parameter \""
              << core::strngs::fsn() << "\") or target concentration (parameter \""
              << core::strngs::fsctrg() << "\") to solute species.";
-          throw core::input_error::input_logic_error( "Initial per-specie particle counts", core::strngs::fsspec(), ss.str() );
+          throw core::input_error::input_logic_error( "Unable to automatically determine initial per-specie particle counts from input", core::strngs::fsspec(), ss.str() );
         }
         if( nonsolute == 0 )
         {
           std::stringstream ss;
-          ss << "Unable to automatically determine initial particle count. Add predefined particles (parameter \""
+          ss << "Add predefined particles (parameter \""
              << core::strngs::fsn() << "\") non-solute species.";
-           throw core::input_error::input_logic_error( "Initial per-specie particles", core::strngs::fsspec(), ss.str() );
+           throw core::input_error::input_logic_error( "Unable to automatically determine initial per-specie particle counts from input", core::strngs::fsspec(), ss.str() );
         }
       }
     }
@@ -410,10 +410,15 @@ auto const& ens = *( this->ensemble_ );
     oslog << core::strngs::horizontal_bar() << "\n";
     if( is_overlap_in_predefined_particles or is_overlap_with_region )
     {
-      const std::string errstr = errmsg.str();
-      oslog << errstr;
-      UTILITY_INPUT( not is_overlap_in_predefined_particles, "Overlap between particles in predifined particle set.", core::strngs::fsspec(), nullptr );
-      UTILITY_INPUT( not is_overlap_with_region, "Overlap between particles and cell in predefined particle set.", core::strngs::fsspec(), nullptr );
+      oslog << errmsg.rdbuf();
+      if( is_overlap_in_predefined_particles )
+      {
+        throw core::input_error::parameter_value_error( "Particle position", core::strngs::fsspec(), core::strngs::fsn(), "see log output", nullptr, "Need to remove particle-particle overlap in predifined particle set." );
+      }
+      if( is_overlap_with_region )
+      {
+        throw core::input_error::parameter_value_error( "Particle position", core::strngs::fsspec(), core::strngs::fsn(), "see log output", nullptr, "Need to remove particle-object overlap in predifined particle set." );
+      }
     }
   }
 }
@@ -497,8 +502,10 @@ if( not utility::feq( this->target_ionic_strength(), 0.0 ) )
       // get gridder based on minimum spacing
       auto gridder = gman.system_region().make_gridder( min_spacing, ranf );
 
-      UTILITY_INPUT( gridder->size() > keys.size(), "System is too dense, can not create insertion grid with enough points.", core::strngs::fsspec(), nullptr );
-
+      if( gridder->size() < keys.size() )
+      {
+        throw core::input_error::parameter_value_error( "Concentration", core::strngs::fsspec(), core::strngs::fsctrg(), "see log", nullptr, "Unable to create initial system as concentration is too high, need to reduce concentration of some or all species." );
+      }
       // index into keys vector
       std::size_t idx = 0;
       // Only need to check overlap with predefined particles
@@ -535,7 +542,10 @@ if( not utility::feq( this->target_ionic_strength(), 0.0 ) )
         this->ensemble_->append_position( ispec, pos );
         ++idx;
       }
-      UTILITY_INPUT( idx == keys.size(), "System is too dense, can not insert enough particles.", core::strngs::fsspec(), nullptr );
+      if( idx < keys.size() )
+      {
+        throw core::input_error::parameter_value_error( "Concentration", core::strngs::fsspec(), core::strngs::fsctrg(), "see log", nullptr, "Unable to create initial system as concentration is too high, need to reduce concentration of some or all species." );
+      }
     }
   }
 }

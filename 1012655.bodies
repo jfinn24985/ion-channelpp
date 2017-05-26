@@ -1,7 +1,7 @@
 class input_delegater
 !!!1917615.cpp!!!	read_input(inout reader : input_base_reader) : void
 typedef std::map< std::string, boost::shared_ptr< input_base_meta > >::iterator iterator;
-UTILITY_REQUIRE (not input_delegate_map_.empty(), "Attempt to read input file before creating delegate map");
+UTILITY_REQUIRE( not this->input_delegate_map_.empty(), "Attempt to read input file before creating delegate map" );
 
 // Assume current is max
 this->file_version_ = max_version_;
@@ -14,44 +14,52 @@ std::set< std::string > included_sections;
 // work through input document.
 try
 {
-   while (reader.next())
-   {
-      if (strngs::fsfver() == reader.name())
+  while( reader.next() )
+  {
+    if (strngs::fsfver() == reader.name())
+    {
+      // Looking for top-level option names:
+      //  'filever' input file version
+      this->file_version_ = reader.get_ordinal( "Input file version", std::string{} );
+      if( this->file_version_ > max_version_ )
       {
-         // Looking for top-level option names:
-         //  'filever' input file version
-         // check is not negative by looking at string
-         UTILITY_INPUT( std::isdigit( reader.value()[0] )
-                        , "Non-numeric or negative file version (" + reader.value() + ") is invalid"
-                        , strngs::fschnl(), &reader);
-         
-         file_version_ = boost::lexical_cast < size_t > (reader.value());
-         UTILITY_INPUT( file_version_ <= max_version_
-                        , "File version " + reader.value() + " is too recent for this program"
-                        , strngs::fschnl(), &reader);
+        reader.parameter_value_error( "Input file version", std::string{}, "File version is too recent for this program" );
       }
-      else
+    }
+    else
+    {
+      // Looking for section names:
+      iterator known_section = this->input_delegate_map_.find( reader.name () );
+      // Section label not known
+      if( known_section == this->input_delegate_map_.end() )
       {
-         // Looking for section names:
-         iterator known_section = input_delegate_map_.find( reader.name () );
-         UTILITY_INPUT( known_section != input_delegate_map_.end()
-                        , "Name " + reader.name () + " is not a valid input section label"
-                        , strngs::fschnl(), &reader );
-         // Add to the section_list.
-         UTILITY_INPUT( known_section->second->multiple() or 0 == included_sections.count (reader.name ())
-                           , "Input file section " + reader.name() + " appears more than once"
-                           , strngs::fschnl(), &reader);
-         included_sections.insert( reader.name () );
-
-         // Get delegate to read its input section
-         known_section->second->read_section( reader );
-
-         // check reader is at 'end', the delegate should have thrown an error
-         // otherwise.
-         UTILITY_CHECK( reader.name() == strngs::fsend()
-                        , "Reader delegate should have read to an 'end' label.");
+        std::stringstream kss;
+        for( auto const& entry : this->input_delegate_map_ )
+        {
+          kss << entry.first << " ";
+        }
+        std::string keys( kss.str() );
+        keys.erase( keys.size() - 1, 1 );
+        throw input_error::invalid_section_error( reader.name(), &reader, keys );
       }
-   }
+      // Only sections with multiple tag can appear twice.
+      if( not known_section->second->multiple() and 0 != included_sections.count( reader.name () ) )
+      {
+        throw input_error::duplicate_section_error( reader.name(), &reader );
+      }
+      // Add to the section_list.
+
+      included_sections.insert( reader.name () );
+
+      // Get delegate to read its input section
+      known_section->second->read_section( reader );
+
+      // check reader is at 'end', the delegate should have thrown an error
+      // otherwise.
+      UTILITY_CHECK( reader.name() == strngs::fsend()
+                     , "Reader delegate should have read to an 'end' label.");
+    }
+  }
 }
 catch( core::input_error const& err )
 {
@@ -59,18 +67,23 @@ catch( core::input_error const& err )
 }
 catch (std::runtime_error const& err)
 {
-   std::stringstream ss;
-   ss << "Error in input file " << reader.current_filename()
-             << " at line " << reader.current_line_number() << "\n" << err.what();
-   throw std::runtime_error( ss.str() );
+  std::stringstream ss;
+  ss << "Error in input file " << reader.current_filename()
+     << " at line " << reader.current_line_number() << "\n" << err.what();
+  throw std::runtime_error( ss.str() );
 }
 // Check for required input sections
+std::stringstream ss;
 for (auto & itr : input_delegate_map_)
 {
-   if (itr.second->required ())
-   {
-      UTILITY_INPUT( 0 != included_sections.count (itr.first)
-                     , "Missing input file section: " + itr.first
-                     , strngs::fschnl(), &reader);
-   }
+  if( itr.second->required() and 0 == included_sections.count( itr.first ) )
+  {
+    ss << itr.first << " ";
+  }
+}
+std::string missing( ss.str() );
+if( not missing.empty() )
+{
+  missing.erase( missing.size() - 1, 1 );
+  throw input_error::missing_section_error( &reader, missing );
 }
