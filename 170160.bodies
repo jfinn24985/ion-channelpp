@@ -6,16 +6,50 @@ os << boost::format(header) % this->type_ % (100.0*this->rate_) << "\n";
 std::set< std::string > include, exclude;
 if( this->parameter_set_.find( core::strngs::fsspec() ) != this->parameter_set_.end() )
 {
+  std::string bad_labels;
   // Have inclusion/exclusion list
   boost::char_separator< char > sep( " " );
   boost::tokenizer< boost::char_separator< char > > tok( this->parameter_set_.at( core::strngs::fsspec() ), sep );
   for( auto const& entry : tok )
   {
+    bool is_include{ true };
+    std::string label{};
     if( entry[0] == '+' )
     {
-      include.insert( entry.substr( 1, 2 ) );
+      label = entry.substr( 1, 2 );
+      include.insert( label );
     }
     else if( entry[0] == '-' )
+    {
+      is_include = false;
+      label = entry.substr( 1, 2 );
+    }
+    else
+    {
+      label = entry.substr( 0, 2 );
+    }
+    bool label_found{ false };
+    for( auto const& spec : species )
+    {
+      if( spec.label() == label )
+      {
+        label_found = true;
+        break;
+      }
+    }
+    if( not label_found )
+    {
+      std::stringstream sps;
+      sps << "(";
+      for( auto const& spec : species )
+      {
+        sps << spec.label() << ",";
+      }
+      std::string list( sps.str() );
+      list.back() = ')';
+      throw core::input_error::parameter_value_error( "Include/exclude specie list", core::strngs::fstry(), core::strngs::fsspec(), label, nullptr, ( core::input_error::bad_key_message_format() % list ).str() );
+    }
+    if( is_include )
     {
       exclude.insert( entry.substr( 1, 2 ) );
     }
@@ -23,6 +57,7 @@ if( this->parameter_set_.find( core::strngs::fsspec() ) != this->parameter_set_.
     {
       include.insert( entry.substr( 0, 2 ) );
     }
+
   }
 }
 // Require that species are not in both include and exclude lists
@@ -30,9 +65,10 @@ if( not include.empty() and not exclude.empty() )
 {
   for( auto const& entry : include )
   {
-    UTILITY_INPUT( 0 == exclude.count( entry ),
-                   "Specie label "+entry+" set as included and excluded",
-                   core::strngs::fstry(), nullptr );
+    if( 0 != exclude.count( entry ) )
+    {
+      throw core::input_error::parameter_value_error( "Specie label list", core::strngs::fstry(), core::strngs::fsspec(), entry, nullptr, "Specie label "+entry+" set as both included and excluded" );
+    }
   }
 }
 boost::ptr_vector< base_choice > new_choices;

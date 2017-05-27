@@ -90,8 +90,10 @@ return true;
 if( this->missing_required_tags_.any() )
 {
   // Not all required tags were present.
-  UTILITY_INPUT( not this->missing_required_tags_[ CHOICE_RATE ], "Trial section requires \"" + core::strngs::rate_label() + "\" parameter.", this->section_label(), &reader );
-  UTILITY_INPUT( not this->missing_required_tags_[ CHOICE_TYPE ], "Trial section requires \"" + core::strngs::fstype() + "\" parameter.", this->section_label(), &reader );
+  std::string missing;
+  if( this->missing_required_tags_[ CHOICE_RATE ] ) missing = core::strngs::rate_label();
+  if( this->missing_required_tags_[ CHOICE_TYPE ] ) missing = ( missing.empty() ? missing + " " + core::strngs::fstype() : core::strngs::fstype() );
+  reader.missing_parameters_error( "Trial definition", this->section_label(), missing );
 }
 // find definition
 std::size_t idx = 0;
@@ -109,13 +111,15 @@ if( not this->parameter_set_.empty() )
 {
   for( auto const& entry : this->parameter_set_ )
   {
-    UTILITY_INPUT( defn.has_definition( entry.first ) != 0, "Trial \"" + entry.first + "\" parameter with value (" + entry.second + ") is not understood by " + this->type_ + " " + this->section_label() + ".", this->section_label(), &reader );
+    if( not defn.has_definition( entry.first ) )
+    {
+      reader.invalid_parameter_subtype_error( this->section_label(), this->type_, entry.first );
+    }
   }
 }
 
 // Use generator to create the chooser object.
 this->manager_->add_chooser( defn( this->parameter_set_, this->type_, this->specie_list_, this->rate_ ) );
-
 !!!1171376.cpp!!!	do_reset() : void
 this->missing_required_tags_.set();
 this->parameter_set_.clear();

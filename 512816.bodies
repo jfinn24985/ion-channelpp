@@ -77,14 +77,30 @@ const std::string region_name_label { core::strngs::fsregn() };
 // --------------------
 // region label (required)
 // check for required parameters.
-UTILITY_INPUT( params.count( region_name_label ) == 1, "Jump-in trial requires \"" + region_name_label + "\" parameter.", core::strngs::fstry(), nullptr );
-UTILITY_INPUT( not params.at( region_name_label ).empty(), "Jump-in trial \"" + region_name_label + "\" parameter requires a value.", core::strngs::fstry(), nullptr );
-region_name = core::input_base_reader::dequote( params.at( region_name_label ) );
+if( params.count( region_name_label ) ==  0 )
+{
+  throw core::input_error::missing_parameters_error( "Jump-in subtype trial", core::strngs::fstry(), region_name_label, nullptr );
+}
+core::input_base_reader::text_input( region_name_label, params.at( region_name_label ), "Jump-in target region", core::strngs::fstry(), region_name, nullptr );
 boost::algorithm::trim( region_name );
 const std::size_t region_index = gman.region_key( region_name );
-UTILITY_INPUT( region_index != gman.region_count(), "Jump-in trial \"" + region_name_label + "\" parameter value (" + region_name + ") is not a known region label.", core::strngs::fstry(), nullptr );
-UTILITY_INPUT( region_index != 0, "Jump-in trial \"" + region_name_label + "\" parameter value (" + region_name + ") should not be the entire system region.", core::strngs::fstry(), nullptr );
-
+if( region_index == gman.region_count() )
+{
+  // make list of region labels.
+  std::stringstream rss{};
+  rss << "(";
+  for( std::size_t ireg = 0; ireg != gman.region_count(); ++ireg )
+  {
+    rss << gman.get_region( ireg ).label() << ",";
+  }
+  std::string list( rss.str() );
+  list.back() = ')';
+  throw core::input_error::parameter_value_error( "Jump-in target region", core::strngs::fstry(), region_name_label, params.at( region_name_label ), nullptr, ( core::input_error::bad_key_message_format() % list ).str() );
+}
+if( region_index == 0 )
+{
+  throw core::input_error::parameter_value_error( "Jump-in target region", core::strngs::fstry(), region_name_label, params.at( region_name_label ), nullptr, "Jump-in target region cannot be the system region" );
+}
 // build choice object.
 std::unique_ptr< jump_in > current( new jump_in( ispec, region_index ) );
 return current;
