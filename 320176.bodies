@@ -28,8 +28,10 @@ if( nullptr == this->dbf_ )
     {
       boost::filesystem::create_directories( parent );
     }
-    UTILITY_INPUT( boost::filesystem::is_directory( parent ),
-                   "Unable to create directory "+parent.string(), core::strngs::simulator_label(), nullptr );
+    if( not boost::filesystem::is_directory( parent ) )
+    {
+      throw core::input_error::input_logic_error( "Problem with \"" + core::strngs::outputdir_label() + "\" value", core::strngs::simulator_label(), "Unable to create directory " + parent.string() + "." );
+    }
   }
   int flag;
   bool must_exist = false;
@@ -57,16 +59,17 @@ if( nullptr == this->dbf_ )
   }
   if( must_exist )
   {
-    UTILITY_INPUT( boost::filesystem::exists( this->path_ )
-                   , "Database file \""+this->path_+"\" must exist."
-                   , core::strngs::simulator_label(), nullptr );
+    if( not boost::filesystem::exists( this->path_ ) )
+    {
+      throw core::input_error::input_logic_error( "Problem with \"" + core::strngs::outputdir_label() + "\" value", core::strngs::simulator_label(), "Request to open archive file " + this->path_ + " but file does not exist." );
+    }
   }
   this->dbf_ = ::gdbm_open( const_cast< char* >( this->path_.c_str() ), 4096, flag, 0644, nullptr );
   if( nullptr == this->dbf_ )
   {
     // error occurred
     std::string mesg = ::gdbm_strerror( ::gdbm_errno );
-    throw std::runtime_error( mesg );
+    throw core::input_error::input_logic_error( "Possible problem with \"" + core::strngs::outputdir_label() + "\" value", core::strngs::simulator_label(), mesg );
   }
 }
 !!!567856.cpp!!!	ensure_close() : void

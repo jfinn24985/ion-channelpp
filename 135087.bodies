@@ -22,21 +22,11 @@ for( auto const& item : params )
 {
   if( item.first == core::strngs::fsiwid() )
   {
-    core::input_base_reader::ordinal_input( item.first, item.second, type_label_(), core::strngs::sampler_label(), smplr->trials_, nullptr );
+    core::input_base_reader::ordinal_input( item.first, item.second, "Widom insertion counts/cycle", core::strngs::sampler_label(), smplr->trials_, nullptr );
   }
   else if( item.first == core::strngs::fsspec() )
   {
-    UTILITY_INPUT( not item.second.empty(),
-                   "widom \""+item.first+"\" parameter requires a value",
-                   core::strngs::sampler_label(), nullptr );
-    smplr->key_labels_ = item.second;
-  }
-  else
-  {
-    const std::string known_key;
-    UTILITY_INPUT( item.first==known_key,
-                   "Parameter ["+item.first+"] unknown for sampler type ["+widom::type_label_()+"]",
-                   core::strngs::sampler_label(), nullptr );
+    core::input_base_reader::text_input( item.first, item.second, "Specie label list", core::strngs::sampler_label(),smplr->key_labels_, nullptr );
   }
 }
 boost::shared_ptr< tracked_observable > result;
@@ -229,13 +219,15 @@ else
   std::string used_labels;
   for( std::string lbl : tok )
   {
-    UTILITY_INPUT( pman.has_specie( lbl ),
-                   "widom \"specie\" parameter value ("+ this->key_labels_ +") has unknown specie label ["+ lbl +"]",
-                   core::strngs::sampler_label(), nullptr );
+    if( not pman.has_specie( lbl ) )
+    {
+      throw core::input_error::parameter_value_error( "Specie list", core::strngs::sampler_label(), core::strngs::fsspec(), this->key_labels_, nullptr, "Specie label \"" + lbl + "\" must match one of the defined species." ); 
+    }
     std::size_t key = pman.get_specie_key( lbl );
-    UTILITY_INPUT( pman.get_specie( key ).is_solute(),
-                   "widom \"specie\" parameter value ("+ this->key_labels_ +") has specie ["+ lbl +"] that is not a solute",
-                   core::strngs::sampler_label(), nullptr );
+    if( not pman.get_specie( key ).is_solute() )
+    {
+      throw core::input_error::parameter_value_error( "Specie list", core::strngs::sampler_label(), core::strngs::fsspec(), this->key_labels_, nullptr, "Specie \"" + lbl + "\" must be a solute type specie." ); 
+    }
     auto const& spc = pman.get_specie( key );
     // Ignore duplicate indices
     if( this->data_.end() == std::find_if( this->data_.begin(), this->data_.end(), [key]( const widom_datum& dat )

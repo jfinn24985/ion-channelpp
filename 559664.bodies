@@ -598,11 +598,11 @@ std::stringstream store;
     result = observable::d3_distribution::process_region_list( "Ca1,bulk" );
     BOOST_CHECK( canon == result );
   }
-  catch( std::runtime_error const& err )
+  catch( core::input_error const& err )
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Invalid specie label [Ca1] in list [Ca1,bulk] in parameter \"region\" of sampler 3d-distribution" ) < msg.size() );
+    BOOST_CHECK( msg.find( "Specie-region pair list  parameter \"region\" with value (Ca1,bulk) in section \"sampler\".\n** Specie label \"Ca1\" should have two exactly two letters. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -619,11 +619,11 @@ std::stringstream store;
     result = observable::d3_distribution::process_region_list( "Ca,bulk,cell" );
     BOOST_CHECK( canon == result );
   }
-  catch( std::runtime_error const& err )
+  catch( core::input_error const& err )
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Invalid specie label [cell] in list [Ca,bulk,cell] in parameter \"region\" of sampler 3d-distribution" ) < msg.size() );
+    BOOST_CHECK( msg.find( "Specie-region pair list  parameter \"region\" with value (Ca,bulk,cell) in section \"sampler\".\n** Specie label \"cell\" should have two exactly two letters. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -640,11 +640,11 @@ std::stringstream store;
     result = observable::d3_distribution::process_region_list( "Ca,bulk,Na" );
     BOOST_CHECK( canon == result );
   }
-  catch( std::runtime_error const& err )
+  catch( core::input_error const& err )
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Have unmatched specie label [Na] in list [Ca,bulk,Na] in parameter \"region\" of sampler 3d-distribution" ) < msg.size() );
+    BOOST_CHECK( msg.find( "Specie-region pair list  parameter \"region\" with value (Ca,bulk,Na) in section \"sampler\".\n** Specie label \"Na\" has no matching region name. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -661,11 +661,11 @@ std::stringstream store;
     result = observable::d3_distribution::process_region_list( "Ca,bulk,Ca,cell" );
     BOOST_CHECK( canon == result );
   }
-  catch( std::runtime_error const& err )
+  catch( core::input_error const& err )
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Duplicate specie label [Ca] in list [Ca,bulk,Ca,cell] in parameter \"region\" of sampler 3d-distribution" ) < msg.size() );
+    BOOST_CHECK( msg.find( "Specie-region pair list  parameter \"region\" with value (Ca,bulk,Ca,cell) in section \"sampler\".\n** Specie label \"Ca\" appears more than once in list **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -682,11 +682,11 @@ std::stringstream store;
     result = observable::d3_distribution::process_region_list( " , bulk" );
     BOOST_CHECK( canon == result );
   }
-  catch( std::runtime_error const& err )
+  catch( core::input_error const& err )
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Invalid specie label [bulk] in list [ , bulk] in parameter \"region\" of sampler 3d-distribution" ) < msg.size() );
+    BOOST_CHECK( msg.find( "Specie-region pair list  parameter \"region\" with value ( , bulk) in section \"sampler\".\n** Specie label \"bulk\" should have two exactly two letters. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -1855,11 +1855,11 @@ const std::string filename { "widom.dat" };
     var->prepare( *pman, *gman, *eman, *rman );
     BOOST_ERROR( "expected \"var->prepare(...)\" exception not thrown" );
   }
-  catch( std::runtime_error const& err )
+  catch( core::input_error const& err )
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "widom \"specie\" parameter value (Ca:bulk) has unknown specie label [Ca]" ) < msg.size() );
+    BOOST_CHECK( msg.find( "Specie list parameter \"specie\" with value (Ca:bulk) in section \"sampler\".\n** Specie label \"Ca\" must match one of the defined species. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -1893,11 +1893,11 @@ const std::string filename { "widom.dat" };
     var->prepare( *pman, *gman, *eman, *rman );
     BOOST_ERROR( "expected \"var->prepare(...)\" exception not thrown" );
   }
-  catch( std::runtime_error const& err )
+  catch( core::input_error const& err )
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "widom \"specie\" parameter value (CA) has specie [CA] that is not a solute" ) < msg.size() );
+    BOOST_CHECK( msg.find( "Specie list parameter \"specie\" with value (CA) in section \"sampler\".\n** Specie \"CA\" must be a solute type specie. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -1908,7 +1908,8 @@ const std::string filename { "widom.dat" };
 boost::shared_ptr< observable::report_manager > oman( new observable::report_manager );
 core::input_delegater dg( 1 );
 {
-  boost::shared_ptr< core::input_base_meta > m( new observable::sampler_meta( oman ) );
+  boost::shared_ptr< observable::sampler_meta > m( new observable::sampler_meta( oman ) );
+  observable::acceptance_observable::add_definition( *m );
   dg.add_input_delegate( m );
 }
 // Invalid : unknown sub-type
@@ -1921,11 +1922,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Sampler \"type\" parameter value (freeze) does not name a valid sampler for this application (see documentation)." ) < msg.size() );
+  BOOST_CHECK( msg.find( "Sampler subtype parameter \"type\" with value (freeze) in section \"sampler\" at input file \"/home/finnerty/src/ionch/BUILD/linux-deb/PNP/dummy\" line 2.\n   >>type freeze<<\n** A value from the list (trial-rate) was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -1973,11 +1974,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Parameter \"width\" is not valid in a sampler \"trial-rate\" type section." ) < msg.size() );
+  BOOST_CHECK( msg.find( "Unknown parameter \"width\" in section \"sampler\" subtype \"trial-rate\" detected at input file \"/home/finnerty/src/ionch/BUILD/linux-deb/PNP/dummy\" line 4.\n** Parameter \"width\" is not expected in this section and type. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2001,11 +2002,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Sampler \"type\" parameter appears more than once in a single in section" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Parameter \"type\" appears more than once in section \"sampler\" at input file \"/home/finnerty/src/ionch/BUILD/linux-deb/PNP/dummy\" line 3.\n   >>type trial-rate<<\n** Parameter \"type\" can only appear once per section. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2029,11 +2030,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Sampler \"type\" parameter appears more than once in a single in section" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Parameter \"type\" appears more than once in section \"sampler\" at input file \"/home/finnerty/src/ionch/BUILD/linux-deb/PNP/dummy\" line 3.\n   >>type accept<<\n** Parameter \"type\" can only appear once per section. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2115,11 +2116,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Parameter \"step-size\" is not valid in a sampler \"population-zaxis\" type section." ) < msg.size() );
+  BOOST_CHECK( msg.find( "Unknown parameter \"step-size\" in section \"sampler\" subtype \"population-zaxis\" detected at input file \"/home/finnerty/src/ionch/BUILD/linux-deb/PNP/dummy\" line 4.\n** Parameter \"step-size\" is not expected in this section and type. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2143,11 +2144,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "population-zaxis \"stepsize\" parameter requires a value." ) < msg.size() );
+  BOOST_CHECK( msg.find( "population-zaxis parameter \"stepsize\" in section \"sampler\".\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2171,11 +2172,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "population-zaxis \"stepsize\" parameter value (half) is not a number" ) < msg.size() );
+  BOOST_CHECK( msg.find( "population-zaxis parameter \"stepsize\" with value (half) in section \"sampler\".\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2233,11 +2234,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Parameter \"wave\" is not valid in a sampler \"3d-distribution\" type section." ) < msg.size() );
+  BOOST_CHECK( msg.find( "Unknown parameter \"wave\" in section \"sampler\" subtype \"3d-distribution\" detected at input file \"/home/finnerty/src/ionch/BUILD/linux-deb/PNP/dummy\" line 6.\n** Parameter \"wave\" is not expected in this section and type. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2261,11 +2262,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "3d-distribution \"stepsize\" parameter requires a value." ) < msg.size() );
+  BOOST_CHECK( msg.find( "3d-distribution parameter \"stepsize\" in section \"sampler\".\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2289,11 +2290,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "3d-distribution \"stepsize\" parameter value (half) is not a number" ) < msg.size() );
+  BOOST_CHECK( msg.find( "3d-distribution parameter \"stepsize\" with value (half) in section \"sampler\".\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2317,11 +2318,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Sampler \"stepsize\" parameter appears more than once in a single in section" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Parameter \"stepsize\" appears more than once in section \"sampler\" at input file \"/home/finnerty/src/ionch/BUILD/linux-deb/PNP/dummy\" line 5.\n   >>stepsize 1.5<<\n** Parameter \"stepsize\" can only appear once per section. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2345,11 +2346,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "3d-distribution paramter \"region\" requires a value." ) < msg.size() );
+  BOOST_CHECK( msg.find( "3D distribution 3d-distribution parameter \"region\" in section \"sampler\".\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2373,11 +2374,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "3d-distribution parameter \"region\" value [\" : \"] is invalid." ) < msg.size() );
+  BOOST_CHECK( msg.find( "Volume selection parameter \"region\" with value (\" : \") in section \"sampler\".\n** Unable to convert value into a list of region labels. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2401,11 +2402,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Sampler \"region\" parameter appears more than once in a single in section" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Parameter \"region\" appears more than once in section \"sampler\" at input file \"/home/finnerty/src/ionch/BUILD/linux-deb/PNP/dummy\" line 5.\n   >>region Na cell<<\n** Parameter \"region\" can only appear once per section. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2463,11 +2464,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Parameter \"region\" is not valid in a sampler \"metropolis\" type section." ) < msg.size() );
+  BOOST_CHECK( msg.find( "Unknown parameter \"region\" in section \"sampler\" subtype \"metropolis\" detected at input file \"/home/finnerty/src/ionch/BUILD/linux-deb/PNP/dummy\" line 4.\n** Parameter \"region\" is not expected in this section and type. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2523,11 +2524,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Parameter \"region\" is not valid in a sampler \"rdf-specie\" type section." ) < msg.size() );
+  BOOST_CHECK( msg.find( "Unknown parameter \"region\" in section \"sampler\" subtype \"rdf-specie\" detected at input file \"/home/finnerty/src/ionch/BUILD/linux-deb/PNP/dummy\" line 4.\n** Parameter \"region\" is not expected in this section and type. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2551,11 +2552,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "rdf-specie \"width\" parameter requires a value" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Radial Distribution function total width parameter \"width\" in section \"sampler\".\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2579,11 +2580,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "rdf-specie \"width\" parameter value (Ca:bulk) is not a number" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Radial Distribution function total width parameter \"width\" with value (Ca:bulk) in section \"sampler\".\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2607,11 +2608,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "rdf-specie \"stepsize\" parameter requires a value" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Radial Distribution histgram bin width parameter \"stepsize\" in section \"sampler\".\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2635,11 +2636,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "rdf-specie \"stepsize\" parameter value (Ca:bulk) is not a number" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Radial Distribution histgram bin width parameter \"stepsize\" with value (Ca:bulk) in section \"sampler\".\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2693,11 +2694,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Parameter \"region\" is not valid in a sampler \"specie-count\" type section." ) < msg.size() );
+  BOOST_CHECK( msg.find( "Unknown parameter \"region\" in section \"sampler\" subtype \"specie-count\" detected at input file \"/home/finnerty/src/ionch/BUILD/linux-deb/PNP/dummy\" line 4.\n** Parameter \"region\" is not expected in this section and type. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2753,11 +2754,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Parameter \"region\" is not valid in a sampler \"widom\" type section." ) < msg.size() );
+  BOOST_CHECK( msg.find( "Unknown parameter \"region\" in section \"sampler\" subtype \"widom\" detected at input file \"/home/finnerty/src/ionch/BUILD/linux-deb/PNP/dummy\" line 4.\n** Parameter \"region\" is not expected in this section and type. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2781,11 +2782,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "widom \"iwidom\" parameter requires a value" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Widom insertion counts/cycle parameter \"iwidom\" in section \"sampler\".\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2809,11 +2810,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "widom \"iwidom\" parameter value (Ca:bulk) is not a number" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Widom insertion counts/cycle parameter \"iwidom\" with value (Ca:bulk) in section \"sampler\".\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2837,11 +2838,11 @@ try
   dg.read_input( reader );
   BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
 }
-catch( std::runtime_error const& err )
+catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "widom \"specie\" parameter requires a value" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Specie label list parameter \"specie\" in section \"sampler\".\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {

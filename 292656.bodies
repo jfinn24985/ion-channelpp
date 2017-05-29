@@ -32,8 +32,10 @@ if( nullptr == this->arch_ )
     {
       boost::filesystem::create_directories( parent );
     }
-    UTILITY_INPUT( boost::filesystem::is_directory( parent ),
-                   "Unable to create directory "+parent.string(), core::strngs::simulator_label(), nullptr );
+    if( not boost::filesystem::is_directory( parent ) )
+    {
+      throw core::input_error::input_logic_error( "Problem with \"" + core::strngs::outputdir_label() + "\" value", core::strngs::simulator_label(), "Unable to create directory " + parent.string() + "." );
+    }
   }
   // open file and test for success.
   int flag = 0;
@@ -57,9 +59,10 @@ if( nullptr == this->arch_ )
   }
   if( must_exist )
   {
-    UTILITY_INPUT( boost::filesystem::exists( this->path_ )
-                   , "Zip file \""+this->path_+"\" must exist."
-                   , core::strngs::simulator_label(), nullptr );
+    if( not boost::filesystem::exists( this->path_ ) )
+    {
+      throw core::input_error::input_logic_error( "Problem with \"" + core::strngs::outputdir_label() + "\" value", core::strngs::simulator_label(), "Request to open archive file " + this->path_ + " but file does not exist." );
+    }
   }
   int error;
   this->arch_ = ::zip_open( this->path_.c_str(), flag, &error );
@@ -200,3 +203,7 @@ if (idx == -1)
 }
 this->dirty_ = true;
 
+!!!511920.cpp!!!	make_error_message(in error_number : int, in system_number : int) : string
+char buf[4001];
+zip_error_to_str(buf, 4000, error_number, system_number); 
+return std::string(buf);

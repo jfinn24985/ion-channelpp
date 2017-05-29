@@ -26,8 +26,7 @@ std::string region_list;
 double stepsize = d3_distribution::default_bin_width();
 if (paramset.count( core::strngs::fsregn() ) != 0)
 {
-  region_list = paramset.at( core::strngs::fsregn() );
-  UTILITY_INPUT( not region_list.empty(), d3_distribution::type_label_() + " paramter \"" + core::strngs::fsregn() + "\" requires a value.", core::strngs::sampler_label(), nullptr );
+  core::input_base_reader::text_input( core::strngs::fsregn(), paramset.at( core::strngs::fsregn() ), "3D distribution " + d3_distribution::type_label_(), core::strngs::sampler_label(), region_list, nullptr );
 }
 if (0 != paramset.count("stepsize"))
 {
@@ -37,7 +36,10 @@ std::unique_ptr<d3_distribution> result( new d3_distribution );
 if( not region_list.empty() )
 {
   result->regions_ = d3_distribution::process_region_list( region_list );
-  UTILITY_INPUT( not result->regions_.empty(), d3_distribution::type_label_() + " parameter \"" + core::strngs::fsregn() + "\" value ["+region_list+"] is invalid.", core::strngs::sampler_label(), nullptr );
+  if( result->regions_.empty() )
+  {
+    throw core::input_error::parameter_value_error( "Volume selection", core::strngs::sampler_label(), core::strngs::fsregn(), paramset.at( core::strngs::fsregn() ), nullptr, "Unable to convert value into a list of region labels." );
+  }
 }
 result->stepsize_ = stepsize;
 boost::shared_ptr< base_observable > tmp(result.release());
@@ -56,7 +58,19 @@ if( not this->regions_.empty() )
 {
   for( auto const& entry : this->regions_ )
   {
-    UTILITY_INPUT( gman.region_key( entry.second ) != gman.region_count(), "Expected a region with name ["+entry.second+"] when generating sampler type "+type_label_(), core::strngs::sampler_label(), nullptr );
+    if( gman.region_key( entry.second ) == gman.region_count() )
+    {
+      // error, region label not found.
+      std::stringstream region_os;
+      region_os << "(";
+      for( std::size_t ireg = 0; ireg != gman.region_count(); ++ireg )
+      {
+        region_os << gman.get_region( ireg ).label() << ",";
+      }
+      std::string reg_list( region_os.str() );
+      reg_list.back() = ')';
+      throw core::input_error::parameter_value_error( "Volume selection", core::strngs::sampler_label(), core::strngs::fsregn(), entry.second, nullptr, (core::input_error::bad_key_message_format() % reg_list).str() );
+    }
   }
 }
 this->specie_labels_.resize( pman.specie_count() );
@@ -153,17 +167,26 @@ for( std::string word_or_pair : tok )
   if( label.empty() )
   {
     // specie label part of pair
-    UTILITY_INPUT( ( 2 == word_or_pair.size() ) or ( 1 == word_or_pair.size() ), "Invalid specie label ["+ word_or_pair +"] in list ["+list+"] in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label(), nullptr );
+    if( 2 != word_or_pair.size() )
+    {
+      throw core::input_error::parameter_value_error( "Specie-region pair list ", core::strngs::sampler_label(), core::strngs::fsregn(), list, nullptr, "Specie label \""+word_or_pair+"\" should have two exactly two letters." ); 
+    }
     label = word_or_pair;
   }
   else
   {
     // region part of pair
     auto check_unique = regions.insert( { label, word_or_pair } );
-    UTILITY_INPUT( check_unique.second, "Duplicate specie label ["+ label +"] in list ["+list+"] in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label(), nullptr );
+    if( not check_unique.second )
+    {
+      throw core::input_error::parameter_value_error( "Specie-region pair list ", core::strngs::sampler_label(), core::strngs::fsregn(), list, nullptr, "Specie label \""+label+"\" appears more than once in list" ); 
+    }
     label.clear();
   }
 }
-UTILITY_INPUT( label.empty(), "Have unmatched specie label ["+label+"] in list ["+list+"] in parameter \"region\" of sampler "+type_label_(), core::strngs::sampler_label(), nullptr );
+if( not label.empty() )
+{
+  throw core::input_error::parameter_value_error( "Specie-region pair list ", core::strngs::sampler_label(), core::strngs::fsregn(), list, nullptr, "Specie label \""+label+"\" has no matching region name." ); 
+}
 return regions;
 
