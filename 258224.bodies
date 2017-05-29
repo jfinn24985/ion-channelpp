@@ -20,70 +20,37 @@ class icc_orig
 // UTILITY_INPUT( nullptr != psim, "Induced charge evaluator is not suitable for this simulator.", core::strngs::evaluator_label(), nullptr );
 std::unique_ptr< induced_charge > cc(new induced_charge);
 
-std::string unknown_parameter;
-
-for (auto nvpair : param_set)
+for( auto const& nvpair : param_set )
 {
-   if ( nvpair.first.find( core::strngs::fsdxf() ) != std::string::npos )
-   {
-      try
-      {
-         cc->set_dxf( boost::lexical_cast< double >( nvpair.second ) );
-      }
-      catch(std::bad_cast &err)
-      {
-         bool good_cast_to_double = false;
-         UTILITY_INPUT(good_cast_to_double, "Cannot convert \"" + nvpair.second
-                       + "\" to a real number as argument of parameter \"" + nvpair.first + "\""
-                       , core::strngs::evaluator_label(), nullptr );
-      }
-   }
-   else if ( nvpair.first.find( core::strngs::fsdxw() ) != std::string::npos )
-   {
-      try
-      {
-         cc->set_dxw( boost::lexical_cast< double >( nvpair.second ) );
-      }
-      catch(std::bad_cast &err)
-      {
-         bool good_cast_to_double = false;
-         UTILITY_INPUT(good_cast_to_double, "Cannot convert \"" + nvpair.second
-                       + "\" to a real number as argument of parameter \"" + nvpair.first + "\""
-                       , core::strngs::evaluator_label(), nullptr );
-      }
-   }
-   else if ( nvpair.first.find( core::strngs::fsnsub() ) != std::string::npos )
-   {
-      try
-      {
-         cc->set_nsub0( boost::lexical_cast< std::size_t >( nvpair.second ) );
-      }
-      catch(std::bad_cast &err)
-      {
-         bool good_cast_to_integer = false;
-         UTILITY_INPUT(good_cast_to_double, "Cannot convert \"" + nvpair.second
-                       + "\" to a positive integer as argument of parameter \"" + nvpair.first + "\""
-                       , core::strngs::evaluator_label(), nullptr );
-      }
-   }
-   else
-   {
-      if ( unknown_parameter.empty() )
-      {
-         unknown_parameter = nvpair.first;
-      }
-      else
-      {
-         unknown_parameter += " " + nvpair.first;
-      }
-   }
+  if ( nvpair.first.find( core::strngs::fsdxf() ) != std::string::npos )
+  {
+    double dxf;
+    core::input_base_reader::float_input( nvpair.first, nvpair.second, "Angular delta", core::strngs::evaluator_label(), dxf, true, false, nullptr );
+    cc->set_dxf( dxf );
+  }
+  else if ( nvpair.first.find( core::strngs::fsdxw() ) != std::string::npos )
+  {
+    double dxw;
+    core::input_base_reader::float_input( nvpair.first, nvpair.second, "Linear delta", core::strngs::evaluator_label(), dxw, true, false, nullptr );
+    cc->set_dxw( dxw );
+  }
+  else if ( nvpair.first.find( core::strngs::fsnsub() ) != std::string::npos )
+  {
+    std::size_t nsub0;
+    core::input_base_reader::ordinal_input( nvpair.first, nvpair.second, "Integrater subsampling", core::strngs::evaluator_label(), nsub0, nullptr );
+    cc->set_nsub0( nsub0 );
+  }
+  else
+  {
+    UTILITY_CHECK( unknown_parameter.empty(),"Uncaught unknown parameter found in evaluator factory" );
+  }
 }
-UTILITY_INPUT( unknown_parameter.empty(),"Unknown parameter(s) [" + unknown_parameter + "] for induced charge evaluator.", core::strngs::evaluator_label(), nullptr);
+UTILITY_CHECK( unknown_parameter.empty(),"Unknown parameter(s) [" + unknown_parameter + "] for induced charge evaluator.", core::strngs::evaluator_label(), nullptr);
 
 // Connect to inner-loop signal to get notification from every trial
 {
-   auto sig = boost::any_cast< platform::simulator::inner_loop_signal_type* >( sim.get_signal("inner-loop" ) );
-   cc->sample_conx_ = sig->connect(boost::bind(&induced_charge::on_inner_loop, cc.get(), _1));
+  auto sig = boost::any_cast< platform::simulator::inner_loop_signal_type* >( sim.get_signal("inner-loop" ) );
+  cc->sample_conx_ = sig->connect(boost::bind(&induced_charge::on_inner_loop, cc.get(), _1));
 }
 
 
