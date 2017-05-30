@@ -63,5 +63,16 @@ wr[ ix ].add_entry( "update", this->type_label_() );
 !!!2112688.cpp!!!	add_to_definition(inout defn : simulation_definition) : string
 return type_label_();
 !!!2112560.cpp!!!	make_updater(in params : string) : imc_update
-UTILITY_CHECK( params.empty(), "Malasics Iterative Monte Carlo updater requires no parameters." );
-return boost::shared_ptr< imc_update >{ new malasics_igcmc };
+if( not params.empty() )
+{
+  std::string unknown_param{};
+  for (auto const& item : params)
+  {
+    unknown_param += ( unknown_param.empty() ? "" : " " ) + item.first;
+  }
+  if( not unknown_param.empty() )
+  {
+    throw core::input_error::invalid_parameter_subtype_error( core::strngs::simulator_label(), type_label_(), unknown_param, nullptr );
+  }
+}
+return boost::shared_ptr< imc_update > { new malasics_igcmc };

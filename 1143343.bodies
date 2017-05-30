@@ -109,12 +109,33 @@ else
 }
 return true;
 !!!186416.cpp!!!	do_read_end(in reader : input_base_reader) : void
-UTILITY_INPUT( this->required_tags_[SIMULATOR_PROD], "Simulation production step \""+core::strngs::fsnstp()+"\" missing in input file.", this->section_label(), &reader);
-UTILITY_INPUT( this->required_tags_[SIMULATOR_THERM], "Simulation equilibration step \""+core::strngs::fsnavr()+"\" missing in input file.", this->section_label(), &reader);
-UTILITY_INPUT( this->required_tags_[SIMULATOR_CHECK], "Simulation checkpoint/report interval \""+core::strngs::fsisav()+"\" missing in input file.", this->section_label(), &reader);
-UTILITY_INPUT( this->required_tags_[SIMULATOR_INNER], "Simulation inner loop \""+core::strngs::inner_label()+"\" missing in input file.", this->section_label(), &reader);
-UTILITY_INPUT( this->required_tags_[SIMULATOR_TYPE], "Simulation manager \""+core::strngs::fstype()+"\" missing in input file.", this->section_label(), &reader);
-UTILITY_INPUT( this->required_tags_.all(), "Not all required tags were present.", this->section_label(), &reader);
+{
+  std::string missing{};
+  if( not this->required_tags_[SIMULATOR_PROD] )
+  {
+    missing += (missing.empty() ? "" : " " ) + core::strngs::fsnstp();
+  }
+  if( not this->required_tags_[SIMULATOR_THERM] )
+  {
+    missing += (missing.empty() ? "" : " " ) + core::strngs::fsnavr();
+  }
+  if( not this->required_tags_[SIMULATOR_CHECK] )
+  {
+    missing += (missing.empty() ? "" : " " ) + core::strngs::fsisav();
+  }
+  if( not this->required_tags_[SIMULATOR_INNER] )
+  {
+    missing += (missing.empty() ? "" : " " ) + core::strngs::inner_label();
+  }
+  if( not this->required_tags_[SIMULATOR_TYPE] )
+  {
+    missing += (missing.empty() ? "" : " " ) + core::strngs::fstype();
+  }
+  if( not missing.empty() )
+  {
+    reader.missing_parameters_error( "Simulation configuration", this->section_label(), missing );
+  }
+}
 // create sim manager
 for( auto const& defn : this->types_ )
 {
@@ -123,7 +144,10 @@ for( auto const& defn : this->types_ )
     // check parameters.
     for( auto const& entry : this->params_ )
     {
-      //UTILITY_INPUT( defn.has_definition( entry.first ), str( core::input_error_messages::invalid_parameter_subtype() % entry.first % this->section_label() % this->type_ ), this->section_label(), &reader );
+      if( not defn.has_definition( entry.first ) )
+      {
+        reader.invalid_parameter_subtype_error( this->section_label(), this->type_, entry.first );
+      }
     }
     boost::shared_ptr< simulation_manager > sman;
     sman = defn( this->params_ );
@@ -133,7 +157,7 @@ for( auto const& defn : this->types_ )
     return;
   }
 }
-UTILITY_ALWAYS( false, "Programming error, should never get here." );  
+UTILITY_ALWAYS( false, "Programming error, should never get here." );
 !!!2331184.cpp!!!	definition_key_list() : string
 std::vector< std::string > result;
 for( auto const& entry : this->types_ )

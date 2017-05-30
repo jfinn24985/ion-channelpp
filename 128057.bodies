@@ -39,6 +39,7 @@ return type_label_();
 !!!2113200.cpp!!!	make_updater(in params : string) : imc_update
 std::unique_ptr< lamperski_igcmc > smplr(new lamperski_igcmc);
 // Check parameters for usable values
+std::string unknown_param{};
 for (auto const& item : params)
 {
   if (item.first == "delta")
@@ -55,9 +56,11 @@ for (auto const& item : params)
   }
   else
   {
-    const std::string known_key;
-    //UTILITY_INPUT( item.first == known_key,
-    //              (core::input_error_messages::invalid_parameter() % item.first % ("Iterative Monte Carlo [lamperski]" + core::strngs::simulator_label())).str(), core::strngs::simulator_label(), nullptr);
+    unknown_param += ( unknown_param.empty() ? "" : " " ) + item.first;
   }
+}
+if( not unknown_param.empty() )
+{
+  throw core::input_error::invalid_parameter_subtype_error( core::strngs::simulator_label(), type_label_(), unknown_param, nullptr );
 }
 return boost::shared_ptr< imc_update >( smplr.release() );

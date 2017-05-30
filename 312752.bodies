@@ -91,10 +91,14 @@ while ( not anode.eof() )
   this->set_line( line );
   // If the name is not include (eg someone wrote include....) continue
   if( this->name() != incl_label ) continue;
-  UTILITY_INPUT( not this->value().empty(), "Keyword 'include' used without file name in file \""+anode.path()+"\" at line "+std::to_string( anode.line_number() ), core::strngs::fsincl(), this );
-
+  std::string filename_str{ this->dequote( this->value() ) };
+  boost::algorithm::trim( filename_str );
+  if( filename_str.empty() )
+  {
+    this->parameter_value_error( "Include file", "", core::input_error::non_empty_value_message() );
+  }
   // Complete filename based on the current node's path
-  boost::filesystem::path fn( this->value() );
+  boost::filesystem::path fn( filename_str );
   // reset name/value.
   this->clear();
 

@@ -17,7 +17,13 @@ if( reader.name().find( core::strngs::outputdir_label() ) == 0 )
   // --------------------
   // Output/data directory name "outputdir 'abc/def'"
   // (can not test for duplicate entry)
-  this->fstype_->set_output_dir_fmt( reader.get_text( "Output directory", this->section_label() ) );
+  std::string fmt{ reader.get_text( "Output directory", this->section_label() ) };
+  boost::algorithm::trim( fmt );
+  if( fmt.empty() )
+  {
+    reader.parameter_value_error( "Output directory", this->section_label(), core::input_error::non_empty_value_message() );
+  }
+  this->fstype_->set_output_dir_fmt( fmt );
 }
 else if( reader.name().find( core::strngs::inputpattern_label() ) == 0 )
 {
@@ -52,15 +58,27 @@ else if( reader.name().find( this->output_name_label() ) == 0 )
   // --------------------
   // outname {path} : output filename
   // (can not test for duplicate entry)
-  this->fstype_->set_output_name( reader.get_text( "Output filename", this->section_label() ) );
-}
+  std::string fmt{ reader.get_text( "Output filename", this->section_label() ) };
+  boost::algorithm::trim( fmt );
+  if( fmt.empty() )
+  {
+    reader.parameter_value_error( "Output filename", this->section_label(), core::input_error::non_empty_value_message() );
+  }
+  this->fstype_->set_output_name( fmt );
+ }
 else if( reader.name().find( this->checkpoint_name_label() ) == 0 )
 {
   // --------------------
   // checkname {path} : checkpoint filename
   // (can not test for duplicate entry)
-  this->fstype_->set_checkpoint_name( reader.get_text( "Checkpoint filename", this->section_label() ) );
-}
+  std::string fmt{ reader.get_text( "Checkpoint filename", this->section_label() ) };
+  boost::algorithm::trim( fmt );
+  if( fmt.empty() )
+  {
+    reader.parameter_value_error( "Checkpoint filename", this->section_label(), core::input_error::non_empty_value_message() );
+  }
+  this->fstype_->set_checkpoint_name( fmt );
+ }
 else if( reader.name().find( core::strngs::fstype() ) == 0 )
 {
   // --------------------
@@ -79,7 +97,10 @@ else
 }
 return true;
 !!!1884336.cpp!!!	do_read_end(in reader : input_base_reader) : void
-UTILITY_INPUT( not this->type_.empty(), "Storage manager \""+core::strngs::fstype()+"\" missing in input file.", this->section_label(), &reader);
+if( this->type_.empty() )
+{
+  reader.missing_parameters_error( "Simulation configuration", this->section_label(), core::strngs::fstype() );
+}
 // Call functor method to create sampler and add to simulator
 for( const auto& defn : this->types_ )
 {
@@ -88,7 +109,10 @@ for( const auto& defn : this->types_ )
     // check parameters.
     for( auto const& entry : this->parameter_set_ )
     {
-      //UTILITY_INPUT( defn.has_definition( entry.first ), str( core::input_error_messages::invalid_parameter_subtype() % entry.first % this->section_label() % this->type_ ), this->section_label(), &reader );
+      if( not defn.has_definition( entry.first ) )
+      {
+        reader.invalid_parameter_subtype_error( this->section_label(), this->type_, entry.first );
+      }
     }
     this->fstype_->set_parameters( this->parameter_set_ );
     return;

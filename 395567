@@ -1,6 +1,6 @@
 format 75
 "platform" // platform
-  revision 332
+  revision 333
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -5709,8 +5709,11 @@ ${docstring}${body}
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "fn" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
+  UTILITY_REQUIRE( not fn.empty(), \"Cannot set checkpoint name to an empty string.\" );
   this->checkpoint_name_ = ${p0};
 }
 "
@@ -5719,16 +5722,20 @@ ${docstring}${body}
 	
 	
 	comment " Set the name of the checkpoint file.
-"
+
+ \\require not fn.empty"
       end
 
       operation 1758896 "set_filename_base"
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "fmt" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
- this->filename_base_ = ${p0};
+  UTILITY_REQUIRE( not ${p0}.empty(), \"Cannot set checkpoint name to an empty string.\" );
+  this->filename_base_ = ${p0};
 }
 "
 	
@@ -5765,8 +5772,11 @@ ${docstring}${body}
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "fmt" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
+  UTILITY_REQUIRE( not ${p0}.empty(), \"Cannot set checkpoint name to an empty string.\" );
   this->output_dir_fmt_ = ${p0};
 }
 "
@@ -5785,9 +5795,11 @@ be in Boost Format, Posix printf or printf style."
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "fmt" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
 {
-  this->output_name_ = ${p0};
+  ${body}
 }
 "
 	
@@ -5797,7 +5809,8 @@ be in Boost Format, Posix printf or printf style."
 	comment " Set the name of the output file. If an extension is
  given it should be used to select the file type and
  use an appropriate base_sink subclass.
-"
+
+ \\require has_valid_extension( fmt )"
       end
 
       operation 1908016 "set_parameters"
@@ -5847,6 +5860,27 @@ ${docstring}${body}
 	idl ""
       end
 
+      operation 2391472 "has_valid_extension"
+	class_operation public explicit_return_type "bool"
+	nparams 1
+	  param in name "fmt" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	
+	
+	comment " Test the name of the output file to see if it has a 
+ known extension. (Having no extension is interpreted
+ as using the default extension and is therefore also
+ true)"
+      end
+
       operation 1848496 "open_sink_by_extension"
 	class_operation public return_type class_ref 313520 // base_sink
 	nparams 2
@@ -5865,6 +5899,9 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
+	comment " Use file extension (or default extension) to open a sink object.
+
+ \\pre has_valid_extension( path.native )"
       end
 
       operation 1841200 "checkpoint_path"
@@ -5908,10 +5945,37 @@ ${docstring}${body}
  from the output_dir_fmt template."
       end
 
-      operation 1759280 "find_input_filename"
-	abstract const cpp_virtual public explicit_return_type "std::string"
+      operation 2209840 "ensure_output_dir"
+	protected return_type class_ref 252079 // path
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Ensure the output directory exists, creating if necessary.
+ Return the path to the directory. Throws error if output
+ directory path exists but is not a directory.
+"
+      end
+
+      operation 2209968 "find_input_filename"
+	const public explicit_return_type "std::string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
 "
 	
 	
@@ -5922,14 +5986,17 @@ ${docstring}${body}
 	comment " Generate a series of possible filenames and return
  the first filename that is found. Throw an error if no
  filenames are found. The template string is processed
- using 'printf' like function.
+ using 'printf' or boost::format like function.
 
- For a filename_base of \"input.%03d.inp\" and run number
+ For a filename_base of \"input.%1$03d.inp\" and run number
  of 11 the filenames checked for will be:
 
   * input.011.inp
 
   * input.inp
+
+ If no \"%\" is present it assumes the string is directly
+ the filename.
 
  \\post exists(return val)
 "
@@ -6405,63 +6472,6 @@ ${docstring}${body}
 	
 	comment " Computer the output directory for the current simulator object
  from the output_dir_fmt template."
-      end
-
-      operation 1848368 "ensure_output_dir"
-	private return_type class_ref 252079 // path
-	nparams 0
-	cpp_visibility private cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Ensure the output directory exists, creating if necessary.
- Return the path to the directory. Throws error if output
- directory path exists but is not a directory.
-"
-      end
-
-      operation 1840816 "find_input_filename"
-	const public explicit_return_type "std::string"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Generate a series of possible filenames and return
- the first filename that is found. Throw an error if no
- filenames are found. The template string is processed
- using 'printf' or boost::format like function.
-
- For a filename_base of \"input.%1$03d.inp\" and run number
- of 11 the filenames checked for will be:
-
-  * input.011.inp
-
-  * input.inp
-
- If no \"%\" is present it assumes the string is directly
- the filename.
-
- \\post exists(return val)
-"
       end
 
       operation 1877296 "main"
@@ -7025,63 +7035,6 @@ ${docstring}${body}
 	
 	comment " Computer the output directory for the current simulator object
  from the output_dir_fmt template."
-      end
-
-      operation 2209840 "ensure_output_dir"
-	private return_type class_ref 252079 // path
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Ensure the output directory exists, creating if necessary.
- Return the path to the directory. Throws error if output
- directory path exists but is not a directory.
-"
-      end
-
-      operation 2209968 "find_input_filename"
-	const public explicit_return_type "std::string"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
-{
-  ${body}
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Generate a series of possible filenames and return
- the first filename that is found. Throw an error if no
- filenames are found. The template string is processed
- using 'printf' or boost::format like function.
-
- For a filename_base of \"input.%1$03d.inp\" and run number
- of 11 the filenames checked for will be:
-
-  * input.011.inp
-
-  * input.inp
-
- If no \"%\" is present it assumes the string is directly
- the filename.
-
- \\post exists(return val)
-"
       end
 
       operation 2250544 "main"
@@ -10596,6 +10549,7 @@ BOOST_CLASS_EXPORT_KEY( platform::malasics_igcmc );
 
 ${includes}
 // Manuals
+#include \"core/input_error.hpp\"
 #include \"geometry/geometry_manager.hpp\"
 #include \"observable/report_manager.hpp\"
 #include \"particle/particle_manager.hpp\"
@@ -11190,6 +11144,7 @@ ${namespace_end}
 
 ${includes}
 // manual includes
+#include \"core/input_error.hpp\"
 #include \"core/strngs.hpp\"
 #include \"observable/archive_file.hpp\"
 #include \"observable/base_sink.hpp\"
@@ -11200,6 +11155,7 @@ ${includes}
 // -
 #include <boost/program_options.hpp>
 #include <boost/random/random_device.hpp>
+#include <fstream>
 // -
 ${namespace_start}
 ${members}
@@ -11248,11 +11204,12 @@ ${namespace_end}
 
 ${includes}
 // manual includes
-//#include \"core/XXinput_erro.hpp\"
+#include \"core/input_error.hpp\"
 #include \"core/strngs.hpp\"
 #include \"utility/utility.hpp\"
 // -
 #include <boost/iostreams/filtering_stream.hpp>
+#include <boost/algorithm/string.hpp>
 // - 
 ${namespace_start}
 ${members}

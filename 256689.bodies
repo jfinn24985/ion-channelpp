@@ -25,11 +25,13 @@ print >>os, " - Number of repeats : ", self.super_loop_size_
 print >>os, " - Current loop*     : ", self.super_loop_count_ + 1 
 print >>os, " (*Will be one except after restart.)"
 !!!2098864.cpp!!!	make_simulation_manager(in params : string) : simulation_manager
-UTILITY_INPUT( not params.empty(), "Iterative Monte Carlo simulation requires parameters.", core::strngs::simulator_label(), nullptr );
-UTILITY_INPUT( params.find( "update" ) != params.end(), "Iterative Monte Carlo simulation requires parameter \"update\".", core::strngs::simulator_label(), nullptr );
-std::unique_ptr< imc_simulation > result{ new imc_simulation };
 const std::string number_of_iterations_label{ "niter" };
 const std::string updater_label{ "update" };
+if( params.find( updater_label ) == params.end() )
+{
+  throw core::input_error::missing_parameters_error( "Simulation configuration", core::strngs::simulator_label(), updater_label, nullptr );
+}
+std::unique_ptr< imc_simulation > result{ new imc_simulation };
 // make copy of params so we can remove used parameters
 std::map< std::string, std::string > subparams( params );
 
@@ -38,28 +40,28 @@ if( subparams.find( number_of_iterations_label ) != subparams.end() )
   // -------------------
   std::size_t niter;
   core::input_base_reader::ordinal_input( number_of_iterations_label, subparams.at( number_of_iterations_label ), "Iterative Monte Carlo", core::strngs::simulator_label(), niter, nullptr );
-  UTILITY_INPUT( niter > 1, "Iterative Monte Carlo parameter \"niter\" requires a value greater than 1.", core::strngs::simulator_label(), nullptr );
+  if( niter <= 1 )
+  {
+    core::input_error::parameter_value_error( "Iterative Monte Carlo", core::strngs::simulator_label(),  number_of_iterations_label, subparams.at( number_of_iterations_label ), nullptr, "Iterative procedure requires more than one iteration." );
+  }
   result->set_loop_size( niter );
   subparams.erase( subparams.find( number_of_iterations_label ) );
 }
-// if( subparams.find( "update" ) != subparams.end() )
+// subparams.find( "update" ) tested above
 {
   // -------------------
-  const std::string label{ subparams.at( updater_label ) };
-  //UTILITY_INPUT( not label.empty(), ( core::input_error_messages::missing_value() % updater_label % ("Iterative Monte Carlo " + core::strngs::simulator_label()) ).str(), core::strngs::simulator_label(), nullptr );
+  const std::vector< std::string > keys{ malasics_igcmc::type_label_(), lamperski_igcmc::type_label_() };
+  std::size_t idx;
+  core::input_base_reader::key_input( updater_label, subparams.at( updater_label ), "Iterative Monte Carlo", core::strngs::simulator_label(), idx, keys, nullptr );
   subparams.erase( subparams.find( updater_label ) );
-  if( 0 == malasics_igcmc::type_label_().find( label ) )
+  switch( idx )
   {
+  case 0:
     result->updater_ = malasics_igcmc::make_updater( subparams );
-  }
-  else if ( 0 == lamperski_igcmc::type_label_().find( label ) )
-  {
+    break;
+  case 1:
     result->updater_ = lamperski_igcmc::make_updater( subparams );
-  }
-  else
-  {
-    const bool known_label{ false };
-    //UTILITY_INPUT( known_label, ( core::input_error_messages::bad_value() % updater_label % label % core::strngs::simulator_label() ).str(), core::strngs::simulator_label(), nullptr );
+    break;
   }
 }
 return boost::shared_ptr< simulation_manager >( result.release() );

@@ -98,6 +98,14 @@ sec.add_entry( core::strngs::inputpattern_label(), this->filename_base() );
 sec.add_entry( platform::storage_meta::output_name_label(), this->output_name() );
 sec.add_entry( platform::storage_meta::checkpoint_name_label(), this->checkpoint_name() );
 this->do_write_document( wr, ix );
+!!!1758768.cpp!!!	set_output_name(in fmt : string) : void
+UTILITY_REQUIRE( not fmt.empty(), "Cannot set output file to an empty string." );
+UTILITY_REQUIRE( has_valid_extension( fmt ), "Output file extension is not one of (zip,dbm,mem)" );
+this->output_name_ = fmt;
+!!!2391472.cpp!!!	has_valid_extension(in fmt : string) : bool
+boost::filesystem::path fpath( fmt );
+std::string ext = fpath.extension().native();
+return ( ext.empty() or ext.find( "zip" ) < ext.size() or ext.find( "dbm" ) < ext.size() or ext.find( "mem" ) < ext.size() );
 !!!1848496.cpp!!!	open_sink_by_extension(in fpath : path, in def_ext : string) : base_sink
 std::string ext = fpath.extension().native();
 boost::shared_ptr< observable::base_sink > result; 
@@ -120,23 +128,112 @@ else if( ext.find( "mem" ) < ext.size() )
   // in-memory sink
   result.reset( new observable::memory_sink( fpath.native() ) );
 }
-else
-{
-  const bool known_extension( false );
-  UTILITY_INPUT( known_extension, "Output fileextension["+ext+"] is not one of (zip|dbm|mem)", core::strngs::simulator_label(), nullptr );
-}
 return result;
 !!!1841200.cpp!!!	checkpoint_path() : std::string
-UTILITY_INPUT( not this->checkpoint_name().empty()
-               , "No name for the checkpoint file."
-               , core::strngs::simulator_label(), nullptr );
 boost::filesystem::path cpath( this->compute_output_dir() );
 cpath /= this->checkpoint_name();
 return cpath.native();
+!!!2209840.cpp!!!	ensure_output_dir() : path
+const boost::filesystem::path dpath( this->compute_output_dir() );
+if( not boost::filesystem::exists( dpath ) )
+{
+  boost::filesystem::create_directories( dpath );
+}
+else
+{
+  if( not boost::filesystem::is_directory( dpath ) )
+  {
+    throw core::input_error::input_logic_error( "The filesystem object at target output directory path \""+dpath.native()+"\" is not a directory", core::strngs::simulator_label(), "Delete filesystem object or set/change parameter \"" + core::strngs::outputdir_label() + "\"." );
+  }
+}
+return dpath;
+!!!2209968.cpp!!!	find_input_filename() : std::string
+// Filenames to generate
+//   input.%03d.inp % run_index
+//   input.inp
+std::string result;
+std::string errmsg( "Unable to find input file(s) named:" );
+
+auto test_fn = [](std::string fn)->bool{
+ return boost::filesystem::exists( fn )
+   and boost::filesystem::is_regular_file( fn )
+   and std::ifstream( fn );
+};
+  
+if( not this->filename_base().empty() )
+{
+  // Check for '%' to see if filename base is a format string
+  if( std::string::npos != this->filename_base().find( '%' ) )
+  {
+    // TRY ONE : filename base is format string
+    // -------
+    // Assume filename_base is a format string.
+    boost::format res( this->filename_base() );
+    // Ignore error of too many arguments.
+    res.exceptions( boost::io::all_error_bits ^ boost::io::too_many_args_bit );
+    res % this->run_number();
+    result = res.str();
+    // Check if file exists
+    if( test_fn( result ) )
+    {
+      return result;
+    }
+    else
+    {
+      // Filename not found
+      errmsg.append( " " );
+      errmsg.append( result );
+    }
+    // TRY TWO : remove format code from filename base
+    // -------
+    result.assign( this->filename_base() );
+    // Remove everything from the '%' to the next '.'
+    std::size_t pos1 = result.find( '%' ); // We know this is not npos!
+    std::size_t pos2 = result.find( '.', pos1 );
+    if( std::string::npos != pos2 )
+    {
+      result.erase( pos1, pos2 - pos1 + 1 );
+    }
+    else
+    {
+      result.erase( pos1 );
+    }
+    // Check if file exists
+    if( test_fn( result ) )
+    {
+      return result;
+    }
+    else
+    {
+      // Filename not found
+      errmsg.append( " " );
+      errmsg.append( result );
+    }
+  }
+  else
+  {
+    // TRY THREE : filename base is simple string
+    // ---------
+    result = this->filename_base();
+    // Check if file exists
+    if( test_fn( result ) )
+    {
+      return result;
+    }
+    else
+    {
+      // Filename not found
+      errmsg.append( " " );
+      errmsg.append( result );
+    }
+  }
+}
+// If we got here no files where found.
+throw core::input_error::input_logic_error( errmsg, core::strngs::simulator_label(), "Check input file name or provide --inputpattern commandline option." );
+result.clear();
+return result; // To stop compiler complaints
+
 !!!1841840.cpp!!!	output_path() : std::string
-UTILITY_INPUT( not this->output_name().empty()
-               , "No name for the output file."
-               , core::strngs::simulator_label(), nullptr );
 boost::filesystem::path cpath( this->compute_output_dir() );
 cpath /= this->output_name();
 return cpath.native();
