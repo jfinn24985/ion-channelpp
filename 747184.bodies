@@ -41,7 +41,6 @@ return res.str();
 !!!2250544.cpp!!!	main(in argc : int, in argv : char, inout sim : simulation) : bool
 // NOTE: The input decoders are not required to check that
 // the final system is valid.
-std::stringstream log;
 namespace mpi = boost::mpi;
 // HACK TO TEST FOR OPENMPI SERVER
 if( std::getenv( "OMPI_COMM_WORLD_SIZE" ) )
@@ -54,57 +53,57 @@ if( std::getenv( "OMPI_COMM_WORLD_SIZE" ) )
 }
 try
 {
-  switch( this->process_command_line( argc, argv, log ) )
+  switch( this->process_command_line( argc, argv ) )
   {
   case 0:
     // Bad command line options.
-    this->system_log() << log.rdbuf();
+    this->system_log() << this->get_log().rdbuf();
     this->world_->abort( 1 );
     return false;
   case 1:
   {
     // Help message requested.
     const std::string nul_string{};
-    sim.generate_help( nul_string, nul_string, log );
-    this->system_log() << log.rdbuf();
+    this->system_log() << this->get_log().rdbuf();
+    sim.generate_help( nul_string, nul_string, this->system_log() );
     this->world_->abort( 0 );
     return true;
   }
   case 2:
-    // Read input file.
   {
+    // Read input file.
     {
       auto reader = this->open_input();
-      log << core::strngs::horizontal_bar() << "\n"
+      this->get_log() << core::strngs::horizontal_bar() << "\n"
           << "Reading input file \""
           << reader->current_filename() << "\"\n";
       sim.read_input( *reader );
-      log << core::strngs::horizontal_bar() << "\n";
     }
     // Now our log is well defined, so write temporary log out.
-    this->get_log() << log.rdbuf();
+    this->cutover_log();
+    this->get_log() << core::strngs::horizontal_bar() << "\n";
     sim.set_random_seed( this->get_seed_value() );
     sim.generate_simulation();
 
     break;
   }
   case 3:
-    // Restart from checkpoint
   {
-    if( not sim.restart( log ) )
+    // Restart from checkpoint
+    if( not sim.restart() )
     {
-      this->system_log() << log.rdbuf() << "\n";
+      this->system_log() << this->get_log().rdbuf() << "\n";
       this->world_->abort( 1 );
       return false;
     }
-    log << core::strngs::horizontal_bar() << "\n";
     // Now our log is well defined, so write temporary log out.
-    this->get_log() << log.rdbuf();
+    this->cutover_log();
+    this->get_log() << core::strngs::horizontal_bar() << "\n";
     break;
   }
   default:
-    // Logic error
   {
+    // Logic error
     UTILITY_CHECK( false, "Should never get here!" );
     break;
   }
@@ -115,16 +114,23 @@ try
 }
 catch(const core::input_error &err)
 {
-  log << err.what() << "\n";
-  sim.generate_help( err.section(), err.parameter(), log );
-  this->system_log() << log.rdbuf() << "\n";
+  if( not this->is_cutover() )
+  {
+    this->system_log() << this->get_log().rdbuf() << "\n";
+  }
+  this->system_log() << err.what() << "\n";
+  sim.generate_help( err.section(), err.parameter(), this->system_log() );
   this->world_->abort( 1 );
   return false;
 }
 catch(const std::runtime_error &err)
 {
   // Crashing...
-  this->system_log() << log.rdbuf() << "\n" << err.what() << "\n";
+  if( not this->is_cutover() )
+  {
+    this->system_log() << this->get_log().rdbuf() << "\n";
+  }
+  this->system_log() << err.what() << "\n";
   this->world_->abort( 1 );
   return false;
 }

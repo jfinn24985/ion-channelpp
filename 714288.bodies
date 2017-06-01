@@ -103,12 +103,17 @@ std::stringstream store;
 
   // test open/get/set log methods
   {
+    BOOST_CHECK( not var2->is_cutover() );
     var2->get_log() << "TEST1";
-    BOOST_CHECK_EQUAL( "TEST1", var2->thelog->str() );
+    std::stringstream ss;
+    ss << var2->get_log().rdbuf();
+    BOOST_CHECK_EQUAL( "TEST1", ss.str() );
   }
   {
     boost::shared_ptr< std::stringstream > ss( new std::stringstream );
+    BOOST_CHECK( not var2->is_cutover() );
     var2->set_log( ss );
+    BOOST_CHECK( var2->is_cutover() );
     var2->get_log() << "TEST2";
     BOOST_CHECK_EQUAL( "TEST2", ss->str() );
   }
@@ -992,7 +997,9 @@ BOOST_CHECK_EQUAL( fstype->checkpoint_name(), test_cname );
 BOOST_CHECK_EQUAL( fstype->filename_base(), fbase );
 BOOST_CHECK_EQUAL( fstype->output_dir_fmt(), test_dbase );
 BOOST_CHECK_EQUAL( fstype->output_name(), test_oname );
-const std::string slog( fstype->thelog->str() );
+std::stringstream ss;
+ss << fstype->get_log().rdbuf();
+const std::string slog( ss.str() );
 BOOST_CHECK( slog.find( fbase ) < slog.size() );
 BOOST_CHECK( slog.find( test_fbase ) < slog.size() );
 //std::cout << "\n" << slog << "\n";

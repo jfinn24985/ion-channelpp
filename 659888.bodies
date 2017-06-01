@@ -6,6 +6,7 @@ ar & output_dir_fmt_;
 ar & output_name_;
 ar & run_number_;
 ar & seed_value_;
+ar & cutover_log_;
 !!!1940400.cpp!!!	description(inout os : ostream) : void
 os << core::strngs::horizontal_bar() << "\n";
 os << " Simulation Runtime Settings\n";
@@ -98,6 +99,35 @@ sec.add_entry( core::strngs::inputpattern_label(), this->filename_base() );
 sec.add_entry( platform::storage_meta::output_name_label(), this->output_name() );
 sec.add_entry( platform::storage_meta::checkpoint_name_label(), this->checkpoint_name() );
 this->do_write_document( wr, ix );
+!!!2411440.cpp!!!	cutover_log() : void
+if( not this->cutover_log_ )
+{
+  boost::shared_ptr< std::ostream > newlog{ this->open_log() };
+  if( newlog )
+  {
+    auto buf = this->log_->rdbuf();
+    const std::streamsize avail{ buf->in_avail() };
+    for( std::streamsize ii = 0; ii < avail; ++ii )
+    {
+      (*newlog) << static_cast< char >( buf->sbumpc() );
+    }
+    std::swap( this->log_, newlog );
+    this->cutover_log_ = true;
+  }
+}
+!!!1861680.cpp!!!	set_log(in os_ptr : ostream) : ostream
+if( not this->cutover_log_ )
+{
+  auto buf = this->log_->rdbuf();
+  const std::streamsize avail{ buf->in_avail() };
+  for( std::streamsize ii = 0; ii < avail; ++ii )
+  {
+    (*os_ptr) << static_cast< char >( buf->sbumpc() );
+  }
+  this->cutover_log_ = true;
+}
+std::swap( os_ptr, this->log_ );
+return os_ptr;
 !!!1758768.cpp!!!	set_output_name(in fmt : string) : void
 UTILITY_REQUIRE( not fmt.empty(), "Cannot set output file to an empty string." );
 UTILITY_REQUIRE( has_valid_extension( fmt ), "Output file extension is not one of (zip,dbm,mem)" );
@@ -246,7 +276,7 @@ platform::serial_storage::add_definition( *fsmeta );
 
 
 delegate.add_input_delegate( fsmeta );
-!!!2257072.cpp!!!	process_command_line(in argc : int, in argv : char, inout log : ostream) : int
+!!!2257072.cpp!!!	process_command_line(in argc : int, in argv : char) : int
 if( argc > 1 )
 {
   namespace po = boost::program_options;
@@ -266,7 +296,7 @@ if( argc > 1 )
   }
   catch( std::exception &err )
   {
-    log << "Error : " << err.what() << "\n"
+    this->get_log() << "Error : " << err.what() << "\n"
                        << cmdln_opts << "\n";
     return 0;
   }
@@ -276,7 +306,7 @@ if( argc > 1 )
   // would have been raised.
   if( vm.count( "help" ) )
   {
-    log << cmdln_opts << "\n";
+    this->get_log() << cmdln_opts << "\n";
     return 1;
   }
 
@@ -286,12 +316,12 @@ if( argc > 1 )
     // ----------------------------------
     if( vm.count( "seed" ) )
     {
-      log << core::strngs::horizontal_bar() << "\n"
+      this->get_log() << core::strngs::horizontal_bar() << "\n"
           << "Random seed value on command line is ignored with restart.\n";
     }
     if( vm.count( core::strngs::inputpattern_label() ) )
     {
-      log << core::strngs::horizontal_bar() << "\n"
+      this->get_log() << core::strngs::horizontal_bar() << "\n"
           << "Input filename on command line is ignored with restart.\n";
     }
     if( vm.count( core::strngs::outputdir_label() ) )
@@ -323,7 +353,7 @@ if( argc > 1 )
 
     // set random generator seed
     this->set_seed_value( vm.count( "seed" ) ? this->compute_seed( vm["seed"].as<unsigned int>() ) : this->random_seed_value() );
-    log << core::strngs::horizontal_bar()
+    this->get_log() << core::strngs::horizontal_bar()
         << "\nRandom seed value : " << this->get_seed_value() << ".\n";
     return 2;
   }
@@ -335,7 +365,7 @@ else
 
   // set random generator seed
   this->set_seed_value( this->random_seed_value() );
-  log << core::strngs::horizontal_bar()
+  this->get_log() << core::strngs::horizontal_bar()
       << "\nRandom seed value : " << this->get_seed_value() << ".\n";
   return 2;
 }

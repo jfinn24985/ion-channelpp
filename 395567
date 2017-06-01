@@ -1,6 +1,6 @@
 format 75
 "platform" // platform
-  revision 336
+  revision 337
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -48,7 +48,7 @@ format 75
     //activity diagram settings
     package_name_in_tab default show_context default show_opaque_action_definition default auto_label_position default write_flow_label_horizontally default draw_all_relations default shadow default
     show_infonote default drawing_language default show_stereotype_properties default
-    associated_deployment_view deploymentview_ref 334895 // application class deployment
+    associated_deployment_view deploymentview_ref 334895 // platform class deployment
     classdiagram 623535 "Simulator"
       draw_all_relations default hide_attributes yes hide_operations yes hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
       size A4
@@ -4287,11 +4287,10 @@ ${docstring}${body}
 
       operation 2257456 "restart"
 	public explicit_return_type "bool"
-	nparams 1
-	  param inout name "log" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -5221,6 +5220,19 @@ Defaults to 1."
 	comment " Not serialized"
       end
 
+      attribute 912944 "cutover_log_"
+	private explicit_type "bool"
+	init_value "false"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Are we using the cache log or have cut over to output log?"
+      end
+
       extra_member 695856 "LIFETIME"
 	
 	cpp "" ""
@@ -5242,7 +5254,8 @@ Defaults to 1."
 , output_name_( ${class}::default_output_name() )
 , run_number_( ${class}::default_run_number() )
 , seed_value_()
-, log_()
+, log_( new std::stringstream )
+, cutover_log_( false )
 {}"
 	
 	
@@ -5571,6 +5584,22 @@ ${docstring}${body}
  Therefore this may throw any exception as open_log."
       end
 
+      operation 2411568 "is_cutover"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->cutover_log_;
+}"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Have we switched from in-memory log to output log?"
+      end
+
       operation 2230704 "main"
 	abstract cpp_virtual public explicit_return_type "bool"
 	nparams 3
@@ -5726,6 +5755,25 @@ ${docstring}${body}
 	idl ""
       end
 
+      operation 2411440 "cutover_log"
+	public explicit_return_type "void"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Signal that we can switch from in-memory log to output log."
+      end
+
       operation 1840048 "set_checkpoint_name"
 	public explicit_return_type "void"
 	nparams 1
@@ -5776,6 +5824,7 @@ ${docstring}${body}
 "
 	cpp_def "${comment}${inline}boost::shared_ptr< ${type} > ${class}::${name}${(}boost::shared_ptr< ${t0} > ${p0}${)}${const}${volatile}${throw}
 {
+  ${body}
   std::swap( os_ptr, this->log_ );
   return os_ptr;
 }
@@ -5786,7 +5835,9 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Function to set log to an externally defined output stream."
+	comment " Function to set log to an externally defined output stream.
+
+ \\return The previous stream."
       end
 
       operation 1840176 "set_output_dir_fmt"
@@ -6129,13 +6180,12 @@ ${docstring}${body}
 
       operation 2257072 "process_command_line"
 	protected explicit_return_type "int"
-	nparams 3
+	nparams 2
 	  param in name "argc" explicit_type "int"
 	  param in name "argv" explicit_type "char"
-	  param inout name "log" explicit_type "ostream"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ** ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ** ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ** ${p1}, ${t2} & ${p2}${)}${const}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ** ${p1}${)}${const}${throw}
 {
   ${body}
 }
@@ -7254,7 +7304,7 @@ ${docstring}${body}
     //activity diagram settings
     package_name_in_tab default show_context default show_opaque_action_definition default auto_label_position default write_flow_label_horizontally default draw_all_relations default shadow default
     show_infonote default drawing_language default show_stereotype_properties default
-    associated_deployment_view deploymentview_ref 334895 // application class deployment
+    associated_deployment_view deploymentview_ref 334895 // platform class deployment
     comment "The simulation system is set from input information like
 the following:
 
@@ -10643,7 +10693,7 @@ ${definition}"
     end
   end
 
-  deploymentview 334895 "application class deployment"
+  deploymentview 334895 "platform class deployment"
     //deployment diagram settings
     package_name_in_tab default show_context default write_horizontally default auto_label_position default draw_all_relations default shadow default
     draw_component_as_icon default show_component_req_prov default show_component_rea default show_stereotype_properties default
