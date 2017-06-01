@@ -185,6 +185,7 @@ core::help_entry entry3( core::strngs::fsname(), "four letters", "", "required",
     // test of printing a section
     std::stringstream os;
     tmp.write( section1, os );
+    //std::cout << "--\n" << os.rdbuf() << "--\n";
     const std::string output( os.str() );
     boost::tokenizer<> tok( output );
     boost::tokenizer<> toksearch1( sectdesc1 );
@@ -201,6 +202,7 @@ core::help_entry entry3( core::strngs::fsname(), "four letters", "", "required",
     // test printing everything
     std::stringstream os;
     tmp.write( os );
+    //std::cout << "--\n" << os.rdbuf() << "--\n";
     const std::string output( os.str() );
     boost::tokenizer<> tok( output );
     boost::tokenizer<> toksearch1( sectdesc1 );
@@ -213,6 +215,32 @@ core::help_entry entry3( core::strngs::fsname(), "four letters", "", "required",
     boost::tokenizer<> toksearch4( entry3.description() );
     BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch4.begin(), toksearch4.end() ) );
   }
+  {
+    // test printing parameter
+    std::stringstream os;
+    tmp.write( section1, core::strngs::fsname(), os );
+    //std::cout << "--\n" << os.rdbuf() << "--\n";
+    const std::string output( os.str() );
+    boost::tokenizer<> tok( output );
+    boost::tokenizer<> toksearch1( sectdesc1 );
+    BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch1.begin(), toksearch1.end() ) );
+    boost::tokenizer<> toksearch3( entry1.description() );
+    BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch3.begin(), toksearch3.end() ) );
+  }
+  {
+    // test printing parameter
+    std::stringstream os;
+    tmp.write( "", core::strngs::fsname(), os );
+    //std::cout << "--\n" << os.rdbuf() << "--\n";
+    const std::string output( os.str() );
+    boost::tokenizer<> tok( output );
+    // Check description of section 2 is present
+    boost::tokenizer<> toksearch1( sectdesc2 );
+    BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch1.begin(), toksearch1.end() ) );
+    boost::tokenizer<> toksearch4( entry3.description() );
+    BOOST_CHECK( tok.end() != std::search( tok.begin(), tok.end(), toksearch4.begin(), toksearch4.end() ) );
+  }
+
 }
 
 
@@ -2377,8 +2405,7 @@ const std::string desc2 { "desc2" };
   idoc.publish_help( helper, seclabel );
 
   std::stringstream store;
-  std::string nul_string;
-  helper.write( nul_string, store );
+  helper.write( store );
 
   const std::string msg( store.str() );
   //std::cout << msg << "\n";
@@ -3130,6 +3157,15 @@ std::stringstream store;
   oa << hsubtype;
 }
 {
+  const std::string title2( "title2" );
+  const std::string type_desc2( "float number" );
+  const std::string range2( "" );
+  const std::string defval2( "10.0" );
+  const std::string desc2( "blam blam blam" );
+  const std::string output1( "  title\n    blah blah blah\n    Option:\n    title\n      [integral number: range(> 0), \n      default{10}]\n      blah blah blah\n" );
+  const std::string output2( "  title\n    blah blah blah\n    Option:\n    title2\n      [float number: default{10.0}]\n      blam blam blam\n" );
+  const std::string output3( "  title\n    blah blah blah\n    Options:\n    title\n      [integral number: range(> 0), \n      default{10}]\n      blah blah blah\n    title2\n      [float number: default{10.0}]\n      blam blam blam\n" );
+
   core::help_subtype hsubtype;
   BOOST_CHECK_EQUAL( hsubtype.description(), nul_string );
   BOOST_CHECK_EQUAL( hsubtype.title(), nul_string );
@@ -3148,6 +3184,45 @@ std::stringstream store;
     std::stringstream os;
     hsubtype.write( filt, os );
     BOOST_CHECK_EQUAL( os.str(), output );
+  }
+  hsubtype.add_entry( { title2, type_desc2, range2, defval2, desc2 } );
+  BOOST_CHECK( hsubtype.has_entry( title2 ) );
+  {
+    core::fixed_width_output_filter filt( 2, 1, 40 );
+    std::stringstream os;
+    hsubtype.write( filt, title, os );
+    BOOST_CHECK_EQUAL( os.str(), output1 );
+  }
+  {
+    core::fixed_width_output_filter filt( 2, 1, 40 );
+    std::stringstream os;
+    hsubtype.write( filt, title2, os );
+    //std::cout << os.rdbuf() << "\n";
+    BOOST_CHECK_EQUAL( os.str(), output2 );
+  }
+  {
+    core::fixed_width_output_filter filt( 2, 1, 40 );
+    std::stringstream os;
+    hsubtype.write( filt, os );
+    //std::cout << os.rdbuf() << "\n";
+    BOOST_CHECK_EQUAL( os.str(), output3 );
+  }
+  {
+    core::fixed_width_output_filter filt( 2, 1, 40 );
+    std::stringstream os;
+    try
+    {
+      hsubtype.write( filt, "", os );
+      BOOST_ERROR( "hsubtype.write( filt, \"\", os ) did not throw expected error." );
+      //std::cout << os.rdbuf() << "\n";
+      BOOST_CHECK_EQUAL( os.str(), output3 );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "REASON: \"Input parameter name should not be empty when using this 'write' method.\"" ) < msg.size() );
+    }
   }
 }
 !!!1722288.cpp!!!	help_section_lifetime_test() : void
@@ -3310,6 +3385,15 @@ std::stringstream store;
     core::fixed_width_output_filter filt( 2, 1, 40 );
     std::stringstream os;
     hsection.write( filt, os );
+    //std::cout << "--\n" << os.str() << "--\n";
+    BOOST_CHECK_EQUAL( os.str(), output );
+  }
+  {
+    const std::string output( "  title\n    blah blah blah\n    type:\n    title1\n      blah blah blah\n      Option:\n      title2\n        [integral number: range(> 0), \n        default{10}]\n        blah blah blah\n" );
+
+    core::fixed_width_output_filter filt( 2, 1, 40 );
+    std::stringstream os;
+    hsection.write( filt, title2, os );
     //std::cout << "--\n" << os.str() << "--\n";
     BOOST_CHECK_EQUAL( os.str(), output );
   }

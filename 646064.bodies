@@ -31,3 +31,31 @@ namespace io = boost::iostreams;
   }
 }
 
+!!!2404912.cpp!!!	write(inout filt : fixed_width_output_filter, in param : string, inout dest : ostream) : bool
+UTILITY_REQUIRE( not param.empty(), "Input parameter name should not be empty when using this 'write' method." );
+if( this->children_.count( param ) != 0 )
+{
+  namespace io = boost::iostreams;
+  {
+    io::filtering_ostream os;
+    os.push( filt );
+    os.push( dest );
+    os << this->title_ << "\n";
+  }
+  {
+    core::indent_guard grd( filt );
+    {
+      io::filtering_ostream out;
+      out.push( filt );
+      out.push( dest );
+      if( not this->description_.empty() )
+      {
+        out << this->description_ << "\n";
+      }
+      out << "Option:\n";
+    }
+    this->children_.at( param ).write( filt, dest );
+  }
+  return true;
+}
+return false;

@@ -49,23 +49,17 @@ std::string result;
 }
 throw std::runtime_error( result );
 !!!1751344.cpp!!!	write(in section : string, inout errlog : ostream) : void
+UTILITY_REQUIRE( not section.empty(), "Can not use this 'write' method with an empty section name" );
 // Print out any help text
 {
   fixed_width_output_filter filt( 2, 1, 70 );
-  if( not section.empty() and this->has_section( section ) )
+  if( this->has_section( section ) )
   {
     this->get_section( section ).write( filt, errlog );
   }
   else
   {
-    for( auto const& sect : this->sections_ )
-    {
-      sect.second.write( filt, errlog );
-    }
-    if( not section.empty() )
-    {
-      errlog << "Error related to undocumented input section '" << section << "'\n";
-    }
+    errlog << "Input section '" << section << "' is undocumented.\n";
   }
   errlog << "\n";
 }
@@ -78,4 +72,34 @@ throw std::runtime_error( result );
     sect.second.write( filt, errlog );
   }
   errlog << "\n";
+}
+!!!2404656.cpp!!!	write(in section : string, in param : string, inout errlog : ostream) : void
+UTILITY_REQUIRE( not param.empty(), "Can not call this method with an empty parameter name." );
+// Print out any help text
+{
+  fixed_width_output_filter filt( 2, 1, 70 );
+  if( not section.empty() )
+  {
+    if( this->has_section( section ) )
+    {
+      if( this->get_section( section ).write( filt, param, errlog ) )
+      {
+         errlog << "\n";
+         return;
+      }
+    }
+    errlog << "Input parameter '" << param << "' in section '" << section << "' is undocumented.\n\n";
+  }
+  else
+  {
+    for( auto const& sect : this->sections_ )
+    {
+      if( sect.second.write( filt, param, errlog ) )
+      {
+        errlog << "\n";
+        return;
+      }
+    }
+    errlog << "Input parameter '" << param << "' is undocumented.\n\n";
+  }
 }

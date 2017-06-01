@@ -1,6 +1,6 @@
 format 75
 "platform" // platform
-  revision 334
+  revision 336
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -4312,6 +4312,27 @@ ${docstring}${body}
 	python ""
 	idl ""
       end
+
+      operation 2404528 "generate_help"
+	public explicit_return_type "void"
+	nparams 3
+	  param in name "section" explicit_type "string"
+	  param in name "param" explicit_type "string"
+	  param inout name "log" explicit_type "ostream"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} & ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
     end
 
     class 659760 "simulation_manager"
@@ -5564,7 +5585,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " The main function"
+	comment " The main function. This should catch any anticipated exceptions."
       end
 
       operation 1758128 "output_dir_fmt"
@@ -10634,6 +10655,7 @@ ${definition}"
 #define DEBUG 0
 #endif
 
+#include \"core/input_error.hpp\"
 // Default to a periodic cube base region. This can be
 // overridden in the input file.
 #include \"geometry/periodic_cube_region.hpp\"
@@ -10643,21 +10665,11 @@ ${definition}"
 
 int main( int argc, char ** argv )
 {
-  int result = 0;
   boost::shared_ptr< geometry::base_region > regn( new geometry::periodic_cube_region( \"cell\", 10.0 ) );
   boost::shared_ptr< platform::storage_manager > stor( new platform::serial_storage );
   boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
-  try
-  {
-    if( not stor->main( argc, argv, *sim ) ) result = 1;
-  }
-  catch( std::exception const& err )
-  {
-    stor->system_log() << \"Unexpected exception thrown\\n\" << err.what() << \"\\n\";
-    result = 1;
-  }
-  return result;
+  return ( stor->main( argc, argv, *sim ) ? 0 : 1 );
 }
 "
       python_src "${comment}
@@ -10875,8 +10887,9 @@ BOOST_CLASS_EXPORT_KEY( platform::serial_storage );
 
 ${includes}
 // manuals
-#include \"core/strngs.hpp\"
+#include \"core/input_error.hpp\"
 #include \"core/input_reader.hpp\"
+#include \"core/strngs.hpp\"
 // -
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
@@ -10934,6 +10947,7 @@ ${namespace_end}
 
 ${includes}
 // manual includes
+#include \"core/input_help.hpp\"
 #include \"core/strngs.hpp\"
 #include \"evaluator/hard_sphere_overlap.hpp\"
 #include \"geometry/periodic_cube_region.hpp\"
@@ -11323,16 +11337,7 @@ int main( int argc, char ** argv )
   boost::shared_ptr< platform::mpi_storage > stor( new platform::mpi_storage );
   boost::shared_ptr< platform::simulation > sim( new platform::simulation( regn, stor ) );
 
-  try
-  {
-    if( not sim->main( argc, argv, *sim ) ) result = 1;
-  }
-  catch( std::exception const& err )
-  {
-    stor->system_log() << \"Unexpected exception thrown\\n\" << err.what() << \"\\n\";
-    stor->abort( 1 );
-  }
-  return result;
+  return ( not sim->main( argc, argv, *sim ) ? 0 : 1 );
 }
 
 "
@@ -11385,8 +11390,9 @@ BOOST_CLASS_EXPORT_KEY( platform::mpi_storage );
 
 ${includes}
 // manuals
-#include \"core/strngs.hpp\"
+#include \"core/input_error.hpp\"
 #include \"core/input_preprocess.hpp\"
+#include \"core/strngs.hpp\"
 // -
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>

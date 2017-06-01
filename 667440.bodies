@@ -48,12 +48,17 @@ try
   {
   case 0:
     // Bad command line options.
+    // (help message already written to log)
     this->system_log() << log.rdbuf();
     return false;
   case 1:
+  {
     // Help message requested.
+    const std::string nul_string{};
+    sim.generate_help( nul_string, nul_string, log );
     this->system_log() << log.rdbuf();
     return true;
+  }
   case 2:
     // Read input file.
   {
@@ -89,16 +94,24 @@ try
       break;
     }
   }
+  // Initialisation from input complete. (We could still get some
+  // input errors after this point during call to 'prepare'.)
+  return sim.main();
+}
+catch(const core::input_error &err)
+{
+  log << err.what() << "\n";
+  sim.generate_help( err.section(), err.parameter(), log );
+  this->system_log() << log.rdbuf() << "\n";
+  return false;
 }
 catch(const std::runtime_error &err)
 {
   // Crashing...
-  this->system_log() << log.rdbuf() << "\n" << err.what() << "\n";
+  log << err.what() << "\n";
+  this->system_log() << log.rdbuf() << "\n";
   return false;
 }
-// Initialisation from input complete. (We should not get any
-// input errors after this point.
-return sim.main();
 !!!1838896.cpp!!!	open_output() : base_sink
 this->ensure_output_dir();
 const std::string fn( this->output_path() );

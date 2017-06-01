@@ -41,3 +41,46 @@ this->help_subtype::write( filt, dest );
     }
   }
 }
+!!!2404784.cpp!!!	write(inout filt : fixed_width_output_filter, in param : string, inout dest : ostream) : bool
+UTILITY_REQUIRE( not param.empty(), "Should not be using this 'write' with empty parameter name." );
+if( this->help_subtype::write( filt, param, dest ) )
+{
+  // param was immediate child
+  return true;
+}
+else
+{
+  // search in subtypes
+  for( auto const& entry : this->subtypes_ )
+  {
+    if( entry.second.has_entry( param ) )
+    {
+      // found subtype
+      namespace io = boost::iostreams;
+      {
+        io::filtering_ostream os;
+        os.push( filt );
+        os.push( dest );
+        os << this->title() << "\n";
+      }
+      {
+        core::indent_guard grd( filt );
+        {
+          io::filtering_ostream out;
+          out.push( filt );
+          out.push( dest );
+          if( not this->description().empty() )
+          {
+            out << this->description() << "\n";
+          }
+          out << "type:\n";
+        }
+        {
+          entry.second.write( filt, param, dest );
+        }
+      }
+      return true;
+    }
+  }
+}
+return false;

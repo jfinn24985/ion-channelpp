@@ -43,6 +43,7 @@ return res.str();
 // the final system is valid.
 std::stringstream log;
 namespace mpi = boost::mpi;
+// HACK TO TEST FOR OPENMPI SERVER
 if( std::getenv( "OMPI_COMM_WORLD_SIZE" ) )
 {
   const bool abort_on_exception{ true };
@@ -61,19 +62,25 @@ try
     this->world_->abort( 1 );
     return false;
   case 1:
+  {
     // Help message requested.
+    const std::string nul_string{};
+    sim.generate_help( nul_string, nul_string, log );
     this->system_log() << log.rdbuf();
     this->world_->abort( 0 );
     return true;
+  }
   case 2:
     // Read input file.
   {
-    auto reader = this->open_input();
-    log << core::strngs::horizontal_bar() << "\n"
-        << "Reading input file \""
-        << reader->current_filename() << "\"\n";
-    sim.read_input( *reader );
-    log << core::strngs::horizontal_bar() << "\n";
+    {
+      auto reader = this->open_input();
+      log << core::strngs::horizontal_bar() << "\n"
+          << "Reading input file \""
+          << reader->current_filename() << "\"\n";
+      sim.read_input( *reader );
+      log << core::strngs::horizontal_bar() << "\n";
+    }
     // Now our log is well defined, so write temporary log out.
     this->get_log() << log.rdbuf();
     sim.set_random_seed( this->get_seed_value() );
@@ -102,6 +109,17 @@ try
     break;
   }
   }
+  // Initialisation from input complete. (We could still get some
+  // input errors after this point during call to 'prepare'.)
+  return sim.main();
+}
+catch(const core::input_error &err)
+{
+  log << err.what() << "\n";
+  sim.generate_help( err.section(), err.parameter(), log );
+  this->system_log() << log.rdbuf() << "\n";
+  this->world_->abort( 1 );
+  return false;
 }
 catch(const std::runtime_error &err)
 {
@@ -110,9 +128,6 @@ catch(const std::runtime_error &err)
   this->world_->abort( 1 );
   return false;
 }
-// Initialisation from input complete. (We should not get any
-// input errors after this point.
-return sim.main();
 !!!2210224.cpp!!!	open_output() : base_sink
 this->ensure_output_dir();
 const std::string fn( this->output_path() );
