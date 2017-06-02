@@ -105,12 +105,9 @@ if( not this->cutover_log_ )
   boost::shared_ptr< std::ostream > newlog{ this->open_log() };
   if( newlog )
   {
-    auto buf = this->log_->rdbuf();
-    const std::streamsize avail{ buf->in_avail() };
-    for( std::streamsize ii = 0; ii < avail; ++ii )
-    {
-      (*newlog) << static_cast< char >( buf->sbumpc() );
-    }
+    std::copy( std::istreambuf_iterator<char>( this->log_->rdbuf() ),
+               std::istreambuf_iterator<char>(),
+               std::ostreambuf_iterator<char>( newlog->rdbuf() ) );
     std::swap( this->log_, newlog );
     this->cutover_log_ = true;
   }
@@ -118,16 +115,14 @@ if( not this->cutover_log_ )
 !!!1861680.cpp!!!	set_log(in os_ptr : ostream) : ostream
 if( not this->cutover_log_ )
 {
-  auto buf = this->log_->rdbuf();
-  const std::streamsize avail{ buf->in_avail() };
-  for( std::streamsize ii = 0; ii < avail; ++ii )
-  {
-    (*os_ptr) << static_cast< char >( buf->sbumpc() );
-  }
+  std::copy( std::istreambuf_iterator<char>( this->log_->rdbuf() ),
+             std::istreambuf_iterator<char>(),
+             std::ostreambuf_iterator<char>( os_ptr->rdbuf() ) );
   this->cutover_log_ = true;
 }
-std::swap( os_ptr, this->log_ );
-return os_ptr;
+boost::shared_ptr< std::ostream > tmp{ this->log_ };
+this->log_ = os_ptr;
+return tmp;
 !!!1758768.cpp!!!	set_output_name(in fmt : string) : void
 UTILITY_REQUIRE( not fmt.empty(), "Cannot set output file to an empty string." );
 UTILITY_REQUIRE( has_valid_extension( fmt ), "Output file extension is not one of (zip,dbm,mem)" );
