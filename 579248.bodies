@@ -15,13 +15,13 @@ for( auto &atom : changes )
     if( j != idx and particle::specie_key::nkey != ens.key( j ) )
     {
       const std::size_t jspec = ens.key( j );
-      const double eps_ij = this->epsilon_cache_[ cache_offset + jspec ];
-      const double sig_ij = this->sigma_cache_[ cache_offset + jspec ];
+      const double eps_ij{ this->epsilon_cache_[ cache_offset + jspec ] };
+      const double sig_ij2{ std::pow( this->sigma_cache_[ cache_offset + jspec ], 2 ) };
       if( atom.do_new )
       {
         // NEW
-        // Use atom.new_rij
-        const double r6 { std::pow( sig_ij / atom.new_rij[ j ], 6 ) };
+        // Use atom.new_rij2
+        const double r6 { std::pow( sig_ij2 / atom.new_rij2[ j ], 3 ) };
         const double r12 { std::pow( r6, 2 ) };
         energy_new += eps_ij * ( r12 - r6 );
       }
@@ -29,8 +29,8 @@ for( auto &atom : changes )
       {
         // OLD
         // --------------------------------
-        // Use atom.old_rij
-        const double r6 { std::pow( sig_ij / atom.old_rij[ j ], 6 ) };
+        // Use atom.old_rij2
+        const double r6 { std::pow( sig_ij2 / atom.old_rij2[ j ], 3 ) };
         const double r12 { std::pow( r6, 2 ) };
         energy_old += eps_ij * ( r12 - r6 );
       }
@@ -82,7 +82,7 @@ for atom in changes.changes:
 // all charged particles.
 double energy = 0.0;
 auto const& ens = pman.get_ensemble();
-std::vector< double > rij( ens.size(), 0.0 );
+std::vector< double > rij2( ens.size(), 0.0 );
 
 for( std::size_t idx = 0; idx != ens.size() - 1; ++idx )
 {
@@ -92,17 +92,17 @@ for( std::size_t idx = 0; idx != ens.size() - 1; ++idx )
     continue;
   }
   const std::size_t cache_offset = ispec * pman.specie_count();
-  // calculate rij vector
-  gman.calculate_distances( ens.position( idx ), ens.get_coordinates(), rij, idx + 1, ens.size() );
+  // calculate rij2 vector
+  gman.calculate_distances_sq( ens.position( idx ), ens.get_coordinates(), rij2, idx + 1, ens.size() );
 
   for( std::size_t jdx = idx + 1; jdx != ens.size(); ++jdx )
   {
     const std::size_t jspec = ens.key( jdx );
     if( particle::specie_key::nkey != jspec )
     {
-      const double eps_ij = this->epsilon_cache_[ cache_offset + jspec ];
-      const double sig_ij = this->sigma_cache_[ cache_offset + jspec ];
-      const double r6 = std::pow( sig_ij / rij[ jdx ], 6 );
+      const double eps_ij{ this->epsilon_cache_[ cache_offset + jspec ] };
+      const double sig_ij2{ std::pow( this->sigma_cache_[ cache_offset + jspec ], 2 ) };
+      const double r6 = std::pow( sig_ij2 / rij2[ jdx ], 3 );
       const double r12 = std::pow( r6, 2 );
       energy += eps_ij * ( r12 - r6 );
     }
