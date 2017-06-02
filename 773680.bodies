@@ -1,0 +1,161 @@
+class membrane_cell_inserter
+!!!2432688.cpp!!!	membrane_cell_inserter(in radius : double, in cell_radius : double, in cell_hlength : double, in channel_radius : double, in channel_hlength : double, in arc_radius : double)
+: radius_( radius )
+, reduced_cell_radius_( cell_radius - radius )
+, compartment_factor_( std::pow( cell_radius - radius, 2 ) * core::constants::pi() * ( cell_hlength - 2 * radius ) )
+, cell_offset_( channel_hlength + radius )
+, reduced_channel_radius_( channel_radius - radius )
+, inner_channel_factor_( std::pow( channel_radius - radius, 2 ) * core::constants::pi() * ( channel_hlength - arc_radius ) )
+, vestibule_factor_( volume_of_rotation( channel_radius + arc_radius, arc_radius + radius ) )
+, vestibule_radius_( channel_radius + arc_radius )
+, vestibule_offset_( channel_hlength - arc_radius )
+{}
+!!!2432816.cpp!!!	compare_equal(in source : membrane_cell_inserter) : bool
+return this->radius_             == source.radius_ and
+  this->reduced_cell_radius_     == source.reduced_cell_radius_ and
+  this->compartment_factor_      == source.compartment_factor_ and
+  this->cell_offset_             == source.cell_offset_ and
+  this->reduced_channel_radius_  == source.reduced_channel_radius_ and
+  this->inner_channel_radius_    == source.inner_channel_radius_ and
+  this->vestibule_factor_        == source.vestibule_factor_ and
+  this->vestibutle_outer_radius_ == source.vestibutle_outer_radius_ and
+  this->vestibutle_radius_       == source.vestibutle_radius_ and
+  this->vestibutle_offset_       == source.vestibutle_offset_;
+
+!!!2431792.cpp!!!	generate_position(inout rgnr : random_distribution) : coordinate
+constexpr double pi = core::constants::pi();
+const double full_factor{ this->compartment_factor_ + this->inner_channel_factor_ + this->vestibule_factor_ };
+const double zfactor = rgnr.uniform( -full_factor, full_factor );
+const double abs_zfactor{ std::abs( zfactor ) };
+
+double max_radius {};
+// calculate z pos and radius
+if ( abs_zfactor >= this->inner_channel_factor_ + this->vestibule_factor_ )
+{
+  // in compartment volume
+  pos.z = abs_zfactor - (this->inner_channel_factor_ + this->vestibule_factor_);
+  // Now linear in compartment volume, reduce to length
+  pos.z /= (std::pow( this->reduced_cell_radius_, 2 ) * pi);
+  // in cell compartment
+  pos.z += this->cell_offset_;
+  if (zfactor < 0)
+  {
+    pos.z = -pos.z;
+  }
+  max_radius = this->reduced_cell_radius_;
+}
+else if ( abs_zfactor <= inner_channel_factor )
+{
+  pos.z = (abs_zfactor / (std::pow( this->reduced_channel_radius_, 2 ) * pi));
+  if (zfactor < 0)
+  {
+    pos.z = -pos.z;
+  }
+  // fully in channel
+  max_radius = this->reduced_channel_radius_;
+}
+else
+{
+  // in channel vestibule: z is non-linear in volume
+  //
+  // NOTE abs_zfactor = volume_of_rotation(0, R, r, 0, z)
+  //  where R = channel_radius + arc_radius
+  //        r = arc_radius + radius
+  //        z = unknown z coordinate
+  //
+  // derivative of volume_of_rotation is:
+  //  pi{R^2 + r^2 - z^2 - R(sqrt(r^2 - z^2) - 2*z/sqrt(r^2 - z^2) + rcos(z/r)}
+  const double RR = this->vestibule_outer_radius_;
+  const double rr = this->vestibule_radius_;
+  auto deriv= [RR,rr,pi](double zz)->double
+  {
+    double sqt = std::sqrt(rr*rr - zz*zz);
+    return pi * ( RR*RR + rr*rr - zz*zz - RR * ( sqt - (2*zz/sqt) + rr *std::cos(zz/rr)));
+  };
+  double vol { abs_zfactor - this->inner_channel_factor_ };
+  UTILITY_CHECK( vol < this->vestibule_factor, "Error in logic, not in expected volume" );
+  // first guess is linear approx
+  double zguess = rr * vol / this->vestibule_factor;
+  // do four Newton/Raphson steps
+  //  f(z) = volume_of_rotation(0, RR, rr, 0, z) - vol = 0
+  //  f'(z) = deriv(z)
+  for (std::size_t ii = 0; ii < 4; ++ii)
+  {
+    zguess -= (volume_of_rotation(0.0, RR, rr, 0.0, zguess) - vol)/deriv(zguess);
+  }
+  UTILITY_CHECK( zguess >= 0.0, "Error in calculating z in vestibule" );
+  UTILITY_CHECK( zguess <= rr, "Error in calculating z in vestibule" );
+  // bound zguess to 0 <-> this->arc_radius_ + radius
+  zguess = zguess < 0.0 ? 0.0 : ( zguess > rr ? rr : zguess );
+  pos.z = this->vestibule_offset_ + zguess;
+  if (zfactor < 0)
+  {
+    pos.z = -pos.z;
+  }
+  //
+  // closest approach at pos.z is when 
+  //
+  //  ddr * ddr + z * z = r * r 
+  // 
+  //  where ddr is distance from arc centrepoint. This
+  //  gives final radius as
+  //
+  //  max_radius = channel_radius + arc_radius - ddr
+  const double ddr_sq { std::pow(rr, 2) - std::pow(zguess,2) };
+  max_radius = RR - std::sqrt( ddr_sq );
+}
+// volume distribution is linear in square of radius and phi
+const double r( std::sqrt(rgnr.uniform( std::pow(max_radius, 2 ) ) ) );
+const double phi( rgnr.uniform( 0.0, core::constants::pi() * 2 ) );
+pos.x = r * std::cos( phi );
+pos.y = r * std::sin( phi );
+//UTILITY_ENSURE( this->is_inside( pos, radius ), "Error in calculating new position." );
+return pos;
+
+
+!!!2435376.cpp!!!	volume_of_rotation(in axial_disp : double, in radial_disp : double, in arc_radius : double, in z_0 : double, in z_1 : double) : double
+UTILITY_REQUIRE(arc_radius < radial_disp, "The arc radius must be smaller than the radial offset.");
+UTILITY_REQUIRE(not utility::feq(z_0,z_1), "Z0 can not equal Z1.");
+UTILITY_REQUIRE(z_0 < z_1, "Z0 must be less than Z1.");
+const double z1bar_ (z_1 - axial_disp);
+const double z0bar_ (z_0 - axial_disp);
+UTILITY_REQUIRE(z0bar_ >= axial_disp - arc_radius, "Z0 must be within one arc_radius of axial_disp.");
+UTILITY_REQUIRE(z1bar_ <= axial_disp + arc_radius, "Z0 must be within one arc_radius of axial_disp.");
+
+const double arc_r2 (std::pow(arc_radius,2));
+if (utility::feq(z0bar_, 0.0))
+{
+   // Handle case where x0 = xc --> z0bar_ = 0
+   return core::constants::pi()
+          * (
+             (std::pow(radial_disp,2) + arc_r2) * (z_1 - z_0)
+             - std::pow(z1bar_,3)/3.0
+             - radial_disp * (z1bar_ * std::sqrt(arc_r2 - std::pow(z1bar_,2))
+                              + arc_r2 * asin(z1bar_/arc_radius))
+          );
+}
+else if (utility::feq(z1bar_, arc_radius))
+{
+   // handle case where x1 = xc + r --> z1bar_ = r)
+   return core::constants::pi()
+          * (
+             (std::pow(radial_disp,2) + arc_r2) * (z_1 - z_0)
+             + (std::pow(z0bar_,3) - std::pow(z1bar_,3))/3.0
+             - radial_disp * (arc_r2 * core::constants::pi() / 4.0)
+             + radial_disp * (z0bar_ * std::sqrt(arc_r2 - std::pow(z0bar_,2))
+                              + arc_r2 * std::asin(z0bar_/arc_radius))
+          );
+}
+else
+{
+   return core::constants::pi()
+          * (
+             (std::pow(radial_disp,2) + arc_r2) * (z_1 - z_0)
+             + (std::pow(z0bar_,3) - std::pow(z1bar_,3))/3.0
+             - radial_disp * (z1bar_ * std::sqrt(arc_r2 - std::pow(z1bar_,2))
+                              + arc_r2 * std::asin(z1bar_/arc_radius))
+             + radial_disp * (z0bar_ * sqrt(arc_r2 - std::pow(z0bar_,2))
+                              + arc_r2 * std::asin(z0bar_/arc_radius))
+          );
+}
+
