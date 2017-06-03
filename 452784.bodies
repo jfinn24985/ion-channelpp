@@ -1394,6 +1394,80 @@ const double offset( 10.0 );
   const std::size_t mod_8{ counter_ntarget_r2 % 8 };
   BOOST_WARN_MESSAGE( 0 == mod_8, "8 FOLD SYMMETRY FAILURE: 0 == (counter_ntarget_r2 % 8)" );
 }
+!!!2449328.cpp!!!	membrane_cell_inserter_lifetime_test() : void
+{
+  // Test is canonical pattern
+  BOOST_CHECK( std::is_default_constructible< geometry::membrane_cell_inserter >::type {} );
+  BOOST_CHECK( std::is_copy_constructible< geometry::membrane_cell_inserter >::type {} );
+  BOOST_CHECK( std::is_move_constructible< geometry::membrane_cell_inserter >::type {} );
+  BOOST_CHECK( ( std::is_assignable< geometry::membrane_cell_inserter, geometry::membrane_cell_inserter >::type {} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< geometry::membrane_cell_inserter >::type {} );
+}
+std::stringstream store;
+const double sphere_radius{ 1.0 };
+const double cell_hlength{ 30.0 };
+const double cell_radius{ 30.0 };
+const double channel_hlength{ 10.0 };
+const double channel_radius{ 3.0 };
+const double arc_radius{ 5.0 };
+{
+// Circle grid default ctor
+  geometry::membrane_cell_inserter var1{ sphere_radius,
+                                         cell_radius,
+                                         cell_hlength,
+                                         channel_radius,
+                                         channel_hlength,
+                                         arc_radius };
+  // Default should have no size
+  BOOST_CHECK_EQUAL( var1.radius(), sphere_radius );
+  BOOST_CHECK_EQUAL( var1.reduced_cell_radius(), cell_radius - sphere_radius );
+  BOOST_CHECK_EQUAL( var1.cell_offset(), channel_hlength + sphere_radius );
+  BOOST_CHECK_EQUAL( var1.reduced_channel_radius(), channel_radius - sphere_radius );
+  BOOST_CHECK_EQUAL( var1.vestibule_outer_radius(), channel_radius + arc_radius );
+  BOOST_CHECK_EQUAL( var1.vestibule_radius(), sphere_radius + arc_radius );
+  BOOST_CHECK_EQUAL( var1.vestibule_offset(), channel_hlength - arc_radius );
+  // Volumes
+  BOOST_CHECK_EQUAL( var1.compartment_factor(), (std::pow( var1.reduced_cell_radius(), 2 ) * core::constants::pi() * ( cell_hlength - 2 * sphere_radius ) ) );
+  BOOST_CHECK_EQUAL( var1.inner_channel_factor(),  (std::pow( var1.reduced_channel_radius(), 2 ) * core::constants::pi() * ( channel_hlength - arc_radius ) ) );
+  BOOST_CHECK_EQUAL( var1.vestibule_factor(), var1.volume_of_rotation( channel_radius + arc_radius, sphere_radius + arc_radius ) );
+
+  {
+    geometry::membrane_cell_inserter var2( var1 );
+    BOOST_CHECK( var1 == var2 );
+  }
+  {
+    geometry::membrane_cell_inserter var3;
+    var3 = var1;
+    BOOST_CHECK( var1 == var3 );
+  }
+  {
+    geometry::membrane_cell_inserter var3( var1 );
+    geometry::membrane_cell_inserter var5( std::move( var3 ) );
+    BOOST_CHECK( var1 == var5 );
+  }
+
+  boost::archive::text_oarchive oa( store );
+  // write class instance to archive
+  oa << var1;
+  BOOST_CHECK_EQUAL( var1.radius(), sphere_radius );
+}
+{
+  geometry::membrane_cell_inserter var1;
+  boost::archive::text_iarchive ia( store );
+  // read class instance from archive
+  ia >> var1;
+  BOOST_CHECK_EQUAL( var1.radius(), sphere_radius );
+  BOOST_CHECK_EQUAL( var1.reduced_cell_radius(), cell_radius - sphere_radius );
+  BOOST_CHECK_EQUAL( var1.cell_offset(), channel_hlength + sphere_radius );
+  BOOST_CHECK_EQUAL( var1.reduced_channel_radius(), channel_radius - sphere_radius );
+  BOOST_CHECK_EQUAL( var1.vestibule_outer_radius(), channel_radius + arc_radius );
+  BOOST_CHECK_EQUAL( var1.vestibule_radius(), sphere_radius + arc_radius );
+  BOOST_CHECK_EQUAL( var1.vestibule_offset(), channel_hlength - arc_radius );
+  // Volumes
+  BOOST_CHECK_EQUAL( var1.compartment_factor(), (std::pow( var1.reduced_cell_radius(), 2 ) * core::constants::pi() * ( cell_hlength - 2 * sphere_radius ) ) );
+  BOOST_CHECK_EQUAL( var1.inner_channel_factor(),  (std::pow( var1.reduced_channel_radius(), 2 ) * core::constants::pi() * ( channel_hlength - arc_radius ) ) );
+  BOOST_CHECK_EQUAL( var1.vestibule_factor(), var1.volume_of_rotation( channel_radius + arc_radius, sphere_radius + arc_radius ) );
+}
 !!!1022640.cpp!!!	periodic_cube_region_lifetime_test() : void
 {
   // Test is virtual object pattern

@@ -79,107 +79,17 @@ return result;
 !!!1106608.cpp!!!	do_new_position(inout rgnr : random_distribution, in radius : double) : coordinate
 // A random position anywhere in cell
 geometry::coordinate pos( 0.0, 0.0, 0.0 );
-constexpr double pi = core::constants::pi();
-// Generate z coordinate:
-const double reduced_cell_radius { this->radius() - radius };
-const double compartment_factor { std::pow( reduced_cell_radius, 2 ) * pi * (this->half_length() - 2 * radius) };
-
-const double reduced_channel_radius { this->channel_radius() - radius };
-const double inner_channel_factor { std::pow( reduced_channel_radius, 2 ) * pi * (this->channel_half_length_ - this->arc_radius_) };
-
-const double vestibule_factor { volume_of_rotation( this->channel_radius_ + this->arc_radius_, this->arc_radius_ + radius ) };
-
-// full factor is volume in one half of cell
-const double full_factor { compartment_factor + inner_channel_factor + vestibule_factor };
-const double zfactor = rgnr.uniform( -full_factor, full_factor );
-const double abs_zfactor{ std::abs( zfactor ) };
-
-double max_radius {};
-// calculate z pos and radius
-if ( abs_zfactor >= inner_channel_factor + vestibule_factor )
+// search cache for entry
+for( std::size_t idx = 0; idx != this->cache_.size(); ++idx )
 {
-  // in compartment volume
-  pos.z = abs_zfactor - (inner_channel_factor + vestibule_factor);
-  // Now linear in compartment volume, reduce to length
-  pos.z /= (std::pow( reduced_cell_radius, 2 ) * pi);
-  // in cell compartment
-  pos.z += this->channel_half_length_ + radius;
-  if (zfactor < 0)
+  if( utility::feq( radius, this->cache_[idx].radius() ) )
   {
-    pos.z = -pos.z;
+    return this->cache_[idx].generate_position( rgnr );
   }
-  max_radius = reduced_cell_radius;
 }
-else if ( abs_zfactor <= inner_channel_factor )
-{
-  pos.z = (abs_zfactor / (std::pow( reduced_channel_radius, 2 ) * pi));
-  if (zfactor < 0)
-  {
-    pos.z = -pos.z;
-  }
-  // fully in channel
-  max_radius = this->channel_radius_ - radius;
-}
-else
-{
-  // in channel vestibule: z is non-linear in volume
-  //
-  // NOTE abs_zfactor = volume_of_rotation(0, R, r, 0, z)
-  //  where R = channel_radius + arc_radius
-  //        r = arc_radius + radius
-  //        z = unknown z coordinate
-  //
-  // derivative of volume_of_rotation is:
-  //  pi{R^2 + r^2 - z^2 - R(sqrt(r^2 - z^2) - 2*z/sqrt(r^2 - z^2) + rcos(z/r)}
-  const double RR = this->channel_radius_ + this->arc_radius_;
-  const double rr = this->arc_radius_ + radius;
-  auto deriv= [RR,rr,pi](double zz)->double
-  {
-    double sqt = std::sqrt(rr*rr - zz*zz);
-    return pi * ( RR*RR + rr*rr - zz*zz - RR * ( sqt - (2*zz/sqt) + rr *std::cos(zz/rr)));
-  };
-  double vol { abs_zfactor - inner_channel_factor };
-  UTILITY_CHECK( vol < vestibule_factor, "Error in logic, not in expected volume" );
-  // first guess is linear approx
-  double zguess = rr * vol / vestibule_factor;
-  // do four Newton/Raphson steps
-  //  f(z) = volume_of_rotation(0, RR, rr, 0, z) - vol = 0
-  //  f'(z) = deriv(z)
-  for (std::size_t ii = 0; ii < 4; ++ii)
-  {
-    zguess -= (volume_of_rotation(0.0, RR, rr, 0.0, zguess) - vol)/deriv(zguess);
-  }
-  UTILITY_CHECK( zguess >= 0.0, "Error in calculating z in vestibule" );
-  UTILITY_CHECK( zguess <= rr, "Error in calculating z in vestibule" );
-  // bound zguess to 0 <-> this->arc_radius_ + radius
-  zguess = zguess < 0.0 ? 0.0 : ( zguess > rr ? rr : zguess );
-  pos.z = this->channel_half_length_ - this->arc_radius_ + zguess;
-  if (zfactor < 0)
-  {
-    pos.z = -pos.z;
-  }
-  //
-  // closest approach at pos.z is when 
-  //
-  //  ddr * ddr + z * z = r * r 
-  // 
-  //  where ddr is distance from arc centrepoint. This
-  //  gives final radius as
-  //
-  //  max_radius = channel_radius + arc_radius - ddr
-  const double ddr_sq { std::pow(rr, 2) - std::pow(zguess,2) };
-  max_radius = RR - std::sqrt( ddr_sq );
-  
-}
-// volume distribution is linear in square of radius and phi
-const double r( std::sqrt(rgnr.uniform( std::pow(max_radius, 2 ) ) ) );
-const double phi( rgnr.uniform( 0.0, core::constants::pi() * 2 ) );
-pos.x = r * std::cos( phi );
-pos.y = r * std::sin( phi );
-//UTILITY_ENSURE( this->is_inside( pos, radius ), "Error in calculating new position." );
-return pos;
-
-
+// if here then no inserter found.
+this->cache_.push_back( new membrane_cell_inserter( radius, this->radius(), this->half_length(), this->channel_radius(), this->channel_half_length(), this->arc_radius() ) );
+return this->cache_.back().generate_position( rgnr );
 !!!2442032.cpp!!!	alt_new_position(inout rgnr : random_distribution, in radius : double) : coordinate
 // A random position within cylinder
 geometry::coordinate pos( 0.0, 0.0, 0.0 );

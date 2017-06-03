@@ -503,7 +503,55 @@ BOOST_CHECK_EQUAL( var1.label(), "bulk" );
 
 geom_distribution_test::general_new_position_test( var1, 2.0, "Membrane Cell" );
 
-!!!2442416.cpp!!!	membrane_cell_z_test() : void
+!!!2449072.cpp!!!	membrane_cell_z_test() : void
+// Cylinder main ctor 
+geometry::membrane_cylinder_region var1( "bulk", 50.0, 30.0, 20.0, 5.0, 15.0 );
+BOOST_CHECK_EQUAL( var1.half_length(), 30.0 );
+BOOST_CHECK_EQUAL( var1.radius(), 50.0 );
+BOOST_CHECK_EQUAL( var1.channel_half_length(), 20.0 );
+BOOST_CHECK_EQUAL( var1.channel_radius(), 5.0 );
+BOOST_CHECK_EQUAL( var1.arc_radius(), 15.0 );
+BOOST_CHECK_EQUAL( var1.label(), "bulk" );
+
+boost::shared_ptr< boost::mt19937> generator( new boost::mt19937 );
+utility::random_distribution rand( generator );
+
+for( std::size_t rad_iter = 0; rad_iter < 10; ++rad_iter )
+{
+  double radius{ 0.0 };
+  do
+  {
+    radius = var1.channel_radius() / (rad_iter + 2) ;
+  }
+  while( radius <= 0.0 or var1.channel_radius() <= radius );
+  // histogram length
+  const double length{ var1.channel_half_length() + var1.half_length() - radius };
+  utility::histogram histo( 0.0, length, 1000ul, false );
+  std::cout << "# RADIUS : " << radius << "\n";
+  std::cout << "# CHANNEL_RADIUS : " <<  var1.channel_radius() << "\n";
+  std::cout << "# VESTIBULE START : " <<  (var1.channel_half_length() - var1.arc_radius()) << "\n";
+  std::cout << "# VESTIBULE END : " <<  (var1.channel_half_length() + radius) << "\n";
+  std::cout << "# CELL END : " <<  (var1.channel_half_length() + var1.half_length() - radius) << "\n";
+ 
+  for( std::size_t iter = 0; iter < 10000; ++iter )
+  {
+    histo.begin_sample();
+    for( std::size_t jter = 0; jter < 1000; ++jter )
+    {
+      const geometry::coordinate pos{ var1.new_position( rand, radius ) };
+      histo.sample_datum( std::abs( pos.z ) );
+    }
+    histo.end_sample();
+  }
+  
+  for( auto iter = histo.begin(); iter != histo.end(); ++iter )
+  {
+    const double vol{ var1.sub_volume( iter.minimum(), iter.maximum(), radius ) };
+    std::cout << iter.midpoint() << " " << iter.mean() << " " << iter.variance() << " " << (iter.mean()/vol) << " " << (iter.variance()/vol) << "\n";
+  }
+  std::cout << "\n\n";  
+}
+!!!2442416.cpp!!!	membrane_cell_alt_z_test() : void
 // Cylinder main ctor 
 geometry::membrane_cylinder_region var1( "bulk", 50.0, 30.0, 20.0, 5.0, 15.0 );
 BOOST_CHECK_EQUAL( var1.half_length(), 30.0 );

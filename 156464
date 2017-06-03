@@ -1,6 +1,6 @@
 format 75
 "geometry" // geometry
-  revision 48
+  revision 49
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -4782,6 +4782,15 @@ ${docstring}${members}
 	  b parent class_ref 183856 // cylinder_region
       end
 
+      classrelation 1277360 // <dependency>
+	relation 1276464 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 1277360 // <dependency>
+	  b parent class_ref 773680 // membrane_cell_inserter
+      end
+
       classrelation 658608 // <dependency>
 	relation 657712 -_->
 	  a package
@@ -4798,6 +4807,19 @@ ${docstring}${members}
 	php ""
 	python ""
 	idl ""
+      end
+
+      classrelation 1277232 // cache_ (<directional composition>)
+	relation 1276336 *-->
+	  stereotype "ptr_vector"
+	  a role_name "cache_" multiplicity "*" private
+	    comment " Cached data for use in generating a new position."
+	    cpp mutable default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+"
+	    python "${comment}${self}${name} = ${stereotype}()
+"
+	    classrelation_ref 1277232 // cache_ (<directional composition>)
+	  b parent class_ref 773680 // membrane_cell_inserter
       end
 
       attribute 529712 "channel_half_length_"
@@ -4861,6 +4883,7 @@ ${docstring}${body}
 	  param in name "arc_radius" explicit_type "double"
 	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} ${p4}${v4}, ${t5} ${p5}${v5}${)}${volatile}${throw}
 : cylinder_region( ${p0}, ${p1}, ${p2} )
+, cache_()
 , channel_half_length_( ${p3} )
 , channel_radius_( ${p4} )
 , arc_radius_( ${p5} )
@@ -4915,6 +4938,7 @@ ${docstring}${body}
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
   ar & boost::serialization::base_object< geometry::cylinder_region >(*this);
+  ar & this->cache_;
   ar & this->channel_half_length_;
   ar & this->channel_radius_;
   ar & this->arc_radius_;
@@ -5645,12 +5669,7 @@ radius.
       operation 2431920 "membrane_cell_inserter"
 	public explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
-{
-  ${body}
-}
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
 "
 	
 	
@@ -5658,6 +5677,7 @@ radius.
 ${docstring}${body}
 "
 	
+	comment " For serialization"
       end
 
       operation 2432688 "membrane_cell_inserter"
@@ -5685,12 +5705,7 @@ ${docstring}${body}
       operation 2432048 "~membrane_cell_inserter"
 	public explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
-{
-  ${body}
-}
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} = default;
 "
 	
 	
@@ -6223,7 +6238,6 @@ ${docstring}${body}
 	
 	comment " Get the radius this is for"
       end
-
     end
 
     class 459952 "non_periodic_region"
