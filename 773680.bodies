@@ -7,22 +7,35 @@ class membrane_cell_inserter
 , reduced_channel_radius_( channel_radius - radius )
 , inner_channel_factor_( std::pow( channel_radius - radius, 2 ) * core::constants::pi() * ( channel_hlength - arc_radius ) )
 , vestibule_factor_( volume_of_rotation( channel_radius + arc_radius, arc_radius + radius ) )
-, vestibule_radius_( channel_radius + arc_radius )
+, vestibule_outer_radius_( channel_radius + arc_radius )
+, vestibule_radius_( arc_radius + radius )
 , vestibule_offset_( channel_hlength - arc_radius )
 {}
+!!!2432560.cpp!!!	swap(inout source : membrane_cell_inserter) : void
+std::swap( this->radius_, source.radius_ );
+std::swap( this->reduced_cell_radius_, source.reduced_cell_radius_ );
+std::swap( this->compartment_factor_, source.compartment_factor_ );
+std::swap( this->cell_offset_, source.cell_offset_ );
+std::swap( this->reduced_channel_radius_, source.reduced_channel_radius_ );
+std::swap( this->inner_channel_factor_, source.inner_channel_factor_ );
+std::swap( this->vestibule_factor_, source.vestibule_factor_ );
+std::swap( this->vestibule_outer_radius_, source.vestibule_outer_radius_ );
+std::swap( this->vestibule_radius_, source.vestibule_radius_ );
+std::swap( this->vestibule_offset_, source.vestibule_offset_ );
 !!!2432816.cpp!!!	compare_equal(in source : membrane_cell_inserter) : bool
-return this->radius_             == source.radius_ and
-  this->reduced_cell_radius_     == source.reduced_cell_radius_ and
-  this->compartment_factor_      == source.compartment_factor_ and
-  this->cell_offset_             == source.cell_offset_ and
-  this->reduced_channel_radius_  == source.reduced_channel_radius_ and
-  this->inner_channel_radius_    == source.inner_channel_radius_ and
-  this->vestibule_factor_        == source.vestibule_factor_ and
-  this->vestibutle_outer_radius_ == source.vestibutle_outer_radius_ and
-  this->vestibutle_radius_       == source.vestibutle_radius_ and
-  this->vestibutle_offset_       == source.vestibutle_offset_;
+return this->radius_            == source.radius_ and
+  this->reduced_cell_radius_    == source.reduced_cell_radius_ and
+  this->compartment_factor_     == source.compartment_factor_ and
+  this->cell_offset_            == source.cell_offset_ and
+  this->reduced_channel_radius_ == source.reduced_channel_radius_ and
+  this->inner_channel_factor_   == source.inner_channel_factor_ and
+  this->vestibule_factor_       == source.vestibule_factor_ and
+  this->vestibule_outer_radius_ == source.vestibule_outer_radius_ and
+  this->vestibule_radius_       == source.vestibule_radius_ and
+  this->vestibule_offset_       == source.vestibule_offset_;
 
 !!!2431792.cpp!!!	generate_position(inout rgnr : random_distribution) : coordinate
+coordinate pos{};
 constexpr double pi = core::constants::pi();
 const double full_factor{ this->compartment_factor_ + this->inner_channel_factor_ + this->vestibule_factor_ };
 const double zfactor = rgnr.uniform( -full_factor, full_factor );
@@ -44,7 +57,7 @@ if ( abs_zfactor >= this->inner_channel_factor_ + this->vestibule_factor_ )
   }
   max_radius = this->reduced_cell_radius_;
 }
-else if ( abs_zfactor <= inner_channel_factor )
+else if ( abs_zfactor <= this->inner_channel_factor_ )
 {
   pos.z = (abs_zfactor / (std::pow( this->reduced_channel_radius_, 2 ) * pi));
   if (zfactor < 0)
@@ -73,20 +86,18 @@ else
     return pi * ( RR*RR + rr*rr - zz*zz - RR * ( sqt - (2*zz/sqt) + rr *std::cos(zz/rr)));
   };
   double vol { abs_zfactor - this->inner_channel_factor_ };
-  UTILITY_CHECK( vol < this->vestibule_factor, "Error in logic, not in expected volume" );
+  UTILITY_CHECK( vol < this->vestibule_factor_, "Error in logic, not in expected volume" );
   // first guess is linear approx
-  double zguess = rr * vol / this->vestibule_factor;
+  double zguess = rr * std::sqrt( vol / this->vestibule_factor_ );
   // do four Newton/Raphson steps
   //  f(z) = volume_of_rotation(0, RR, rr, 0, z) - vol = 0
   //  f'(z) = deriv(z)
   for (std::size_t ii = 0; ii < 4; ++ii)
   {
-    zguess -= (volume_of_rotation(0.0, RR, rr, 0.0, zguess) - vol)/deriv(zguess);
+    zguess -= ((zguess == 0.0 ? 0.0 : volume_of_rotation(0.0, RR, rr, 0.0, zguess)) - vol)/deriv(zguess);
+    zguess = zguess < 0.0 ? 0.0 : ( zguess > rr ? rr : zguess );
   }
-  UTILITY_CHECK( zguess >= 0.0, "Error in calculating z in vestibule" );
-  UTILITY_CHECK( zguess <= rr, "Error in calculating z in vestibule" );
-  // bound zguess to 0 <-> this->arc_radius_ + radius
-  zguess = zguess < 0.0 ? 0.0 : ( zguess > rr ? rr : zguess );
+  // zguess is bound to [ 0, this->arc_radius_ + radius ]
   pos.z = this->vestibule_offset_ + zguess;
   if (zfactor < 0)
   {
@@ -111,16 +122,15 @@ pos.x = r * std::cos( phi );
 pos.y = r * std::sin( phi );
 //UTILITY_ENSURE( this->is_inside( pos, radius ), "Error in calculating new position." );
 return pos;
-
-
 !!!2435376.cpp!!!	volume_of_rotation(in axial_disp : double, in radial_disp : double, in arc_radius : double, in z_0 : double, in z_1 : double) : double
 UTILITY_REQUIRE(arc_radius < radial_disp, "The arc radius must be smaller than the radial offset.");
 UTILITY_REQUIRE(not utility::feq(z_0,z_1), "Z0 can not equal Z1.");
 UTILITY_REQUIRE(z_0 < z_1, "Z0 must be less than Z1.");
+UTILITY_REQUIRE(0.0 <= z_0, "Z0 must be positive.");
 const double z1bar_ (z_1 - axial_disp);
 const double z0bar_ (z_0 - axial_disp);
-UTILITY_REQUIRE(z0bar_ >= axial_disp - arc_radius, "Z0 must be within one arc_radius of axial_disp.");
-UTILITY_REQUIRE(z1bar_ <= axial_disp + arc_radius, "Z0 must be within one arc_radius of axial_disp.");
+UTILITY_REQUIRE(z0bar_ >= 0.0 or utility::feq(z0bar_, 0.0), "Z0 must be within one arc_radius of axial_disp.");
+UTILITY_REQUIRE(z1bar_ <= arc_radius or utility::feq(z1bar_, arc_radius), "Z1 must be within one arc_radius of axial_disp.");
 
 const double arc_r2 (std::pow(arc_radius,2));
 if (utility::feq(z0bar_, 0.0))

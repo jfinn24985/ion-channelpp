@@ -180,6 +180,59 @@ pos.y = r * std::sin( phi );
 return pos;
 
 
+!!!2442032.cpp!!!	alt_new_position(inout rgnr : random_distribution, in radius : double) : coordinate
+// A random position within cylinder
+geometry::coordinate pos( 0.0, 0.0, 0.0 );
+do
+{
+  // volume is linear in square of radius
+  const double r( std::sqrt(rgnr.uniform( std::pow( this->radius() - radius, 2 ) ) ) );
+  const double phi( rgnr.uniform( 0.0, core::constants::pi() * 2 ) );
+  pos.x = r * std::cos( phi );
+  pos.y = r * std::sin( phi );
+  const double halflength{ this->half_length() + this->channel_half_length() - radius };
+  pos.z = rgnr.uniform( -halflength, halflength );
+} while( not this->do_is_inside( pos, radius ) );
+return pos;
+
+!!!2442288.cpp!!!	sub_volume(in z0 : double, in z1 : double, in radius : double) : double
+UTILITY_REQUIRE( z0 >= 0.0, "Symmetry around 0.0, only use positive z values." );
+UTILITY_REQUIRE( z0 < z1, "Must have a positive interval." );
+UTILITY_REQUIRE( radius < this->channel_radius(), "Must have a sphere that fits inside the channel." );
+UTILITY_REQUIRE( z1 <= (this->half_length() + this->channel_half_length() - radius), "Interval must fit inside the cell." );
+const double vestibule_offset{ this->channel_half_length() - this->arc_radius() };
+if( z1 <= vestibule_offset )
+{
+  // both in channel : pi.r2.h
+  return core::constants::pi() * std::pow( this->channel_radius() - radius, 2 ) * (z1- z0);
+}
+else if ( z0 >= this->channel_half_length() + radius )
+{
+  // both in cell
+  return core::constants::pi() * std::pow( this->radius() - radius, 2 ) * (z1- z0);
+}
+else
+{
+  double result{ 0.0 };
+  double z0bar{ z0 };
+  double z1bar{ z1 };
+  if( z0 < vestibule_offset )
+  {
+    z0bar = vestibule_offset;
+    // z0 in channel
+    if( this->channel_radius() >= radius )
+    {
+      result += core::constants::pi() * std::pow( this->channel_radius() - radius, 2 ) * (vestibule_offset - z0);
+    }
+  }
+  if( z1 > this->channel_half_length() + radius )
+  {
+    // z1 in cell
+    z1bar = this->channel_half_length() + radius;
+    result += core::constants::pi() * std::pow( this->radius() - radius, 2 ) * (z1 - (this->channel_half_length() + radius));
+  }
+  return result + volume_of_rotation( vestibule_offset, this->channel_radius() + this->arc_radius(), this->arc_radius() + radius, z0bar, z1bar );
+}
 !!!1310128.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
 const std::string half_length_label { "half-length" };
 const std::string radius_label { "radius" };

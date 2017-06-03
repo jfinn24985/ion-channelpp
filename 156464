@@ -1,6 +1,6 @@
 format 75
 "geometry" // geometry
-  revision 47
+  revision 48
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -5239,7 +5239,51 @@ ${docstring}${body}
  over the volume.
 
  \\pre fits(radius)
- \\post is_inside(pos, radius)"
+ \\post is_inside(pos, radius)
+
+ PROs: bound number of calls to rgnr and bound calculation time.
+
+ CONs: complex, requires careful testing to guarrantee equivolume 
+   distribution.
+"
+      end
+
+      operation 2442032 "alt_new_position"
+	const public return_type class_ref 986799 // coordinate
+	nparams 2
+	  param inout name "rgnr" type class_ref 463407 // random_distribution
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Calculate new random position for particle of the given
+ radius to be inside the region. This alternate version
+ randomly allocates a point in the bounding cylinder (V_bound)
+ and tests to see if it is in the allowed volume, repeating
+ the procedure until a point lies within the allowed volume
+ (V_allowed). The run time of the method is therefore unbound,
+ but should average to V_bound/V_allowed times longer than a
+ cylinder of V_bound.
+
+ \\pre fits(radius)
+ \\post is_inside(pos, radius)
+
+ PROs: robust, simple to guarrantee equivolume 
+   distribution.
+
+ CONs: unbound number of calls to rgnr.
+
+"
       end
 
       operation 1106992 "do_volume"
@@ -5260,6 +5304,32 @@ ${docstring}${body}
  with the given radius
 
  NOTE: can assume fits(radius)"
+      end
+
+      operation 2442288 "sub_volume"
+	public explicit_return_type "double"
+	nparams 3
+	  param in name "z0" explicit_type "double"
+	  param in name "z1" explicit_type "double"
+	  param in name "radius" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Volume of cell between z0 and z1
+
+ \\pre radius < channel_radius
+ \\pre z0, z1 in [ 0, channel_half_length + half_length - radius ]
+ \\pre z0 < z1"
       end
 
       operation 1310128 "do_write_document"
@@ -5664,11 +5734,10 @@ ${docstring}${body}
 	public return_type class_ref 773680 // membrane_cell_inserter
 	nparams 1
 	  param in name "source" type class_ref 773680 // membrane_cell_inserter
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} & ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
 {
-  ${body}
+  this->swap( ${p0} );
+  return *this;
 }
 "
 	
@@ -5722,11 +5791,11 @@ ${docstring}${body}
   ar & compartment_factor_;
   ar & cell_offset_;
   ar & reduced_channel_radius_;
-  ar & inner_channel_radius_;
+  ar & inner_channel_factor_;
   ar & vestibule_factor_;
-  ar & vestibutle_outer_radius_;
-  ar & vestibutle_radius_;
-  ar & vestibutle_offset_;
+  ar & vestibule_outer_radius_;
+  ar & vestibule_radius_;
+  ar & vestibule_offset_;
 }
 "
 	
@@ -6154,6 +6223,7 @@ ${docstring}${body}
 	
 	comment " Get the radius this is for"
       end
+
     end
 
     class 459952 "non_periodic_region"
@@ -7731,7 +7801,6 @@ ${docstring}${body}
 	comment " Create and add a region_definition to the meta object."
       end
     end
-
   end
 
   classview 501551 "grid builders"
@@ -10507,6 +10576,58 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 "
     end
 
+    artifact 703792 "membrane_cell_inserter"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+// manual includes
+#include \"core/constants.hpp\"
+// -
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// - manual includes
+#include \"core/constants.hpp\"
+#include \"utility/fuzzy_equals.hpp\"
+${namespace_start}
+${members}
+${namespace_end}"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 773680 // membrane_cell_inserter
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
     artifact 497584 "membrane_cylinder_region"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -10921,55 +11042,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 504112 // digitizer_3d
 	artifact_ref 578479 // grid
 	artifact_ref 687919 // coordinate
-      end
-      comment "----------------------------------------------------------------------
-This source file is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-----------------------------------------------------------------------
-"
-    end
-
-    artifact 703792 "membrane_cell_inserter"
-      stereotype "source"
-      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
-#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
-
-${comment}
-${includes}
-// manual includes
-#include \"core/constants.hpp\"
-// -
-${declarations}
-${namespace_start}
-${definition}
-${namespace_end}
-#endif
-"
-      cpp_src "${comment}
-
-#ifndef DEBUG
-#define DEBUG 0
-#endif
-
-${includes}
-${namespace_start}
-${members}
-${namespace_end}"
-      python_src "${comment}
-${import}
-${definition}"
-      associated_classes
-	class_ref 773680 // membrane_cell_inserter
+	artifact_ref 703792 // membrane_cell_inserter
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
