@@ -141,7 +141,7 @@ else
     z1bar = this->channel_half_length() + radius;
     result += core::constants::pi() * std::pow( this->radius() - radius, 2 ) * (z1 - (this->channel_half_length() + radius));
   }
-  return result + volume_of_rotation( vestibule_offset, this->channel_radius() + this->arc_radius(), this->arc_radius() + radius, z0bar, z1bar );
+  return result + membrane_cell_inserter::volume_of_rotation( vestibule_offset, this->channel_radius() + this->arc_radius(), this->arc_radius() + radius, z0bar, z1bar );
 }
 !!!1310128.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
 const std::string half_length_label { "half-length" };
@@ -211,49 +211,3 @@ cylinder_defn->add_definition( { "channel-length", "distance in Angstrom", ">0",
 cylinder_defn->add_definition( { "channel-radius", "distance in Angstrom", ">0", "required", "The radius of the channel between the two cell compartments." } );
 cylinder_defn->add_definition( { "arc-radius", "distance in Angstrom", ">0", "required", "The radius of the arc that rounds the channel ends into the membrane." } );
 meta.add_definition( cylinder_defn );
-!!!1114416.cpp!!!	volume_of_rotation(in axial_disp : double, in radial_disp : double, in arc_radius : double, in z_0 : double, in z_1 : double) : double
-UTILITY_REQUIRE(arc_radius < radial_disp, "The arc radius must be smaller than the radial offset.");
-UTILITY_REQUIRE(not utility::feq(z_0,z_1), "Z0 can not equal Z1.");
-UTILITY_REQUIRE(z_0 < z_1, "Z0 must be less than Z1.");
-const double z1bar_ (z_1 - axial_disp);
-const double z0bar_ (z_0 - axial_disp);
-UTILITY_REQUIRE(z0bar_ >= axial_disp - arc_radius, "Z0 must be within one arc_radius of axial_disp.");
-UTILITY_REQUIRE(z1bar_ <= axial_disp + arc_radius, "Z0 must be within one arc_radius of axial_disp.");
-
-const double arc_r2 (std::pow(arc_radius,2));
-if (utility::feq(z0bar_, 0.0))
-{
-   // Handle case where x0 = xc --> z0bar_ = 0
-   return core::constants::pi()
-          * (
-             (std::pow(radial_disp,2) + arc_r2) * (z_1 - z_0)
-             - std::pow(z1bar_,3)/3.0
-             - radial_disp * (z1bar_ * std::sqrt(arc_r2 - std::pow(z1bar_,2))
-                              + arc_r2 * asin(z1bar_/arc_radius))
-          );
-}
-else if (utility::feq(z1bar_, arc_radius))
-{
-   // handle case where x1 = xc + r --> z1bar_ = r)
-   return core::constants::pi()
-          * (
-             (std::pow(radial_disp,2) + arc_r2) * (z_1 - z_0)
-             + (std::pow(z0bar_,3) - std::pow(z1bar_,3))/3.0
-             - radial_disp * (arc_r2 * core::constants::pi() / 4.0)
-             + radial_disp * (z0bar_ * std::sqrt(arc_r2 - std::pow(z0bar_,2))
-                              + arc_r2 * std::asin(z0bar_/arc_radius))
-          );
-}
-else
-{
-   return core::constants::pi()
-          * (
-             (std::pow(radial_disp,2) + arc_r2) * (z_1 - z_0)
-             + (std::pow(z0bar_,3) - std::pow(z1bar_,3))/3.0
-             - radial_disp * (z1bar_ * std::sqrt(arc_r2 - std::pow(z1bar_,2))
-                              + arc_r2 * std::asin(z1bar_/arc_radius))
-             + radial_disp * (z0bar_ * sqrt(arc_r2 - std::pow(z0bar_,2))
-                              + arc_r2 * std::asin(z0bar_/arc_radius))
-          );
-}
-
