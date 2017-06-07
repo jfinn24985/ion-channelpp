@@ -1,6 +1,6 @@
 format 75
 "utility" // utility
-  revision 245
+  revision 250
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -9027,15 +9027,16 @@ ${inlines}
 
       operation 835631 "dgetrf"
 	class_operation public return_type class_ref 230576 // int_type
-	nparams 5
+	nparams 6
+	  param inout name "row_major" explicit_type "bool"
 	  param in name "m" type class_ref 230576 // int_type
 	  param in name "n" type class_ref 230576 // int_type
 	  param inout name "amx" explicit_type "double"
 	  param in name "lda" type class_ref 230576 // int_type
 	  param inout name "ipiv" type class_ref 230576 // int_type
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} * ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} * ${p4}${v4}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} * ${p3}${v3}, ${t4} ${p4}${v4}, ${t5} * ${p5}${v5}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} * ${p2}, ${t3} ${p3}, ${t4} * ${p4}${)}${const}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} * ${p3}, ${t4} ${p4}, ${t5} * ${p5}${)}${const}${throw}
 {
   ${body}
 }
@@ -9046,7 +9047,7 @@ ${inlines}
 ${docstring}${body}
 "
 	
-	comment " Computers an LU factorization of a general M-by-N matrix A
+	comment " Computes an LU factorization of a general M-by-N matrix A
  using partial pivoting with row interchanges.
 
  The factorization has the form
@@ -9065,14 +9066,15 @@ ${docstring}${body}
 
       operation 352688 "dgetrf"
 	class_operation public return_type class_ref 230576 // int_type
-	nparams 2
+	nparams 3
+	  param inout name "row_major" explicit_type "bool"
 	  param inout name "amx" explicit_type "boost::multi_array< double, 2 >"
 	  param inout name "ipiv" explicit_type "std::vector< int_type  >"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${throw}
 {
-  ${body}
+  return ${class}::${name}( ${p0}, ${p1}.shape()[ 0 ], ${p1}.shape()[ 1 ], ${p1}.origin(), ${p2}.size(), ${p2}.data() );
 }
 "
 	
@@ -9100,7 +9102,8 @@ ${docstring}${body}
 
       operation 835759 "dgetrs"
 	class_operation public return_type class_ref 230576 // int_type
-	nparams 7
+	nparams 8
+	  param in name "row_major" explicit_type "bool"
 	  param in name "n" type class_ref 230576 // int_type
 	  param in name "nrhs" type class_ref 230576 // int_type
 	  param inout name "amx" explicit_type "double"
@@ -9108,9 +9111,9 @@ ${docstring}${body}
 	  param inout name "ipiv" type class_ref 230576 // int_type
 	  param out name "b" explicit_type "double"
 	  param in name "ldb" type class_ref 230576 // int_type
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} * ${p2}${v2}, ${t3} ${p3}${v3}, ${t4} * ${p4}${v4}, ${t5} * ${p5}${v5}, ${t6} ${p6}${v6}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} * ${p3}${v3}, ${t4} ${p4}${v4}, ${t5} * ${p5}${v5}, ${t6} * ${p6}${v6}, ${t7} ${p7}${v7}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} * ${p2}, ${t3} ${p3}, ${t4} * ${p4}, ${t5} * ${p5}, ${t6} ${p6}${)}${const}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}, ${t3} * ${p3}, ${t4} ${p4}, ${t5} * ${p5}, ${t6} * ${p6}, ${t7} ${p7}${)}${const}${throw}
 {
   ${body}
 }
@@ -9133,15 +9136,16 @@ through this interface.)
 
       operation 352560 "dgetrs"
 	class_operation public return_type class_ref 230576 // int_type
-	nparams 3
+	nparams 4
+	  param in name "row_major" explicit_type "bool"
 	  param in name "amx" explicit_type "boost::multi_array< double, 2 >"
 	  param in name "ipiv" explicit_type "std::vector< int_type >"
 	  param out name "b" explicit_type "std::vector< double >"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, const ${t1} & ${p1}${v1}, const ${t2} & ${p2}${v2}, ${t3} & ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, const ${t1} & ${p1}, const ${t2} & ${p2}, ${t3} & ${p3}${)}${const}${throw}
 {
-  ${body}
+  return ${class}::${name}( ${p0}, ${p1}.shape()[ 1 ], 1, const_cast< double* >( amx.origin() ),  ${p2}.size(), const_cast< lapack::int_type* >( ${p2}.data() ), ${p3}.data(), ${p3}.size() );
 }
 "
 	
@@ -9162,15 +9166,16 @@ through this interface.)
 
       operation 532272 "dgetrs"
 	class_operation public return_type class_ref 230576 // int_type
-	nparams 3
+	nparams 4
+	  param in name "row_major" explicit_type "bool"
 	  param in name "amx" explicit_type "boost::multi_array< double, 2 >"
 	  param in name "ipiv" explicit_type "std::vector< int_type >"
 	  param out name "b" explicit_type "std::valarray< double >"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} & ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, const ${t1} & ${p1}${v1}, const ${t2} & ${p2}${v2}, ${t3} & ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}const ${t0} & ${p0}, const ${t1} & ${p1}, ${t2} & ${p2}${)}${const}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, const ${t1} & ${p1}, const ${t2} & ${p2}, ${t3} & ${p3}${)}${const}${throw}
 {
-  ${body}
+  return ${class}::${name}( ${p0}, ${p1}.shape()[ 1 ], 1, const_cast< double* >( amx.origin() ),  ${p2}.size(), const_cast< lapack::int_type* >( ${p2}.data() ), &${p3}[0], ${p3}.size() );
 }
 "
 	
@@ -9206,6 +9211,68 @@ ${docstring}${body}
 "
 	
 	comment "Get the inuse lapack library version"
+      end
+
+      operation 2465712 "square_transpose"
+	class_operation public explicit_return_type "void"
+	nparams 1
+	  param inout name "mx" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}boost::multi_array< ${t0}, 2 > & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}boost::multi_array< ${t0}, 2 > & ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Transpose a square matrix"
+      end
+
+      operation 2472240 "square_transpose"
+	class_operation public explicit_return_type "void"
+	nparams 2
+	  param inout name "mat" explicit_type "double"
+	  param in name "sz" type class_ref 230576 // int_type
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} * ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} * ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Transpose a square matrix"
+      end
+
+      operation 2478896 "square_transpose2"
+	class_operation public explicit_return_type "void"
+	nparams 2
+	  param inout name "mat" explicit_type "double"
+	  param in name "sz" type class_ref 230576 // int_type
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} * ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} * ${p0}, ${t1} ${p1}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Transpose a square matrix"
       end
     end
   end
@@ -10973,13 +11040,25 @@ ${namespace_end}
 #include <mkl_service.h>
 #endif
 
+#ifdef USE_OPENBLAS
+#include <f77blas.h>
+#include <openblas_config.h>
+#endif
+
 // Get version information for the ATLAS library
 #ifdef USE_ATLAS
-#include <atlas/clapack.h>
+extern \"C\"
+{
+#include <clapack.h>
+#include <atlas/atlas_buildinfo.h>
+}
+#include <boost/format.hpp>
 #endif
 
 #ifdef USE_GSL
-#include <clapach.h>
+#include <boost/format.hpp>
+#include <clapack.h>
+#include <gsl_version.h>
 #endif
 
 ${includes}
@@ -10990,6 +11069,9 @@ ${namespace_end}
       associated_classes
 	class_ref 184623 // lapack
       end
+      ncouples 2
+      key "butter flags" value "$(LAPACKINC)"
+      key "butter ldflags" value "$(LAPACKLIB)"
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

@@ -1,126 +1,71 @@
 class lapack
-!!!835631.cpp!!!	dgetrf(in m : lapack::int_type, in n : lapack::int_type, inout amx : double, in lda : lapack::int_type, inout ipiv : lapack::int_type) : lapack::int_type
+!!!835631.cpp!!!	dgetrf(inout row_major : bool, in m : lapack::int_type, in n : lapack::int_type, inout amx : double, in lda : lapack::int_type, inout ipiv : lapack::int_type) : lapack::int_type
 lapack::int_type info( 1 );
 // Intel MKL library
 #ifdef USE_MKL
+if( not row_major )
+{
+  row_major = true;
+  square_transpose( amx, m );
+}
 ::dgetrf(&m, &n, amx, &lda, ipiv, &info);
 #endif
 
-// ATLAS library
-#ifdef USE_ATLAS
-info = ::clapack_dgetrf(CblasRowMajor, m, n, a, lda, ipiv);
-#endif
-
-// GNU Scientific library
-#ifdef USE_GSL
-::dgetrf(m, n, amx, lda, ipiv, info);
-#endif
-return info;
-!!!352688.cpp!!!	dgetrf(inout amx : boost::multi_array< double, 2 >, inout ipiv : std::vector< int_type  >) : lapack::int_type
-lapack::int_type info( 1 );
-// Intel MKL library
-#ifdef USE_MKL
-lapack::int_type m( amx.shape()[ 0 ] );
-lapack::int_type n( amx.shape()[ 1 ] );
-lapack::int_type lda( m );
-::dgetrf(&m, &n, amx.origin(), &lda, ipiv.data(), &info);
+// openBLAS library
+#ifdef USE_OPENBLAS
+if( row_major )
+{
+  row_major = false;
+  square_transpose( amx, m );
+}
+::dgetrf_(&m, &n, amx, &lda, ipiv, &info);
 #endif
 
 // ATLAS library
 #ifdef USE_ATLAS
-lapack::int_type m( amx.shape()[ 0 ] );
-lapack::int_type n( amx.shape()[ 1 ] );
-lapack::int_type lda( m );
-info = ::clapack_dgetrf(CblasRowMajor, m, n, amx.origin(), lda, ipiv.data());
+if( not row_major )
+{
+  row_major = true;
+  square_transpose( amx, m );
+}
+info = ::clapack_dgetrf(CblasRowMajor, m, n, amx, lda, ipiv);
 #endif
 
 // GNU Scientific library
 #ifdef USE_GSL
-lapack::int_type m( amx.shape()[ 0 ] );
-lapack::int_type n( amx.shape()[ 1 ] );
-lapack::int_type lda( m );
-info = ::clapack_dgetrf(CblasRowMajor, m, n, amx.origin(), lda, ipiv.data());
+if( not row_major )
+{
+  row_major = true;
+  square_transpose( amx, m );
+}
+info = ::dgetrf(CblasRowMajor, m, n, amx, lda, ipiv);
 #endif
 return info;
-!!!835759.cpp!!!	dgetrs(in n : lapack::int_type, in nrhs : lapack::int_type, inout amx : double, in lda : lapack::int_type, inout ipiv : lapack::int_type, out b : double, in ldb : lapack::int_type) : lapack::int_type
+!!!835759.cpp!!!	dgetrs(in row_major : bool, in n : lapack::int_type, in nrhs : lapack::int_type, inout amx : double, in lda : lapack::int_type, inout ipiv : lapack::int_type, out b : double, in ldb : lapack::int_type) : lapack::int_type
 lapack::int_type info( 1 );
 // Intel Maths Kernel Library
 #ifdef USE_MKL
-char trans('N');
+char trans{ row_major ? 'N' : 'T' };
 ::dgetrs(&trans, &n, &nrhs, amx, &lda, ipiv, b, &ldb, &info);
 #endif
 
+// openBLAS Library
+#ifdef USE_OPENBLAS
+char trans{ row_major ? 'T' : 'N' };
+::dgetrs_(&trans, &n, &nrhs, amx, &lda, ipiv, b, &ldb, &info);
+#endif
+
+
 // The ATLAS Library
 #ifdef USE_ATLAS
-info = ::clapack_dgetrs(CblasRowMajor, CblasNoTrans, n, nrhs, a, lda, ipiv, b, ldb);
+char trans{ row_major ? CblasRowMajor : CblasColMajor };
+info = ::clapack_dgetrs(CblasRowMajor, CblasNoTrans, n, nrhs, amx, lda, ipiv, b, ldb);
 #endif
 
 // GNU Scientific Library
 #ifdef USE_GSL
-char trans('N')
-::dgetrs(trans, n, nrhs, amx, lda, ipiv, b, ldb, info);
-#endif
-return info;
-
-!!!352560.cpp!!!	dgetrs(in amx : boost::multi_array< double, 2 >, in ipiv : std::vector< int_type >, out b : std::vector< double >) : lapack::int_type
-lapack::int_type info( 1 );
-// Intel Maths Kernel Library
-#ifdef USE_MKL
-lapack::int_type n( amx.shape()[ 1 ] );
-lapack::int_type nrhs( 1 );
-lapack::int_type lda( amx.shape()[ 0 ] );
-lapack::int_type ldb( b.size() );
-char trans('N');
-::dgetrs(&trans, &n, &nrhs, const_cast< double* >( amx.origin() ), &lda, const_cast< lapack::int_type* >( ipiv.data() ), b.data(), &ldb, &info);
-#endif
-
-// The ATLAS Library
-#ifdef USE_ATLAS
-lapack::int_type n( amx.shape()[ 1 ] );
-lapack::int_type nrhs( 1 );
-lapack::int_type lda( amx.shape()[ 0 ] )
-lapack::int_type ldb( b.size() );
-info = ::clapack_dgetrs(CblasRowMajor, CblasNoTrans, n, nrhs, static_cast< double* >( amx.origin() ), lda, ipiv.data(), b.data(), ldb);
-#endif
-
-// GNU Scientific Library
-#ifdef USE_GSL
-lapack::int_type n( amx.shape()[ 1 ] );
-lapack::int_type nrhs( 1 );
-lapack::int_type lda( amx.shape()[ 0 ] )
-lapack::int_type ldb( b.size() );
-return ::clapack_dgetrs(CblasRowMajor, CblasNoTrans, n, nrhs, static_cast< double* >( amx.origin() ), lda, ipiv.data(), b.data(), ldb);
-#endif
-return info;
-
-!!!532272.cpp!!!	dgetrs(in amx : boost::multi_array< double, 2 >, in ipiv : std::vector< int_type >, out b : std::valarray< double >) : lapack::int_type
-lapack::int_type info( 1 );
-// Intel Maths Kernel Library
-#ifdef USE_MKL
-lapack::int_type n( amx.shape()[ 1 ] );
-lapack::int_type nrhs( 1 );
-lapack::int_type lda( amx.shape()[ 0 ] );
-lapack::int_type ldb( b.size() );
-char trans('N');
-::dgetrs(&trans, &n, &nrhs, const_cast< double* >( amx.origin() ), &lda, const_cast< lapack::int_type* >( ipiv.data() ), &b[0], &ldb, &info);
-#endif
-
-// The ATLAS Library
-#ifdef USE_ATLAS
-lapack::int_type n( amx.shape()[ 1 ] );
-lapack::int_type nrhs( 1 );
-lapack::int_type lda( amx.shape()[ 0 ] )
-lapack::int_type ldb( b.size() );
-info = ::clapack_dgetrs(CblasRowMajor, CblasNoTrans, n, nrhs, static_cast< double* >( amx.origin() ), lda, ipiv.data(), &b[0], ldb);
-#endif
-
-// GNU Scientific Library
-#ifdef USE_GSL
-lapack::int_type n( amx.shape()[ 1 ] );
-lapack::int_type nrhs( 1 );
-lapack::int_type lda( amx.shape()[ 0 ] )
-lapack::int_type ldb( b.size() );
-return ::clapack_dgetrs(CblasRowMajor, CblasNoTrans, n, nrhs, static_cast< double* >( amx.origin() ), lda, ipiv.data(), &b[0], ldb);
+char trans{ row_major ? CblasRowMajor : CblasColMajor };
+info = ::dgetrs(CblasRowMajor, CblasNoTrans, n, nrhs, amx, lda, ipiv, b, ldb);
 #endif
 return info;
 
@@ -138,18 +83,112 @@ if (not once)
   version = std::string (buf_);
 #endif
 
+// Get version information for the MKL library
+#ifdef USE_OPENBLAS
+  version = std::string{ OPENBLAS_VERSION };
+#endif
+
 // Get version information for the ATLAS library
 #ifdef USE_ATLAS
-  boost::format ver ("ATLAS math library version %1%: arch %2%") % ATL_VERS % ATL_ARCH;
+  boost::format ver("ATLAS math library version %1%: arch %2%");
+  ver % ATL_VERS % ATL_ARCH;
   version = ver.str();
 #endif
 
 // Get version information for the GSL library
 #ifdef USE_GSL
-  boost::format ver ("Gnu Scientific library %1%") % gsl_version;
+  boost::format ver("Gnu Scientific library %1%");
+  ver % gsl_version;
   version = ver.str ();
 #endif
   once = true;
 }
 return version;
 
+!!!2465712.cpp!!!	square_transpose(inout mx : double) : void
+// UTILITY_REQUIRE( mx.shape()[ 1 ] == mx.shape()[ 0 ], "Matrix is not square" );
+std::array< std::size_t, 2 > idx, jdx;
+for(std::size_t ii = 0; ii != mx.shape()[ 0 ]; ++ii)
+{
+  idx[0] = ii;
+  jdx[1] = ii;
+  for (std::size_t jj = ii + 1; jj < mx.shape()[ 1 ] ; ++jj)
+  {
+    idx[1] = jj;
+    jdx[0] = jj;
+    std::swap( mx( idx ), mx( jdx ) );
+  }
+}
+!!!2472240.cpp!!!	square_transpose(inout mat : double, in sz : lapack::int_type) : void
+for( int_type i = 0; i < sz; ++i )
+for( int_type j = i + 1; j < sz; ++j )
+{
+#ifdef FAST_INDEX
+  std::swap (mat[i * sz + j], mat[j * sz + i]);
+#else
+  std::swap (*(mat + i * sz + j), *(mat + j * sz + i));
+#endif
+}
+!!!2478896.cpp!!!	square_transpose2(inout mat : double, in sz : lapack::int_type) : void
+struct local_index_type
+{
+  int_type i1, j1, i2, j2;
+};
+std::vector< local_index_type > stack;
+stack.push_back( { 0, 0, sz, sz } );
+while( not stack.empty() )
+{
+  local_index_type cur = stack.back();
+  stack.pop_back();
+  if( cur.i1 == cur.j1 ) // diagonal
+  {
+    const int_type da{ cur.i2 - cur.i1 };
+    if( da > 16 )
+    {
+      const int_type hda{ da / 2 };
+      stack.push_back( { cur.i1, cur.j1, cur.i1 + hda, cur.j1 + hda } );
+      stack.push_back( { cur.i1 + hda, cur.j1, cur.i2, cur.j1 + hda } );
+      stack.push_back( { cur.i1 + hda, cur.j1 + hda, cur.i2, cur.j2 } );
+    }
+    else
+    {
+      for( ; cur.i1 < cur.i2; ++cur.i1 )
+      {
+        for( cur.j1 = cur.i1 + 1; cur.j1 < cur.j2; ++cur.j1 )
+        {
+#ifdef FAST_INDEX
+          std::swap( mat[cur.i1 * sz + cur.j1], mat[cur.j1 * sz + cur.i1] );
+#else
+          std::swap( *(mat + cur.i1 * sz + cur.j1), *(mat + cur.j1 * sz + cur.i1) );
+#endif
+        }
+      }
+    }
+  }
+  else // non-diagonal
+  {
+    const int_type da{ cur.i2 - cur.i1 };
+    if( da > 16 )
+    {
+      const int_type hda{ da / 2 };
+      stack.push_back( { cur.i1, cur.j1, cur.i1 + hda, cur.j1 + hda } );
+      stack.push_back( { cur.i1 + hda, cur.j1, cur.i2, cur.j1 + hda } );
+      stack.push_back( { cur.i1, cur.j1 + hda, cur.i1 + hda, cur.j2 } );
+      stack.push_back( { cur.i1 + hda, cur.j1 + hda, cur.i2, cur.j2 } );
+    }
+    else
+    {
+      for( ; cur.i1 < cur.i2; ++cur.i1 )
+      {
+        for( int_type jj = cur.j1; jj < cur.j2; ++jj )
+        {
+#ifdef FAST_INDEX
+          std::swap( mat[cur.i1 * sz + jj], mat[jj * sz + cur.i1] );
+#else
+          std::swap( *(mat + cur.i1 * sz + jj), *(mat + jj * sz + cur.i1) );
+#endif
+        }
+      }
+    }
+  }
+}

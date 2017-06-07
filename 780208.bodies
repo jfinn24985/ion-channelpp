@@ -1,0 +1,213 @@
+class lapack_test
+!!!2464688.cpp!!!	lapack_version() : void
+// utility::fp_env &env(utility::fp_env::env_);
+// utility::fp_env::fp_nonstop_scope scoper;
+// BOOST_CHECK_EQUAL(0, env.except());
+
+BOOST_CHECK_EQUAL( utility::lapack::version(), " OpenBLAS 0.2.19 " );
+!!!2465200.cpp!!!	dgetrf_dgetrs_c_test() : void
+// WE HAVE THREE DGETRF FUNCTIONS TO TEST
+double var[ 3 ][ 3 ];
+utility::lapack::int_type n{ 3 }, m{ 3 }, lda{ 3 };
+utility::lapack::int_type ipiv[ 3 ]{ 0, 1, 2 };
+utility::lapack::int_type info{ 1 };
+bool row_major{ true };
+
+var[0][0] = 1.0;
+var[0][1] = 2.0;
+var[0][2] = 3.0;
+
+var[1][0] = 4.0;
+var[1][1] = 5.0;
+var[1][2] = 6.0;
+
+var[2][0] = 7.0;
+var[2][1] = 8.0;
+var[2][2] = 0.0;
+//
+//  Factor the matrix.
+//
+//  for(std::size_t ii = 0; ii != 3ul; ++ii)
+//  {
+//    for(std::size_t jj = 0; jj != 3ul; ++jj)
+//    {
+//      std::cout << "  A["<< ii << "," << jj << "] = " << var[ii][jj];
+//    }
+//    std::cout << "\n";
+//  }
+//  std::cout << ipiv[0] << " " << ipiv[1] << " " << ipiv[2] << "\n";
+info = utility::lapack::dgetrf( row_major, m, n, &var[0][0], lda, &ipiv[0] );
+BOOST_CHECK_EQUAL( info, 0 );
+//  for(std::size_t ii = 0; ii != 3ul; ++ii)
+//  {
+//    for(std::size_t jj = 0; jj != 3ul; ++jj)
+//    {
+//      std::cout << "  A["<< ii << "," << jj << "] = " << var[ii][jj];
+//  
+//    }
+//    std::cout << "\n";
+//  }
+//  std::cout << ipiv[0] << " " << ipiv[1] << " " << ipiv[2] << "\n";
+//  
+double b[ 3 ] { 14.0, 32.0, 23.0 };
+double result[ 3 ] { 1.0, 2.0, 3.0 };
+
+//  std::cout << b[0] << " " << b[1] << " " << b[2] << "\n";
+info = utility::lapack::dgetrs( row_major, n, 1, &var[0][0], lda, &ipiv[0], &b[0], m );
+BOOST_CHECK_EQUAL( info, 0 );
+//  std::cout << b[0] << " " << b[1] << " " << b[2] << "\n";
+for( std::size_t ii{ 0 }; ii != 3ul; ++ii )
+{
+  BOOST_CHECK( utility::feq( b[ii], result[ii] ) );
+}
+!!!2465072.cpp!!!	dgetrf_matrix_vector_test() : void
+// WE HAVE THREE DGETRF FUNCTIONS TO TEST
+typedef std::array< std::size_t, 2 > index_type;
+boost::multi_array< double, 2 > var( index_type{ 3, 3 } );
+std::vector< utility::lapack::int_type > ipiv{ { 0, 1, 2 } };
+utility::lapack::int_type info{ 1 };
+bool row_major{ true };
+
+var( index_type{0,0} ) = 1.0;
+var( index_type{0,1} ) = 2.0;
+var( index_type{0,2} ) = 3.0;
+
+var( index_type{1,0} ) = 4.0;
+var( index_type{1,1} ) = 5.0;
+var( index_type{1,2} ) = 6.0;
+
+var( index_type{2,0} ) = 7.0;
+var( index_type{2,1} ) = 8.0;
+var( index_type{2,2} ) = 0.0;
+//
+//  Factor the matrix.
+//
+//  for(std::size_t ii = 0; ii != 3ul; ++ii)
+//  {
+//    for(std::size_t jj = 0; jj != 3ul; ++jj)
+//    {
+//      std::cout << "  A["<< ii << "," << jj << "] = " << var( index_type{ii,jj} );
+//    }
+//    std::cout << "\n";
+//  }
+//  std::cout << ipiv[0] << " " << ipiv[1] << " " << ipiv[2] << "\n";
+info = utility::lapack::dgetrf( row_major, var, ipiv );
+BOOST_CHECK_EQUAL( info, 0 );
+//  for(std::size_t ii = 0; ii != 3ul; ++ii)
+//  {
+//    for(std::size_t jj = 0; jj != 3ul; ++jj)
+//    {
+//      std::cout << "  A["<< ii << "," << jj << "] = " << var( index_type{ii,jj} );
+//  
+//    }
+//    std::cout << "\n";
+//  }
+//  std::cout << ipiv[0] << " " << ipiv[1] << " " << ipiv[2] << "\n";
+//  
+std::vector< double > b{ { 14.0, 32.0, 23.0 } };
+std::vector< double > result{ { 1.0, 2.0, 3.0 } };
+
+//  std::cout << b[0] << " " << b[1] << " " << b[2] << "\n";
+info = utility::lapack::dgetrs( row_major, var, ipiv, b );
+BOOST_CHECK_EQUAL( info, 0 );
+//  std::cout << b[0] << " " << b[1] << " " << b[2] << "\n";
+for( std::size_t ii{ 0 }; ii != 3ul; ++ii )
+{
+  BOOST_CHECK( utility::feq( b[ii], result[ii] ) );
+}
+!!!2465328.cpp!!!	dgetrf_matrix_valarray_test() : void
+// WE HAVE THREE DGETRF FUNCTIONS TO TEST
+typedef std::array< std::size_t, 2 > index_type;
+boost::multi_array< double, 2 > var( index_type{ 3, 3 } );
+std::vector< utility::lapack::int_type > ipiv{ { 0, 1, 2 } };
+utility::lapack::int_type info{ 1 };
+bool row_major{ true };
+
+var( index_type{0,0} ) = 1.0;
+var( index_type{0,1} ) = 2.0;
+var( index_type{0,2} ) = 3.0;
+
+var( index_type{1,0} ) = 4.0;
+var( index_type{1,1} ) = 5.0;
+var( index_type{1,2} ) = 6.0;
+
+var( index_type{2,0} ) = 7.0;
+var( index_type{2,1} ) = 8.0;
+var( index_type{2,2} ) = 0.0;
+//
+//  Factor the matrix.
+//
+//  for(std::size_t ii = 0; ii != 3ul; ++ii)
+//  {
+//    for(std::size_t jj = 0; jj != 3ul; ++jj)
+//    {
+//      std::cout << "  A["<< ii << "," << jj << "] = " << var( index_type{ii,jj} );
+//    }
+//    std::cout << "\n";
+//  }
+//  std::cout << ipiv[0] << " " << ipiv[1] << " " << ipiv[2] << "\n";
+info = utility::lapack::dgetrf( row_major, var, ipiv );
+BOOST_CHECK_EQUAL( info, 0 );
+//  for(std::size_t ii = 0; ii != 3ul; ++ii)
+//  {
+//    for(std::size_t jj = 0; jj != 3ul; ++jj)
+//    {
+//      std::cout << "  A["<< ii << "," << jj << "] = " << var( index_type{ii,jj} );
+//  
+//    }
+//    std::cout << "\n";
+//  }
+//  std::cout << ipiv[0] << " " << ipiv[1] << " " << ipiv[2] << "\n";
+//  
+std::valarray< double > b{ { 14.0, 32.0, 23.0 } };
+std::valarray< double > result{ { 1.0, 2.0, 3.0 } };
+
+//  std::cout << b[0] << " " << b[1] << " " << b[2] << "\n";
+info = utility::lapack::dgetrs( row_major, var, ipiv, b );
+BOOST_CHECK_EQUAL( info, 0 );
+//  std::cout << b[0] << " " << b[1] << " " << b[2] << "\n";
+for( std::size_t ii{ 0 }; ii != 3ul; ++ii )
+{
+  BOOST_CHECK( utility::feq( b[ii], result[ii] ) );
+}
+!!!2465584.cpp!!!	transpose_test() : void
+typedef std::array< std::size_t, 2 > index_type;
+boost::multi_array< double, 2 > var( index_type{ 3300, 3300 } );
+boost::shared_ptr< boost::mt19937 > gentor(new boost::mt19937);
+utility::random_distribution a(gentor);
+for(std::size_t ii = 0; ii != 3300; ++ii )
+{
+  index_type idx;
+  idx[0] = ii;
+  for(std::size_t jj = 0; jj != 3300; ++jj )
+  {
+    idx[1] = jj;
+    var( idx ) = a.uniform(1.0);
+  }
+}
+{
+  boost::timer::auto_cpu_timer t;
+  for( std::size_t idx{ 0 }; idx != 10; ++idx )
+  {
+    utility::lapack::square_transpose( var.origin(), var.shape()[0] );
+  }
+}
+{
+  boost::timer::auto_cpu_timer t;
+  for( std::size_t idx{ 0 }; idx != 100; ++idx )
+  {
+    utility::lapack::square_transpose( var.origin(), var.shape()[0] );
+  }
+}
+{
+  boost::timer::auto_cpu_timer t;
+  for( std::size_t idx{ 0 }; idx != 100; ++idx )
+  {
+    utility::lapack::square_transpose2( var.origin(), var.shape()[0] );
+  }
+}
+boost::multi_array< double, 2 > var2( var );
+BOOST_CHECK( var == var2 );
+utility::lapack::square_transpose( var.origin(), var.shape()[0] );
+utility::lapack::square_transpose2( var2.origin(), var2.shape()[0] );
+BOOST_CHECK( var == var2 );
