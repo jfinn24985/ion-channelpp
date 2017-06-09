@@ -1,6 +1,6 @@
 format 75
 "evaluator" // evaluator
-  revision 198
+  revision 205
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -4887,6 +4887,18 @@ ${inlines}
 	comment "The index vector from the LU decomposition"
       end
 
+      attribute 940592 "row_major_"
+	private explicit_type "bool"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Storage order of matrix. Defaults to true but may be changed by some methods to optimise performance."
+      end
+
       extra_member 226992 "LIFETIME"
 	
 	cpp "" ""
@@ -4941,7 +4953,7 @@ ${docstring}${body}
       end
 
       operation 388528 "~icc_matrix"
-	cpp_virtual public explicit_return_type ""
+	public explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw}
 {}
@@ -4990,6 +5002,7 @@ ${docstring}${body}
 {
    ar & amx_;
    ar & indx_;
+   ar & row_major_;
 }
 "
 	
@@ -5037,6 +5050,22 @@ ${docstring}${body}
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
    return this->indx_.${name}();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 2472368 "is_row_major"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->row_major_;
 }
 "
 	
@@ -5203,7 +5232,6 @@ ${docstring}${body}
 	comment " After the A matrix has been generated, perform LU decomposition.
 "
       end
-
     end
 
     class 1005615 "icc_surface_grid"
@@ -6394,19 +6422,6 @@ ${inlines}
  ..."
       end
 
-      attribute 252208 "sample_conx_"
-	private type class_ref 206255 // connection
-	init_value "None"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "Connection to 'inner-loop' signal"
-      end
-
       attribute 252336 "alfa_"
 	private explicit_type "double"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -6657,6 +6672,9 @@ Valid only for channel_system simtypes. Accepts no input parameters."
    ar & epsw_;
    ar & old_potential_;
    ar & new_potential_;
+   ar & epspr_;
+   ar & protein_radius_;
+   ar & membrane_arc_radius_;
 }
 "
 	
@@ -6860,6 +6878,7 @@ ${docstring}return self.a_matrix_filename
 	
 	idl_name_spec "get_${name}"
 	get_of_attribute attribute_ref 1339695 // a_matrix_filename
+	comment " Filename to save A matrix data. If empty no data is saved separately."
       end
 
       operation 410672 "get_alfa"
@@ -6962,6 +6981,7 @@ ${docstring}return self.patch_filename
 	
 	idl_name_spec "get_${name}"
 	get_of_attribute attribute_ref 1339823 // patch_filename
+	comment " Filename to save patch data. If empty no data is saved separately."
       end
 
       operation 422064 "get_permittivity"
@@ -6978,8 +6998,60 @@ ${docstring}return self.patch_filename
 ${docstring}${body}
 "
 	
-	comment " Get the patch/tile delta to divide up the circumference
- of circles normal to and centred on the Z-axis"
+	comment " Get the relative permittivity of the solvent media"
+      end
+
+      operation 2485680 "get_protein_permittivity"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->epspr_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the relative permittivity of the protein media"
+      end
+
+      operation 2485552 "get_protein_radius"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->protein_radius_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the radius of the outer part of the protein. It should be less than the cell radius but
+ greater than the sum of the channel radius and the vestibule and membrane
+ arc radii."
+      end
+
+      operation 2485424 "get_membrane_arc_radius"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->membrane_arc_radius_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the arc radius of the protein toroid within the membrane."
       end
 
       operation 2455984 "patch_file_label"
@@ -7305,6 +7377,7 @@ ${docstring}self.a_matrix_filename = ${p0}
 	
 	idl_name_spec "set_${name}"
 	set_of_attribute attribute_ref 1339695 // a_matrix_filename
+	comment " Set filename to save A matrix information. If not set then no data is saved."
       end
 
       operation 410544 "set_alfa"
@@ -7390,9 +7463,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Set the patch/tile delta to divide up the circumference
- of circles normal to and centred on the Z-axis (only 
- useful before generating A matrix)"
+	comment " Set the arc radius of the protein toroid within the membrane."
       end
 
       operation 346416 "set_nsub0"
@@ -7441,6 +7512,8 @@ ${docstring}self.patch_filename = ${p0}
 	
 	idl_name_spec "set_${name}"
 	set_of_attribute attribute_ref 1339823 // patch_filename
+	comment " Set filename to save patch information. If not set then no patch
+ data is saved."
       end
 
       operation 421936 "set_permittivity"
@@ -7458,9 +7531,7 @@ ${docstring}self.patch_filename = ${p0}
 ${docstring}${body}
 "
 	
-	comment " Set the patch/tile delta to divide up the circumference
- of circles normal to and centred on the Z-axis (only 
- useful before generating A matrix)"
+	comment " Set the relative permittivity of the solvent media"
       end
 
       operation 2456240 "set_protein_permittivity"
@@ -7478,9 +7549,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Set the patch/tile delta to divide up the circumference
- of circles normal to and centred on the Z-axis (only 
- useful before generating A matrix)"
+	comment " Set the relative permittivity of the protein media"
       end
 
       operation 2456368 "set_protein_radius"
@@ -7498,9 +7567,9 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Set the patch/tile delta to divide up the circumference
- of circles normal to and centred on the Z-axis (only 
- useful before generating A matrix)"
+	comment " Set the radius of the outer part of the protein. It should be less than the cell radius but
+ greater than the sum of the channel radius and the vestibule and membrane
+ arc radii."
       end
 
       operation 537648 "dump"

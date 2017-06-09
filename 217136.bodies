@@ -3319,361 +3319,1469 @@ std::stringstream store;
   BOOST_CHECK_EQUAL( wall_ptr->phi2(), phi2 );
 }
 !!!369200.cpp!!!	patch_matrix_fixture_test() : void
-//XXconst double temperature( 300.0 );
-//XXconst double epsw( 80.0 );
-//XXconst double epspr( 10.0 );
-//XXconst double zl1( 5.3 );
-//XXconst double rl1( 8.8 );
-//XXconst double rl4( 30.0 );
-//XXconst double rlvest( 10.0 );
-//XXconst double rlmemb( 5.0 );
-//XXconst double dxw( 4.0 );
-//XXconst double dxf( 4.0 );
-//XXstd::size_t nsub( 10 );
-//XXstd::size_t expect( 620 );
-//XX
-//XXevaluator::patch_matrix_fixture var {};
-//XXBOOST_CHECK_EQUAL( var.epsw(), epsw );
-//XXBOOST_CHECK_EQUAL( var.epspr(), epspr );
-//XXBOOST_CHECK_EQUAL( var.dxf(), dxf );
-//XXBOOST_CHECK_EQUAL( var.dxw(), dxw );
-//XXBOOST_CHECK_EQUAL( var.nsub(), nsub );
-//XXBOOST_CHECK_EQUAL( var.expected_grid_size(), expect );
-//XXBOOST_CHECK_EQUAL( var.zl1(), zl1 );
-//XXBOOST_CHECK_EQUAL( var.zl2(), zl1 + rlvest );
-//XXBOOST_CHECK_EQUAL( var.zl3(), zl1 + rlvest - rlmemb );
-//XXBOOST_CHECK_EQUAL( var.rl1(), rl1 );
-//XXBOOST_CHECK_EQUAL( var.rl2(), rl1 + rlvest );
-//XXBOOST_CHECK_EQUAL( var.rl3(), rl4 - rlmemb );
-//XXBOOST_CHECK_EQUAL( var.rl4(), rl4 );
-//XXBOOST_CHECK_EQUAL( var.rlvest(), rlvest );
-//XXBOOST_CHECK_EQUAL( var.rlmemb(), rlmemb );
-//XXBOOST_CHECK_EQUAL( var.temperature(), temperature );
+const double temperature( 300.0 );
+const double epsw( 80.0 );
+const double epspr( 10.0 );
+const double zl1( 5.3 );
+const double rl1( 8.8 );
+const double rl4( 30.0 );
+const double rlvest( 10.0 );
+const double rlmemb( 5.0 );
+const double dxw( 4.0 );
+const double dxf( 4.0 );
+std::size_t nsub( 10 );
+std::size_t expect( 620 );
+{
+  //  Constructor tests
+  BOOST_CHECK( std::is_default_constructible< evaluator::patch_matrix_fixture >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< evaluator::patch_matrix_fixture >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< evaluator::patch_matrix_fixture >::type {} );
+  BOOST_CHECK( ( not std::is_assignable< evaluator::patch_matrix_fixture, evaluator::patch_matrix_fixture >::type {} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< evaluator::patch_matrix_fixture >::type {} );
+}
+evaluator::patch_matrix_fixture var {};
+BOOST_CHECK_EQUAL( var.epsw(), epsw );
+BOOST_CHECK_EQUAL( var.epspr(), epspr );
+BOOST_CHECK_EQUAL( var.dxf(), dxf );
+BOOST_CHECK_EQUAL( var.dxw(), dxw );
+BOOST_CHECK_EQUAL( var.nsub(), nsub );
+BOOST_CHECK_EQUAL( var.expected_grid_size(), expect );
+BOOST_CHECK_EQUAL( var.zl1(), zl1 );
+BOOST_CHECK_EQUAL( var.zl2(), zl1 + rlvest );
+BOOST_CHECK_EQUAL( var.zl3(), zl1 + rlvest - rlmemb );
+BOOST_CHECK_EQUAL( var.rl1(), rl1 );
+BOOST_CHECK_EQUAL( var.rl2(), rl1 + rlvest );
+BOOST_CHECK_EQUAL( var.rl3(), rl4 - rlmemb );
+BOOST_CHECK_EQUAL( var.rl4(), rl4 );
+BOOST_CHECK_EQUAL( var.rlvest(), rlvest );
+BOOST_CHECK_EQUAL( var.rlmemb(), rlmemb );
+BOOST_CHECK_EQUAL( var.temperature(), temperature );
 !!!363184.cpp!!!	icc_surface_grid_test() : void
-//XXconst double dxf( 1.1 );
-//XXconst double dxw( 1.1 );
-//XXconst std::size_t nsub( 6 );
-//XXevaluator::patch_matrix_fixture var;
-//XXstd::stringstream store;
-//XXstd::stringstream log;
-//XX{
-//XX   // constructor
-//XX   evaluator::icc_surface_grid grid;
-//XX   BOOST_CHECK_EQUAL( grid.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( grid.empty(), true );
-//XX   BOOST_CHECK_EQUAL( grid.have_integrators(), false );
-//XX   BOOST_CHECK_EQUAL( grid.get_dxf(), 1.6 );
-//XX   BOOST_CHECK_EQUAL( grid.get_dxw(), 1.6 );
-//XX   BOOST_CHECK_EQUAL( grid.get_nsub0(), 10 );
-//XX
-//XX   // setters
-//XX   grid.set_dxf( dxf );
-//XX   BOOST_CHECK_EQUAL( grid.get_dxf(), dxf );
-//XX   grid.set_dxw( dxw );
-//XX   BOOST_CHECK_EQUAL( grid.get_dxw(), dxw );
-//XX   grid.set_nsub0( nsub );
-//XX   BOOST_CHECK_EQUAL( grid.get_nsub0(), nsub );
-//XX
-//XX   var.define_grid( grid, log );
-//XX   // Should set dxf, dxw and nsub as
-//XX   // well as define patches.
-//XX   BOOST_CHECK_EQUAL( grid.get_dxf(), var.dxf() );
-//XX   BOOST_CHECK_EQUAL( grid.get_dxw(), var.dxw() );
-//XX   BOOST_CHECK_EQUAL( grid.get_nsub0(), var.nsub() );
-//XX
-//XX   log << grid.size() << "\n";
-//XX   
-//XX   BOOST_CHECK_NE( grid.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( grid.size(), var.expected_grid_size() );
-//XX   BOOST_CHECK_EQUAL( grid.empty(), false );
-//XX   BOOST_CHECK_EQUAL( grid.have_integrators(), true );
-//XX   {
-//XX      std::ofstream os( "patch.txt" );
-//XX      grid.write_grid( os );
-//XX   }
-//XX   boost::archive::text_oarchive oa( store );
-//XX   oa << grid;
-//XX}
-//XX{
-//XX   evaluator::icc_surface_grid grid;
-//XX
-//XX   boost::archive::text_iarchive ia( store );
-//XX   ia >> grid;
-//XX
-//XX   BOOST_CHECK_EQUAL( grid.get_dxf(), var.dxf() );
-//XX   BOOST_CHECK_EQUAL( grid.get_dxw(), var.dxw() );
-//XX   BOOST_CHECK_EQUAL( grid.get_nsub0(), var.nsub() );
-//XX   BOOST_CHECK_EQUAL( grid.size(), var.expected_grid_size() );
-//XX   BOOST_CHECK_EQUAL( grid.empty(), false );
-//XX   BOOST_CHECK_EQUAL( grid.have_integrators(), true );
-//XX}
+{
+  //  Constructor tests
+  BOOST_CHECK( std::is_default_constructible< evaluator::icc_surface_grid >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< evaluator::icc_surface_grid >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< evaluator::icc_surface_grid >::type {} );
+  BOOST_CHECK( ( not std::is_assignable< evaluator::icc_surface_grid, evaluator::icc_surface_grid >::type {} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< evaluator::icc_surface_grid >::type {} );
+}
+const double dxf( 1.1 );
+const double dxw( 1.1 );
+const std::size_t nsub( 6 );
+evaluator::patch_matrix_fixture var;
+std::stringstream store;
+{
+   // constructor
+   evaluator::icc_surface_grid grid;
+   BOOST_CHECK_EQUAL( grid.size(), 0 );
+   BOOST_CHECK_EQUAL( grid.empty(), true );
+   BOOST_CHECK_EQUAL( grid.have_integrators(), false );
+   BOOST_CHECK_EQUAL( grid.get_dxf(), 1.6 );
+   BOOST_CHECK_EQUAL( grid.get_dxw(), 1.6 );
+   BOOST_CHECK_EQUAL( grid.get_nsub0(), 10 );
+
+   // setters
+   grid.set_dxf( dxf );
+   BOOST_CHECK_EQUAL( grid.get_dxf(), dxf );
+   grid.set_dxw( dxw );
+   BOOST_CHECK_EQUAL( grid.get_dxw(), dxw );
+   grid.set_nsub0( nsub );
+   BOOST_CHECK_EQUAL( grid.get_nsub0(), nsub );
+
+   var.define_grid( grid );
+   // Should set dxf, dxw and nsub as
+   // well as define patches.
+   BOOST_CHECK_EQUAL( grid.get_dxf(), var.dxf() );
+   BOOST_CHECK_EQUAL( grid.get_dxw(), var.dxw() );
+   BOOST_CHECK_EQUAL( grid.get_nsub0(), var.nsub() );
+
+   BOOST_CHECK_NE( grid.size(), 0 );
+   BOOST_CHECK_EQUAL( grid.size(), var.expected_grid_size() );
+   BOOST_CHECK_EQUAL( grid.empty(), false );
+   BOOST_CHECK_EQUAL( grid.have_integrators(), true );
+   {
+      std::ofstream os( "patch.txt" );
+      grid.write_grid( os );
+   }
+   boost::archive::text_oarchive oa( store );
+   oa << grid;
+}
+{
+   evaluator::icc_surface_grid grid;
+
+   boost::archive::text_iarchive ia( store );
+   ia >> grid;
+
+   BOOST_CHECK_EQUAL( grid.get_dxf(), var.dxf() );
+   BOOST_CHECK_EQUAL( grid.get_dxw(), var.dxw() );
+   BOOST_CHECK_EQUAL( grid.get_nsub0(), var.nsub() );
+   BOOST_CHECK_EQUAL( grid.size(), var.expected_grid_size() );
+   BOOST_CHECK_EQUAL( grid.empty(), false );
+   BOOST_CHECK_EQUAL( grid.have_integrators(), true );
+}
 !!!395312.cpp!!!	icc_matrix_test() : void
-//XXevaluator::patch_matrix_fixture fix;
-//XXstd::stringstream store;
-//XXstd::stringstream iostore;
-//XXstd::stringstream log;
-//XXevaluator::icc_matrix::array_type amx;
-//XXstd::vector< std::size_t > indx;
-//XX{
-//XX   evaluator::icc_matrix var;
-//XX   BOOST_CHECK_EQUAL( var.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( var.empty(), true );
-//XX
-//XX   BOOST_CHECK_THROW( var.write_a_matrix( store ), std::runtime_error );
-//XX
-//XX   evaluator::icc_surface_grid gridder;
-//XX
-//XX   fix.define_grid( gridder, log );
-//XX   log << gridder.size() << "\n";
-//XX   
-//XX   var.compute_amx( gridder, log );
-//XX   {
-//XX      std::ofstream os( "amx1.txt" );
-//XX      var.write_a_matrix( os );
-//XX   }
-//XX   BOOST_CHECK_EQUAL( var.size(), gridder.size() );
-//XX   BOOST_CHECK_EQUAL( var.size(), fix.expected_grid_size() );
-//XX   var.lu_decompose_amx( log );
-//XX   {
-//XX      std::ofstream os( "amx.txt" );
-//XX      var.write_a_matrix( os );
-//XX   }
-//XX   var.write_a_matrix( store );
-//XX
-//XX   boost::archive::text_oarchive oa( iostore );
-//XX   oa << var;
-//XX
-//XX   amx.resize( boost::extents[ var.size() ][ var.size() ] );
-//XX   indx.resize( var.size() );
-//XX   for (std::size_t i = 0; i != var.size(); ++i)
-//XX   {
-//XX      std::array< std::size_t, 2 > idx;
-//XX      idx[ 0 ] = i;
-//XX      indx[ i ] = var.pivot( i );
-//XX      for (std::size_t j = 0; j != var.size(); ++j)
-//XX      {
-//XX         idx[ 1 ] = j;
-//XX         amx( idx ) = var.a( i, j );
-//XX      }
-//XX   }
-//XX}
-//XX{
-//XX   evaluator::icc_matrix var;
-//XX
-//XX   BOOST_CHECK_EQUAL( var.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( var.empty(), true );
-//XX
-//XX   boost::archive::text_iarchive ia( iostore );
-//XX   ia >> var;
-//XX   BOOST_CHECK_EQUAL( var.size(), fix.expected_grid_size() );
-//XX   BOOST_CHECK_EQUAL( var.empty(), false );
-//XX   for (std::size_t i = 0; i != var.size(); ++i)
-//XX   {
-//XX      std::array< std::size_t, 2 > idx;
-//XX      idx[ 0 ] = i;
-//XX      BOOST_CHECK_EQUAL( indx[ i ], var.pivot( i ) );
-//XX      for (std::size_t j = 0; j != var.size(); ++j)
-//XX      {
-//XX         idx[ 1 ] = j;
-//XX         BOOST_CHECK_EQUAL( amx( idx ), var.a( i, j ) );
-//XX      }
-//XX   }
-//XX}
-//XX{
-//XX   evaluator::icc_matrix var;
-//XX
-//XX   BOOST_CHECK_EQUAL( var.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( var.empty(), true );
-//XX
-//XX   var.read_a_matrix( store );
-//XX   BOOST_CHECK_EQUAL( var.size(), fix.expected_grid_size() );
-//XX   BOOST_CHECK_EQUAL( var.empty(), false );
-//XX   for (std::size_t i = 0; i != var.size(); ++i)
-//XX   {
-//XX      std::array< std::size_t, 2 > idx;
-//XX      idx[ 0 ] = i;
-//XX      BOOST_CHECK_EQUAL( indx[ i ], var.pivot( i ) );
-//XX      for (std::size_t j = 0; j != var.size(); ++j)
-//XX      {
-//XX         idx[ 1 ] = j;
-//XX         // Allow error in the value as data was writen to only
-//XX         // about 6 significant places (+/-0.0005 %)
-//XX         BOOST_CHECK_CLOSE_FRACTION( amx( idx ), var.a( i, j ), 0.00051 );
-//XX      }
-//XX   }
-//XX}
+evaluator::patch_matrix_fixture fix;
+std::stringstream store;
+std::stringstream iostore;
+evaluator::icc_matrix::array_type amx;
+std::vector< std::size_t > indx;
+{
+  //  Constructor tests
+  BOOST_CHECK( std::is_default_constructible< evaluator::icc_matrix >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< evaluator::icc_matrix >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< evaluator::icc_matrix >::type {} );
+  BOOST_CHECK( ( not std::is_assignable< evaluator::icc_matrix, evaluator::icc_matrix >::type {} ) );
+  BOOST_CHECK( not std::has_virtual_destructor< evaluator::icc_matrix >::type {} );
+}
+{
+   evaluator::icc_matrix var;
+   BOOST_CHECK_EQUAL( var.size(), 0 );
+   BOOST_CHECK_EQUAL( var.empty(), true );
+
+   BOOST_CHECK_THROW( var.write_a_matrix( store ), std::runtime_error );
+
+   evaluator::icc_surface_grid gridder;
+
+   fix.define_grid( gridder );
+   
+   var.compute_amx( gridder );
+   {
+      std::ofstream os( "amx1.txt" );
+      var.write_a_matrix( os );
+   }
+   BOOST_CHECK_EQUAL( var.size(), gridder.size() );
+   BOOST_CHECK_EQUAL( var.size(), fix.expected_grid_size() );
+   var.lu_decompose_amx();
+   {
+      std::ofstream os( "amx.txt" );
+      var.write_a_matrix( os );
+   }
+
+   boost::archive::text_oarchive oa( iostore );
+   oa << var;
+
+   amx.resize( boost::extents[ var.size() ][ var.size() ] );
+   indx.resize( var.size() );
+   for (std::size_t i = 0; i != var.size(); ++i)
+   {
+      std::array< std::size_t, 2 > idx;
+      idx[ 0 ] = i;
+      indx[ i ] = var.pivot( i );
+      for (std::size_t j = 0; j != var.size(); ++j)
+      {
+         idx[ 1 ] = j;
+         amx( idx ) = var.a( i, j );
+      }
+   }
+}
+{
+   evaluator::icc_matrix var;
+
+   BOOST_CHECK_EQUAL( var.size(), 0 );
+   BOOST_CHECK_EQUAL( var.empty(), true );
+
+   boost::archive::text_iarchive ia( iostore );
+   ia >> var;
+   BOOST_CHECK_EQUAL( var.size(), fix.expected_grid_size() );
+   BOOST_CHECK_EQUAL( var.empty(), false );
+   for (std::size_t i = 0; i != var.size(); ++i)
+   {
+      std::array< std::size_t, 2 > idx;
+      idx[ 0 ] = i;
+      BOOST_CHECK_EQUAL( indx[ i ], var.pivot( i ) );
+      for (std::size_t j = 0; j != var.size(); ++j)
+      {
+         idx[ 1 ] = j;
+         BOOST_CHECK_EQUAL( amx( idx ), var.a( i, j ) );
+      }
+   }
+}
 !!!410032.cpp!!!	induced_charge_test() : void
-//XXevaluator::patch_matrix_fixture fix;
-//XX//std::map< std::string, std::string > params;
-//XXstd::stringstream store;
-//XXstd::stringstream log;
-//XX{
-//XX   // static method test
-//XX   BOOST_CHECK_EQUAL( core::strngs::fsptch(), evaluator::induced_charge::type_label_() );
-//XX}
-//XX// Constructor test method
-//XX{
-//XX   // default
-//XX   evaluator::induced_charge icceval;
-//XX
-//XX   BOOST_CHECK_EQUAL( icceval.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( icceval.empty(), true );
-//XX   BOOST_CHECK_EQUAL( icceval.type_label(), core::strngs::fsptch() );
-//XX   BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx.dat" );
-//XX   BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch.dat" );
-//XX   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.6 );
-//XX   BOOST_CHECK_EQUAL( icceval.get_dxw(), 1.6 );
-//XX   BOOST_CHECK_EQUAL( icceval.get_nsub0(), 10 );
-//XX
-//XX   BOOST_CHECK_NO_THROW( icceval.set_a_matrix_filename( "amx-test.txt" ) );
-//XX   BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx-test.txt" );
-//XX
-//XX   BOOST_CHECK_NO_THROW( icceval.set_patch_filename( "patch-test.txt" ) );
-//XX   BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch-test.txt" );
-//XX
-//XX   BOOST_CHECK_NO_THROW( icceval.set_dxf( 1.25 ) );
-//XX   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.25 );
-//XX
-//XX   BOOST_CHECK_NO_THROW( icceval.set_dxw( 3.5 ) );
-//XX   BOOST_CHECK_EQUAL( icceval.get_dxw(), 3.5 );
-//XX
-//XX   BOOST_CHECK_NO_THROW( icceval.set_nsub0( 11 ) );
-//XX   BOOST_CHECK_EQUAL( icceval.get_nsub0(), 11 );
-//XX
-//XX   BOOST_CHECK_EQUAL( icceval.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( icceval.empty(), true );
-//XX
-//XX   boost::archive::text_oarchive oa( store );
-//XX   oa << icceval;
-//XX}
-//XX// Serialization test method.
-//XX{
-//XX   evaluator::induced_charge icceval;
-//XX
-//XX   boost::archive::text_iarchive ia( store );
-//XX   ia >> icceval;
-//XX
-//XX   BOOST_CHECK_EQUAL( icceval.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( icceval.empty(), true );
-//XX   BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx-test.txt" );
-//XX   BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch-test.txt" );
-//XX   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.25 );
-//XX   BOOST_CHECK_EQUAL( icceval.get_dxw(), 3.5 );
-//XX   BOOST_CHECK_EQUAL( icceval.get_nsub0(), 11 );
-//XX
-//XX}
-//XX// Manual build test
-//XX{
-//XX   // default
-//XX   evaluator::induced_charge icceval;
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   // Set parameters as per 'fix'.
-//XX   BOOST_CHECK_NO_THROW( icceval.set_dxf( fix.dxf() ) );
-//XX   BOOST_CHECK_NO_THROW( icceval.set_dxw( fix.dxw() ) );
-//XX   BOOST_CHECK_NO_THROW( icceval.set_nsub0( fix.nsub() ) );
-//XX   BOOST_CHECK_NO_THROW( icceval.set_alfa( fix.temperature() ) );
-//XX   BOOST_CHECK_NO_THROW( icceval.set_permittivity( fix.epsw() ) );
-//XX   BOOST_CHECK_EQUAL( icceval.get_alfa(), fix.alfa() );
-//XX   BOOST_CHECK_EQUAL( icceval.get_permittivity(), fix.epsw() );
-//XX
-//XX   // Build amx from data from 'fix'. We need to
-//XX   // do this as simfix is not derived from channel_system.
-//XX   BOOST_CHECK_NO_THROW( icceval.create_amx( fix.zl1(), fix.rl1(), fix.rl4(), fix.rlvest(), fix.rlmemb(), fix.epsw(), fix.epspr(), log ) );
-//XX
-//XX   // We assume this simple size test means that the surface grid and the A
-//XX   // matrix are correctly built because independent tests of the surface grid
-//XX   // and A matrix classes produce the correct results.
-//XX   BOOST_CHECK_EQUAL( icceval.size(), fix.expected_grid_size() );
-//XX}
-//XX{
-//XX   // Construction as if from an input file with no parameters
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   std::map< std::string, std::string > params;
-//XX   // Empty parameter list allowed
-//XX   BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
-//XX
-//XX   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
-//XX   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
-//XX   BOOST_REQUIRE( nullptr != llp );
-//XX   BOOST_CHECK_EQUAL( llp->get_dxf(), 1.6);
-//XX
-//XX   // write_document test
-//XX   core::input_document wr( 1 );
-//XX   bep->write_document( wr );
-//XX   BOOST_CHECK_EQUAL( wr.size(), 1  );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].label(), core::strngs::evaluator_label() );
-//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fstype() ) );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fstype() ), core::strngs::fsptch() );
-//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsdxw() ) );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsdxw() ), std::to_string( 1.6 ) );
-//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsdxf() ) );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsdxf() ), std::to_string( 1.6 ) );
-//XX   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsnsub() ) );
-//XX   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsnsub() ), std::to_string( 10 ) );
-//XX}
-//XX{
-//XX   // Construction as if from an input file with valid parameters
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   std::map< std::string, std::string > params;
-//XX   params[ core::strngs::fsdxf() ] = "4.0";
-//XX   params[ core::strngs::fsdxw() ] = "6.0";
-//XX   params[ core::strngs::fsnsub() ] = "50";
-//XX   // Empty parameter list allowed
-//XX   BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
-//XX
-//XX   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
-//XX   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
-//XX   BOOST_REQUIRE( nullptr != llp );
-//XX   BOOST_CHECK_EQUAL( llp->get_dxf(), 4.0 );
-//XX   BOOST_CHECK_EQUAL( llp->get_dxw(), 6.0 );
-//XX   BOOST_CHECK_EQUAL( llp->get_nsub0(), 50 );
-//XX}
-//XX{
-//XX   // Construction as if from an input file with valid parameters
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   std::map< std::string, std::string > params;
-//XX   params[ core::strngs::fsdxf() ] = "4";
-//XX   // Empty parameter list allowed
-//XX   BOOST_REQUIRE_NO_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ) );
-//XX
-//XX   evaluator::base_evaluator const* bep( &(*simfix.sim->get_evaluators().begin()) );
-//XX   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( bep );
-//XX   BOOST_REQUIRE( nullptr != llp );
-//XX   BOOST_CHECK_EQUAL( llp->get_dxf(), 4.0 );
-//XX}
-//XX{
-//XX   // Construction as if from an input file with invalid parameters : invalid value
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   std::map< std::string, std::string > params;
-//XX   params[ core::strngs::fsdxf() ] = "four";
-//XX   // Empty parameter list allowed
-//XX   BOOST_REQUIRE_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ), std::runtime_error );
-//XX}
-//XX{
-//XX   // Construction as if from an input file with invalid parameters : invalid name
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   std::map< std::string, std::string > params;
-//XX   params[ core::strngs::fsiwid() ] = "4.0";
-//XX   // Empty parameter list allowed
-//XX   BOOST_REQUIRE_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ), std::runtime_error );
-//XX}
-//XX{
-//XX   // Construction as if from an input file with invalid parameters we would
-//XX   // like to be valid
-//XX   platform::simulator_fixture simfix;
-//XX
-//XX   std::map< std::string, std::string > params;
-//XX   params[ "amxfile" ] = "amx.txt";
-//XX   params[ "patchfile" ] = "patch.txt";
-//XX   // Empty parameter list allowed
-//XX   BOOST_REQUIRE_THROW( evaluator::induced_charge::make_evaluator( params, *simfix.sim ), std::runtime_error );
-//XX}
+evaluator::patch_matrix_fixture fix;
+//std::map< std::string, std::string > params;
+std::stringstream store;
+std::stringstream log;
+{
+  //  Constructor tests
+  BOOST_CHECK( std::is_default_constructible< evaluator::induced_charge >::type {} );
+  BOOST_CHECK( not std::is_copy_constructible< evaluator::induced_charge >::type {} );
+  BOOST_CHECK( not std::is_move_constructible< evaluator::induced_charge >::type {} );
+  BOOST_CHECK( ( not std::is_assignable< evaluator::induced_charge, evaluator::icc_matrix >::type {} ) );
+  BOOST_CHECK( std::has_virtual_destructor< evaluator::induced_charge >::type {} );
+}
+{
+   // static method test
+   BOOST_CHECK_EQUAL( core::strngs::fsptch(), evaluator::induced_charge::type_label_() );
+}
+// Constructor test method
+{
+   // default
+   evaluator::induced_charge icceval;
+
+   BOOST_CHECK_EQUAL( icceval.size(), 0 );
+   BOOST_CHECK_EQUAL( icceval.empty(), true );
+   BOOST_CHECK_EQUAL( icceval.type_label(), core::strngs::fsptch() );
+   BOOST_CHECK( icceval.get_a_matrix_filename().empty()  );
+   BOOST_CHECK( icceval.get_patch_filename().empty() );
+   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.6 );
+   BOOST_CHECK_EQUAL( icceval.get_dxw(), 1.6 );
+   BOOST_CHECK_EQUAL( icceval.get_membrane_arc_radius(), 0.0 );
+   BOOST_CHECK_EQUAL( icceval.get_permittivity(), 0.0 );
+   BOOST_CHECK_EQUAL( icceval.get_protein_permittivity(), 10.0 );
+   BOOST_CHECK_EQUAL( icceval.get_protein_radius(), 0.0 );
+
+   BOOST_CHECK_NO_THROW( icceval.set_a_matrix_filename( "amx-test.txt" ) );
+   BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx-test.txt" );
+
+   BOOST_CHECK_NO_THROW( icceval.set_patch_filename( "patch-test.txt" ) );
+   BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch-test.txt" );
+
+   BOOST_CHECK_NO_THROW( icceval.set_dxf( 1.25 ) );
+   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.25 );
+
+   BOOST_CHECK_NO_THROW( icceval.set_dxw( 3.5 ) );
+   BOOST_CHECK_EQUAL( icceval.get_dxw(), 3.5 );
+
+   BOOST_CHECK_NO_THROW( icceval.set_nsub0( 11 ) );
+   BOOST_CHECK_EQUAL( icceval.get_nsub0(), 11 );
+
+   BOOST_CHECK_NO_THROW( icceval.set_membrane_arc_radius( 12.25 ) );
+   BOOST_CHECK_EQUAL( icceval.get_membrane_arc_radius(), 12.25 );
+
+   BOOST_CHECK_NO_THROW( icceval.set_permittivity( 80.5 ) );
+   BOOST_CHECK_EQUAL( icceval.get_permittivity(), 80.5 );
+
+   BOOST_CHECK_NO_THROW( icceval.set_protein_permittivity( 8.125 ) );
+   BOOST_CHECK_EQUAL( icceval.get_protein_permittivity(), 8.125 );
+
+   BOOST_CHECK_NO_THROW( icceval.set_protein_radius( 32.5 ) );
+   BOOST_CHECK_EQUAL( icceval.get_protein_radius(), 32.5 );
+
+   BOOST_CHECK_EQUAL( icceval.size(), 0 );
+   BOOST_CHECK_EQUAL( icceval.empty(), true );
+
+   boost::archive::text_oarchive oa( store );
+   oa << icceval;
+}
+// Serialization test method.
+{
+   evaluator::induced_charge icceval;
+
+   boost::archive::text_iarchive ia( store );
+   ia >> icceval;
+
+   BOOST_CHECK_EQUAL( icceval.size(), 0 );
+   BOOST_CHECK_EQUAL( icceval.empty(), true );
+   BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx-test.txt" );
+   BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch-test.txt" );
+   BOOST_CHECK_EQUAL( icceval.get_dxf(), 1.25 );
+   BOOST_CHECK_EQUAL( icceval.get_dxw(), 3.5 );
+   BOOST_CHECK_EQUAL( icceval.get_nsub0(), 11 );
+   BOOST_CHECK_EQUAL( icceval.get_membrane_arc_radius(), 12.25 );
+   BOOST_CHECK_EQUAL( icceval.get_permittivity(), 80.5 );
+   BOOST_CHECK_EQUAL( icceval.get_protein_permittivity(), 8.125 );
+   BOOST_CHECK_EQUAL( icceval.get_protein_radius(), 32.5 );
+}
+// Manual build test
+{
+   // default
+   evaluator::induced_charge icceval;
+   evaluator::patch_matrix_fixture simfix;
+
+   // Set parameters as per 'fix'.
+   BOOST_CHECK_NO_THROW( icceval.set_dxf( fix.dxf() ) );
+   BOOST_CHECK_NO_THROW( icceval.set_dxw( fix.dxw() ) );
+   BOOST_CHECK_NO_THROW( icceval.set_nsub0( fix.nsub() ) );
+   BOOST_CHECK_NO_THROW( icceval.set_alfa( fix.temperature() ) );
+   BOOST_CHECK_NO_THROW( icceval.set_permittivity( fix.epsw() ) );
+   BOOST_CHECK_EQUAL( icceval.get_alfa(), fix.alfa() );
+   BOOST_CHECK_EQUAL( icceval.get_permittivity(), fix.epsw() );
+   BOOST_CHECK_NO_THROW( icceval.set_membrane_arc_radius( fix.rlmemb() ) );
+   BOOST_CHECK_NO_THROW( icceval.set_protein_permittivity( fix.epspr() ) );
+   BOOST_CHECK_NO_THROW( icceval.set_protein_radius( fix.rl4() ) );
+ 
+   // Build amx from data from 'fix'. We need to
+   // do this as simfix is not derived from channel_system.
+   BOOST_CHECK_NO_THROW( icceval.create_amx( fix.zl1(), fix.rl1(), fix.rlvest() ) );
+
+   // We assume this simple size test means that the surface grid and the A
+   // matrix are correctly built because independent tests of the surface grid
+   // and A matrix classes produce the correct results.
+   BOOST_CHECK_EQUAL( icceval.size(), fix.expected_grid_size() );
+}
+{
+   // Construction as if from an input file with no parameters
+  boost::shared_ptr< evaluator::base_evaluator > eval;
+   core::input_preprocess reader;
+
+   std::map< std::string, std::string > params;
+   // Empty parameter list allowed
+   BOOST_REQUIRE_NO_THROW( eval = evaluator::induced_charge::make_evaluator( params, reader ) );
+
+   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( eval.get() );
+   BOOST_REQUIRE( nullptr != llp );
+   BOOST_CHECK_EQUAL( llp->get_dxf(), 1.6);
+
+   // write_document test
+   core::input_document wr( 1 );
+   eval->write_document( wr );
+   BOOST_CHECK_EQUAL( wr.size(), 1  );
+   BOOST_CHECK_EQUAL( wr[ 0 ].label(), core::strngs::evaluator_label() );
+   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fstype() ) );
+   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fstype() ), core::strngs::fsptch() );
+   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsdxw() ) );
+   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsdxw() ), std::to_string( 1.6 ) );
+   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsdxf() ) );
+   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsdxf() ), std::to_string( 1.6 ) );
+   BOOST_CHECK( wr[ 0 ].has_entry( core::strngs::fsnsub() ) );
+   BOOST_CHECK_EQUAL( wr[ 0 ].get_entry( core::strngs::fsnsub() ), std::to_string( 10 ) );
+}
+{
+   // Construction as if from an input file with valid parameters
+  boost::shared_ptr< evaluator::base_evaluator > eval;
+   core::input_preprocess reader;
+
+   std::map< std::string, std::string > params;
+   params[ core::strngs::fsdxf() ] = "4.0";
+   params[ core::strngs::fsdxw() ] = "6.0";
+   params[ core::strngs::fsnsub() ] = "50";
+   // Empty parameter list allowed
+   BOOST_REQUIRE_NO_THROW( eval = evaluator::induced_charge::make_evaluator( params, reader ) );
+
+   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( eval.get() );
+   BOOST_REQUIRE( nullptr != llp );
+   BOOST_CHECK_EQUAL( llp->get_dxf(), 4.0 );
+   BOOST_CHECK_EQUAL( llp->get_dxw(), 6.0 );
+   BOOST_CHECK_EQUAL( llp->get_nsub0(), 50 );
+}
+{
+   // Construction as if from an input file with valid parameters
+  boost::shared_ptr< evaluator::base_evaluator > eval;
+   core::input_preprocess reader;
+
+   std::map< std::string, std::string > params;
+   params[ core::strngs::fsdxf() ] = "4";
+   BOOST_REQUIRE_NO_THROW( eval = evaluator::induced_charge::make_evaluator( params, reader ) );
+
+   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( eval.get() );
+   BOOST_REQUIRE( nullptr != llp );
+   BOOST_CHECK_EQUAL( llp->get_dxf(), 4.0 );
+}
+{
+   // Construction as if from an input file with invalid parameters : invalid value
+  boost::shared_ptr< evaluator::base_evaluator > eval;
+   core::input_preprocess reader;
+
+   std::map< std::string, std::string > params;
+   params[ core::strngs::fsdxf() ] = "four";
+   BOOST_REQUIRE_THROW( eval = evaluator::induced_charge::make_evaluator( params, reader ), core::input_error );
+}
+{
+   // Construction as if from an input file with invalid parameters : invalid name
+  boost::shared_ptr< evaluator::base_evaluator > eval;
+   core::input_preprocess reader;
+
+   std::map< std::string, std::string > params;
+   params[ core::strngs::fsnsub() ] = "-4";
+   BOOST_REQUIRE_THROW( eval = evaluator::induced_charge::make_evaluator( params, reader ), core::input_error );
+}
+{
+   // Construction as if from an input file with invalid parameters we would
+   // like to be valid
+  boost::shared_ptr< evaluator::base_evaluator > eval;
+   core::input_preprocess reader;
+
+   std::map< std::string, std::string > params;
+   params[ evaluator::induced_charge::amx_file_label() ] = "amx.txt";
+   params[ evaluator::induced_charge::patch_file_label() ] = "";
+   BOOST_REQUIRE_THROW( eval = evaluator::induced_charge::make_evaluator( params, reader ), core::input_error );
+}
+!!!2492208.cpp!!!	input_induced_charge_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxf 0.5\ndxw 0.25\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\npatch_file patch.dat\namx_file \"amx.dat\"\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+
+  BOOST_REQUIRE_EQUAL( mngr->size(), 1ul );
+  BOOST_REQUIRE_EQUAL( mngr->get_evaluators()[ 0 ].type_label(), "patch" );
+  const evaluator::induced_charge* icc = dynamic_cast< const evaluator::induced_charge* >( &mngr->get_evaluators()[ 0 ] );
+  BOOST_REQUIRE( icc != nullptr ); 
+  BOOST_CHECK_EQUAL( icc->get_dxf(), 0.5 );
+  BOOST_CHECK_EQUAL( icc->get_dxw(), 0.25 );
+  BOOST_CHECK_EQUAL( icc->get_nsub0(), 20 );
+  BOOST_CHECK_EQUAL( icc->get_protein_permittivity(), 3.0 );
+  BOOST_CHECK_EQUAL( icc->get_protein_radius(), 30.0 );
+  BOOST_CHECK_EQUAL( icc->get_membrane_arc_radius(), 10.0 );
+  BOOST_CHECK_EQUAL( icc->get_patch_filename(), "patch.dat" );
+  BOOST_CHECK_EQUAL( icc->get_a_matrix_filename(), "amx.dat" );
+  
+}catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "Unexpected exception thrown by \"dg.read_input( reader )\": " ) + err.what() );
+}
+!!!2492336.cpp!!!	input_induced_charge_unknown_parameter_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxf 0.5\ndxw 0.3\nmobk \"Na\"\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Unknown parameter \"mobk\" in section \"evaluator\" subtype \"patch\" detected at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Parameter \"mobk\" is not expected in this section and type. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2492464.cpp!!!	input_induced_charge_amx_file_no_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxf 0.5\ndxw 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\namx_file \nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Patch file path parameter \"amx_file\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2492592.cpp!!!	input_induced_charge_amx_file_empty_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxf 0.5\ndxw 0.3\namx_file \"\"\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Patch file path parameter \"amx_file\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a non-empty value. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2492848.cpp!!!	input_induced_charge_patch_file_no_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxf 0.5\ndxw 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\npatch_file \nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Patch file path parameter \"patch_file\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2492720.cpp!!!	input_induced_charge_patch_file_empty_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxf 0.5\ndxw 0.3\npatch_file \"\"\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Patch file path parameter \"patch_file\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a non-empty value. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2493104.cpp!!!	input_induced_charge_dxf_no_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxf\ndxw 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2492976.cpp!!!	input_induced_charge_dxf_empty_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxf \"\"\ndxw 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2493232.cpp!!!	input_induced_charge_dxf_bad_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxf three\ndxw 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" with value (three) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2493360.cpp!!!	input_induced_charge_dxf_zero_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxf 0.0\ndxw 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" with value (0.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2493488.cpp!!!	input_induced_charge_dxf_negative_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxf -0.5\ndxw 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" with value (-0.5) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2494128.cpp!!!	input_induced_charge_dxw_no_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2494000.cpp!!!	input_induced_charge_dxw_empty_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw \"\"\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2493872.cpp!!!	input_induced_charge_dxw_bad_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw three\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" with value (three) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2493744.cpp!!!	input_induced_charge_dxw_zero_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.0\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" with value (0.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2493616.cpp!!!	input_induced_charge_dxw_negative_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw -0.5\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" with value (-0.5) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2494768.cpp!!!	input_induced_charge_epspr_no_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub 20\nepspr\nrl4 30.0\nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2494640.cpp!!!	input_induced_charge_epspr_empty_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub 20\nepspr \"\"\nrl4 30.0\nrlcurv 10.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2494512.cpp!!!	input_induced_charge_epspr_bad_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub 20\nepspr three\nrl4 30.0\nrlcurv 10.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" with value (three) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2494384.cpp!!!	input_induced_charge_epspr_zero_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub 20\nepspr 0.0\nrl4 30.0\nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" with value (0.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2494256.cpp!!!	input_induced_charge_epspr_negative_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.5\ndxf 0.3\nnsub 20\nepspr -3.0\nrl4 30.0\nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" with value (-3.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2495408.cpp!!!	input_induced_charge_rl4_no_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 \nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2495280.cpp!!!	input_induced_charge_rl4_empty_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 \"\"\nrlcurv 10.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2495152.cpp!!!	input_induced_charge_rl4_bad_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 ten\nrlcurv 10.0\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" with value (ten) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2495024.cpp!!!	input_induced_charge_rl4_zero_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 0.0\nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" with value (0.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2494896.cpp!!!	input_induced_charge_rl4_negative_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.5\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 -30.0\nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" with value (-30.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2496048.cpp!!!	input_induced_charge_rlcurv_no_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv \n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2495920.cpp!!!	input_induced_charge_rlcurv_empty_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv \"\"\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2495792.cpp!!!	input_induced_charge_rlcurv_bad_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv ten\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" with value (ten) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2495664.cpp!!!	input_induced_charge_rlcurv_zero_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv 0.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" with value (0.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2495536.cpp!!!	input_induced_charge_rlcurv_negative_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.5\ndxf 0.3\nnsub 20\nepspr 3.0\nrl4 30.0\nrlcurv -10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" with value (-10.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2496688.cpp!!!	input_induced_charge_nsub_no_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2496560.cpp!!!	input_induced_charge_nsub_empty_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub \"\"\nepspr 3.0\nrl4 30.0\nrlcurv 12\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2496432.cpp!!!	input_induced_charge_nsub_bad_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub three\nepspr 3.0\nrl4 30.0\nrlcurv 10\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" with value (three) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2496304.cpp!!!	input_induced_charge_nsub_zero_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.3\ndxf 0.3\nnsub 0\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" with value (0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
+!!!2496176.cpp!!!	input_induced_charge_nsub_negative_value_test() : void
+// Test read input (specie meta)
+boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
+core::input_delegater dg( 1 );
+{
+  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
+  evaluator::induced_charge::add_definition( *m );
+
+  dg.add_input_delegate( m );
+}
+
+std::string canon_input( "evaluator\ntype \"patch\"\ndxw 0.5\ndxf 0.3\nnsub -20\nepspr 3.0\nrl4 30.0\nrlcurv 10.0\n\nend\n\n" );
+
+core::input_preprocess reader;
+reader.add_buffer( "dummy", canon_input );
+try
+{
+  dg.read_input( reader );
+  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
+}
+catch( core::input_error const& err )
+{
+  const std::string msg( err.what() );
+  //std::cout << msg << "\n";
+  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" with value (-20) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than or equal to zero. **" ) < msg.size() );
+}
+catch( std::exception const& err )
+{
+  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+}
 !!!421168.cpp!!!	legendre_test() : void
 //XX// In order to test the ICC code an analytically tractable problem
 //XX// is a single charge near a sphere.

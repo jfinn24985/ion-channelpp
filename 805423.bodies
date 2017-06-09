@@ -8,13 +8,15 @@ class induced_charge
 , hnew_()
 , rip_()
 , ripnew_()
-, a_matrix_filename_( "amx.dat" )
-, patch_filename_( "patch.dat" )
-, sample_conx_()
+, a_matrix_filename_()
+, patch_filename_()
 , alfa_()
 , epsw_()
 , old_potential_()
 , new_potential_()
+, epspr_( 10.0 )
+, protein_radius_()
+, membrane_arc_radius_()
 {}
 !!!2455856.cpp!!!	add_definition(inout meta : evaluator_meta) : void
 std::string desc( "Calculate the energy contribution from the interactions of charged particles with the induced surface charges." );
@@ -22,7 +24,7 @@ std::unique_ptr< evaluator_definition > defn( new evaluator_definition( type_lab
 // Add parameter definitions.
 defn->add_definition( { core::strngs::fsdxf(), "number", ">0", "1.6", "The factor determining integration patches around the axis of rotation." } );
 defn->add_definition( { core::strngs::fsdxw(), "number", ">0", "1.6", "The factor determining integration patches along the axis of rotation." } );
-defn->add_definition( { core::strngs::fsdxf(), "ordinal", ">0", "10", "The factor determining number of integration subpatches when integrating within a patch." } );
+defn->add_definition( { core::strngs::fsnsub(), "ordinal", ">0", "10", "The factor determining number of integration subpatches when integrating within a patch." } );
 defn->add_definition( { core::strngs::fsepsp(), "number", ">0", "10", "The relative permittivity of the protein media." } );
 defn->add_definition( { core::strngs::fsgrl4(), "number", ">0", "(rl1+rlvest+rlcurv)", "The outer radius of the protein toroid." } );
 defn->add_definition( { core::strngs::fsgrlc(), "number", ">0", "10", "The arc radius of outer curve of the protein toroid." } );
@@ -49,6 +51,10 @@ if ( param_set.count( core::strngs::fsnsub() ) != 0 )
 {
   std::size_t nsub0{};
   reader.ordinal_input( core::strngs::fsnsub(), param_set.at( core::strngs::fsnsub() ), "Subpatch integration factor", core::strngs::evaluator_label(), nsub0, &reader );
+  if( nsub0 == 0ul )
+  {
+    throw core::input_error::parameter_value_error( "Subpatch integration factor", core::strngs::evaluator_label(), core::strngs::fsnsub(), param_set.at( core::strngs::fsnsub() ), &reader, core::input_error::number_zero_message() );
+  }
   cc->set_nsub0( nsub0 );
 }
 if ( param_set.count( core::strngs::fsepsp() ) != 0 )
@@ -66,7 +72,7 @@ if ( param_set.count( core::strngs::fsgrl4() ) != 0 )
 if ( param_set.count( core::strngs::fsgrlc() ) != 0 )
 {
   double radius{};
-  reader.float_input( core::strngs::fsgrlc(), param_set.at( core::strngs::fsgrlc() ), "Protein outer radius", core::strngs::evaluator_label(), radius, true, false, &reader );
+  reader.float_input( core::strngs::fsgrlc(), param_set.at( core::strngs::fsgrlc() ), "Protein outer arc radius", core::strngs::evaluator_label(), radius, true, false, &reader );
   cc->set_membrane_arc_radius( radius );
 }
 
@@ -698,7 +704,6 @@ std::ofstream dos( fname );
 dos << "# alfa : " << this->alfa_ << "\n";
 dos << "# patch name : " << this->patch_filename_ << "\n";
 dos << "# amx name : " << this->a_matrix_filename_ << "\n";
-dos << "# connection : " << (this->sample_conx_.connected() ? " true" : "false" ) << "\n";
 dos << "#  C  CNEW H HNEW RIPNEW\n";
 for ( std::size_t ii = 0; ii != this->size(); ++ii )
 {

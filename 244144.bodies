@@ -2,36 +2,38 @@ class icc_matrix
 !!!388144.cpp!!!	icc_matrix()
 : amx_()
 , indx_()
+, row_major_( true )
 {}
 !!!390960.cpp!!!	write_a_matrix(inout output : ostream) : void
 UTILITY_REQUIRE( not this->empty(), "No patch information to write." );
 UTILITY_REQUIRE( output.good (), "Invalid output stream." );
 {
-   output << core::strngs::comment_begin() << " " << this->size() << " " << core::strngs::comment_end() << "\n";
-   // The indx and A matrix
-   std::array< std::size_t, 2 > idx;
-   for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
-   {
-      idx[ 0 ] = ipch;
-      output << this->indx_[ ipch ] << "\n";
-      for (std::size_t jpch = 0; jpch != this->size(); ++jpch)
-      {
-         idx[ 1 ] = jpch;
-         output << ipch << " " << jpch << " " << this->amx_( idx ) << "\n";
-      }
-      output << "\n";
-   }
+  output << core::strngs::comment_begin() << " SIZE : " << this->size() << " " << core::strngs::comment_end() << "\n";
+  output << core::strngs::comment_begin() << " ROW_MAJOR : " << ( this->row_major_ ? "true" : "false" ) << " " << core::strngs::comment_end() << "\n";
+  // The indx and A matrix
+  std::array< std::size_t, 2 > idx;
+  for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+  {
+    idx[ 0 ] = ipch;
+    output << this->indx_[ ipch ] << "\n";
+    for (std::size_t jpch = 0; jpch != this->size(); ++jpch)
+    {
+      idx[ 1 ] = jpch;
+      output << ipch << " " << jpch << " " << this->amx_( idx ) << "\n";
+    }
+    output << "\n";
+  }
 }
 !!!397488.cpp!!!	back_substitute(inout ch : double) : void
 {
-   const utility::lapack::int_type info_dgetrs = utility::lapack::dgetrs( this->amx_, this->indx_, ch );
-   UTILITY_ALWAYS( info_dgetrs == 0, "DGETRS routine returned error number " + std::to_string( info_dgetrs ) );
+   const utility::lapack::int_type info_dgetrs = utility::lapack::dgetrs( this->row_major_, this->amx_, this->indx_, ch );
+   UTILITY_ALWAYS( info_dgetrs == 0, "DGETRS routine returned error number " + std::to_string( info_dgetrs ) + ". 1 might mean no math library was configured." );
 }
 
 !!!532144.cpp!!!	back_substitute(inout ch : double) : void
 {
-   const utility::lapack::int_type info_dgetrs = utility::lapack::dgetrs( this->amx_, this->indx_, ch );
-   UTILITY_ALWAYS( info_dgetrs == 0, "DGETRS routine returned error number " + std::to_string( info_dgetrs ) );
+   const utility::lapack::int_type info_dgetrs = utility::lapack::dgetrs( this->row_major_, this->amx_, this->indx_, ch );
+   UTILITY_ALWAYS( info_dgetrs == 0, "DGETRS routine returned error number " + std::to_string( info_dgetrs ) + ". 1 might mean no math library was configured." );
 }
 
 !!!391216.cpp!!!	compute_amx(inout grid : icc_surface_grid) : void
@@ -51,8 +53,8 @@ UTILITY_CHECK( this->indx_[ 0 ] == this->indx_[ 1 ] , "Cannot LU decompose A mat
 // -----------------------------------------------------
 // Do LU decomposition of the A matrix
 {
-   const utility::lapack::int_type info_dgetrf = utility::lapack::dgetrf( this->amx_, this->indx_ );
+   const utility::lapack::int_type info_dgetrf = utility::lapack::dgetrf( this->row_major_, this->amx_, this->indx_ );
 
-   UTILITY_ALWAYS( info_dgetrf == 0, "Matrix inversion failed, DGETRF routine returned error number " + std::to_string( info_dgetrf ) );
+   UTILITY_ALWAYS( info_dgetrf == 0, "Matrix inversion failed, DGETRF routine returned error number " + std::to_string( info_dgetrf ) + ". 1 might mean no math library was configured." );
 }
 
