@@ -1,0 +1,500 @@
+class icc_fortran
+!!!2503216.cpp!!!	icc_fortran()
+: c_()
+, cnew_()
+, h_()
+, hnew_()
+, rip_()
+, ripnew_()
+, a_matrix_filename_()
+, patch_filename_()
+, alfa_()
+, epsw_()
+, old_potential_()
+, new_potential_()
+, epspr_( 10.0 )
+, protein_radius_()
+, membrane_arc_radius_()
+, dx_zaxis_( 1.6 )
+, dx_radial_( 1.6 )
+, nsub0_( 10 )
+{}
+!!!2503856.cpp!!!	add_definition(inout meta : evaluator_meta) : void
+std::string desc( "Calculate the energy contribution from the interactions of charged particles with the induced surface charges." );
+std::unique_ptr< evaluator_definition > defn( new evaluator_definition( type_label_(), desc, &make_evaluator ) );
+// Add parameter definitions.
+defn->add_definition( { core::strngs::fsdxf(), "number", ">0", "1.6", "The factor determining integration patches around the axis of rotation." } );
+defn->add_definition( { core::strngs::fsdxw(), "number", ">0", "1.6", "The factor determining integration patches along the axis of rotation." } );
+defn->add_definition( { core::strngs::fsnsub(), "ordinal", ">0", "10", "The factor determining number of integration subpatches when integrating within a patch." } );
+defn->add_definition( { core::strngs::fsepsp(), "number", ">0", "10", "The relative permittivity of the protein media." } );
+defn->add_definition( { core::strngs::fsgrl4(), "number", ">0", "(rl1+rlvest+rlcurv)", "The outer radius of the protein toroid." } );
+defn->add_definition( { core::strngs::fsgrlc(), "number", ">0", "10", "The arc radius of outer curve of the protein toroid." } );
+defn->add_definition( { patch_file_label(), "file path", "", "(optional)", "If this option is present, the surface patch information is written into a file of the given name." } );
+defn->add_definition( { amx_file_label(), "file path", "", "(optional)", "If this option is present, the A matrix is written into a file of the given name." } );
+
+meta.add_definition( defn );
+!!!2503984.cpp!!!	make_evaluator(in param_set : string, in reader : input_base_reader) : base_evaluator
+std::unique_ptr< icc_fortran > cc( new icc_fortran );
+
+if ( param_set.count( core::strngs::fsdxf() ) != 0 )
+{
+  double dxf{};
+  reader.float_input( core::strngs::fsdxf(), param_set.at( core::strngs::fsdxf() ), "Angular integration factor", core::strngs::evaluator_label(), dxf, true, false, &reader );
+  cc->set_dxf( dxf );
+}
+if ( param_set.count( core::strngs::fsdxw() ) != 0 )
+{
+  double dxw{};
+  reader.float_input( core::strngs::fsdxw(), param_set.at( core::strngs::fsdxw() ), "Axial integration factor", core::strngs::evaluator_label(), dxw, true, false, &reader );
+  cc->set_dxw( dxw );
+}
+if ( param_set.count( core::strngs::fsnsub() ) != 0 )
+{
+  std::size_t nsub0{};
+  reader.ordinal_input( core::strngs::fsnsub(), param_set.at( core::strngs::fsnsub() ), "Subpatch integration factor", core::strngs::evaluator_label(), nsub0, &reader );
+  if( nsub0 == 0ul )
+  {
+    throw core::input_error::parameter_value_error( "Subpatch integration factor", core::strngs::evaluator_label(), core::strngs::fsnsub(), param_set.at( core::strngs::fsnsub() ), &reader, core::input_error::number_zero_message() );
+  }
+  cc->set_nsub0( nsub0 );
+}
+if ( param_set.count( core::strngs::fsepsp() ) != 0 )
+{
+  double epspr{};
+  reader.float_input( core::strngs::fsepsp(), param_set.at( core::strngs::fsepsp() ), "Protein relative permittivity", core::strngs::evaluator_label(), epspr, true, false, &reader );
+  cc->set_protein_permittivity( epspr );
+}
+if ( param_set.count( core::strngs::fsgrl4() ) != 0 )
+{
+  double radius{};
+  reader.float_input( core::strngs::fsgrl4(), param_set.at( core::strngs::fsgrl4() ), "Protein outer radius", core::strngs::evaluator_label(), radius, true, false, &reader );
+  cc->set_protein_radius( radius );
+}
+if ( param_set.count( core::strngs::fsgrlc() ) != 0 )
+{
+  double radius{};
+  reader.float_input( core::strngs::fsgrlc(), param_set.at( core::strngs::fsgrlc() ), "Protein outer arc radius", core::strngs::evaluator_label(), radius, true, false, &reader );
+  cc->set_membrane_arc_radius( radius );
+}
+
+const std::string patch_label{ patch_file_label() };
+const std::string amx_label{ amx_file_label() };
+if ( param_set.count( patch_label ) != 0 )
+{
+  std::string filename{};
+  reader.text_input( patch_label, param_set.at( patch_label ), "Patch file path", core::strngs::evaluator_label(), filename, &reader );
+  cc->set_patch_filename( filename );
+}
+if ( param_set.count( amx_label ) != 0 )
+{
+  std::string filename{};
+  reader.text_input( amx_label, param_set.at( amx_label ), "Patch file path", core::strngs::evaluator_label(), filename, &reader );
+  cc->set_a_matrix_filename( filename );
+}
+std::unique_ptr< base_evaluator > result( cc.release() );
+return result;
+!!!2504240.cpp!!!	compute_potential(in pman : particle_manager, in gman : geometry_manager, inout changes : change_set) : void
+//
+// Calculate the electric field at each tile. This
+//   should be the same as the previous field adjusted
+//   for the changes. We also calculate ripnew
+//   distance arrays for any changes with new positions
+//
+// O(changes.size() * icc.size())
+std::copy( this->c_.begin(), this->c_.end(), this->cnew_.begin() );
+
+std::valarray< double > valency_array( pman.specie_count() );
+for( std::size_t idx = 0; idx != valency_array.size(); ++idx )
+{
+  valency_array[ idx ] = pman.get_specie( idx ).valency();
+}
+
+// Check size of ripnew
+if ( this->ripnew_.size() < changes.size() )
+{
+   this->ripnew_.resize( changes.size(), std::vector< double >( this->size() ) );
+}
+
+const double epsw{ this->epsw_ };
+const particle::ensemble &ens{ pman.get_ensemble() };
+//
+//   C = (1/4.pi.eps) SUM{ (q_i dot(r_ip,u_i) / ||r_ip||^3 ) }
+//
+for (std::size_t cursor = 0; cursor != changes.size(); ++cursor)
+{
+  auto const& atom = changes[ cursor ];
+  const double valency = valency_array[ atom.key ];
+  if ( atom.do_old )
+  {
+    // Subtract field from old position from cnew
+    // (that actually means we add to cnew)
+    std::array< std::size_t, 2 > idx;
+    idx[ 0 ] = atom.index;
+    for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
+    {
+      idx[ 1 ] = ipch;
+      // vector is from tile to charge
+      const int iipch{ ipch };
+      const double rxki = atom.old_position.x - IONCH_PRX( iipch );
+      const double ryki = atom.old_position.y - IONCH_PRY( iipch );
+      const double rzki = atom.old_position.z - IONCH_PRZ( iipch );
+      const double rip  = this->rip_( idx );
+      const double rki  = rxki * IONCH_PUX( iipch )
+                          + ryki * IONCH_PUY( iipch )
+                          + rzki * IONCH_PUZ( iipch );
+      // Scale by change in eps over boundary.
+      const double delta_eps{ IONCH_DEP( iipch ) };
+      this->cnew_[ ipch ] += valency * delta_eps * rki / (epsw * 4 * core::constants::pi() * std::pow( rip, 3 ) );
+    }
+  }
+  if ( atom.do_new )
+  {
+    // Add field from new position to cnew
+    // (that actually means we subtract from cnew)
+    for (std::size_t ipch = 0; ipch != this->size(); ++ipch )
+    {
+      const int iipch{ ipch };
+      const double rxki = atom.new_position.x - IONCH_PRX( iipch );
+      const double ryki = atom.new_position.y - IONCH_PRY( iipch );
+      const double rzki = atom.new_position.z - IONCH_PRZ( iipch );
+      const double rip  = std::sqrt( std::pow( rxki, 2 ) + std::pow( ryki, 2 ) + std::pow( rzki, 2 ) );
+      const double rki  = rxki * IONCH_PUX( iipch )
+                          + ryki * IONCH_PUY( iipch )
+                          + rzki * IONCH_PUZ( iipch );
+      const double delta_eps{ IONCH_DEP( iipch ) };
+      this->cnew_[ ipch ] -= valency * rki * delta_eps /
+                             (4 * core::constants::pi() * epsw * std::pow( rip, 3 ) );
+      // Calculate and store distances between patches and particle
+      this->ripnew_[ cursor ][ ipch ] = rip;
+    }
+  }
+}
+//
+// Calculate the new H
+//
+std::copy( this->cnew_.begin(), this->cnew_.end(), this->hnew_.begin() );
+IONCH_BAKSUB(this->hnew_.data());
+
+//
+// Calculate new potential
+//
+//   U = (1/4.pi.eps) SUM{ z_i . h_p . area_p / 2 ||r_ip|| }
+//
+// O(ens.size() * icc.size())
+//
+double old_potential = 0.0;
+double new_potential = 0.0;
+// cache charge density * area calculation.
+std::valarray< double > surface_field_new( this->size() );
+for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
+{
+  surface_field_new[ ipch ] = this->hnew_[ ipch ] * IONCH_AREA( ipch );
+}
+
+for (std::size_t ii = 0; ii != ens.size(); ++ii)
+{
+   const std::size_t ispec( ens.key( ii ) );
+   if (ispec != particle::specie_key::nkey )
+   {
+      std::array< std::size_t, 2 > idx;
+      idx[ 0 ] = ii;
+      const double valency = valency_array[ ispec ];
+      for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
+      {
+         idx[ 1 ] = ipch;
+         new_potential += valency * surface_field_new[ ipch ] / ( 2 * this->rip_( idx ) );
+      }
+   }
+}
+// Remove effect of changes from new_potential
+for (std::size_t cursor = 0; cursor != changes.size(); ++cursor)
+{
+   auto const& atom = changes[ cursor ];
+   const double valency = valency_array[ atom.key ];
+   std::array< std::size_t, 2 > idx;
+   if ( atom.do_old )
+   {
+      // Subtract potential from old position
+      idx[ 0 ] = atom.index;
+      for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
+      {
+         idx[ 1 ] = ipch;
+         new_potential -= valency * surface_field_new[ ipch ] / (2 * this->rip_( idx ) );
+      }
+   }
+   if ( atom.do_new )
+   {
+      // Add potential from new position
+      for (std::size_t ipch = 0; ipch != this->size(); ++ipch )
+      {
+         new_potential += valency * surface_field_new[ ipch ] / (2 * this->ripnew_[ cursor ][ ipch ] );
+      }
+   }
+}
+// Scale energy to correct units (k_BT) + SI
+new_potential *= this->alfa_;
+old_potential = this->old_potential_;
+this->new_potential_ = new_potential;
+// Set potential energy on first atom in change set
+changes.begin()->energy_old += old_potential;
+changes.begin()->energy_new += new_potential;
+!!!2504368.cpp!!!	compute_total_potential(in pman : particle_manager, in gman : geometry_manager) : double
+return this->old_potential_;
+!!!2504496.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
+if (this->size() == 0)
+{
+  this->set_alfa( eman.temperature() );
+  this->epsw_ = eman.permittivity();
+
+  // create A matrix.  Need to down cast region to be
+  // able to get protein geometry.
+  const geometry::membrane_cylinder_region * cellrgn = nullptr;
+  cellrgn = dynamic_cast< const geometry::membrane_cylinder_region* >( &(gman.system_region()) );
+  if( nullptr == cellrgn )
+  {
+    throw core::input_error::input_logic_error( "Induced charge computation \"" + type_label_() +"\"", core::strngs::evaluator_label(), "This evaluator requires the system region to be of type \""+geometry::membrane_cylinder_region::type_label()+"\" or similar." );
+  }
+
+  this->create_amx( *cellrgn );
+
+  // write out data if dump filenames defined
+  this->write_data();
+}
+// (Re)Generate the initial rip, c and h vectors
+this->compute_initial_c_h( pman );
+
+!!!2504752.cpp!!!	do_description(inout os : ostream) : void
+os << " Compute the induced charge on the dielectric boundary surface\n";
+os << " and the resulting electrostatic potential on the particles.\n\n";
+os << " Computing the induced charge is made reasonalbly efficient\n";
+os << " by fixing the position of the boundary surface during the\n";
+os << " simulation and dividing the surface. Using these surface\n";
+os << " elements allows the generation of a set of simultaneous equations\n";
+os << " that relate the external field on the surface elements to the \n";
+os << " induced charge on the elements. These equations can be \n";
+os << " presolved and the solution matrix stored. Then at each\n";
+os << " simulation step the electric field at each surface element \n";
+os << " is calculated. Back-substituion into the solved simultaneous\n";
+os << " equations then gives the induced surface charges. These are\n";
+os << " then used to calculate the screened Coulomb potential between\n";
+os << " each surface element and each particle.\n\n";
+os << " Parameters:\n";
+os << "   dxf : The approximate tile width (in Angstrom) in the direction\n";
+os << "         around the rotation axis.\n";
+os << "   dxw : The approximate tile width (in Angstrom) in the direction\n";
+os << "         parallel and radial to the rotation axis.\n";
+os << "  nsub : Integration parameter indicating how many sub-tiles a\n";
+os << "         surface element is divided into during integration.\n\n";
+os << " References for induced charge:\n";
+os << "  R. Allen and J.-P. Hansen and S. Melchionna \"Electrostatic potential\n";
+os << "    inside ionic solutions confined by dielectrics: a variational approach\"\n";
+os << "    Phys Chem Chem Physics, 2001, 3, 4177-4186\n";
+os << " This implementation based on:\n";
+os << "  Dezso Boda, Dirk Gillespie, Wolfgang Nonner, Douglas Henderson, \n";
+os << "   and Bob Eisenberg \"Computing induced charges in inhomogeneous \n";
+os << "   dielectric media: Application in a Monte Carlo simulation of \n";
+os << "   complex ionic systems\" Physical Review E, 2004, 69, 046702\n";
+
+
+!!!2504880.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+wr[ ix ].add_entry( core::strngs::fsdxf(), this->get_dxf() );
+wr[ ix ].add_entry( core::strngs::fsdxw(), this->get_dxw() );
+wr[ ix ].add_entry( core::strngs::fsnsub(), this->get_nsub0() );
+wr[ ix ].add_entry( core::strngs::fsepsp(), this->get_protein_permittivity() );
+wr[ ix ].add_entry( core::strngs::fsgrl4(), this->get_protein_radius() );
+wr[ ix ].add_entry( core::strngs::fsgrlc(), this->get_membrane_arc_radius() );
+if( not this->get_patch_filename().empty() )
+{
+  wr[ ix ].add_entry( patch_file_label(), this->get_patch_filename() );
+}
+if( not this->get_a_matrix_filename().empty() )
+{
+  wr[ ix ].add_entry( amx_file_label(), this->get_a_matrix_filename() );
+}
+!!!2506672.cpp!!!	surface_charge(in idx : size_t) : double
+return IONCH_AREA( idx ) * this->h_[ idx ] / IONCH_DEP( idx ) / std::sqrt( core::constants::electron_charge() * this->alfa_ );
+
+!!!2507312.cpp!!!	type_label_() : string
+  return "fpatch";
+!!!2507440.cpp!!!	write_data() : void
+// save patch data and amx
+//if( not this->patch_filename_.empty() )
+//{
+//  std::ofstream os_pch( this->patch_filename_ );
+//  this->grid_->write_grid( os_pch );
+//}
+//if( not this->a_matrix_filename_.empty() )
+//{
+//  std::ofstream os_amx( this->a_matrix_filename_ );
+//  this->amx_.write_a_matrix( os_amx );
+//}
+!!!2507568.cpp!!!	compute_initial_c_h(in pman : particle_manager) : void
+//
+// Calculate the electric field at each tile.
+//
+// O(ens.size() * icc.size())
+//
+// Convert energy units
+// Check size of rip
+const particle::ensemble &ens{ pman.get_ensemble() };
+if (this->rip_.shape()[0] < ens.max_size() or
+      this->rip_.shape()[1] < this->size())
+{
+   this->rip_.resize( boost::extents[ens.max_size()][this->size()] );
+}
+
+std::valarray< double > valency_array( pman.specie_count() );
+for( std::size_t idx = 0; idx != valency_array.size(); ++idx )
+{
+  valency_array[ idx ] = pman.get_specie( idx ).valency();
+}
+
+std::fill( this->c_.begin(), this->c_.end(), 0.0 );
+
+const double epsw{ this->epsw_ };
+//
+//   C = (1/4.pi.eps) SUM{ (q_i dot(r_ip,u_i) / ||r_ip||^3 ) }
+//
+for (std::size_t ii = 0; ii != ens.size(); ++ii)
+{
+   const std::size_t ispec = ens.key( ii );
+   if (ispec == particle::specie_key::nkey)
+   {
+      continue;
+   }
+   const double valency{ valency_array[ ispec ]};
+   const geometry::coordinate pos{ ens.position( ii ) };
+   std::array< std::size_t, 2 > idx;
+   idx[ 0 ] = ii;
+   //
+   //  calculate ( r_ij . n_i ) / | r_ij |^3
+   //
+   //  NOTE: direction of vector r_ij is important for the
+   //  dot product. The vector goes from tile i to particle j.
+   for (std::size_t ipch = 0; ipch != this->size(); ++ipch )
+   {
+      idx[ 1 ] = ipch;
+      const int iipch{ ipch };
+      const double rxki = pos.x - IONCH_PRX( iipch );
+      const double ryki = pos.y - IONCH_PRY( iipch );
+      const double rzki = pos.z - IONCH_PRZ( iipch );
+      const double rip  = std::sqrt( std::pow( rxki, 2 ) + std::pow( ryki, 2 ) + std::pow( rzki, 2 ) );
+      const double rki  = rxki * IONCH_PUX( iipch )
+                          + ryki * IONCH_PUY( iipch )
+                          + rzki * IONCH_PUZ( iipch );
+      // Scale by change in eps over boundary.
+      const double delta_eps{ IONCH_DEP( iipch ) };
+      this->c_[ ipch ] -= valency * delta_eps * rki / (epsw * 4 * core::constants::pi() * std::pow( rip, 3 ) );
+      // Calculate and store distances between patches and particle
+      this->rip_( idx ) = rip;
+   }
+}
+
+//
+// Calculate the new H
+//
+std::copy( this->c_.begin(), this->c_.end(), this->h_.begin() );
+IONCH_BAKSUB(this->h_.data());
+
+// cache charge density * area calculation.
+std::valarray< double > surface_field( this->size() );
+for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
+{
+   const int iipch{ ipch };
+   surface_field[ ipch ] = this->h_[ ipch ] * IONCH_AREA( iipch );
+}
+this->old_potential_ = 0.0;
+// POTENTIAL OPENMP LOOP
+for (std::size_t ii = 0; ii != ens.size(); ++ii)
+{
+   const std::size_t ispec( ens.key( ii ) );
+   if (ispec != particle::specie_key::nkey )
+   {
+      std::array< std::size_t, 2 > idx;
+      idx[ 0 ] = ii;
+      const double valency = valency_array[ ispec ];
+      for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
+      {
+         idx[ 1 ] = ipch;
+         this->old_potential_ += valency * surface_field[ ipch ] / ( 2 * this->rip_( idx ) );
+      }
+   }
+}
+this->old_potential_ *= this->alfa_;
+!!!2507696.cpp!!!	compute_total_surface_charge(out charget : double, out areat : double) : void
+areat = 0.0;
+charget = 0.0;
+for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+{
+  const double area{ IONCH_AREA( ipch ) };
+  areat += area;
+  charget += area * this->h_[ipch];
+}
+!!!2507952.cpp!!!	create_amx(in zl1 : double, in rl1 : double, in rlvest : double) : void
+double pi_{ core::constants::pi() };
+CCALLSFSUB11(__patch_MOD_MATRIX,__patch_MOD_matrix,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,INT,DOUBLE,DOUBLE,DOUBLE,DOUBLE,DOUBLE,pi_,this->dx_radial_,this->dx_zaxis_,this->epsw_,this->epspr_,this->nsub0_,zl1,rl1,this->protein_radius_,rlvest,this->membrane_arc_radius_);
+int sz = IONCH_NPATCH();
+this->c_.resize( sz );
+this->h_.resize( sz );
+this->hnew_.resize( sz );
+if( not this->get_patch_filename().empty() )
+{
+  char * fname{ const_cast< char* >( this->get_patch_filename().c_str() ) };
+  IONCH_WPATCH(fname);
+}
+if( not this->get_a_matrix_filename().empty() )
+{
+  char * fname{ const_cast< char* >( this->get_a_matrix_filename().c_str() ) };
+  IONCH_WAMX(fname);
+}
+!!!2508208.cpp!!!	on_conclude_trial(in changes : change_set) : void
+if (changes.accept())
+{
+   std::swap(this->h_, this->hnew_);
+   std::swap(this->c_, this->cnew_);
+   this->old_potential_ = this->new_potential_;
+   for (std::size_t cursor = 0; cursor != changes.size(); ++cursor)
+   {
+      auto const& atom = changes[ cursor ];
+      std::array< std::size_t, 2 > idx;
+      idx[ 0 ] = atom.index;
+      for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+      {
+         idx[ 1 ] = ipch;
+         this->rip_( idx ) = this->ripnew_[ cursor ][ ipch ];
+      }
+   }
+}
+!!!2508464.cpp!!!	set_alfa(in temperature : double) : void
+this->alfa_ = core::constants::electron_charge() / std::sqrt(4 * core::constants::pi() * core::constants::epsilon_0() * core::constants::boltzmann_constant() * temperature * core::constants::angstrom() );
+
+!!!2509616.cpp!!!	dump(in fname : string) : void
+//std::ofstream dos( fname );
+//
+//dos << "# alfa : " << this->alfa_ << "\n";
+//dos << "# patch name : " << this->patch_filename_ << "\n";
+//dos << "# amx name : " << this->a_matrix_filename_ << "\n";
+//dos << "#  C  CNEW H HNEW RIPNEW\n";
+//for ( std::size_t ii = 0; ii != this->size(); ++ii )
+//{
+//   dos << c_[ ii ] << " " << cnew_[ ii ] << " " 
+//      << h_[ ii ] << " " << hnew_[ ii ] << " "
+//      << ripnew_[ 0 ][ ii ] << "\n";
+//}
+//
+//dos << "# RIP\n";
+//std::array< std::size_t, 2 > idx;
+//for ( std::size_t ii = 0; ii != this->rip_.shape()[0]; ++ii)
+//{
+//   idx[ 0 ] = ii;
+//   for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
+//   {
+//      idx[ 1 ] = ipch;
+//      dos << ii << " " << ipch << " " << this->rip_( idx ) << "\n";
+//   }
+//}
+//dos << "# A MATRIX\n";
+//this->amx_.write_a_matrix( dos );
+//dos << "# GRID\n";
+//this->grid_->write_grid( dos );
+//
