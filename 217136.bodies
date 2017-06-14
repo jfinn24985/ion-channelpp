@@ -3609,6 +3609,15 @@ std::stringstream log;
   // do this as simfix is not derived from channel_system.
   BOOST_CHECK_NO_THROW( icceval.create_amx( fix.zl1(), fix.rl1(), fix.rlvest() ) );
   BOOST_CHECK_NO_THROW( icceval.write_data() );
+  std::cout << "C-area " << icceval.surface_area() << "\n";
+
+  // Check patches are on surface.
+  for( std::size_t idx = 0ul; idx != icceval.size(); ++idx )
+  {
+    geometry::coordinate p,u;
+    icceval.get_patch_coordinate( idx, p, u );
+    BOOST_CHECK( fix.on_surface( p.x, p.y, p.z ) );
+  }
 
   // We assume this simple size test means that the surface grid and the A
   // matrix are correctly built because independent tests of the surface grid
@@ -5261,6 +5270,21 @@ evaluator::patch_matrix_fixture fix;
   // do this as simfix is not derived from channel_system.
   BOOST_CHECK_NO_THROW( icceval.create_amx_f( fix.zl1(), fix.rl1(), fix.rlvest() ) );
   BOOST_CHECK_NO_THROW( icceval.write_data() );
+  std::cout << "C-area " << icceval.surface_area() << " >< " << fix.surface_area() << "\n";
+  BOOST_CHECK_CLOSE( icceval.surface_area(), fix.surface_area(), 0.00001 );
+
+  // Check patches are on surface.
+  for( std::size_t idx = 0ul; idx != icceval.size(); ++idx )
+  {
+    geometry::coordinate p,u;
+    icceval.get_patch_coordinate( idx, p, u );
+    BOOST_CHECK( fix.on_surface( p.x, p.y, p.z ) );
+    if( not fix.normal_test( p, u ) )
+    {
+      std::cout << idx << " P " << p << " U " << u << "\n";
+    }
+    //BOOST_CHECK( fix.normal_test( p, u ) );
+  }
 
   // We assume this simple size test means that the surface grid and the A
   // matrix are correctly built because independent tests of the surface grid
@@ -5384,6 +5408,17 @@ std::stringstream log;
   // matrix are correctly built because independent tests of the surface grid
   // and A matrix classes produce the correct results.
   BOOST_CHECK_EQUAL( icceval.size(), fix.expected_grid_size() );
+  std::cout << "F-area " << icceval.surface_area() << " >< " << fix.surface_area() << "\n";
+  BOOST_CHECK_CLOSE( icceval.surface_area(), fix.surface_area(), 0.00001 );
+
+  // Check patches are on surface.
+  for( std::size_t idx = 0ul; idx != icceval.size(); ++idx )
+  {
+    geometry::coordinate p,u;
+    icceval.get_patch_coordinate( idx, p, u );
+    BOOST_CHECK( fix.on_surface( p.x, p.y, p.z ) );
+    BOOST_CHECK( fix.normal_test( p, u ) );
+  }
 }
 {
   // Construction as if from an input file with no parameters

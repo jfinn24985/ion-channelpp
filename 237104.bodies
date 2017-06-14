@@ -83,3 +83,129 @@ grid.add_wall( geom_zl2, geom_rl2, geom_rl3, epspr_, epsw_, 0, 0, true );
 
 // lo-z wall
 grid.add_wall( -geom_zl2, geom_rl2, geom_rl3, epspr_, epsw_, 0, 0, false );
+!!!2530992.cpp!!!	on_surface(in x : double, in y : double, in z : double) : bool
+const double r2{ x*x+y*y };
+const double za{ std::abs( z ) };
+// Check is in bounding cylinder
+if( r2 < rl1_*rl1_ and not utility::feq( r2, rl1_*rl1_ ) )
+{
+  return false;
+}
+if( r2 > rl4_*rl4_ and not utility::feq( r2, rl4_*rl4_ ) )
+{
+  return false;
+}
+if( za > zl2_ and not utility::feq( za, zl2_ ) )
+{
+  return false;
+}
+// Check simple surfaces.
+if ( utility::feq( r2, rl4_*rl4_ ) )
+{
+  // must be on outer cylinder surface
+  return ( za <= zl3_ or utility::feq( za, zl3_ ) );
+}
+if ( utility::feq( r2, rl1_*rl1_ ) )
+{
+  // must be on inner cylinder surface
+  return ( za <= zl1_ or utility::feq( za, zl1_ ) );
+}
+if( r2 >= rl2_*rl2_ and r2 <= rl3_*rl3_ )
+{
+  // must be on wall surface
+  return utility::feq( za, zl2_ );
+}
+if( r2 <= rl2_*rl2_ )
+{
+  if( za < zl1_ ) return false;
+  // must be on lower arc
+  const double r{ std::sqrt( r2 ) };
+  const double dr{ rl2_ - r };
+  const double dz{ za - zl1_ };
+  return utility::feq( rlvest_*rlvest_, dr*dr + dz*dz );
+}
+if( r2 >= rl3_*rl3_ )
+{
+  if( za < zl3_ ) return false;
+  // must be on lower arc
+  const double r{ std::sqrt( r2 ) };
+  const double dr{ rl3_ - r };
+  const double dz{ za - zl3_ };
+  return utility::feq( rlmemb_*rlmemb_, dr*dr + dz*dz );
+}
+return false;
+!!!2537776.cpp!!!	surface_area() : double
+double area{ 0.0 };
+constexpr double pi_{ core::constants::pi() };
+// inner cylinder.
+area += 4 * pi_ * rl1_ * zl1_;
+// outer cylinder.
+area += 4 * pi_ * rl4_ * zl3_;
+// walls
+area += 2 * pi_ * ( rl3_*rl3_ - rl2_*rl2_ );
+// arcs : vestibule using Pappus
+//   arc centroid = R - 4r/3pi
+//area += 2 * pi_ * (rl2_ - ((4*rlvest_)/(3*pi_))) * pi_ * rlvest_;
+// my version = R - 2r/pi
+area += 2 * pi_ * (rl2_ - ((2*rlvest_)/pi_)) * pi_ * rlvest_;
+// arcs : membrane using Pappus
+//   arc centroid = R + 4r/3pi
+// my version = R - 2r/pi
+//area += 2 * pi_ * (rl3_ + ((4*rlmemb_)/(3*pi_))) * pi_ * rlmemb_;
+area += 2 * pi_ * (rl3_ + ((2*rlmemb_)/pi_)) * pi_ * rlmemb_;
+return area;
+!!!2544304.cpp!!!	normal_test(in p : coordinate, in u : coordinate) : bool
+// Test 1: All normals pass through z axis or are parallel
+bool pass { false };
+
+// test for parallel
+if( utility::feq( u.x, 0.0 ) )
+{
+  pass = utility::feq( u.y, 0.0 );
+}
+else
+{
+  // p.x/u.x == p.y/u.y
+  pass = utility::feq( p.x/u.x, p.y/u.y );
+}
+if( pass )
+{
+  if( std::abs(u.z) == 1 )
+  {
+    // off walls
+    pass = ( std::abs(p.z) == zl2_ );
+  }
+  else if( u.z == 0 )
+  {
+    // off the cylinders
+    const double r2{ p.x*p.x + p.y*p.y };
+    pass = utility::feq( r2, rl1_*rl1_ ) or utility::feq( r2, rl4_*rl4_ );
+  }
+  else
+  {
+    // off arc
+    const double r2{ p.x*p.x + p.y*p.y };
+    if( r2 <= rl2_*rl2_ )
+    {
+      // lower arc
+      const double v{ ((p.z > 0.0 ? zl1_ : -zl1_ ) - p.z)/u.z };
+      const double x0{ v*u.x + p.x };
+      const double y0{ v*u.y + p.y };
+      pass = utility::feq( rl2_*rl2_, x0*x0+y0*y0 );
+    }
+    else if ( r2 >= rl3_*rl3_ )
+    {
+      // upper arc
+      const double v{ ((p.z > 0.0 ? zl3_ : -zl3_ ) - p.z)/u.z };
+      const double x0{ v*u.x + p.x };
+      const double y0{ v*u.y + p.y };
+      pass = utility::feq( rl3_*rl3_, x0*x0+y0*y0 );
+    }
+    else
+    {
+      pass = false;
+    }
+  }
+}
+
+return pass;
