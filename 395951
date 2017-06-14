@@ -1,6 +1,6 @@
 format 75
 "evaluator" // evaluator
-  revision 210
+  revision 212
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -7335,6 +7335,38 @@ ${docstring}${body}
 "
       end
 
+      operation 2523952 "create_amx_f"
+	preserve_cpp_body_indent public explicit_return_type "void"
+	nparams 3
+	  param in name "zl1" explicit_type "double"
+	  param in name "rl1" explicit_type "double"
+	  param in name "rlvest" explicit_type "double"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}${)}${const}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+	comment " Create the  matrix like fortran does, this involves defining the patch grid,
+ integrating the grid to generate the A' matrix then inverting
+ this matrix to get the A matrix.
+
+ Use the input geometry to define the information that the
+ 'patch' module will use to generate a set of 'patches' that
+ cover the protein surface.
+
+ fortran equiv patch::defgrd + patch::matrix
+  see ionch::iccgrid::add_XXXX for patch::goXXXX
+  see ionch::XXXX_integrator types for patch::intXXXX"
+      end
+
       operation 538544 "on_conclude_trial"
 	public explicit_return_type "void"
 	nparams 1
@@ -13619,10 +13651,10 @@ contains
   !   ________|_____|_ |__|______ z-axis
   !<<-------------->| zl4
   !
-  subroutine defgrd(geodfn,zl2,rl1,rl4,rlvest,rlcurv)
+  subroutine defgrd(geodfn,zl1,rl1,rl4,rlvest,rlcurv)
   implicit none
   type (geomdf), intent(inout) :: geodfn
-  double precision, intent(in) :: zl2,rl1,rl4,rlvest,rlcurv
+  double precision, intent(in) :: zl1,rl1,rl4,rlvest,rlcurv
 
   ! LOCALS
   integer, dimension(5,npchmx_) :: isurf
@@ -13634,10 +13666,10 @@ contains
   integer ::  iii,is  ! Loop indices
   double precision, dimension(:,:), allocatable :: p__
 
-  double precision :: rl2,rl3,zl1,zl3
+  double precision :: rl2,rl3,zl2,zl3
   rl2 = rl1 + rlvest
   rl3 = rl4 - rlcurv
-  zl1 = zl2 - rlvest
+  zl2 = zl1 + rlvest
   zl3 = zl2 - rlcurv
   ! -----  Define doughnut geometry -----------------
   geodfn%narch=4
@@ -13842,10 +13874,11 @@ contains
       ! zlength = arl  rlength = 2.pi_.r/nfil <==> dfil.r
       p__(4,iii)=arl(i,j)*geodfn%dfil(i,j)*rc
       if (dbc_) then
+        if (p__(4,iii).le.0.0) stop \"area is negative\"
         if (isnan(p__(4,iii))) stop \"area is NaN\"
         if (isnan(arl(i,j))) stop \"arl is NaN\"
       endif
-      p__(8,iii)=2*(epspr_-epsw_)/(epspr_+epsw_)
+      p__(8,iii)=2*(epsw_-epspr_)/(epspr_+epsw_)
     enddo b3a4l6
   enddo i3y5r5
   write(unit=fidlog,fmt=\"(50('-'))\")
@@ -13919,10 +13952,11 @@ contains
         ! zlength = arl  rlength = 2.pi_.r/nfil <==> dfil.r
         p__(4,iii)=arl(i,j)*geodfn%dfil(i,j)*rc
         if (dbc_) then
+          if (p__(4,iii).le.0.0) stop \"area is negative\"
           if (isnan(p__(4,iii))) stop \"area is NaN\"
           if (isnan(arl(i,j))) stop \"arl is NaN\"
         endif
-        p__(8,iii)=2*(epspr_-epsw_)/(epspr_+epsw_)
+        p__(8,iii)=2*(epsw_-epspr_)/(epspr_+epsw_)
       enddo v4z2z1
     enddo p3o5e7
     write(unit=fidlog,fmt=\"(50('-'))\")
@@ -13998,7 +14032,7 @@ contains
           nsurf(2)=nsurf(2)+1
           isurf(2,nsurf(2))=is
         endif y4h5p2
-        fik=(k-0.05D0)*geodfn%dfia(i,j)
+        fik=(k-0.5D0)*geodfn%dfia(i,j)
         if (dbc_) then
           if (isnan(fik)) stop \"fik is NaN\"
         endif
@@ -14020,10 +14054,11 @@ contains
         endif
         p__(4,iii)=geodfn%ra(i)*ara(i,j)*geodfn%dfia(i,j)
         if (dbc_) then
+          if (p__(4,iii).le.0.0) stop \"area is negative\"
           if (isnan(p__(4,iii))) stop \"area is NaN\"
           if (isnan(ara(i,j))) stop \"ara is NaN\"
         endif
-        p__(8,iii)=2*(epspr_-epsw_)/(epspr_+epsw_)
+        p__(8,iii)=2*(epsw_-epspr_)/(epspr_+epsw_)
       enddo z9c4a8
     enddo
     write(unit=fidlog,fmt=\"(50('-'))\")
@@ -14088,7 +14123,7 @@ contains
         p__(6,iii)=0
         p__(7,iii)=geodfn%ulsign(i)
         p__(4,iii)=arr(i,j)*geodfn%dfil(i,j)
-        p__(8,iii)=2*(epspr_-epsw_)/(epspr_+epsw_)
+        p__(8,iii)=2*(epsw_-epspr_)/(epspr_+epsw_)
       enddo i6o4l5
       geodfn%rrl1(i,j+1)=geodfn%rrl2(i,j)
     enddo w8w7s2
@@ -14104,11 +14139,11 @@ contains
   !
   ! NOTE: The saved matrix does not adjust the i=j or multiply by deps_
 
-  subroutine matrix_(pi,dxf,dxw,epsw,epspr,nsub0,zl2,rl1,rl4,rlvest,rlcurv)
+  subroutine matrix_(pi,dxf,dxw,epsw,epspr,nsub0,zl1,rl1,rl4,rlvest,rlcurv)
   implicit none
   double precision, intent(in) :: pi,dxf,dxw,epsw,epspr
   integer, intent(in) :: nsub0     ! patch number (input) parameters
-  double precision, intent(in) :: zl2,rl1,rl4,rlvest,rlcurv
+  double precision, intent(in) :: zl1,rl1,rl4,rlvest,rlcurv
   type (geomdf), allocatable :: geodfn
 
   external dgetrf
@@ -14139,7 +14174,7 @@ contains
   allocate(geodfn)
 
   ! -----  Define geometry ------------------------------
-  call defgrd(geodfn,zl2,rl1,rl4,rlvest,rlcurv)
+  call defgrd(geodfn,zl1,rl1,rl4,rlvest,rlcurv)
 
   ! Npatch defined, allocate memory
   call f4s3s6
@@ -14319,9 +14354,9 @@ contains
       sinfij=dsin(fij)
       pxj=rc*cosfij
       pyj=rc*sinfij
-      pxij=pxi-pxj
-      pyij=pyi-pyj
-      pzij=pzi-pzj
+      pxij=pxj-pxi
+      pyij=pyj-pyi
+      pzij=pzj-pzi
       rijsq=pxij*pxij+pyij*pyij+pzij*pzij
       rij=dsqrt(rijsq)
       rij3=rijsq*rij
@@ -14400,9 +14435,9 @@ contains
       pyj=rc*sinfij
       pzj=zc
   ! pxi,pyi,pzi is center of patch
-      pxij=pxi-pxj
-      pyij=pyi-pyj
-      pzij=pzi-pzj
+      pxij=pxj-pxi
+      pyij=pyj-pyi
+      pzij=pzj-pzi
       rijsq=pxij*pxij+pyij*pyij+pzij*pzij
   ! rij is the distance from the patch centroid to the tiny patch
       rij=dsqrt(rijsq)
@@ -14459,9 +14494,9 @@ contains
       pxj=rc*dcos(fij)
       pyj=rc*dsin(fij)
       pzj=z0
-      pxij=pxi-pxj
-      pyij=pyi-pyj
-      pzij=pzi-pzj
+      pxij=pxj-pxi
+      pyij=pyj-pyi
+      pzij=pzj-pzi
       rijsq=pxij*pxij+pyij*pyij+pzij*pzij
       rij=dsqrt(rijsq)
       rij3=rijsq*rij

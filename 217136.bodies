@@ -5232,6 +5232,41 @@ catch( std::exception const& err )
 //XX//XX        BOOST_CHECK_CLOSE_FRACTION( area, 2*core::constants::pi()*40.0*10, 0.0001 );
 //XX//XX     }
 //XX//XX  }
+!!!2524080.cpp!!!	induced_charge_f_test() : void
+evaluator::patch_matrix_fixture fix;
+// Manual build like fortran test
+{
+  // default
+  evaluator::induced_charge icceval;
+  evaluator::patch_matrix_fixture simfix;
+
+  // Set parameters as per 'fix'.
+  BOOST_CHECK_NO_THROW( icceval.set_dxf( fix.dxf() ) );
+  BOOST_CHECK_NO_THROW( icceval.set_dxw( fix.dxw() ) );
+  BOOST_CHECK_NO_THROW( icceval.set_nsub0( fix.nsub() ) );
+  BOOST_CHECK_NO_THROW( icceval.set_alfa( fix.temperature() ) );
+  BOOST_CHECK_NO_THROW( icceval.set_permittivity( fix.epsw() ) );
+  BOOST_CHECK_EQUAL( icceval.get_alfa(), fix.alfa() );
+  BOOST_CHECK_EQUAL( icceval.get_permittivity(), fix.epsw() );
+  BOOST_CHECK_NO_THROW( icceval.set_membrane_arc_radius( fix.rlmemb() ) );
+  BOOST_CHECK_NO_THROW( icceval.set_protein_permittivity( fix.epspr() ) );
+  BOOST_CHECK_NO_THROW( icceval.set_protein_radius( fix.rl4() ) );
+  BOOST_CHECK_NO_THROW( icceval.set_a_matrix_filename( "amx-ctest.txt" ) );
+  BOOST_CHECK_EQUAL( icceval.get_a_matrix_filename(), "amx-ctest.txt" );
+
+  BOOST_CHECK_NO_THROW( icceval.set_patch_filename( "patch-ctest.txt" ) );
+  BOOST_CHECK_EQUAL( icceval.get_patch_filename(), "patch-ctest.txt" );
+
+  // Build amx from data from 'fix'. We need to
+  // do this as simfix is not derived from channel_system.
+  BOOST_CHECK_NO_THROW( icceval.create_amx_f( fix.zl1(), fix.rl1(), fix.rlvest() ) );
+  BOOST_CHECK_NO_THROW( icceval.write_data() );
+
+  // We assume this simple size test means that the surface grid and the A
+  // matrix are correctly built because independent tests of the surface grid
+  // and A matrix classes produce the correct results.
+  BOOST_CHECK_EQUAL( icceval.size(), fix.expected_grid_size() );
+}
 !!!2517424.cpp!!!	icc_fortran_test() : void
 evaluator::patch_matrix_fixture fix;
 //std::map< std::string, std::string > params;

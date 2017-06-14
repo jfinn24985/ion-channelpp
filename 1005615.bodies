@@ -214,7 +214,7 @@ for (int j = 0; j != nta_; ++j)
    // loop over all the slices of phi;
    for (int k = 0; k != nfia_; ++k)
    {
-      const double fik = (k + 0.050) * dfia_;
+      const double fik = (k+0.5) * dfia_;
 
       this->xyz_.set_x( this->npatch_, rc * std::cos( fik ) );
       this->xyz_.set_y( this->npatch_, rc * std::sin( fik ) );
@@ -350,15 +350,15 @@ for (std::size_t percent = 0; percent != 10; ++percent)
       const double puy{ this->uy_[ ipatch ] };
       const double puz{ this->uz_[ ipatch ] };
       // scale integration by change in eps over boundary
-      const double delta_eps{ this->eps_in_[ ipatch ] - this->eps_out_[ ipatch ] };
+      const double scale_eps{ 2 * (this->eps_out_[ ipatch ] - this->eps_in_[ ipatch ])/(this->eps_in_[ ipatch ] + this->eps_out_[ ipatch ]) };
       for (std::size_t jpatch = 0; jpatch != this->npatch_; ++jpatch)
       {
          idx[ 1 ] = jpatch;
-         a_matrix( idx ) = this->intgs_[ jpatch ]( ipatch, pxi, pyi, pzi, pux, puy, puz ) * delta_eps;
+         a_matrix( idx ) = this->intgs_[ jpatch ]( ipatch, pxi, pyi, pzi, pux, puy, puz ) * scale_eps;
       }
       //  for A_ii add average eps over boundary
       idx[ 1 ] = ipatch;
-      a_matrix( idx ) += ( this->eps_in_[ ipatch ] + this->eps_out_[ ipatch ] ) / 2.0;
+      a_matrix( idx ) += 1.0;
    }
 }
 !!!347056.cpp!!!	resize(in npatch : size_t) : void

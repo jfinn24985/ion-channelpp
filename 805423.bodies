@@ -636,7 +636,7 @@ const double geom_rlcurv{ this->membrane_arc_radius_ };
 // future work adds code to put second permittivity
 // zone inside the channel.
 const double epsw{ this->epsw_ };
-const double epsch{ epsw };
+const double epsch{ this->epsw_ };
 const double epspr{ this->epspr_ };
 
 // Minimum number of tiles along a dimension
@@ -645,10 +645,10 @@ const int outer_min_z_tiles{ 4 };
 const int min_r_tiles{ 16 };
 
 // Channel pore cylinder
-this->grid_->add_line( -geom_zl1, geom_zl1, geom_rl1, epsch, epsw, channel_min_z_tiles, min_r_tiles, true );
+this->grid_->add_line( -geom_zl1, geom_zl1, geom_rl1, epspr, epsch, channel_min_z_tiles, min_r_tiles, true );
 
 // Hi-z inner arc
-this->grid_->add_arc( geom_zl1, geom_rl2, geom_rlvest, theta3, theta4, epsch, epsw, outer_min_z_tiles, min_r_tiles, true );
+this->grid_->add_arc( geom_zl1, geom_rl2, geom_rlvest, theta3, theta4, epspr, epsch, outer_min_z_tiles, min_r_tiles, true );
 
 // hi-z wall
 this->grid_->add_wall( geom_zl2, geom_rl2, geom_rl3, epspr, epsw, 0, 0, true );
@@ -666,7 +666,7 @@ this->grid_->add_arc( -geom_zl3, geom_rl3, geom_rlcurv, theta1, theta2, epspr, e
 this->grid_->add_wall( -geom_zl2, geom_rl2, geom_rl3, epspr, epsw, 0, 0, false );
 
 // lo-z inner arc
-this->grid_->add_arc( -geom_zl1, geom_rl2, geom_rlvest, theta2, theta3, epsch, epsw, outer_min_z_tiles, min_r_tiles, true );
+this->grid_->add_arc( -geom_zl1, geom_rl2, geom_rlvest, theta2, theta3, epspr, epsch, outer_min_z_tiles, min_r_tiles, true );
 
 this->amx_.compute_amx( *this->grid_ );
 this->amx_.lu_decompose_amx();
@@ -674,6 +674,70 @@ this->amx_.lu_decompose_amx();
 UTILITY_CHECK( this->grid_->empty(), "Cannot define grid twice");
 
 std::swap( this->grid_, grid );
+
+this->amx_.compute_amx( *this->grid_ );
+this->amx_.lu_decompose_amx();
+!!!2523952.cpp!!!	create_amx_f(in zl1 : double, in rl1 : double, in rlvest : double) : void
+UTILITY_CHECK( this->grid_->empty(), "Cannot define grid twice");
+
+//       |theta1 = pi/2
+// theta2|     theta0 = 0.0
+//  ---- z ----- theta4 = 2pi
+// = pi  |
+//       | theta3 = 3/2 pi
+// d_theta = pi/2
+const double theta0( 0.0);
+const double theta1( core::constants::pi() / 2);
+const double theta2( core::constants::pi() );
+const double theta3{ core::constants::pi() * 3.0/2.0 };
+const double theta4{ 2 * core::constants::pi() };
+
+// Get geometry data
+const double geom_zl1{ zl1 };
+const double geom_rl1{ rl1 };
+const double geom_rl2{ rl1 + rlvest };
+const double geom_rlvest{ rlvest };
+const double geom_zl2{ zl1 + rlvest };
+const double geom_rl3{ this->protein_radius_ - this->membrane_arc_radius_ };
+const double geom_zl3{ zl1 + rlvest - this->membrane_arc_radius_ };
+const double geom_rl4{ this->protein_radius_ };
+const double geom_rlcurv{ this->membrane_arc_radius_ };
+
+// Delta permittivity in channel is used here in case
+// future work adds code to put second permittivity
+// zone inside the channel.
+const double epsw{ this->epsw_ };
+const double epsch{ this->epsw_ };
+const double epspr{ this->epspr_ };
+
+// Minimum number of tiles along a dimension
+const int channel_min_z_tiles{ 10 };
+const int outer_min_z_tiles{ 4 };
+const int min_r_tiles{ 16 };
+
+// Channel pore cylinder
+this->grid_->add_line( -geom_zl1, geom_zl1, geom_rl1, epspr, epsch, channel_min_z_tiles, min_r_tiles, true );
+
+// Channel protein outer cylinder
+this->grid_->add_line( -geom_zl3, geom_zl3, geom_rl4, epspr, epsw, outer_min_z_tiles, min_r_tiles, false );
+
+// Hi-z inner arc
+this->grid_->add_arc( geom_zl1, geom_rl2, geom_rlvest, theta3, theta4, epspr, epsch, outer_min_z_tiles, min_r_tiles, true );
+
+// Hi-z outer arc
+this->grid_->add_arc( geom_zl3, geom_rl3, geom_rlcurv, theta0, theta1, epspr, epsw, outer_min_z_tiles, min_r_tiles, true );
+
+// lo-z outer arc
+this->grid_->add_arc( -geom_zl3, geom_rl3, geom_rlcurv, theta1, theta2, epspr, epsw, outer_min_z_tiles, min_r_tiles, true );
+
+// lo-z inner arc
+this->grid_->add_arc( -geom_zl1, geom_rl2, geom_rlvest, theta2, theta3, epspr, epsch, outer_min_z_tiles, min_r_tiles, true );
+
+// hi-z wall
+this->grid_->add_wall( geom_zl2, geom_rl2, geom_rl3, epspr, epsw, 0, 0, true );
+
+// lo-z wall
+this->grid_->add_wall( -geom_zl2, geom_rl2, geom_rl3, epspr, epsw, 0, 0, false );
 
 this->amx_.compute_amx( *this->grid_ );
 this->amx_.lu_decompose_amx();
