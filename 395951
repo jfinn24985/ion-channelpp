@@ -1,6 +1,6 @@
 format 75
 "evaluator" // evaluator
-  revision 214
+  revision 216
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -7683,6 +7683,26 @@ ${docstring}${body}
 	
 	comment " Get the patch centre point and normal"
       end
+
+      operation 2550832 "gaussbox"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " calculate a gaussbox over ALL surfaces, so parea_ must be composed
+ of closed surfaces"
+      end
     end
 
     class 1005871 "integrator"
@@ -10416,6 +10436,24 @@ ${docstring}${body}
 "
 	
 	comment " Get the patch centre point and normal"
+      end
+
+      operation 2550960 "gaussbox"
+	const public explicit_return_type "double"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}
+{
+  return IONCH_GAUSSBOX(const_cast< double* >(this->h_.data()));
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
       end
     end
   end
@@ -13459,10 +13497,6 @@ private
   double precision, private, dimension(:), allocatable :: puz_
   ! The effective dielectric constant on the outside of a patch
   double precision, private, dimension(:), allocatable :: deps_
-  ! H vector
-  double precision, private, dimension(:), allocatable :: h
-  ! c vector
-  double precision, private, dimension(:), allocatable :: c
   ! back substitution index vector
   integer, private, dimension(:), allocatable :: indx_
   ! pi_
@@ -13630,8 +13664,9 @@ contains
   ! calculate a gaussbox over ALL surfaces, so parea_ must be composed
   ! of closed surfaces
   !
-  double precision function gaussbox_()
+  double precision function gaussbox_(h)
     implicit none
+    double precision, dimension(npatch_), intent(in) :: h
 
     gaussbox_ = sum(parea_(1:npatch_)*h(1:npatch_)/deps_(1:npatch_))
   end function gaussbox_
@@ -13658,9 +13693,10 @@ contains
   ! aechg = avg archg
   ! er2chg = avg r2chg
   !
-  subroutine patchsaves_(fid,astep)
+  subroutine patchsaves_(fid,astep,h)
     implicit none
     integer, intent(in) :: fid,astep
+    double precision, dimension(npatch_), intent(in) :: h
     double precision, save :: rchg = 0, archg = 0, r2chg = 0
     double precision, save :: area = 0
     double precision, save :: max_chg = 0
@@ -13669,7 +13705,7 @@ contains
 
     if (area.eq.0) area = totalarea_()
     
-    chg = gaussbox_()
+    chg = gaussbox_(h)
 
     rchg = rchg + chg
     archg = archg + dabs(chg)
@@ -18747,6 +18783,7 @@ PROTOCCALLSFFUN1(DOUBLE,__patch_MOD_GETUZ,__patch_MOD_getuz,INT);
 PROTOCCALLSFFUN1(DOUBLE,__patch_MOD_GETAREA,__patch_MOD_getarea,INT);
 PROTOCCALLSFFUN1(DOUBLE,__patch_MOD_GETDEP,__patch_MOD_getdep,INT);
 PROTOCCALLSFFUN0(INT,__patch_MOD_GETNPCH,__patch_MOD_getnpch);
+PROTOCCALLSFFUN1(DOUBLE,__patch_MOD_GAUSSBOX,__patch_MOD_gaussbox,DOUBLEV);
 PROTOCCALLSFFUN0(DOUBLE,__patch_MOD_TOTALAREA,__patch_MOD_totalarea);
 PROTOCCALLSFSUB1(__patch_MOD_BAKSUB,__patch_MOD_baksub,DOUBLEV);
 PROTOCCALLSFSUB1(__patch_MOD_WRITAM,__patch_MOD_writam,STRING);
@@ -18761,6 +18798,7 @@ PROTOCCALLSFSUB11(__patch_MOD_MATRIX,__patch_MOD_matrix,DOUBLE,DOUBLE,DOUBLE,DOU
 #define IONCH_AREA(A) CCALLSFFUN1(__patch_MOD_GETAREA,__patch_MOD_getarea,INT,(A))
 #define IONCH_DEP(A) CCALLSFFUN1(__patch_MOD_GETDEP,__patch_MOD_getdep,INT,(A))
 #define IONCH_NPATCH() CCALLSFFUN0(__patch_MOD_GETNPCH,__patch_MOD_getnpch)
+#define IONCH_GAUSSBOX(A) CCALLSFFUN1(__patch_MOD_GAUSSBOX,__patch_MOD_gaussbox,DOUBLEV,(A))
 #define IONCH_TOTALAREA() CCALLSFFUN0(__patch_MOD_TOTALAREA,__patch_MOD_totalarea)
 #define IONCH_WPATCH(A) CCALLSFSUB1(__patch_MOD_WRITPC,__patch_MOD_writpc,STRING,(A))
 #define IONCH_WAMX(A) CCALLSFSUB1(__patch_MOD_WRITAM,__patch_MOD_writam,STRING,(A))
