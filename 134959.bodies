@@ -88,8 +88,10 @@ for (auto & atom: atomset)
       atom.index = this->inuse_particles_;
       ++this->inuse_particles_;
       // Check size
-      UTILITY_ALWAYS( this->inuse_particles_ != this->max_particles_,
-            "Number of particles has reached maximum size." );
+      if( this->inuse_particles_ >= this->max_particles_ )
+      {
+        this->resize( this->inuse_particles_ ); 
+      }
     }
     else
     {
@@ -158,13 +160,9 @@ UTILITY_REQUIRE( key != particle::specie_key::nkey, "Cannot append positions of 
 std::size_t cursor { this->inuse_particles_ };
 if (this->key_.size() == cursor)
 {
-   this->xyz_.resize( this->key_.size() + 1 ); 
-   this->key_.push_back( key );
+   this->resize( cursor + 1 ); 
 }
-else
-{
-   this->key_[ cursor ] = key;
-}
+this->key_[ cursor ] = key;
 this->xyz_.set_x( cursor, pos.x );
 this->xyz_.set_y( cursor, pos.y );
 this->xyz_.set_z( cursor, pos.z );
@@ -244,7 +242,7 @@ for ii,(x,y,z,key) in enumerate(zip(self.x,self.y,self.z,self.key)):
   if self.parent_.specie_count() != key:
     print >>out, " %4d %9.5f %9.5f %9.5f %2d" % (ii,x,y,z,key)
 !!!1872559.cpp!!!	resize(in npart : size_t) : void
-this->max_particles_ = utility::mathutil::next64(2*npart);
+this->max_particles_ = utility::mathutil::next64( npart );
 this->key_.resize( this->max_particles_, particle::specie_key::nkey );
 this->xyz_.resize( this->max_particles_ );
 !!!1872559.python!!!	resize(in npart : size_t) : void

@@ -338,10 +338,10 @@ return IONCH_AREA( iidx ) * this->h_[ idx ] / IONCH_DEP( iidx ) / std::sqrt( cor
 // Convert energy units
 // Check size of rip
 const particle::ensemble &ens{ pman.get_ensemble() };
-if (this->rip_.shape()[0] < ens.max_size() or
+if (this->rip_.shape()[0] < ens.size() or
       this->rip_.shape()[1] < this->size())
 {
-   this->rip_.resize( boost::extents[ens.max_size()][this->size()] );
+   this->rip_.resize( boost::extents[ens.size()][this->size()] );
 }
 
 std::valarray< double > valency_array( pman.specie_count() );
@@ -459,6 +459,11 @@ if (changes.accept())
       auto const& atom = changes[ cursor ];
       std::array< std::size_t, 2 > idx;
       idx[ 0 ] = atom.index;
+      // increase rip_ if necessary
+      if (this->rip_.shape()[0] <= idx[ 0 ])
+      {
+        this->rip_.resize( boost::extents[idx[ 0 ] + 1][this->size()] );
+      }
       for (std::size_t ipch = 0; ipch != this->size(); ++ipch)
       {
          idx[ 1 ] = ipch;

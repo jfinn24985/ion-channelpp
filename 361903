@@ -1,6 +1,6 @@
 format 75
 "particle" // particle
-  revision 230
+  revision 231
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -2060,7 +2060,24 @@ ${docstring}${members}
  TODO: write_document (need to update specie location info)
      generate_simulation (copy from specie location info)
     ** Scan simulator class for places where ensemble and specie state
-    ** is changed."
+    ** is changed.
+
+ MAXIMUM ENSEMBLE SIZE:
+
+ * In a non-GC simulation the ensemble size will not vary
+ after initialization.
+
+ * In a GC simulation the ensemble size will change, but it
+ should form a normal distribution around the \"target_count\" (N)
+ with a standard deviation of sqrt(N).
+
+ * The system now has no hard-limit on the ensemble
+ size. If such is required then we suggest something like
+ next64(2*\"target_count\") which gives a maximum at least 6
+ standard deviations from the mean. The probability of reaching
+ such a maximum is so small that actually reaching it is most
+ likely to indicate an error condition.
+"
       classrelation 567984 // <dependency>
 	relation 567088 -_->
 	  a package
@@ -2845,11 +2862,17 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
-      comment " A collection of particles defined by their position and specie ID.
+      comment " A collection of particles defined by their position and
+ specie ID.
 
- TODO: The number of particles of each specie is state of the ensemble
- not of the specie -> move here.  The charge is a meta property between the specie
- set and the number of each specie -> move to particle_manager"
+ PROGRAMMING NOTES: To maintain invariant the size < max_size
+ \"resize\" is used to change the ensemble size. The \"commit\"
+ and \"append_position\" methods use it to expand the ensemble
+ as necessary.
+
+ ENSEMBLE MAX SIZE: The maximum size of the ensemble is the
+ maximum of max_size or 2*pman.target_count in GC .
+"
       classrelation 581552 // <dependency>
 	relation 580656 -_->
 	  a default
@@ -3116,7 +3139,7 @@ ${docstring}${body}
       end
 
       operation 549809 "max_size"
-	const public explicit_return_type "size_t"
+	const private explicit_return_type "size_t"
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
@@ -3129,28 +3152,7 @@ ${docstring}${body}
 ${docstring}return self.max_particles_
 "
 	
-	comment "The maximum number of particles allowed in
-the simulation.
-
-DESIGN POLICY: The number of particles in a
-simulation should be a binomial distribution
-around some average. Since the standard deviation
-for the distribution is the square root of the
-mean, the system chooses a default max_size of
-(about) twice the mean number of particles (with
-a minimum of 64).  The chance that this number is
-reached should be very small, and so truncating
-the distribution (as for zero particles) should
-not change the results.  The trial generators are
-expected to enforce this by generating a failed
-trial when max_size is reached.  Attempting to
-add a particle once max_size is reached is
-therefore considered an exception.
-
-This policy also helps with systems that are
-not in equilibrium, where you can get temporary
-large changes in particle number.
-"
+	comment "The current allocated number of particles in the simulation."
       end
 
       operation 1962927 "nth_index"
@@ -3390,7 +3392,7 @@ ensemble to 'out'"
       end
 
       operation 1872559 "resize"
-	preserve_cpp_body_indent public explicit_return_type "void"
+	preserve_cpp_body_indent private explicit_return_type "void"
 	nparams 1
 	  param in name "npart" explicit_type "size_t"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
