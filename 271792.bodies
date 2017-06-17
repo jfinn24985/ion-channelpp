@@ -1,12 +1,51 @@
 class output_series
-!!!476976.cpp!!!	do_body(inout os : ostream) : void
+!!!2575152.cpp!!!	do_array_body(inout os : ostream) : void
 UTILITY_REQUIRE( not this->empty(), "Can not write output with no fields defined." );
-for( auto const& field : *this )
+UTILITY_REQUIRE( not this->series_.empty(), "Can not write output with no data defined." );
+// series is an array
+//
+// standard output format is:
+//
+// # COUNT sample_count
+// <key0> a0.mean a0.var
+// <key1> a1.mean a1.var
+// <key2> a1.mean a1.var
+auto const& arr{ this->series_->front() };
+os << core::strngs::comment_begin() << " SAMPLE COUNT: ";
+os << arr.count();
+os << core::strngs::comment_end() << "\n";
+for( std::size_t idx = 0; idx != arr.size(); ++idx )
 {
-   field.write( os, 0 );
-   os << " ";
+  for( auto const& field : *this )
+  {
+    field.write( os, arr, idx, 0 );
+    os << " ";
+  }
+  os << "\n";
 }
-os << "\n";
+!!!2575280.cpp!!!	do_series_body(inout os : ostream) : void
+UTILITY_REQUIRE( not this->empty(), "Can not write output with no fields defined." );
+UTILITY_REQUIRE( not this->series_.empty(), "Can not write output with no data defined." );
+// Each element in "series_" is a data set in a series.
+//
+// standard output
+// index0 sample_count0 a0.mean a0.var a1.mean a1.var ...
+// index1 sample_count1 a0.mean a0.var a1.mean a1.var ...
+for( std::size_t rank = 0; rank != this->series_.size(); ++rank )
+{
+  auto const& arr = this->series_[ rank ];
+  for( std::size_t idx = 0; idx != this->entries_.size() - 1; ++idx )
+  {
+    this->entries_[ idx ].write( os, arr, 0, rank );
+    os << " ";
+  }
+  for( std::size_t idx = 0; idx != arr.size(); ++idx )
+  {
+    this->entries_.back().write( os, arr, idx );
+    os << " ";
+  }
+  os << "\n";
+}
 !!!470064.cpp!!!	do_header(inout os : ostream) : void
 UTILITY_REQUIRE( not this->empty(), "Can not write output with no fields defined." );
 if ( not this->title_.empty() )
@@ -25,21 +64,44 @@ for ( auto const& field : *this )
    os << field.unit() << " ";
 }
 os << core::strngs::comment_end() << "\n";
-!!!476848.cpp!!!	write(in fname : string, inout sink : base_sink, in overwrite : bool) : void
+!!!476848.cpp!!!	write(inout sink : base_sink) : void
 UTILITY_REQUIRE( not this->empty(), "Can not write output with no fields defined." );
-// For series we don't rewrite the file unless it doesn't exist
-// or overwrite is true.
-if ( overwrite or not sink.exists( fname ) )
+std::stringstream os;
+sink.header( os );
+this->do_header( os );
+if( this->is_serial_ )
 {
-   std::stringstream os;
-   sink.header( os );
-   this->do_header( os );
-   this->do_body( os );
-   sink.write( fname, os.str() );
+  // If series.size > 1, then each element is a different measure
+  //
+  // standard output
+  // <key0> sample_count0 a0.mean a0.var a1.mean a1.var ...
+  // <key1> sample_count1 a0.mean a0.var a1.mean a1.var ...
+  this->do_series_body( os );
 }
 else
 {
-   std::stringstream os;
-   this->do_body( os );
-   sink.append( fname, os.str() );
+  // series is an array
+  //
+  // standard output
+  // # COUNT sample_count
+  // <key0> a0.mean a0.var
+  // <key1> a1.mean a1.var
+  // <key2> a1.mean a1.var
+  this->do_array_body( os );
+}
+sink.write( this->label(), os.str() );
+!!!2575024.cpp!!!	receive_data(in count : size_t, in arr : estimate_array) : void
+if( count < this->data_.size() )
+{
+  this->data_[ count ].merge( arr );
+}
+else if( count == this->data_.size() )
+{
+  this->data_.push_back( arr.release() );
+}
+else 
+{
+  // assert count = this->data_.size() ??
+  this->data_.resize( count );
+  this->data_.replace( count, arr.release() );
 }

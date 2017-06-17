@@ -1,0 +1,37 @@
+class data_report
+!!!2568240.cpp!!!	do_header(inout os : ostream) : void
+UTILITY_REQUIRE( not this->empty(), "Can not write output with no fields defined." );
+if ( not this->title_.empty() )
+{
+   os << core::strngs::comment_begin() << " TITLE: \"" << this->title_ << "\" " << core::strngs::comment_end() << "\n";
+}
+os << core::strngs::comment_begin() << " FIELDS: ";
+for ( auto const& field : this->fields_ )
+{
+   os << field.label() << " ";
+}
+os << core::strngs::comment_end() << "\n";
+os << core::strngs::comment_begin() << " UNITS: ";
+for ( auto const& field : this->fields_ )
+{
+   os << field.unit() << " ";
+}
+os << core::strngs::comment_end() << "\n";
+!!!2567728.cpp!!!	write(in fname : string, inout sink : base_sink, in overwrite : bool, in arr : estimate_array) : void
+UTILITY_REQUIRE( not this->empty(), "Can not write output with no fields defined." );
+// For series we don't rewrite the file unless it doesn't exist
+// or overwrite is true.
+if ( overwrite or not sink.exists( fname ) )
+{
+   std::stringstream os;
+   sink.header( os );
+   this->do_header( os );
+   this->do_body( os );
+   sink.write( fname, os.str() );
+}
+else
+{
+   std::stringstream os;
+   this->do_body( os );
+   sink.append( fname, os.str() );
+}
