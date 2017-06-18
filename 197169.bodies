@@ -97,28 +97,31 @@ for( std::size_t ispec = 0; ispec != pman.specie_count(); ++ispec )
 // Write out 3D data
 for (std::size_t ispec = 0; ispec != this->specie_labels_.size(); ++ispec)
 {
-  if (this->distributions_[ ispec ].count() > 0)
+  if( this->distributions_[ ispec ].count() > 0 )
   {
-    // TODO sim.checkpoint_directory()
-    std::stringstream ofs;
-    sink.header( ofs );
-    ofs << core::strngs::comment_begin();
-    ofs << " TITLE: \"3D density distribution histogram for specie ";
-    ofs << this->specie_labels_[ ispec ] << "\"\n";
-    ofs << core::strngs::comment_begin();
-    ofs << " FIELDS: X_MID Y_MID Z_MID PMEAN PVAR\n";
-    ofs << core::strngs::comment_begin();
-    ofs << " UNITS: ANGSTROM ANGSTROM ANGSTROM COUNT COUNT**2\n";
-    ofs << std::fixed;
-    ofs.precision(6);
-    for( auto datum : this->distributions_[ispec] )
+    std::string label( "d3df-"+this->specie_labels_[ ispec ]+".dat" );
+    auto & data = this->distributions_[ ispec ];
+    if( not sink.has_dataset( label ) )
     {
-      ofs << datum.midpoint() << " " << std::setw(10) << datum.mean() << " " << std::setw(10) << datum.variance() << "\n";
+      std::unique_ptr< observable::output_series >definition{ new observable::output_series( label, false ) };
+      definition->set_title( "3D density distribution histogram for specie "+ this->specie_labels_[ ispec ] );
+      {
+        std::unique_ptr< observable::output_field > field( new observable::output_field( "XMID YMID ZMID", "ANGSTROM ANGSTROM ANGSTROM", std::move( std::unique_ptr< observable::field_format >( new observable::digitizer_3d_output( data.axis(), observable::digitizer_output::USE_MID ) ) ) ) );
+        definition->push_back_field( field );
+      }
+      {
+        std::unique_ptr< observable::mean_variance_output > formatter{ new observable::mean_variance_output };
+        std::unique_ptr< observable::output_field > field( new observable::output_field( "P.mean P.var", "Rate Rate2", std::move( std::unique_ptr< observable::field_format >( new observable::mean_variance_output ) ) ) );
+        definition->push_back_field( field );
+      }
+      sink.add_dataset( definition );
     }
-    sink.write( "d3df-"+this->specie_labels_[ ispec ]+".dat", ofs.str() );
+    {
+      std::unique_ptr< utility::estimate_array > arr( new utility::estimate_array( std::move( data.release_data() ) ) );
+      sink.receive_data( label, 0, arr );
+    }
   }
 }
-
 !!!366001.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
 for( auto & histo : this->distributions_ )
 {

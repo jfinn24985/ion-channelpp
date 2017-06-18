@@ -1,7 +1,7 @@
 class output_series
 !!!2575152.cpp!!!	do_array_body(inout os : ostream) : void
 UTILITY_REQUIRE( not this->empty(), "Can not write output with no fields defined." );
-UTILITY_REQUIRE( not this->series_.empty(), "Can not write output with no data defined." );
+UTILITY_REQUIRE( this->data_.size() == 1, "Can only write array data with one data array defined." );
 // series is an array
 //
 // standard output format is:
@@ -10,7 +10,7 @@ UTILITY_REQUIRE( not this->series_.empty(), "Can not write output with no data d
 // <key0> a0.mean a0.var
 // <key1> a1.mean a1.var
 // <key2> a1.mean a1.var
-auto const& arr{ this->series_->front() };
+auto const& arr = this->data_.front();
 os << core::strngs::comment_begin() << " SAMPLE COUNT: ";
 os << arr.count();
 os << core::strngs::comment_end() << "\n";
@@ -25,15 +25,15 @@ for( std::size_t idx = 0; idx != arr.size(); ++idx )
 }
 !!!2575280.cpp!!!	do_series_body(inout os : ostream) : void
 UTILITY_REQUIRE( not this->empty(), "Can not write output with no fields defined." );
-UTILITY_REQUIRE( not this->series_.empty(), "Can not write output with no data defined." );
-// Each element in "series_" is a data set in a series.
+UTILITY_REQUIRE( not this->data_.empty(), "Can not write output with no data defined." );
+// Each element in "data_" is a data set in a series.
 //
 // standard output
 // index0 sample_count0 a0.mean a0.var a1.mean a1.var ...
 // index1 sample_count1 a0.mean a0.var a1.mean a1.var ...
-for( std::size_t rank = 0; rank != this->series_.size(); ++rank )
+for( std::size_t rank = 0; rank != this->data_.size(); ++rank )
 {
-  auto const& arr = this->series_[ rank ];
+  auto const& arr = this->data_[ rank ];
   for( std::size_t idx = 0; idx != this->entries_.size() - 1; ++idx )
   {
     this->entries_[ idx ].write( os, arr, 0, rank );

@@ -1,6 +1,6 @@
 format 75
 "observable" // observable
-  revision 243
+  revision 244
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -1419,10 +1419,10 @@ ${docstring}${members}
       end
 
       attribute 644784 "data_"
-	private type class_ref 176049 // estimater
+	private type class_ref 175665 // estimate_array
 	multiplicity "*"
 	stereotype "map"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< particle::change_hash, std::pair< ${type}, ${type} > > ${name}${value};
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< particle::change_hash, ${type} > ${name}${value};
 "
 	java_decl ""
 	php_decl ""
@@ -1458,6 +1458,19 @@ ${docstring}${members}
 	comment "The total number of attempted trials."
       end
 
+      attribute 978608 "locked_"
+	private explicit_type "bool"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Once a report has been generated the object can no longer
+ extend the set of reported trials."
+      end
+
       extra_member 537776 "LIFETIME"
 	
 	cpp "" ""
@@ -1490,6 +1503,7 @@ ${docstring}${members}
   ${p0} & this->data_;
   ${p0} & this->dictionary_;
   ${p0} & this->total_;
+  ${p0} & this->locked_;
 }
 "
 	
@@ -1827,17 +1841,14 @@ ${docstring}${body}
       end
 
       operation 1498672 "get_datum"
-	const public return_type class_ref 176049 // estimater
+	const public return_type class_ref 175665 // estimate_array
 	nparams 1
 	  param in name "id" type class_ref 400048 // change_hash
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}std::pair< ${type}, ${type} > ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type}& ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}std::pair< ${type}, ${type} > ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}const ${type}& ${class}::${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}
 {
-  auto iter = this->data_.find( ${p0} );
-  UTILITY_REQUIRE( this->data_.end() != iter, \"Change hash not in acceptance object data set.\" );
-  return iter->second;
-
+  ${body}
 }
 "
 	
@@ -1922,6 +1933,40 @@ ${docstring}${body}
 
  \\pre has_sample( id )"
       end
+
+      operation 2599344 "total_trials"
+	const public explicit_return_type "size_t"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->total_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " The number of trials found during the current sampling phase."
+      end
+
+      operation 2599472 "locked"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->locked_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Can we extend the reported trials?"
+      end
     end
 
     classdiagram 200240 "density samplers"
@@ -1963,15 +2008,6 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 319920 // <dependency>
 	  b parent class_ref 912431 // access
-      end
-
-      classrelation 320048 // <dependency>
-	relation 319664 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 320048 // <dependency>
-	  b parent class_ref 278960 // output_dataset
       end
 
       classrelation 931376 // data_sets_ (<directional composition>)
@@ -9153,12 +9189,11 @@ ${items}};
 
       classrelation 1337136 // axis_ (<directional composition>)
 	relation 1336240 *-->
-	  stereotype "shared_ptr"
-	  a role_name "axis_" multiplicity "0..1" private
+	  a role_name "axis_" multiplicity "1" private
 	    comment " Axis to output."
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
-	    python "${comment}${self}${name} = ${stereotype}()
+	    python "${comment}${self}${name} = ${type}()
 "
 	    classrelation_ref 1337136 // axis_ (<directional composition>)
 	  b parent class_ref 175409 // digitizer
@@ -9236,9 +9271,9 @@ ${docstring}${body}
 	nparams 2
 	  param inout name "axis" type class_ref 175409 // digitizer
 	  param in name "use_which" explicit_type "short"
-	cpp_decl "    ${comment}${inline}${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
 : field_format()
-, axis_( ${p0} )
+, axis_( std::move( ${p0} ) )
 , parts_( ${p1} )
 {}
 "
@@ -9291,9 +9326,9 @@ ${docstring}${body}
       operation 2583600 "axis"
 	const public return_type class_ref 175409 // digitizer
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type} & ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
-  return *(this->axis_);
+  return this->axis_;
 }
 "
 	
@@ -9451,11 +9486,10 @@ ${items}};
 
       classrelation 1337648 // axis_ (<directional composition>)
 	relation 1336752 *-->
-	  stereotype "shared_ptr"
-	  a role_name "axis_" multiplicity "0..1" private
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
+	  a role_name "axis_" multiplicity "1" private
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
-	    python "${comment}${self}${name} = ${stereotype}()
+	    python "${comment}${self}${name} = ${type}()
 "
 	    classrelation_ref 1337648 // axis_ (<directional composition>)
 	  b parent class_ref 506032 // digitizer_3d
@@ -9531,11 +9565,11 @@ ${docstring}${body}
       operation 2584368 "digitizer_3d_output"
 	public explicit_return_type ""
 	nparams 2
-	  param inout name "axis" type class_ref 506032 // digitizer_3d
+	  param in name "axis" type class_ref 506032 // digitizer_3d
 	  param in name "use_which" explicit_type "short"
-	cpp_decl "    ${comment}${inline}${name}${(}boost::shared_ptr< ${t0} > ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
 : field_format()
-, axis_( ${p0} )
+, axis_( std::move( ${p0} ) )
 , parts_( ${p1} )
 {}
 "
@@ -9588,9 +9622,9 @@ ${docstring}${body}
       operation 2584752 "axis"
 	const public return_type class_ref 506032 // digitizer_3d
 	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}const ${type} & ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
-  return *(this->axis_);
+  return this->axis_;
 }
 "
 	
@@ -9684,6 +9718,15 @@ ${docstring}${members}
 	  b parent class_ref 912431 // access
       end
 
+      classrelation 1351984 // <dependency>
+	relation 1351088 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 1351984 // <dependency>
+	  b parent class_ref 802096 // field_format
+      end
+
       attribute 327088 "label_"
 	private explicit_type "string"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -9744,13 +9787,13 @@ ${docstring}${members}
 	  param in name "name" explicit_type "string"
 	  param in name "unit" explicit_type "string"
 	  param in name "fmtr" type class_ref 802096 // field_format
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, std::unique_ptr< ${t2} > && ${p2}${v2}${)}${volatile}${throw};
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, std::unique_ptr< ${t2} > ${p2}${v2}${)}${volatile}${throw};
 
 "
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, std::unique_ptr< ${t2} > && ${p2}${)}${throw}
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, std::unique_ptr< ${t2} > ${p2}${)}${throw}
 : label_( ${p0} )
 , unit_( ${p1} )
-, formatter_( std::move( ${p2} ) )
+, formatter_( ${p2}.release() )
 {}
 "
 	
@@ -9971,7 +10014,7 @@ ${docstring}${body}
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, const ${t1} & ${p1}, ${t2} ${p2}, ${t3} ${p3}${)}${const}${volatile}${throw}
 {
    UTILITY_REQUIRE( this->valid(), \"Can not write incomplete field.\" );
-   this->formatter_( ${p0}, ${p1}, ${p2}, ${p3} );
+   (*this->formatter_)( ${p0}, ${p1}, ${p2}, ${p3} );
 }
 "
 	
@@ -10026,6 +10069,15 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 1338032 // <dependency>
 	  b parent class_ref 912431 // access
+      end
+
+      classrelation 1351600 // <dependency>
+	relation 1350704 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 1351600 // <dependency>
+	  b parent class_ref 175665 // estimate_array
       end
 
       classrelation 306096 // <dependency>
@@ -10168,6 +10220,30 @@ ${docstring}${body}
 "
 	
 	comment " Simple dtor"
+      end
+
+      operation 2599216 "output_series"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "label" explicit_type "string"
+	  param in name "serial" explicit_type "bool"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${volatile}${throw}
+: data_()
+, entries_()
+, title_()
+, label_(${p0})
+, is_serial_(${p1})
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Main constructor"
       end
 
       operation 471216 "output_series"
@@ -10472,9 +10548,9 @@ ${docstring}${body}
 	nparams 2
 	  param in name "count" explicit_type "size_t"
 	  param in name "arr" type class_ref 175665 // estimate_array
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, std::unique_ptr< ${t1} > ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, std::unique_ptr< ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, std::unique_ptr< ${t1} > ${p1}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, std::unique_ptr< ${t1} >& ${p1}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -10494,7 +10570,7 @@ ${docstring}${body}
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "field" type class_ref 271920 // output_field
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} > && ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
   this->entries_.push_back( ${p0}.release() );
 }
@@ -10525,6 +10601,7 @@ ${docstring}${body}
 	
 	comment " Set the value of the files UUID"
       end
+
     end
 
     class 278960 "output_dataset"
@@ -10940,6 +11017,15 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 356272 // <dependency>
 	  b parent class_ref 912431 // access
+      end
+
+      classrelation 1351472 // <dependency>
+	relation 1350576 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 1351472 // <dependency>
+	  b parent class_ref 271792 // output_series
       end
 
       classrelation 897968 // <dependency>
@@ -11509,9 +11595,9 @@ ${docstring}${body}
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "dataset" type class_ref 271792 // output_series
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} >&& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::unique_ptr< ${t0} >&& ${p0}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::unique_ptr< ${t0} >& ${p0}${)}${const}${volatile}${throw}
 {
   UTILITY_REQUIRE( not this->has_dataset( dataset->label() ), \"Attempt to add two data sets with the same label\" );
   this->data_sets_.push_back( dataset.release() );
@@ -11535,9 +11621,9 @@ ${docstring}${body}
 	  param in name "label" explicit_type "string"
 	  param in name "count" explicit_type "size_t"
 	  param in name "arr" type class_ref 175665 // estimate_array
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, std::unique_ptr< ${t2} >&& ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, std::unique_ptr< ${t2} >& ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, std::unique_ptr< ${t2} >&& ${p2}${)}${const}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, std::unique_ptr< ${t2} >& ${p2}${)}${const}${throw}
 {
   ${body}
 }
@@ -11571,6 +11657,7 @@ ${docstring}${body}
 	
 	comment " Write all of the data sets."
       end
+
     end
 
     class 292656 "archive_file"
@@ -13250,14 +13337,10 @@ BOOST_CLASS_EXPORT_KEY( observable::acceptance_observable );
 ${includes}
 // manual includes
 #include \"core/strngs.hpp\"
+#include \"observable/std_field_format.hpp\"
 #include \"observable/output_file.hpp\"
-//#include \"particle/ensemble.hpp\"
 // - 
-//#include <iomanip>
-//#include <fstream>
 #include <boost/format.hpp>
-//#include <boost/io/ios_state.hpp>
-#include <boost/tuple/tuple.hpp>
 // --
 ${namespace_start}
 ${members}
@@ -13365,6 +13448,8 @@ ${includes}
 // Manuals
 #include \"core/input_base_reader.hpp\"
 #include \"core/strngs.hpp\"
+#include \"observable/output_file.hpp\"
+#include \"observable/std_field_format.hpp\"
 #include \"particle/ensemble.hpp\"
 // - 
 ${namespace_start}
@@ -13422,6 +13507,8 @@ ${includes}
 #include \"core/input_base_reader.hpp\"
 #include \"core/input_error.hpp\"
 #include \"core/strngs.hpp\"
+#include \"observable/output_file.hpp\"
+#include \"observable/std_field_format.hpp\"
 #include \"particle/ensemble.hpp\"
 #include \"particle/specie_key.hpp\"
 // -
@@ -13476,8 +13563,9 @@ BOOST_CLASS_EXPORT_KEY( observable::metropolis_sampler );
 
 ${includes}
 // Manuals
-#include <boost/bind.hpp>
 #include \"core/strngs.hpp\"
+#include \"observable/output_file.hpp\"
+#include \"observable/std_field_format.hpp\"
 // - 
 ${namespace_start}
 ${members}
@@ -13914,7 +14002,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 631215 // base_observable
 	artifact_ref 651823 // widom
 	artifact_ref 676656 // trial_observer
-	artifact_ref 730416 // field_format
+	artifact_ref 730416 // std_field_format
 	artifact_ref 789807 // sampler_meta
       end
     end
@@ -13924,7 +14012,43 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     //deployment diagram settings
     package_name_in_tab default show_context default write_horizontally default auto_label_position default draw_all_relations default shadow default
     draw_component_as_icon default show_component_req_prov default show_component_rea default show_stereotype_properties default
-    artifact 730416 "field_format"
+    artifact 736944 "field_format"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 802096 // field_format
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at
+your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 730416 "std_field_format"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
 #define @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -13977,7 +14101,6 @@ BOOST_CLASS_EXPORT_IMPLEMENT( observable::digitizer_3d_output );
 ${import}
 ${definition}"
       associated_classes
-	class_ref 802096 // field_format
 	class_ref 802224 // constant_output
 	class_ref 802608 // element_output
 	class_ref 802992 // index_output

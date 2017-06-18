@@ -52,45 +52,30 @@ out << std::string(this->get_label().size(),' ')
     << std::log(this->energy_change_.variance()) << "\n";
 out << core::strngs::horizontal_bar() << "\n";
 // Write out energy histogram data
+if( this->energy_.count() > 0 )
 {
-  if( this->energy_.count() > 0 )
+  std::string label( metropolis_sampler::type_label_() + ".dat" );
+  auto & data = this->energy_;
+  if( not sink.has_dataset( label ) )
   {
-    const std::size_t sz = this->energy_.size();
-
-    output_dataset dset { [sz]() { return sz; } };
-
-    dset.set_title( "Energy distribution histogram" );
-
-    dset.push_back_entry( observable::output_field( "EMIN", "e^-E", [this]( std::ostream& os, std::size_t ii )
+    std::unique_ptr< observable::output_series >definition{ new observable::output_series( label, false ) };
+    definition->set_title( "Energy distribution histogram" );
     {
-      os << this->energy_.bin_minimum( ii );
-    } ) );
-
-    dset.push_back_entry( observable::output_field( "EMAX", "e^-E", [this]( std::ostream& os, std::size_t ii )
+      std::unique_ptr< observable::output_field > field( new observable::output_field( "EMID EMID EMID", "e^-E e^-E e^-E", std::move( std::unique_ptr< observable::field_format >( new observable::digitizer_output( data.axis(), observable::digitizer_output::USE_ALL ) ) ) ) );
+      definition->push_back_field( field );
+    }
     {
-      os << this->energy_.bin_maximum( ii );
-    } ) );
-
-    dset.push_back_entry( observable::output_field( "EMID", "e^-E", [this]( std::ostream& os, std::size_t ii )
-    {
-      os << this->energy_.bin_midpoint( ii );
-    } ) );
-
-    dset.push_back_entry( observable::output_field( "PMEAN", "COUNT", [this]( std::ostream& os, std::size_t ii )
-    {
-      os << this->energy_.bin_mean( ii );
-    } ) );
-
-    dset.push_back_entry( observable::output_field( "PVAR", "COUNT**2", [this]( std::ostream& os, std::size_t ii )
-    {
-      os << this->energy_.bin_variance( ii );
-    } ) );
-
-    std::string filename = metropolis_sampler::type_label_() + ".dat";
-    dset.write( filename, sink );
+      std::unique_ptr< observable::mean_variance_output > formatter{ new observable::mean_variance_output };
+      std::unique_ptr< observable::output_field > field( new observable::output_field( "P.mean P.var", "Rate Rate2", std::move( std::unique_ptr< observable::field_format >( new observable::mean_variance_output ) ) ) );
+      definition->push_back_field( field );
+    }
+    sink.add_dataset( definition );
+  }
+  {
+    std::unique_ptr< utility::estimate_array > arr( new utility::estimate_array( std::move( data.release_data() ) ) );
+    sink.receive_data( label, 0, arr );
   }
 }
-
 !!!174641.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
 this->boltzmann_factor_.reset();
 this->energy_change_.reset();

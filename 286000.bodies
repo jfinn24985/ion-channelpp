@@ -29,41 +29,29 @@ return tmp;
 // Write out gz data
 for( std::size_t ispec = 0; ispec != this->data_sets_.size(); ++ispec )
 {
-  auto const& data = this->data_sets_[ ispec ];
+  std::string label{ this->filenames_[ ispec ] };
+  auto & data = this->data_sets_[ ispec ];
+  if( not sink.has_dataset( label ) )
+  {
+    // need to give a data set definition
+    std::unique_ptr< observable::output_series >definition{ new observable::output_series( label, false ) };
+    definition->set_title( "Z-axial distribution histogram for specie "+std::to_string( ispec ) );
+    {
+      std::unique_ptr< observable::output_field > field( new observable::output_field( "ZMIN ZMID ZMAX", "ANGSTROM ANGSTROM ANGSTROM", std::move( std::unique_ptr< observable::field_format >( new observable::digitizer_output( data.axis(), observable::digitizer_output::USE_ALL ) ) ) ) );
+      definition->push_back_field( field );
+    }
+    {
+      std::unique_ptr< observable::mean_variance_output > formatter{ new observable::mean_variance_output };
+        std::unique_ptr< observable::output_field > field( new observable::output_field( "P.mean P.var", "Rate Rate2", std::move( std::unique_ptr< observable::field_format >( new observable::mean_variance_output ) ) ) );
+        definition->push_back_field( field );
+    }
+    sink.add_dataset( definition );
+  }
+   
   if( data.count() > 0 )
   {
-    const std::size_t sz = data.size();
-
-    output_dataset dset { [sz]() { return sz; } };
-
-    dset.set_title( "Z-axial distribution histogram for specie "+std::to_string( ispec ) );
-
-    dset.push_back_entry( observable::output_field( "ZMIN", "ANGSTROM", [data]( std::ostream& os, std::size_t ii )
-    {
-      os << data.bin_minimum( ii );
-    } ) );
-
-    dset.push_back_entry( observable::output_field( "ZMAX", "ANGSTROM", [data]( std::ostream& os, std::size_t ii )
-    {
-      os << data.bin_maximum( ii );
-    } ) );
-
-    dset.push_back_entry( observable::output_field( "ZMID", "ANGSTROM", [data]( std::ostream& os, std::size_t ii )
-    {
-      os << data.bin_midpoint( ii );
-    } ) );
-
-    dset.push_back_entry( observable::output_field( "PMEAN", "COUNT", [data]( std::ostream& os, std::size_t ii )
-    {
-      os << data.bin_mean( ii );
-    } ) );
-
-    dset.push_back_entry( observable::output_field( "PVAR", "COUNT**2", [data]( std::ostream& os, std::size_t ii )
-    {
-      os << data.bin_variance( ii );
-    } ) );
-
-    dset.write( this->filenames_[ ispec ], sink );
+    std::unique_ptr< utility::estimate_array > arr( new utility::estimate_array( std::move( data.release_data() ) ) );
+    sink.receive_data( label, 0, arr );
   }
 }
 

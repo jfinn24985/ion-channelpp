@@ -19,59 +19,50 @@ return tmp;
 !!!718640.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
 // data is  [change_hash] : <<success/trial>> : <<attempts>>
 // (0, 1, 1, 0) 0.66666667          0 0.30000000 0.00000000
+const std::string label( "acceptance.dat" );
 if( not this->data_.empty() )
 {
-// CHECK ALL COUNTS ARE EQUAL
-  UTILITY_ENSURE_OLD( const std::size_t check_counter = this->data_.begin()->second.first.count() );
-  const static boost::format title_str( " %14s %10s %10s %10s %10s" );
-  out << boost::format( title_str ) % "Trial" % "Accept.av" % "Accept.var" % "Trial.av" % "Trial.var" << "\n";
-  const static boost::format format_str( " %14s %10.8f %10.8f %10.8f %10.8f" );
-  typedef boost::tuple< std::string, double, double, double, double > datum_t;
-  std::vector< datum_t > dataset;
-  for( auto const& entry : this->data_ )
+  if( not sink.has_dataset( label ) )
   {
-    std::stringstream hashval;
-    hashval << entry.first;
-    dataset.push_back( { hashval.str(), entry.second.first.mean(), entry.second.first.variance(), entry.second.second.mean(), entry.second.second.variance() } );
-    out << boost::format( format_str ) % hashval.str() % entry.second.first.mean() % entry.second.first.variance() % entry.second.second.mean() % entry.second.second.variance() << "\n";
-    UTILITY_ENSURE( check_counter == entry.second.first.count(), "Serious error, estimater counters should all be equal" );
-    UTILITY_ENSURE( check_counter == entry.second.second.count(), "Serious error, estimater counters should all be equal" );
+    // need to give a data set definition
+    std::unique_ptr< observable::output_series >definition{ new observable::output_series( label, true ) };
+    definition->set_title( "Trial acceptance and rate data." );
+    {
+      std::unique_ptr< observable::key_output > formatter{ new observable::key_output( true ) };
+      // Add keys.
+      for( auto const& entry : this->data_ )
+      {
+        std::stringstream hashval;
+        hashval << entry.first;
+        formatter->push_back( hashval.str() );
+      }
+      std::unique_ptr< observable::output_field > field{ new observable::output_field( "Trial", "ID", std::move( formatter ) ) };
+      definition->push_back_field( field );
+    }
+    {
+      std::unique_ptr< observable::mean_variance_output > formatter{ new observable::mean_variance_output };
+      std::unique_ptr< observable::output_field > field{ new observable::output_field{ "Accept.mean Accept.var", "Rate Rate2", std::move( formatter ) } };
+      definition->push_back_field( field );
+    }
+    {
+      std::unique_ptr< observable::mean_variance_output > formatter{ new observable::mean_variance_output };
+      std::unique_ptr< observable::output_field > field{ new observable::output_field{ "Trial.mean Trial.var", "Rate Rate2", std::move( formatter ) } };
+      definition->push_back_field( field );
+    }
+    sink.add_dataset( definition );
+    this->locked_ = true; // Can not add any new trials.
   }
+  // CHECK ALL COUNTS ARE EQUAL
+  UTILITY_ENSURE_OLD( const std::size_t check_counter = this->data_.begin()->second.count() );
+  // Convert map to series.
+  std::size_t rank{ 0 };
+  for( auto & entry : this->data_ )
   {
-    // Write out trial acceptance data
-
-    const std::string filename { "acceptance.dat" };
-    const std::size_t sz { this->data_.size() };
-
-    output_dataset dset { [sz]() { return sz; } };
-    dset.set_title( "Trial acceptance and rate data." );
-
-    dset.push_back_entry( observable::output_field( "TRIAL", "CHANGE_HASH", [&dataset]( std::ostream& os, std::size_t ii )
-    {
-      os << boost::tuples::get< 0 >( dataset[ii] );
-    } ) );
-
-    dset.push_back_entry( observable::output_field( "ACCEPT.MEAN", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
-    {
-      os << boost::tuples::get< 1 >( dataset[ii] );
-    } ) );
-
-    dset.push_back_entry( observable::output_field( "ACCEPT.VAR", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
-    {
-      os << boost::tuples::get< 2 >( dataset[ii] );
-    } ) );
-
-    dset.push_back_entry( observable::output_field( "ATTEMPT.MEAN", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
-    {
-      os << boost::tuples::get< 3 >( dataset[ii] );
-    } ) );
-
-    dset.push_back_entry( observable::output_field( "ATTEMPT.VARIANCE", "RATE", [&dataset]( std::ostream& os, std::size_t ii )
-    {
-      os << boost::tuples::get< 4 >( dataset[ii] );
-    } ) );
-
-    dset.write( filename, sink );
+    UTILITY_ENSURE( check_counter == entry.second.count(), "Serious error, estimater counters should all be equal" );
+    std::unique_ptr< utility::estimate_array > arr( new utility::estimate_array{ 2 } );
+    arr->swap( entry.second );
+    sink.receive_data( label, rank, arr );
+    ++rank;
   }
 }
 !!!1485104.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
@@ -83,7 +74,7 @@ if( not this->data_.empty() )
 std::size_t count = 0;
 if( not this->data_.empty() )
 {
-  count = this->data_.begin()->second.first.count();
+  count = this->data_.begin()->second.count();
 }
 for( auto & entry : this->dictionary_ )
 {
@@ -96,24 +87,25 @@ for( auto & entry : this->dictionary_ )
   // iter->second.second : attempt chance
   if( this->data_.end() == iter )
   {
-    iter = this->data_.insert( std::make_pair( entry.first, std::pair< utility::estimater, utility::estimater >{} ) ).first;
+    UTILITY_REQUIRE( not this->locked_, "Attempt to extend acceptance sampler after defining the first report.\n\n** Increase reporting interval or trial probability. **\n" );
+    iter = this->data_.insert( std::make_pair( entry.first, utility::estimate_array{ 2ul } ) ).first;
     // for late added estimaters we need to increase their
     // counter
+    double dummy[ 2 ]{ 0.0, 0.0 };
     for( std::size_t catchup = 0; catchup != count; ++catchup)
     {
-       iter->second.first.append( 0.0 );
-       iter->second.second.append( 0.0 );
+       iter->second.append( &dummy[0], &dummy[2] );
     }
   }
   if( 0 == entry.second.second )
   {
-     iter->second.first.append( 0.0 );
-     iter->second.second.append( 0.0 );
+    double dummy[ 2 ]{ 0.0, 0.0 };
+    iter->second.append( &dummy[0], &dummy[2] );
   }
   else
   {
-     iter->second.first.append( double(entry.second.first)/double(entry.second.second) );
-     iter->second.second.append( double(entry.second.second)/double(this->total_) );
+    double dummy[ 2 ]{ double(entry.second.first)/double(entry.second.second), double(entry.second.second)/double(this->total_) };
+    iter->second.append( &dummy[0], &dummy[2] );
   }
   // reset counters
   entry.second.first = 0ul;
@@ -140,3 +132,7 @@ this->total_ = 0ul;
 !!!719408.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
 wr[ix].add_entry(core::strngs::fstype(), this->type_label_());
 
+!!!1498672.cpp!!!	get_datum(in id : change_hash) : estimate_array
+auto iter = this->data_.find( id );
+UTILITY_REQUIRE( this->data_.end() != iter, "Change hash not in acceptance object data set." );
+return iter->second;
