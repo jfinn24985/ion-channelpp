@@ -26,27 +26,28 @@ this->buffer_[ this->index_ ].set( trial );
 !!!2179888.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
 if( this->index_ != 0ul )
 {
+  std::string label = this->type_label_() + ".dat";
+  if( not sink.has_dataset( label ) )
+  {
+    // need to give a data set definition
+    std::unique_ptr< observable::output_text >definition{ new observable::output_text( label, true ) };
+    definition->set_title( "Record of each trial" );
+    definition->set_field_labels( "CHANGE_ID ENERGY PROB_FACTOR EXP_FACTOR FAIL ACCEPT" );
+    definition->set_units( "(A,B,C,D) ENERGY NUMBER NUMBER BOOLEAN BOOLEAN" );
+    sink.add_dataset( std::move( definition ) );
+  }
+
   std::stringstream os;
   for( std::size_t idx = 0ul; idx != this->index_ ; ++idx )
   {
     os << this->buffer_[ idx ];
   }
 
-  std::string filename = this->type_label_() + ".dat";
-  if( not sink.exists( filename ) )
-  {
-    std::stringstream title;
-    sink.header( title ); 
-    title << "# TITLE: \"Record of each trial\"\n";
-    title << "# FIELDS: CHANGE_ID ENERGY PROB_FACTOR EXP_FACTOR FAIL ACCEPT\n";
-    title << "# UNITS: (A,B,C,D) ENERGY NUMBER NUMBER BOOLEAN BOOLEAN\n";
-    sink.write( filename, title.str() );
-  }
-  sink.append( filename, os.str() );
+  std::unique_ptr< observable::output_buffer_datum > datum( new observable::output_buffer_datum{ os.str() } );
+  sink.receive_data( label, std::move( datum ) );
+  // Reset index.
+  this->index_ = 0ul;
 }
-// Reset index.
-this->index_ = 0ul;
-
 !!!2180016.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
 this->index_ = 0ul;
 !!!2180272.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void

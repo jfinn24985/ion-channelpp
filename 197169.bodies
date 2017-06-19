@@ -106,19 +106,18 @@ for (std::size_t ispec = 0; ispec != this->specie_labels_.size(); ++ispec)
       std::unique_ptr< observable::output_series >definition{ new observable::output_series( label, false ) };
       definition->set_title( "3D density distribution histogram for specie "+ this->specie_labels_[ ispec ] );
       {
-        std::unique_ptr< observable::output_field > field( new observable::output_field( "XMID YMID ZMID", "ANGSTROM ANGSTROM ANGSTROM", std::move( std::unique_ptr< observable::field_format >( new observable::digitizer_3d_output( data.axis(), observable::digitizer_output::USE_MID ) ) ) ) );
-        definition->push_back_field( field );
+        std::unique_ptr< observable::output_field > field( new observable::digitizer_3d_output( "XMID YMID ZMID", "ANGSTROM ANGSTROM ANGSTROM", data.axis(), observable::digitizer_3d_output::USE_MID ) );
+        definition->push_back_field( std::move( field ) );
       }
       {
-        std::unique_ptr< observable::mean_variance_output > formatter{ new observable::mean_variance_output };
-        std::unique_ptr< observable::output_field > field( new observable::output_field( "P.mean P.var", "Rate Rate2", std::move( std::unique_ptr< observable::field_format >( new observable::mean_variance_output ) ) ) );
-        definition->push_back_field( field );
+        std::unique_ptr< observable::output_field > field( new observable::mean_variance_output( "P.mean P.var", "Rate Rate2" ) );
+        definition->push_back_field( std::move( field ) );
       }
-      sink.add_dataset( definition );
+      sink.add_dataset( std::move( definition ) );
     }
     {
-      std::unique_ptr< utility::estimate_array > arr( new utility::estimate_array( std::move( data.release_data() ) ) );
-      sink.receive_data( label, 0, arr );
+      std::unique_ptr< observable::output_series_datum > datum( new observable::output_series_datum{ 0ul, new utility::estimate_array( std::move( data.release_data() ) ) } );
+      sink.receive_data( label, std::move( datum ) );
     }
   }
 }

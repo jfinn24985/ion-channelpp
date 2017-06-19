@@ -1,6 +1,6 @@
 format 75
 "observable" // observable
-  revision 244
+  revision 245
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -4110,15 +4110,6 @@ ion specie
 	  b parent class_ref 912431 // access
       end
 
-      classrelation 319536 // <dependency>
-	relation 319152 -_->
-	  a default
-	    cpp default "#include in source"
-	    python "${type}"
-	    classrelation_ref 319536 // <dependency>
-	  b parent class_ref 278960 // output_dataset
-      end
-
       classrelation 945072 // data_sets_ (<directional composition>)
 	relation 944176 *-->
 	  stereotype "vector"
@@ -4520,7 +4511,7 @@ ${docstring}${body}
 	idl ""
       end
 
-      operation 1570480 "get_histogram"
+      operation 2607920 "get_histogram"
 	const public return_type class_ref 585776 // histogram
 	nparams 2
 	  param in name "ispec" explicit_type "size_t"
@@ -4541,6 +4532,27 @@ ${docstring}${body}
 	comment " Get histogram for specie pair (i,j)
 
  \\pre ispec < specie_count and jspec < specie_count"
+      end
+
+      operation 1570480 "get_index"
+	const private explicit_return_type "size_t"
+	nparams 2
+	  param in name "ispec" explicit_type "size_t"
+	  param in name "jspec" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  return (((2 * this->specie_count() + 1 - ispec) * ispec ) / 2) + (jspec - ispec);
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get histogram index for specie pair (i,j)
+
+ ASSUMES \\pre ispec <= jspec < specie_count"
       end
 
       operation 1571248 "size"
@@ -4713,6 +4725,18 @@ ${docstring}${members}
  per-specie cell volume."
       end
 
+      attribute 985136 "rank_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The number of times we have reported data."
+      end
+
       extra_member 612016 "LIFETIME"
 	
 	cpp "" ""
@@ -4723,9 +4747,14 @@ ${docstring}${members}
       end
 
       operation 633777 "specie_count"
-	protected explicit_return_type ""
+	private explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: base_observable()
+, count_()
+, specie_list_()
+, rank_( 0ul )
+{}
 "
 	
 	
@@ -4765,7 +4794,7 @@ ${docstring}${members}
 	cpp_decl "    ${comment}template< class ${t0} > ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
   ${p0} & boost::serialization::base_object< base_observable >(*this);
-  ar & this->count_; ar & this->specie_list_;
+  ar & this->count_; ar & this->specie_list_; ar & this->rank_;
 }
 "
 	
@@ -5050,7 +5079,7 @@ ${docstring}${body}
       end
 
       operation 1525936 "specie_key"
-	const public explicit_return_type "double"
+	const public explicit_return_type "size_t"
 	nparams 1
 	  param in name "idx" explicit_type "size_t"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
@@ -5196,6 +5225,18 @@ ${docstring}${members}
 	comment " The number of active species."
       end
 
+      attribute 985264 "rank_"
+	private explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The number of times we have reported data."
+      end
+
       extra_member 618800 "LIFETIME"
 	
 	cpp "" ""
@@ -5206,7 +5247,7 @@ ${docstring}${members}
       end
 
       operation 1532592 "specie_region_count"
-	protected explicit_return_type ""
+	private explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} = default;
 "
@@ -5248,7 +5289,7 @@ ${docstring}${members}
 	cpp_decl "    ${comment}template< class ${t0} > ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
   ${p0} & boost::serialization::base_object< base_observable >(*this);
-  ar & this->count_; ar & this->volume_; ar & this->nspec_;
+  ar & this->count_; ar & this->volume_; ar & this->nspec_; ar & this->rank_;
 }
 "
 	
@@ -7588,7 +7629,7 @@ ${docstring}${body}
     //activity diagram settings
     package_name_in_tab default show_context default show_opaque_action_definition default auto_label_position default write_flow_label_horizontally default draw_all_relations default shadow default
     show_infonote default drawing_language default show_stereotype_properties default
-    associated_deployment_view deploymentview_ref 328239 // core deployment
+    associated_deployment_view deploymentview_ref 183216 // Output classes
     comment " Small cluster of classes to assist in unifying format of output files."
     classdiagram 391600 "aggregator design"
       draw_all_relations default hide_attributes default hide_operations default hide_getset_operations default show_members_full_definition default show_members_visibility default show_members_stereotype default show_members_context default show_members_multiplicity default show_members_initialization default show_attribute_modifiers default member_max_width 0 show_parameter_dir default show_parameter_name default package_name_in_tab default class_drawing_mode default drawing_language default show_context_mode default auto_label_position default show_relation_modifiers default show_relation_visibility default show_infonote default shadow default show_stereotype_properties default
@@ -7656,154 +7697,7 @@ ${docstring}${members}
       size A4
     end
 
-    class 802096 "field_format"
-      abstract visibility package 
-      cpp_decl "${comment}${template}class ${name}${inherit}
- {
-${members}
-};
-${inlines}
-"
-      java_decl ""
-      php_decl ""
-      python_decl "class ${name}${inherit}:
-${docstring}${members}
-"
-      idl_decl ""
-      explicit_switch_type ""
-      
-      classrelation 1336880 // <dependency>
-	relation 1335984 -_->
-	  a package
-	    cpp default "#include in header"
-	    python "${type}"
-	    classrelation_ref 1336880 // <dependency>
-	  b parent class_ref 912431 // access
-      end
-
-      operation 2575536 "field_format"
-	public explicit_return_type ""
-	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} {}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
-      operation 2575664 "~field_format"
-	cpp_virtual public explicit_return_type ""
-	nparams 0
-	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} {}"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
-      operation 2575792 "field_format"
-	stereotype "move"
-	private explicit_return_type ""
-	nparams 1
-	  param inout name "source" type class_ref 802096 // field_format
-	cpp_visibility private cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw} = delete;
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " no move"
-      end
-
-      operation 2575920 "field_format"
-	stereotype "copy"
-	private explicit_return_type ""
-	nparams 1
-	  param in name "source" type class_ref 802096 // field_format
-	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw} = delete;
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " no copy"
-      end
-
-      operation 2576048 "operator="
-	private return_type class_ref 802096 // field_format
-	nparams 1
-	  param in name "source" type class_ref 802096 // field_format
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${abstract} = delete;
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " no assign"
-      end
-
-      extra_member 836784 "friend"
-	
-	cpp "
-  friend class boost::serialization::access;" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      operation 2576176 "serialize"
-	stereotype "template"
-	cpp_inline private explicit_return_type "void"
-	nparams 2
-	  param inout name "ar" explicit_type "Archive"
-	  param in name "version" explicit_type "unsigned int"
-	cpp_decl "    ${comment}template<class Archive>
-  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
-{
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
-${docstring}${body}
-"
-	
-      end
-
-      operation 2575408 "operator()"
-	abstract const cpp_virtual public explicit_return_type "void"
-	nparams 4
-	  param inout name "os" explicit_type "ostream"
-	  param in name "arr" type class_ref 175665 // estimate_array
-	  param in name "idx" explicit_type "size_t"
-	  param in name "rank" explicit_type "size_t"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Write formatted output to the given stream. Output
- may or may not include information from the given 
- parameters."
-      end
-    end
-
-    class 802224 "constant_output"
+    class 810288 "combined_output"
       visibility package 
       cpp_decl "${comment}${template}class ${name}${inherit}
  {
@@ -7819,29 +7713,56 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
-      comment " Output a constant value"
-      classrelation 1335856 // <generalisation>
-	relation 1334960 ---|>
+      comment " Combine several fields into one apparent field."
+      classrelation 1359792 // <generalisation>
+	relation 1358896 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 1335856 // <generalisation>
-	  b parent class_ref 802096 // field_format
+	    classrelation_ref 1359792 // <generalisation>
+	  b parent class_ref 271920 // output_field
       end
 
-      attribute 970288 "value_"
-	private explicit_type "string"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+      classrelation 1359920 // children_ (<directional composition>)
+	relation 1359024 *-->
+	  stereotype "ptr_vector"
+	  a role_name "children_" multiplicity "1..*" private
+	    comment " Sub fields."
+	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
 "
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
+	    python "${comment}${self}${name} = ${stereotype}()
 "
-	idl_decl ""
-	comment " Always output the same constant value."
+	    classrelation_ref 1359920 // children_ (<directional composition>)
+	  b parent class_ref 271920 // output_field
       end
 
-      extra_member 836912 "friend"
+      operation 2608560 "combined_output"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: output_field() {}
+"
+	
+	
+	
+	
+	comment " Simple default ctor"
+      end
+
+      operation 2608304 "~combined_output"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
+{}
+"
+	
+	
+	
+	
+      end
+
+      extra_member 845232 "friend"
 	
 	cpp "
   friend class boost::serialization::access;" ""
@@ -7851,7 +7772,7 @@ ${docstring}${members}
 	idl ""
       end
 
-      operation 2576304 "serialize"
+      operation 2608816 "serialize"
 	stereotype "template"
 	cpp_inline private explicit_return_type "void"
 	nparams 2
@@ -7860,8 +7781,8 @@ ${docstring}${members}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< field_format >(*this);
-  ${p0} & this->value_;
+  ${p0} & boost::serialization::base_object< output_field >(*this);
+  ${p0} & children_;
 }
 "
 	
@@ -7872,57 +7793,15 @@ ${docstring}${body}
 	
       end
 
-      operation 2576432 "constant_output"
-	private explicit_return_type ""
-	nparams 0
-	cpp_visibility private cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: value_() {}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Serialization only"
-      end
-
-      operation 2576560 "~constant_output"
-	cpp_virtual public explicit_return_type ""
-	nparams 0
-	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} {}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-      end
-
-      operation 2576688 "constant_output"
-	public explicit_return_type ""
+      operation 2608048 "push_back_field"
+	public explicit_return_type "void"
 	nparams 1
-	  param in name "value" explicit_type "string"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
-: value_( ${p0} )
-{}
-
+	  param in name "field" type class_ref 271920 // output_field
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} > ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Create with the fixed value."
-      end
-
-      operation 2576816 "value"
-	const public explicit_return_type "string"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::unique_ptr< ${t0} > ${p0}${)}${const}${volatile}${throw}
 {
-  return this->value_;
+  ${body}
 }
 "
 	
@@ -7931,11 +7810,11 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Get the outputter value"
+	comment " Add an output field to the data set row"
       end
 
-      operation 2577456 "operator()"
-	const cpp_virtual public explicit_return_type "void"
+      operation 2608688 "do_write"
+	const cpp_virtual private explicit_return_type "void"
 	nparams 4
 	  param inout name "os" explicit_type "ostream"
 	  param in name "arr" type class_ref 175665 // estimate_array
@@ -7943,9 +7822,9 @@ ${docstring}${body}
 	  param in name "rank" explicit_type "size_t"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract} override;
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, const ${t1} &, ${t2}, ${t3}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, const ${t1} & ${p1}, ${t2} ${p2}, ${t3} ${p3}${)}${const}${volatile}${throw}
 {
-  os << this->value_;
+  ${body}
 }
 "
 	
@@ -7977,13 +7856,13 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " Output a floating point value from a fixed array by index"
-      classrelation 1336240 // <generalisation>
-	relation 1335344 ---|>
+      classrelation 1358640 // <generalisation>
+	relation 1357744 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 1336240 // <generalisation>
-	  b parent class_ref 802096 // field_format
+	    classrelation_ref 1358640 // <generalisation>
+	  b parent class_ref 271920 // output_field
       end
 
       attribute 970800 "keys_"
@@ -8032,7 +7911,7 @@ ${docstring}${members}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< field_format >(*this);
+  ${p0} & boost::serialization::base_object< output_field >(*this);
   ${p0} & keys_;
   ${p0} & use_rank_;
 }
@@ -8049,7 +7928,7 @@ ${docstring}${body}
 	private explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
-: field_format()
+: output_field()
 , keys_()
 , use_rank_()
 {}
@@ -8061,6 +7940,27 @@ ${docstring}${body}
 "
 	
 	comment " Serialization only"
+      end
+
+      operation 2606384 "element_output"
+	public explicit_return_type ""
+	nparams 3
+	  param in name "name" explicit_type "string"
+	  param in name "unit" explicit_type "string"
+	  param in name "use_rank" explicit_type "bool"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}${)}${throw}
+: output_field( ${p0}, ${p1} )
+, keys_()
+, use_rank_( ${p2} )
+{}
+"
+	
+	
+	
+	
+	comment " Main ctor, use_rank choses rank or index as key selector in write."
       end
 
       operation 2578864 "~element_output"
@@ -8076,8 +7976,8 @@ ${docstring}${body}
 	
       end
 
-      operation 2582704 "operator()"
-	const cpp_virtual public explicit_return_type "void"
+      operation 2582704 "do_write"
+	const cpp_virtual private explicit_return_type "void"
 	nparams 4
 	  param inout name "os" explicit_type "ostream"
 	  param in name "arr" type class_ref 175665 // estimate_array
@@ -8188,6 +8088,7 @@ ${docstring}${body}
 "
 	
       end
+
     end
 
     class 802992 "index_output"
@@ -8207,13 +8108,13 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " Output the current index."
-      classrelation 1336752 // <generalisation>
-	relation 1335856 ---|>
+      classrelation 1358768 // <generalisation>
+	relation 1357872 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 1336752 // <generalisation>
-	  b parent class_ref 802096 // field_format
+	    classrelation_ref 1358768 // <generalisation>
+	  b parent class_ref 271920 // output_field
       end
 
       extra_member 837680 "friend"
@@ -8235,7 +8136,7 @@ ${docstring}${members}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< field_format >(*this);
+  ${p0} & boost::serialization::base_object< output_field >(*this);
 }
 "
 	
@@ -8247,9 +8148,9 @@ ${docstring}${body}
       end
 
       operation 2580016 "index_output"
-	public explicit_return_type ""
+	private explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: field_format() {}
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: output_field() {}
 "
 	
 	
@@ -8258,6 +8159,25 @@ ${docstring}${body}
 "
 	
 	comment " Serialization only"
+      end
+
+      operation 2606512 "index_output"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "name" explicit_type "string"
+	  param in name "unit" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw};
+
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${throw}
+: output_field( ${p0}, ${p1} )
+{}
+"
+	
+	
+	
+	
+	comment " Main ctor."
       end
 
       operation 2579888 "~index_output"
@@ -8273,8 +8193,8 @@ ${docstring}${body}
 	
       end
 
-      operation 2579760 "operator()"
-	const cpp_virtual public explicit_return_type "void"
+      operation 2579760 "do_write"
+	const cpp_virtual private explicit_return_type "void"
 	nparams 4
 	  param inout name "os" explicit_type "ostream"
 	  param in name "arr" type class_ref 175665 // estimate_array
@@ -8316,13 +8236,13 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " Output a string value from a fixed array by index"
-      classrelation 1336112 // <generalisation>
-	relation 1335216 ---|>
+      classrelation 1358512 // <generalisation>
+	relation 1357616 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 1336112 // <generalisation>
-	  b parent class_ref 802096 // field_format
+	    classrelation_ref 1358512 // <generalisation>
+	  b parent class_ref 271920 // output_field
       end
 
       attribute 970416 "keys_"
@@ -8371,7 +8291,7 @@ ${docstring}${members}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< field_format >(*this);
+  ${p0} & boost::serialization::base_object< output_field >(*this);
   ${p0} & keys_;
   ${p0} & use_rank_;
 }
@@ -8388,7 +8308,7 @@ ${docstring}${body}
 	private explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
-: field_format()
+: output_field()
 , keys_()
 , use_rank_()
 {}
@@ -8403,23 +8323,25 @@ ${docstring}${body}
 	comment " Serialization only"
       end
 
-      operation 2578480 "key_output"
+      operation 2606640 "key_output"
 	public explicit_return_type ""
-	nparams 1
+	nparams 3
+	  param in name "name" explicit_type "string"
+	  param in name "unit" explicit_type "string"
 	  param in name "use_rank" explicit_type "bool"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
-: field_format()
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}${)}${volatile}${throw};
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, ${t2} ${p2}${)}${throw}
+: output_field( ${p0}, ${p1} )
 , keys_()
-, use_rank_( ${p0} )
+, use_rank_( ${p2} )
 {}
-
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
 	
+	
+	comment " Main ctor, use_rank choses rank or index as key selector in write."
       end
 
       operation 2578352 "~key_output"
@@ -8435,8 +8357,8 @@ ${docstring}${body}
 	
       end
 
-      operation 2578224 "operator()"
-	const cpp_virtual public explicit_return_type "void"
+      operation 2578224 "do_write"
+	const cpp_virtual private explicit_return_type "void"
 	nparams 4
 	  param inout name "os" explicit_type "ostream"
 	  param in name "arr" type class_ref 175665 // estimate_array
@@ -8566,13 +8488,13 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " Output the mean value at the given index"
-      classrelation 1335984 // <generalisation>
-	relation 1335088 ---|>
+      classrelation 1359408 // <generalisation>
+	relation 1358512 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 1335984 // <generalisation>
-	  b parent class_ref 802096 // field_format
+	    classrelation_ref 1359408 // <generalisation>
+	  b parent class_ref 271920 // output_field
       end
 
       extra_member 837040 "friend"
@@ -8594,7 +8516,7 @@ ${docstring}${members}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< field_format >(*this);
+  ${p0} & boost::serialization::base_object< output_field >(*this);
 }
 "
 	
@@ -8606,9 +8528,9 @@ ${docstring}${body}
       end
 
       operation 2577200 "mean_output"
-	public explicit_return_type ""
+	private explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: field_format() {}
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: output_field() {}
 "
 	
 	
@@ -8617,6 +8539,25 @@ ${docstring}${body}
 "
 	
 	comment " Serialization only"
+      end
+
+      operation 2606768 "mean_output"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "name" explicit_type "string"
+	  param in name "unit" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw};
+
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${throw}
+: output_field( ${p0}, ${p1} )
+{}
+"
+	
+	
+	
+	
+	comment " Main ctor."
       end
 
       operation 2577072 "~mean_output"
@@ -8632,8 +8573,8 @@ ${docstring}${body}
 	
       end
 
-      operation 2577584 "operator()"
-	const cpp_virtual public explicit_return_type "void"
+      operation 2577584 "do_write"
+	const cpp_virtual private explicit_return_type "void"
 	nparams 4
 	  param inout name "os" explicit_type "ostream"
 	  param in name "arr" type class_ref 175665 // estimate_array
@@ -8675,13 +8616,13 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " Output the mean and variance values at the given index"
-      classrelation 1337008 // <generalisation>
-	relation 1336112 ---|>
+      classrelation 1359152 // <generalisation>
+	relation 1358256 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 1337008 // <generalisation>
-	  b parent class_ref 802096 // field_format
+	    classrelation_ref 1359152 // <generalisation>
+	  b parent class_ref 271920 // output_field
       end
 
       extra_member 837936 "friend"
@@ -8703,7 +8644,7 @@ ${docstring}${members}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< field_format >(*this);
+  ${p0} & boost::serialization::base_object< output_field >(*this);
 }
 "
 	
@@ -8715,9 +8656,9 @@ ${docstring}${body}
       end
 
       operation 2580912 "mean_variance_output"
-	public explicit_return_type ""
+	private explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: field_format() {}
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: output_field() {}
 "
 	
 	
@@ -8726,6 +8667,25 @@ ${docstring}${body}
 "
 	
 	comment " Serialization only"
+      end
+
+      operation 2606896 "mean_variance_output"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "name" explicit_type "string"
+	  param in name "unit" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw};
+
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${throw}
+: output_field( ${p0}, ${p1} )
+{}
+"
+	
+	
+	
+	
+	comment " Main ctor."
       end
 
       operation 2581040 "~mean_variance_output"
@@ -8741,8 +8701,8 @@ ${docstring}${body}
 	
       end
 
-      operation 2581168 "operator()"
-	const cpp_virtual public explicit_return_type "void"
+      operation 2581168 "do_write"
+	const cpp_virtual private explicit_return_type "void"
 	nparams 4
 	  param inout name "os" explicit_type "ostream"
 	  param in name "arr" type class_ref 175665 // estimate_array
@@ -8784,13 +8744,13 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " Output the rank parameter"
-      classrelation 1336624 // <generalisation>
-	relation 1335728 ---|>
+      classrelation 1358896 // <generalisation>
+	relation 1358000 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 1336624 // <generalisation>
-	  b parent class_ref 802096 // field_format
+	    classrelation_ref 1358896 // <generalisation>
+	  b parent class_ref 271920 // output_field
       end
 
       extra_member 837552 "friend"
@@ -8812,7 +8772,7 @@ ${docstring}${members}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< field_format >(*this);
+  ${p0} & boost::serialization::base_object< output_field >(*this);
 }
 "
 	
@@ -8824,9 +8784,9 @@ ${docstring}${body}
       end
 
       operation 2579504 "rank_output"
-	public explicit_return_type ""
+	private explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: field_format() {}
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: output_field() {}
 "
 	
 	
@@ -8835,6 +8795,25 @@ ${docstring}${body}
 "
 	
 	comment " Serialization only"
+      end
+
+      operation 2607024 "rank_output"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "name" explicit_type "string"
+	  param in name "unit" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw};
+
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${throw}
+: output_field( ${p0}, ${p1} )
+{}
+"
+	
+	
+	
+	
+	comment " Main ctor."
       end
 
       operation 2579376 "~rank_output"
@@ -8850,8 +8829,8 @@ ${docstring}${body}
 	
       end
 
-      operation 2579248 "operator()"
-	const cpp_virtual public explicit_return_type "void"
+      operation 2579248 "do_write"
+	const cpp_virtual private explicit_return_type "void"
 	nparams 4
 	  param inout name "os" explicit_type "ostream"
 	  param in name "arr" type class_ref 175665 // estimate_array
@@ -8893,13 +8872,13 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " Output the sample count of the estimate array."
-      classrelation 1336496 // <generalisation>
-	relation 1335600 ---|>
+      classrelation 1359024 // <generalisation>
+	relation 1358128 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 1336496 // <generalisation>
-	  b parent class_ref 802096 // field_format
+	    classrelation_ref 1359024 // <generalisation>
+	  b parent class_ref 271920 // output_field
       end
 
       extra_member 837808 "friend"
@@ -8912,7 +8891,7 @@ ${docstring}${members}
 	idl ""
       end
 
-      operation 2580656 "serialize"
+      operation 2607408 "serialize"
 	stereotype "template"
 	cpp_inline private explicit_return_type "void"
 	nparams 2
@@ -8921,7 +8900,7 @@ ${docstring}${members}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< field_format >(*this);
+  ${p0} & boost::serialization::base_object< output_field >(*this);
 }
 "
 	
@@ -8932,10 +8911,10 @@ ${docstring}${body}
 	
       end
 
-      operation 2580528 "sample_count_output"
-	public explicit_return_type ""
+      operation 2607280 "sample_count_output"
+	private explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: field_format() {}
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: output_field() {}
 "
 	
 	
@@ -8944,6 +8923,25 @@ ${docstring}${body}
 "
 	
 	comment " Serialization only"
+      end
+
+      operation 2607152 "sample_count_output"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "name" explicit_type "string"
+	  param in name "unit" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw};
+
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${throw}
+: output_field( ${p0}, ${p1} )
+{}
+"
+	
+	
+	
+	
+	comment " Main ctor."
       end
 
       operation 2580400 "~sample_count_output"
@@ -8959,8 +8957,8 @@ ${docstring}${body}
 	
       end
 
-      operation 2580272 "operator()"
-	const cpp_virtual public explicit_return_type "void"
+      operation 2580272 "do_write"
+	const cpp_virtual private explicit_return_type "void"
 	nparams 4
 	  param inout name "os" explicit_type "ostream"
 	  param in name "arr" type class_ref 175665 // estimate_array
@@ -9002,13 +9000,13 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " Output the variance value at the given index"
-      classrelation 1336368 // <generalisation>
-	relation 1335472 ---|>
+      classrelation 1359280 // <generalisation>
+	relation 1358384 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 1336368 // <generalisation>
-	  b parent class_ref 802096 // field_format
+	    classrelation_ref 1359280 // <generalisation>
+	  b parent class_ref 271920 // output_field
       end
 
       extra_member 837168 "friend"
@@ -9021,7 +9019,7 @@ ${docstring}${members}
 	idl ""
       end
 
-      operation 2578096 "serialize"
+      operation 2607792 "serialize"
 	stereotype "template"
 	cpp_inline private explicit_return_type "void"
 	nparams 2
@@ -9030,7 +9028,7 @@ ${docstring}${members}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< field_format >(*this);
+  ${p0} & boost::serialization::base_object< output_field >(*this);
 }
 "
 	
@@ -9041,10 +9039,10 @@ ${docstring}${body}
 	
       end
 
-      operation 2577968 "variance_output"
-	public explicit_return_type ""
+      operation 2607664 "variance_output"
+	private explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: field_format() {}
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}: output_field() {}
 "
 	
 	
@@ -9053,6 +9051,25 @@ ${docstring}${body}
 "
 	
 	comment " Serialization only"
+      end
+
+      operation 2607536 "variance_output"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "name" explicit_type "string"
+	  param in name "unit" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw};
+
+"
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${throw}
+: output_field( ${p0}, ${p1} )
+{}
+"
+	
+	
+	
+	
+	comment " Main ctor."
       end
 
       operation 2577840 "~variance_output"
@@ -9068,8 +9085,8 @@ ${docstring}${body}
 	
       end
 
-      operation 2577712 "operator()"
-	const cpp_virtual public explicit_return_type "void"
+      operation 2577712 "do_write"
+	const cpp_virtual private explicit_return_type "void"
 	nparams 4
 	  param inout name "os" explicit_type "ostream"
 	  param in name "arr" type class_ref 175665 // estimate_array
@@ -9111,13 +9128,13 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " Output bin min/mid/max values of a digitzer at the given index"
-      classrelation 1337264 // <generalisation>
-	relation 1336368 ---|>
+      classrelation 1359664 // <generalisation>
+	relation 1358768 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 1337264 // <generalisation>
-	  b parent class_ref 802096 // field_format
+	    classrelation_ref 1359664 // <generalisation>
+	  b parent class_ref 271920 // output_field
       end
 
       class 803504 "anonymous"
@@ -9234,7 +9251,7 @@ ${items}};
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< field_format >(*this);
+  ${p0} & boost::serialization::base_object< output_field >(*this);
   ${p0} & axis_;
   ${p0} & parts_;
 }
@@ -9251,7 +9268,7 @@ ${docstring}${body}
 	private explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
-: field_format()
+: output_field()
 , axis_()
 , parts_()
 {}
@@ -9268,14 +9285,17 @@ ${docstring}${body}
 
       operation 2583216 "digitizer_output"
 	public explicit_return_type ""
-	nparams 2
+	nparams 4
+	  param in name "name" explicit_type "string"
+	  param in name "unit" explicit_type "string"
 	  param inout name "axis" type class_ref 175409 // digitizer
 	  param in name "use_which" explicit_type "short"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
-: field_format()
-, axis_( std::move( ${p0} ) )
-, parts_( ${p1} )
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${volatile}${throw}
+: output_field( ${p0}, ${p1} )
+, axis_( std::move( ${p2} ) )
+, parts_( ${p3} )
 {}
+
 "
 	
 	
@@ -9298,8 +9318,8 @@ ${docstring}${body}
 	
       end
 
-      operation 2582960 "operator()"
-	const cpp_virtual public explicit_return_type "void"
+      operation 2582960 "do_write"
+	const cpp_virtual private explicit_return_type "void"
 	nparams 4
 	  param inout name "os" explicit_type "ostream"
 	  param in name "arr" type class_ref 175665 // estimate_array
@@ -9408,13 +9428,13 @@ ${docstring}${members}
       explicit_switch_type ""
       
       comment " Output bin min/mid/max values of a digitzer at the given index"
-      classrelation 1337392 // <generalisation>
-	relation 1336496 ---|>
+      classrelation 1359536 // <generalisation>
+	relation 1358640 ---|>
 	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 1337392 // <generalisation>
-	  b parent class_ref 802096 // field_format
+	    classrelation_ref 1359536 // <generalisation>
+	  b parent class_ref 271920 // output_field
       end
 
       class 803760 "anonymous"
@@ -9530,7 +9550,7 @@ ${items}};
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  ${p0} & boost::serialization::base_object< field_format >(*this);
+  ${p0} & boost::serialization::base_object< output_field >(*this);
   ${p0} & axis_;
   ${p0} & parts_;
 }
@@ -9547,7 +9567,7 @@ ${docstring}${body}
 	private explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
-: field_format()
+: output_field()
 , axis_()
 , parts_()
 {}
@@ -9564,13 +9584,15 @@ ${docstring}${body}
 
       operation 2584368 "digitizer_3d_output"
 	public explicit_return_type ""
-	nparams 2
+	nparams 4
+	  param in name "name" explicit_type "string"
+	  param in name "unit" explicit_type "string"
 	  param in name "axis" type class_ref 506032 // digitizer_3d
 	  param in name "use_which" explicit_type "short"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
-: field_format()
-, axis_( std::move( ${p0} ) )
-, parts_( ${p1} )
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${volatile}${throw}
+: output_field( ${p0}, ${p1} )
+, axis_( std::move( ${p2} ) )
+, parts_( ${p3} )
 {}
 "
 	
@@ -9594,8 +9616,8 @@ ${docstring}${body}
 	
       end
 
-      operation 2584624 "operator()"
-	const cpp_virtual public explicit_return_type "void"
+      operation 2584624 "do_write"
+	const cpp_virtual private explicit_return_type "void"
 	nparams 4
 	  param inout name "os" explicit_type "ostream"
 	  param in name "arr" type class_ref 175665 // estimate_array
@@ -9693,7 +9715,7 @@ ${docstring}${body}
     end
 
     class 271920 "output_field"
-      visibility package 
+      abstract visibility package 
       cpp_decl "${comment}${template}class ${name}${inherit}
  {
 ${members}
@@ -9716,15 +9738,6 @@ ${docstring}${members}
 	    python "${type}"
 	    classrelation_ref 1337904 // <dependency>
 	  b parent class_ref 912431 // access
-      end
-
-      classrelation 1351984 // <dependency>
-	relation 1351088 -_->
-	  a package
-	    cpp default "#include in header"
-	    python "${type}"
-	    classrelation_ref 1351984 // <dependency>
-	  b parent class_ref 802096 // field_format
       end
 
       attribute 327088 "label_"
@@ -9751,18 +9764,6 @@ ${docstring}${members}
 	comment " Single word indicating units of field"
       end
 
-      classrelation 1337776 // formatter_ (<directional composition>)
-	relation 1336880 *-->
-	  stereotype "unique_ptr"
-	  a role_name "formatter_" multiplicity "0..1" private
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
-"
-	    python "${comment}${self}${name} = ${stereotype}()
-"
-	    classrelation_ref 1337776 // formatter_ (<directional composition>)
-	  b parent class_ref 802096 // field_format
-      end
-
       operation 469040 "output_field"
 	public explicit_return_type ""
 	nparams 0
@@ -9771,7 +9772,6 @@ ${docstring}${members}
 	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
 : label_()
 , unit_()
-, formatter_()
 {}
 "
 	
@@ -9783,17 +9783,15 @@ ${docstring}${members}
 
       operation 469808 "output_field"
 	public explicit_return_type ""
-	nparams 3
+	nparams 2
 	  param in name "name" explicit_type "string"
 	  param in name "unit" explicit_type "string"
-	  param in name "fmtr" type class_ref 802096 // field_format
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, std::unique_ptr< ${t2} > ${p2}${v2}${)}${volatile}${throw};
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw};
 
 "
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, std::unique_ptr< ${t2} > ${p2}${)}${throw}
+	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${throw}
 : label_( ${p0} )
 , unit_( ${p1} )
-, formatter_( ${p2}.release() )
 {}
 "
 	
@@ -9833,16 +9831,10 @@ ${docstring}${members}
 
       operation 469680 "output_field"
 	stereotype "move"
-	public explicit_return_type ""
+	private explicit_return_type ""
 	nparams 1
 	  param out name "source" type class_ref 271920 // output_field
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${v0}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} && ${p0}${)}${throw}
-: label_( std::move( ${p0}.label_ ) )
-, unit_( std::move( ${p0}.unit_ ) )
-, formatter_( std::move( ${p0}.formatter_ ) )
-{}
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${v0}${)}${volatile}${throw} = delete;
 "
 	
 	
@@ -9872,7 +9864,6 @@ ${docstring}${members}
 {
   ${p0} & label_;
   ${p0} & unit_;
-  ${p0} & formatter_;
 }
 "
 	
@@ -9883,35 +9874,11 @@ ${docstring}${body}
 	
       end
 
-      operation 472496 "swap"
-	public explicit_return_type "void"
-	nparams 1
-	  param out name "source" type class_ref 271920 // output_field
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
- std::swap( label_, ${p0}.label_ );
- std::swap( unit_, ${p0}.unit_ );
- std::swap( formatter_, ${p0}.formatter_ );
-}
-"
-	
-	
-	
-	
-	comment " Simple swap method"
-      end
-
       operation 469424 "operator="
-	public return_type class_ref 271920 // output_field
+	private return_type class_ref 271920 // output_field
 	nparams 1
 	  param in name "source" type class_ref 271920 // output_field
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} & ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
-{
-  this->swap( ${p0} );
-  return *this;
-}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0}& ${p0}${v0}${)}${const}${volatile}${throw}${abstract} = delete;
 "
 	
 	
@@ -9967,25 +9934,6 @@ ${docstring}${body}
 	comment "  Set the field's unit label"
       end
 
-      operation 475312 "set_format_function"
-	stereotype "move"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "fmtr" type class_ref 802096 // field_format
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} > && ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
-"
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::unique_ptr< ${t0} > && ${p0}${)}${const}${volatile}${throw}
-{
-  this->formatter_ = std::move( ${p0} );
-}
-"
-	
-	
-	
-	
-	comment "  Set the field's formatting function"
-      end
-
       operation 448688 "unit"
 	const public explicit_return_type "string"
 	nparams 0
@@ -10001,6 +9949,23 @@ ${docstring}${body}
 	comment " The human readable label for the units of the field"
       end
 
+      operation 477744 "valid"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return not ( this->label_.empty() or this->unit_.empty() );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment "  Check that we have label, unit and formatter function set."
+      end
+
       operation 470576 "write"
 	const public explicit_return_type "void"
 	nparams 4
@@ -10008,13 +9973,12 @@ ${docstring}${body}
 	  param in name "arr" type class_ref 175665 // estimate_array
 	  param in name "idx" explicit_type "size_t"
 	  param in name "rank" explicit_type "size_t"
-	    defaultvalue "0"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}, const ${t1} & ${p1}, ${t2} ${p2}, ${t3} ${p3}${)}${const}${volatile}${throw}
 {
    UTILITY_REQUIRE( this->valid(), \"Can not write incomplete field.\" );
-   (*this->formatter_)( ${p0}, ${p1}, ${p2}, ${p3} );
+   this->do_write( ${p0}, ${p1}, ${p2}, ${p3} );
 }
 "
 	
@@ -10026,12 +9990,229 @@ ${docstring}${body}
  For data series the idx can be ignored."
       end
 
-      operation 477744 "valid"
-	const public explicit_return_type "bool"
+      operation 2575408 "do_write"
+	abstract const cpp_virtual private explicit_return_type "void"
+	nparams 4
+	  param inout name "os" explicit_type "ostream"
+	  param in name "arr" type class_ref 175665 // estimate_array
+	  param in name "idx" explicit_type "size_t"
+	  param in name "rank" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} & ${p1}${v1}, ${t2} ${p2}${v2}, ${t3} ${p3}${v3}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Write formatted output to the given stream. Output
+ may or may not include information from the given 
+ parameters."
+      end
+    end
+
+    class 278960 "output_dataset"
+      abstract visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment "  Base output dataset class."
+      classrelation 1361072 // <dependency>
+	relation 1360176 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 1361072 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+
+      attribute 985392 "label_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Unique label to identify each data_sink object, also used as data key when saving to sink
+ object."
+      end
+
+      attribute 985520 "title_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment "  Human readable title/description of the file content"
+      end
+
+      extra_member 248752 "LIFETIME"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 474160 "output_dataset"
+	protected explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: label_()
+, title_()
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Simple default ctor"
+      end
+
+      operation 474928 "output_dataset"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "label" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
+: label_( ${p0} )
+, title_()
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Main ctor"
+      end
+
+      operation 474288 "~output_dataset"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} {}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Simple default dtor"
+      end
+
+      operation 474416 "output_dataset"
+	stereotype "copy"
+	private explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 278960 // output_dataset
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " No copy ctor"
+      end
+
+      operation 474800 "output_dataset"
+	stereotype "move"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 278960 // output_dataset
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} & ${p0}${v0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " No move ctor"
+      end
+
+      operation 474672 "operator="
+	public return_type class_ref 278960 // output_dataset
+	nparams 1
+	  param in name "source" type class_ref 278960 // output_dataset
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type}& ${name}${(}const ${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " No assignment operator"
+      end
+
+      extra_member 845360 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 2609328 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ${p0} & title_;
+  ${p0} & label_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 248880 "ACCESS"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 2609200 "label"
+	const public explicit_return_type "string"
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
-  return not ( this->label_.empty() or this->unit_.empty() ) and this->formatter_;
+  return this->${name}_;
 }
 "
 	
@@ -10040,8 +10221,102 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment "  Check that we have label, unit and formatter function set."
+	comment " Get the title of the dataset"
       end
+
+      operation 2608944 "title"
+	const public explicit_return_type "string"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->${name}_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Get the title of the dataset"
+      end
+
+      operation 2609072 "write"
+	abstract const cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param inout name "sink" type class_ref 313520 // base_sink
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	
+	
+	comment " Create file if it doesn't exist and write the header and body. If
+ the file exists append new data."
+      end
+
+      extra_member 249008 "MODIFY"
+	
+	cpp "" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 2609840 "accept"
+	abstract cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param in name "datum" type class_ref 810416 // output_datum
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} > ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Attempt to accept a datum."
+      end
+
+      operation 2609584 "receive_data"
+	private explicit_return_type "void"
+	nparams 1
+	  param in name "buf" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  UTILITY_REQUIRE( false, \"This output dataset can not accept a buffer as data.\" );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Transfer arbitrary data as a character buffer. This version "
+      end
+
+      operation 2609456 "set_title"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "val" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->title_ = ${p0};
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Set the title"
+      end
+
     end
 
     class 271792 "output_series"
@@ -10062,13 +10337,13 @@ ${docstring}${members}
       
       comment " A set of fields in a data series. Each write
  will append a single new row to the data file."
-      classrelation 1338032 // <dependency>
-	relation 1337136 -_->
-	  a package
-	    cpp default "#include in header"
+      classrelation 1360304 // <generalisation>
+	relation 1359408 ---|>
+	  a public
+	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 1338032 // <dependency>
-	  b parent class_ref 912431 // access
+	    classrelation_ref 1360304 // <generalisation>
+	  b parent class_ref 278960 // output_dataset
       end
 
       classrelation 1351600 // <dependency>
@@ -10127,40 +10402,6 @@ ${docstring}${members}
 	  b parent class_ref 271920 // output_field
       end
 
-      attribute 327728 "title_"
-	private explicit_type "string"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment "  Human readable title/description of the file content"
-      end
-
-      extra_member 836656 "NEW"
-	
-	cpp "" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      attribute 970160 "label_"
-	private explicit_type "string"
-	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
-"
-	java_decl ""
-	php_decl ""
-	python_decl "${comment}${self}${name} = ${value}
-"
-	idl_decl ""
-	comment " Unique label to identify each data_sink object, also used as data key when saving to sink
- object."
-      end
-
       attribute 970032 "is_serial_"
 	private explicit_type "bool"
 	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
@@ -10184,15 +10425,12 @@ ${docstring}${members}
       end
 
       operation 470960 "output_series"
-	public explicit_return_type ""
+	private explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
-: data_()
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: output_dataset()
+, data_()
 , entries_()
-, title_()
-, label_()
 , is_serial_()
 {}
 "
@@ -10202,7 +10440,28 @@ ${docstring}${members}
 ${docstring}${body}
 "
 	
-	comment " Default constructor"
+	comment " Serialization constructor"
+      end
+
+      operation 2599216 "output_series"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "label" explicit_type "string"
+	  param in name "serial" explicit_type "bool"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
+: output_dataset( ${p0} )
+, data_()
+, entries_()
+, is_serial_( ${p1} )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Main constructor"
       end
 
       operation 471088 "~output_series"
@@ -10220,75 +10479,6 @@ ${docstring}${body}
 "
 	
 	comment " Simple dtor"
-      end
-
-      operation 2599216 "output_series"
-	public explicit_return_type ""
-	nparams 2
-	  param in name "label" explicit_type "string"
-	  param in name "serial" explicit_type "bool"
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw};
-"
-	cpp_def "${comment}${inline}${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}${)}${volatile}${throw}
-: data_()
-, entries_()
-, title_()
-, label_(${p0})
-, is_serial_(${p1})
-{}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Main constructor"
-      end
-
-      operation 471216 "output_series"
-	stereotype "copy"
-	private explicit_return_type ""
-	nparams 1
-	  param in name "source" type class_ref 271792 // output_series
-	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${v0}${)}${volatile}${throw} = delete;"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " No copy ctor"
-      end
-
-      operation 471472 "output_series"
-	stereotype "move"
-	private explicit_return_type ""
-	nparams 1
-	  param in name "source" type class_ref 271792 // output_series
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw} = delete;"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " No move ctor"
-      end
-
-      operation 471344 "operator="
-	private return_type class_ref 271792 // output_series
-	nparams 1
-	  param in name "source" type class_ref 271792 // output_series
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type}& ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract} = delete;
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " No assignment operator"
       end
 
       extra_member 838448 "friend"
@@ -10310,10 +10500,9 @@ ${docstring}${body}
 	cpp_decl "    ${comment}template<class Archive>
   ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
+  ${p0} & boost::serialization::base_object< output_dataset >(*this);
   ${p0} & data_;
   ${p0} & entries_;
-  ${p0} & title_;
-  ${p0} & label_;
   ${p0} & is_serial_;
 }
 "
@@ -10462,23 +10651,6 @@ ${docstring}${body}
 	comment " Get the title of the dataset"
       end
 
-      operation 2592688 "label"
-	const public explicit_return_type "string"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->${name}_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Get the title of the dataset"
-      end
-
       operation 477232 "size"
 	const public explicit_return_type "size_t"
 	nparams 0
@@ -10494,23 +10666,6 @@ ${docstring}${body}
 "
 	
 	comment " Check is there are any data fields defined."
-      end
-
-      operation 473520 "title"
-	const public explicit_return_type "string"
-	nparams 0
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
-{
-  return this->${name}_;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Get the title of the dataset"
       end
 
       operation 476848 "write"
@@ -10543,6 +10698,26 @@ ${docstring}${body}
 	idl ""
       end
 
+      operation 2609968 "accept"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "datum" type class_ref 810416 // output_datum
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} > ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::unique_ptr< ${t0} > ${p0}${)}${const}${volatile}${throw}
+{
+  datum->visit( *this );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Attempt to accept a datum."
+      end
+
       operation 2575024 "receive_data"
 	public explicit_return_type "void"
 	nparams 2
@@ -10570,7 +10745,7 @@ ${docstring}${body}
 	public explicit_return_type "void"
 	nparams 1
 	  param in name "field" type class_ref 271920 // output_field
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} > ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
   this->entries_.push_back( ${p0}.release() );
 }
@@ -10584,29 +10759,16 @@ ${docstring}${body}
 	comment " Add an output field to the data set row"
       end
 
-      operation 472880 "set_title"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "val" explicit_type "string"
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-  this->title_ = ${p0};
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Set the value of the files UUID"
-      end
-
     end
 
-    class 278960 "output_dataset"
+    class 810800 "output_text"
       visibility package 
-      cpp_decl ""
+      cpp_decl "${comment}${template}class ${name}${inherit}
+ {
+${members}
+};
+${inlines}
+"
       java_decl ""
       php_decl ""
       python_decl "class ${name}${inherit}:
@@ -10615,55 +10777,68 @@ ${docstring}${members}
       idl_decl ""
       explicit_switch_type ""
       
-      comment "  An output dataset represents ensemble average data. With this
-  output file the simulation overwrites existing data with new data at each
-  report cycle."
-      classrelation 305584 // <generalisation>
-	relation 305200 ---|>
-	  a private
+      comment " This manages preformatted output data. Data can not be merged, instead it is 
+ simply appended to the buffer."
+      classrelation 1360944 // <generalisation>
+	relation 1360048 ---|>
+	  a public
 	    cpp default "${type}"
 	    python "${type}"
-	    classrelation_ref 305584 // <generalisation>
-	  b parent class_ref 271792 // output_series
+	    classrelation_ref 1360944 // <generalisation>
+	  b parent class_ref 278960 // output_dataset
       end
 
-      class 279216 "size_function_type"
-	visibility package stereotype "typedef" base_type class_ref 252591 // function0
-	nactuals 1
-	actual class class_ref 252591 // function0
-	  rank 0 explicit_value "size_t"
-	cpp_decl "${comment}typedef ${type} ${name};
+      attribute 986160 "field_labels_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
 	java_decl ""
 	php_decl ""
-	python_decl ""
-	idl_decl "${comment}typedef ${type} ${name};
+	python_decl "${comment}${self}${name} = ${value}
 "
-	explicit_switch_type ""
-	
-	classrelation 305712 // <realization>
-	  relation 305328 -_-|>
-	    a public
-	      cpp default "${type}"
-	      python "${type}"
-	      classrelation_ref 305712 // <realization>
-	    b parent class_ref 252591 // function0
-	end
+	idl_decl ""
+	comment " The labels of the data fields"
       end
 
-      classrelation 305840 // sizer_ (<directional composition>)
-	relation 305456 *-->
-	  a role_name "sizer_" private
-	    comment "  Function to get the number of rows to write."
-	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+      attribute 986288 "units_"
+	private explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
-	    python "${comment}${self}${name} = ${type}()
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
 "
-	    classrelation_ref 305840 // sizer_ (<directional composition>)
-	  b parent class_ref 279216 // size_function_type
+	idl_decl ""
+	comment " The units of the data fields"
       end
 
-      extra_member 248752 "LIFETIME"
+      attribute 986416 "buffer_"
+	private explicit_type "string"
+	stereotype "mutable"
+	cpp_mutable cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " The current output"
+      end
+
+      attribute 986032 "is_serial_"
+	private explicit_type "bool"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " If true then the data set is a series of estimate_arrays,
+ one for each report cycle."
+      end
+
+      extra_member 846128 "LIFETIME"
 	
 	cpp "" ""
 	java ""
@@ -10672,30 +10847,15 @@ ${docstring}${members}
 	idl ""
       end
 
-      operation 474928 "output_dataset"
-	public explicit_return_type ""
-	nparams 1
-	  param in name "sz" type class_ref 279216 // size_function_type
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
-: output_series()
-, sizer_( ${p0} )
-{}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Main ctor"
-      end
-
-      operation 474160 "output_dataset"
-	public explicit_return_type ""
+      operation 2614320 "output_text"
+	private explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
-: output_series()
-, sizer_()
+: output_dataset()
+, field_labels_()
+, units_()
+, buffer_()
+, is_serial_()
 {}
 "
 	
@@ -10704,31 +10864,37 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Simple default ctor"
+	comment " Serialization constructor"
       end
 
-      operation 474288 "~output_dataset"
+      operation 2613552 "output_text"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "label" explicit_type "string"
+	  param in name "serial" explicit_type "bool"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}${)}${volatile}${throw}
+: output_dataset( ${p0} )
+, field_labels_()
+, units_()
+, buffer_()
+, is_serial_( ${p1} )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Main constructor"
+      end
+
+      operation 2613424 "~output_text"
 	public explicit_return_type ""
 	nparams 0
-	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} {}
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
 "
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Simple default dtor"
-      end
-
-      operation 474416 "output_dataset"
-	stereotype "copy"
-	public explicit_return_type ""
-	nparams 1
-	  param in name "source" type class_ref 278960 // output_dataset
-	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw}
-: output_series( ${p0} )
-, sizer_( ${p0}.sizer_ )
+	cpp_def "${comment}${inline}${class}::${name}${(}${)}${volatile}${throw}
 {}
 "
 	
@@ -10737,77 +10903,64 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Simple copy ctor"
+	comment " Simple dtor"
       end
 
-      operation 474800 "output_dataset"
-	stereotype "move"
-	public explicit_return_type ""
-	nparams 1
-	  param inout name "source" type class_ref 278960 // output_dataset
-	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw}
-: output_series( ${p0} )
-, sizer_( std::move( ${p0}.sizer_ ) )
-{}
-"
+      extra_member 846000 "friend"
 	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Simple move ctor"
-      end
-
-      operation 475440 "swap"
-	public explicit_return_type "void"
-	nparams 1
-	  param inout name "source" type class_ref 278960 // output_dataset
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
-{
-   this->output_series::swap( ${p0} );
-   std::swap( sizer_, ${p0}.sizer_ );
-}
-
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Simple swap method"
-      end
-
-      operation 474672 "operator="
-	public return_type class_ref 278960 // output_dataset
-	nparams 1
-	  param in name "source" type class_ref 278960 // output_dataset
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}${abstract}
-{
-  this->swap( ${p0} );
-  return *this;
-}
-"
-	
-	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
-${docstring}${body}
-"
-	
-	comment " Simple assignment operator"
-      end
-
-      extra_member 248880 "ACCESS"
-	
-	cpp "" ""
+	cpp "
+  friend class boost::serialization::access;" ""
 	java ""
 	php ""
 	python ""
 	idl ""
       end
 
-      operation 474032 "do_body"
+      operation 2613296 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ${p0} & boost::serialization::base_object< output_dataset >(*this);
+  ${p0} & field_labels_;
+  ${p0} & units_;
+  ${p0} & buffer_;
+  ${p0} & is_serial_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 2612784 "accept"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "datum" type class_ref 810416 // output_datum
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} > ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::unique_ptr< ${t0} > ${p0}${)}${const}${volatile}${throw}
+{
+  datum->visit( *this );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Attempt to accept a datum."
+      end
+
+      operation 2613168 "do_header"
 	const public explicit_return_type "void"
 	nparams 1
 	  param inout name "os" explicit_type "ostream"
@@ -10822,28 +10975,17 @@ ${docstring}${body}
 	
 	
 	
-	comment " Write the data set
+	comment " Write the header of the data file
 
- \\pre not empty and have_size"
+ \\pre not empty"
       end
 
-      extra_member 249904 "using do_header"
-	
-	cpp "using output_series::do_header;
-
-" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      operation 477872 "have_size"
+      operation 2613040 "is_serial"
 	const public explicit_return_type "bool"
 	nparams 0
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
 {
-  return not this->sizer_.empty();
+  return this->${name}_;
 }
 "
 	
@@ -10852,33 +10994,74 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Can we determine the number of data rows?"
+	comment " Whether to replace or append the buffer to the file"
       end
 
-      extra_member 256432 "using set and get functions"
-	
-	cpp "// Make selected base class methods accessible
-using output_series::begin;
-using output_series::empty;
-using output_series::end;
-using output_series::set_title;
-using output_series::size;
-using output_series::title;
-" ""
-	java ""
-	php ""
-	python ""
-	idl ""
-      end
-
-      operation 470192 "write"
-	const public explicit_return_type "void"
-	nparams 2
-	  param in name "fname" explicit_type "string"
-	  param inout name "sink" type class_ref 313520 // base_sink
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} & ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+      operation 2612656 "receive_data"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "buf" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} & ${p1}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  ${body}
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Capture data.
+
+ \\pre not buf.empty"
+      end
+
+      operation 2613680 "set_field_labels"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "val" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->field_labels_ = ${p0};
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Set the field labels"
+      end
+
+      operation 2613808 "set_units"
+	public explicit_return_type "void"
+	nparams 1
+	  param in name "val" explicit_type "string"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+{
+  this->field_labels_ = ${p0};
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Set the field labels"
+      end
+
+      operation 2612912 "write"
+	const public explicit_return_type "void"
+	nparams 1
+	  param inout name "sink" type class_ref 313520 // base_sink
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -10887,12 +11070,133 @@ using output_series::title;
 	
 	
 	
-	comment "  Write/update the data set on permanent storage.
+	comment " Create file if it doesn't exist and write the header and body. If
+ the file exists append new data.
 
- \\pre not empty and have_size"
+ \\pre not empty"
+      end
+    end
+
+    class 810416 "output_datum"
+      abstract visibility package stereotype "struct"
+      cpp_decl "${comment}${template}struct ${name}${inherit} 
+{
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      comment " Visitor class for managing data transfers."
+      extra_member 845488 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
       end
 
-      extra_member 249008 "MODIFY"
+      operation 2610224 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 2610352 "output_datum"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw} {}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " serialization only"
+      end
+
+      operation 2610480 "~output_datum"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} {}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 2610608 "output_datum"
+	stereotype "move"
+	private explicit_return_type ""
+	nparams 1
+	  param inout name "source" type class_ref 810416 // output_datum
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} && ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " No move"
+      end
+
+      operation 2610736 "output_datum"
+	stereotype "copy"
+	private explicit_return_type ""
+	nparams 1
+	  param in name "source" type class_ref 810416 // output_datum
+	cpp_decl "    ${comment}${inline}${name}${(}const ${t0} & ${p0}${)}${volatile}${throw} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " No copy"
+      end
+
+      operation 2610864 "operator="
+	private return_type class_ref 810416 // output_datum
+	nparams 1
+	  param in name "source" type class_ref 810416 // output_datum
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} & ${name}${(}const ${t0} & ${p0}${)}${const}${volatile}${throw}${abstract} = delete;
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " No assignment"
+      end
+
+      extra_member 845616 "METHODS"
 	
 	cpp "" ""
 	java ""
@@ -10901,43 +11205,181 @@ using output_series::title;
 	idl ""
       end
 
-      extra_member 249648 "using push_back_entry"
+      operation 2609712 "visit"
+	abstract cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param inout name "sink" type class_ref 271792 // output_series
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
 	
-	cpp "using output_series::push_back_field;
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
 
-" ""
+      operation 2613936 "visit"
+	abstract cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param inout name "sink" type class_ref 810800 // output_text
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      classrelation 1361200 // <dependency>
+	relation 1360304 -_->
+	  a package
+	    cpp default "#include in header"
+	    python "${type}"
+	    classrelation_ref 1361200 // <dependency>
+	  b parent class_ref 912431 // access
+      end
+    end
+
+    class 810544 "output_series_datum"
+      visibility package stereotype "struct"
+      cpp_decl "${comment}${template}struct ${name}${inherit} 
+{
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl ""
+      explicit_switch_type ""
+      
+      classrelation 1360688 // <generalisation>
+	relation 1359792 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 1360688 // <generalisation>
+	  b parent class_ref 810416 // output_datum
+      end
+
+      operation 2611120 "output_series_datum"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: output_datum()
+, count()
+, arr()
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " serialization only"
+      end
+
+      operation 2611376 "output_series_datum"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "cnt" explicit_type "size_t"
+	  param in name "ar" type class_ref 175665 // estimate_array
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}, std::unique_ptr< ${t1} > ${p1}${v1}${)}${volatile}${throw}
+: output_datum()
+, count( ${p0} )
+, arr( std::move( ${p1} ) )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Main only"
+      end
+
+      operation 2611632 "output_series_datum"
+	public explicit_return_type ""
+	nparams 2
+	  param in name "cnt" explicit_type "size_t"
+	  param in name "ar" type class_ref 175665 // estimate_array
+	cpp_decl "    ${comment}explicit ${inline}${name}${(}${t0} ${p0}${v0}, ${t1} * ${p1}${v1}${)}${volatile}${throw}
+: output_datum()
+, count( ${p0} )
+, arr( ${p1} )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Main only"
+      end
+
+      operation 2610992 "~output_series_datum"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} {}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 845744 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
 	java ""
 	php ""
 	python ""
 	idl ""
       end
 
-      operation 475056 "set_size_function"
-	public explicit_return_type "void"
-	nparams 1
-	  param in name "sz" type class_ref 279216 // size_function_type
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+      operation 2611248 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
 {
-  this->sizer_ = ${p0};
+  ${p0} & boost::serialization::base_object< output_datum >(*this);
+  ${p0} & this->count;
+  ${p0} & this->arr;
 }
 "
 	
 	
-	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
 ${docstring}${body}
 "
 	
-	comment " Set functor to calculate number of rows"
       end
 
-      operation 475184 "set_size_function"
-	stereotype "move"
-	public explicit_return_type "void"
+      operation 2610096 "visit"
+	cpp_virtual public explicit_return_type "void"
 	nparams 1
-	  param inout name "sz" type class_ref 279216 // size_function_type
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} && ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
+	  param inout name "sink" type class_ref 271792 // output_series
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
 {
-  this->sizer_ = std::move( ${p0} );
+  sink.receive_data( this->count, this->arr );
 }
 "
 	
@@ -10946,7 +11388,205 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Set functor to calculate number of rows"
+      end
+
+      operation 2614064 "visit"
+	private explicit_return_type "void"
+	nparams 1
+	  param inout name "sink" type class_ref 810800 // output_text
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  UTILITY_REQUIRE( false, \"This output datum can not update a output_text object.\" );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      attribute 985648 "count"
+	public explicit_type "size_t"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+      end
+
+      attribute 985776 "arr"
+	public type class_ref 175665 // estimate_array
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}std::unique_ptr< ${type} > ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " Data array"
+      end
+    end
+
+    class 810672 "output_buffer_datum"
+      visibility package stereotype "struct"
+      cpp_decl "${comment}${template}struct ${name}${inherit} 
+{
+${members}
+};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_decl "class ${name}${inherit}:
+${docstring}${members}
+"
+      idl_decl "${comment}struct ${name} {
+${members}};
+"
+      explicit_switch_type ""
+      
+      classrelation 1360816 // <generalisation>
+	relation 1359920 ---|>
+	  a public
+	    cpp default "${type}"
+	    python "${type}"
+	    classrelation_ref 1360816 // <generalisation>
+	  b parent class_ref 810416 // output_datum
+      end
+
+      operation 2612400 "output_buffer_datum"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
+: output_datum()
+, buffer()
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " serialization only"
+      end
+
+      operation 2612272 "output_buffer_datum"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "buf" explicit_type "string"
+	cpp_decl "    ${comment}${inline}${name}${(}${t0} ${p0}${v0}${)}${volatile}${throw}
+: output_datum()
+, buffer( ${p0} )
+{}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Main only"
+      end
+
+      operation 2612016 "~output_buffer_datum"
+	cpp_virtual public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} {}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      extra_member 845872 "friend"
+	
+	cpp "
+  friend class boost::serialization::access;" ""
+	java ""
+	php ""
+	python ""
+	idl ""
+      end
+
+      operation 2611888 "serialize"
+	stereotype "template"
+	cpp_inline private explicit_return_type "void"
+	nparams 2
+	  param inout name "ar" explicit_type "Archive"
+	  param in name "version" explicit_type "unsigned int"
+	cpp_decl "    ${comment}template<class Archive>
+  ${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}, const ${t1} ${p1}${v1}${)}${const}${volatile}${throw}${abstract}
+{
+  ${p0} & boost::serialization::base_object< output_datum >(*this);
+  ${p0} & this->buffer;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}self${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 2614192 "visit"
+	private explicit_return_type "void"
+	nparams 1
+	  param inout name "sink" type class_ref 271792 // output_series
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+    UTILITY_REQUIRE( false, \"This output datum can not update a output_series object.\" );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      operation 2611760 "visit"
+	cpp_virtual public explicit_return_type "void"
+	nparams 1
+	  param inout name "sink" type class_ref 810800 // output_text
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} & ${p0}${v0}${)}${const}${volatile}${throw}${abstract} override;
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
+{
+  sink.receive_data( this->buffer );
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+      end
+
+      attribute 985904 "buffer"
+	public explicit_type "string"
+	cpp_decl "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
+"
+	java_decl ""
+	php_decl ""
+	python_decl "${comment}${self}${name} = ${value}
+"
+	idl_decl ""
+	comment " A generic buffer for transferring information."
       end
     end
   end
@@ -11019,13 +11659,13 @@ ${docstring}${members}
 	  b parent class_ref 912431 // access
       end
 
-      classrelation 1351472 // <dependency>
-	relation 1350576 -_->
+      classrelation 1360560 // <dependency>
+	relation 1359664 -_->
 	  a package
 	    cpp default "#include in header"
 	    python "${type}"
-	    classrelation_ref 1351472 // <dependency>
-	  b parent class_ref 271792 // output_series
+	    classrelation_ref 1360560 // <dependency>
+	  b parent class_ref 278960 // output_dataset
       end
 
       classrelation 897968 // <dependency>
@@ -11111,17 +11751,17 @@ ${items}};
 	end
       end
 
-      classrelation 1338288 // data_sets_ (<directional composition>)
-	relation 1337392 *-->
+      classrelation 1360432 // data_sets_ (<directional composition>)
+	relation 1359536 *-->
 	  stereotype "ptr_vector"
 	  a role_name "data_sets_" multiplicity "*" private
-	    comment " The simulations output data sets."
+	    comment " The simulations data base."
 	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${stereotype}< ${type} > ${name}${value};
 "
 	    python "${comment}${self}${name} = ${stereotype}()
 "
-	    classrelation_ref 1338288 // data_sets_ (<directional composition>)
-	  b parent class_ref 271792 // output_series
+	    classrelation_ref 1360432 // data_sets_ (<directional composition>)
+	  b parent class_ref 278960 // output_dataset
       end
 
       attribute 341680 "path_"
@@ -11594,10 +12234,10 @@ ${docstring}${body}
       operation 2585776 "add_dataset"
 	public explicit_return_type "void"
 	nparams 1
-	  param in name "dataset" type class_ref 271792 // output_series
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} >& ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+	  param in name "dataset" type class_ref 278960 // output_dataset
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}std::unique_ptr< ${t0} > ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::unique_ptr< ${t0} >& ${p0}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}std::unique_ptr< ${t0} > ${p0}${)}${const}${volatile}${throw}
 {
   UTILITY_REQUIRE( not this->has_dataset( dataset->label() ), \"Attempt to add two data sets with the same label\" );
   this->data_sets_.push_back( dataset.release() );
@@ -11615,15 +12255,14 @@ ${docstring}${body}
  \\post has_dataset( dataset.label )"
       end
 
-      operation 2585904 "receive_data"
+      operation 2611504 "receive_data"
 	public explicit_return_type "void"
-	nparams 3
+	nparams 2
 	  param in name "label" explicit_type "string"
-	  param in name "count" explicit_type "size_t"
-	  param in name "arr" type class_ref 175665 // estimate_array
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, ${t1} ${p1}${v1}, std::unique_ptr< ${t2} >& ${p2}${v2}${)}${const}${volatile}${throw}${abstract};
+	  param in name "datum" type class_ref 810416 // output_datum
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, std::unique_ptr< ${t1} > ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, ${t1} ${p1}, std::unique_ptr< ${t2} >& ${p2}${)}${const}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, std::unique_ptr< ${t1} > ${p1}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -11657,7 +12296,6 @@ ${docstring}${body}
 	
 	comment " Write all of the data sets."
       end
-
     end
 
     class 292656 "archive_file"
@@ -13337,8 +13975,9 @@ BOOST_CLASS_EXPORT_KEY( observable::acceptance_observable );
 ${includes}
 // manual includes
 #include \"core/strngs.hpp\"
-#include \"observable/std_field_format.hpp\"
-#include \"observable/output_file.hpp\"
+#include \"observable/field_format.hpp\"
+#include \"observable/output_series_datum.hpp\"
+#include \"observable/output_series.hpp\"
 // - 
 #include <boost/format.hpp>
 // --
@@ -13448,8 +14087,9 @@ ${includes}
 // Manuals
 #include \"core/input_base_reader.hpp\"
 #include \"core/strngs.hpp\"
-#include \"observable/output_file.hpp\"
-#include \"observable/std_field_format.hpp\"
+#include \"observable/field_format.hpp\"
+#include \"observable/output_series_datum.hpp\"
+#include \"observable/output_series.hpp\"
 #include \"particle/ensemble.hpp\"
 // - 
 ${namespace_start}
@@ -13507,8 +14147,9 @@ ${includes}
 #include \"core/input_base_reader.hpp\"
 #include \"core/input_error.hpp\"
 #include \"core/strngs.hpp\"
-#include \"observable/output_file.hpp\"
-#include \"observable/std_field_format.hpp\"
+#include \"observable/field_format.hpp\"
+#include \"observable/output_series_datum.hpp\"
+#include \"observable/output_series.hpp\"
 #include \"particle/ensemble.hpp\"
 #include \"particle/specie_key.hpp\"
 // -
@@ -13564,8 +14205,9 @@ BOOST_CLASS_EXPORT_KEY( observable::metropolis_sampler );
 ${includes}
 // Manuals
 #include \"core/strngs.hpp\"
-#include \"observable/output_file.hpp\"
-#include \"observable/std_field_format.hpp\"
+#include \"observable/field_format.hpp\"
+#include \"observable/output_series_datum.hpp\"
+#include \"observable/output_series.hpp\"
 // - 
 ${namespace_start}
 ${members}
@@ -13683,6 +14325,9 @@ ${includes}
 // Manuals
 #include \"core/strngs.hpp\"
 #include \"core/input_base_reader.hpp\"
+#include \"observable/field_format.hpp\"
+#include \"observable/output_series_datum.hpp\"
+#include \"observable/output_series.hpp\"
 #include \"particle/ensemble.hpp\"
 // - 
 ${namespace_start}
@@ -13790,6 +14435,8 @@ BOOST_CLASS_EXPORT_KEY( observable::specie_count );
 
 ${includes}
 // manual includes
+#include \"observable/field_format.hpp\"
+#include \"observable/output_series_datum.hpp\"
 #include \"particle/ensemble.hpp\"
 // -
 #include <boost/format.hpp>
@@ -13845,6 +14492,8 @@ BOOST_CLASS_EXPORT_KEY( observable::specie_region_count );
 
 ${includes}
 // manual includes
+#include \"observable/field_format.hpp\"
+#include \"observable/output_series_datum.hpp\"
 #include \"particle/ensemble.hpp\"
 // -
 #include <boost/format.hpp>
@@ -13902,6 +14551,8 @@ BOOST_CLASS_EXPORT_KEY( observable::trial_observer );
 ${includes}
 // manuals
 #include \"core/strngs.hpp\"
+#include \"observable/output_buffer_datum.hpp\"
+#include \"observable/output_text.hpp\"
 ${namespace_start}
 ${members}
 ${namespace_end}
@@ -14002,7 +14653,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 631215 // base_observable
 	artifact_ref 651823 // widom
 	artifact_ref 676656 // trial_observer
-	artifact_ref 730416 // std_field_format
+	artifact_ref 730416 // field_format
+	artifact_ref 743600 // output_text
+	artifact_ref 743728 // output_series
+	artifact_ref 743856 // output_series_datum
+	artifact_ref 743984 // output_buffer_datum
 	artifact_ref 789807 // sampler_meta
       end
     end
@@ -14012,43 +14667,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     //deployment diagram settings
     package_name_in_tab default show_context default write_horizontally default auto_label_position default draw_all_relations default shadow default
     draw_component_as_icon default show_component_req_prov default show_component_rea default show_stereotype_properties default
-    artifact 736944 "field_format"
-      stereotype "source"
-      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
-#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
-
-${comment}
-${includes}
-${declarations}
-${namespace_start}
-${definition}
-${namespace_end}
-#endif
-"
-      python_src "${comment}
-${import}
-${definition}"
-      associated_classes
-	class_ref 802096 // field_format
-      end
-      comment "----------------------------------------------------------------------
-This source file is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or (at
-your option) any later version.
-
-This program is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
-for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-----------------------------------------------------------------------
-"
-    end
-
-    artifact 730416 "std_field_format"
+    artifact 730416 "field_format"
       stereotype "source"
       cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
 #define @{PROJECT}${NAMESPACE}_${NAME}_HPP
@@ -14061,7 +14680,7 @@ ${definition}
 ${namespace_end}
 
 #include <boost/serialization/export.hpp>
-BOOST_CLASS_EXPORT_KEY( observable::constant_output );
+BOOST_CLASS_EXPORT_KEY( observable::combined_output );
 BOOST_CLASS_EXPORT_KEY( observable::element_output );
 BOOST_CLASS_EXPORT_KEY( observable::index_output );
 BOOST_CLASS_EXPORT_KEY( observable::key_output );
@@ -14085,7 +14704,7 @@ ${namespace_start}
 ${members}
 ${namespace_end}
 
-BOOST_CLASS_EXPORT_IMPLEMENT( observable::constant_output );
+BOOST_CLASS_EXPORT_IMPLEMENT( observable::combined_output );
 BOOST_CLASS_EXPORT_IMPLEMENT( observable::element_output );
 BOOST_CLASS_EXPORT_IMPLEMENT( observable::index_output );
 BOOST_CLASS_EXPORT_IMPLEMENT( observable::key_output );
@@ -14101,7 +14720,6 @@ BOOST_CLASS_EXPORT_IMPLEMENT( observable::digitizer_3d_output );
 ${import}
 ${definition}"
       associated_classes
-	class_ref 802224 // constant_output
 	class_ref 802608 // element_output
 	class_ref 802992 // index_output
 	class_ref 802480 // key_output
@@ -14112,6 +14730,7 @@ ${definition}"
 	class_ref 802736 // variance_output
 	class_ref 803376 // digitizer_output
 	class_ref 803632 // digitizer_3d_output
+	class_ref 810288 // combined_output
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify
@@ -14123,6 +14742,144 @@ This program is distributed in the hope that it will be useful, but
 WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 743472 "output_datum"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+#endif
+"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 810416 // output_datum
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 743856 "output_series_datum"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_KEY( observable::output_series_datum );
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+${namespace_start}
+${members}
+${namespace_end}
+
+BOOST_CLASS_EXPORT_IMPLEMENT( observable::output_series_datum );"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 810544 // output_series_datum
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 743984 "output_buffer_datum"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_KEY( observable::output_buffer_datum );
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+${namespace_start}
+${members}
+${namespace_end}
+
+BOOST_CLASS_EXPORT_IMPLEMENT( observable::output_buffer_datum );"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 810672 // output_buffer_datum
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
@@ -14161,8 +14918,113 @@ ${members}
 ${namespace_end}"
       associated_classes
 	class_ref 271920 // output_field
-	class_ref 271792 // output_series
 	class_ref 278960 // output_dataset
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 743728 "output_series"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_KEY( observable::output_series );
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+${namespace_start}
+${members}
+${namespace_end}
+
+BOOST_CLASS_EXPORT_IMPLEMENT( observable::output_series );"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 271792 // output_series
+      end
+      comment "----------------------------------------------------------------------
+This source file is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+----------------------------------------------------------------------
+"
+    end
+
+    artifact 743600 "output_text"
+      stereotype "source"
+      cpp_h "#ifndef @{PROJECT}${NAMESPACE}_${NAME}_HPP
+#define @{PROJECT}${NAMESPACE}_${NAME}_HPP
+
+${comment}
+${includes}
+${declarations}
+${namespace_start}
+${definition}
+${namespace_end}
+
+#include <boost/serialization/export.hpp>
+BOOST_CLASS_EXPORT_KEY( observable::output_text );
+#endif
+"
+      cpp_src "${comment}
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+${includes}
+// manual includes
+#include \"core/strngs.hpp\"
+// -
+// -
+${namespace_start}
+${members}
+${namespace_end}
+
+BOOST_CLASS_EXPORT_IMPLEMENT( observable::output_text );"
+      python_src "${comment}
+${import}
+${definition}"
+      associated_classes
+	class_ref 810800 // output_text
       end
       comment "----------------------------------------------------------------------
 This source file is free software: you can redistribute it and/or modify

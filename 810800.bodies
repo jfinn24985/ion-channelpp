@@ -1,0 +1,41 @@
+class output_text
+!!!2613168.cpp!!!	do_header(inout os : ostream) : void
+if ( not this->title().empty() )
+{
+  os << core::strngs::comment_begin() << " TITLE: \"" << this->title() << "\" " << core::strngs::comment_end() << "\n";
+}
+if( this->field_labels_.empty() )
+{
+  os << core::strngs::comment_begin() << " FIELDS: " << this->field_labels_ << "\" " << core::strngs::comment_end() << "\n";
+}
+if( this->units_.empty() )
+{
+  os << core::strngs::comment_begin() << " UNITS: " << this->units_ << "\" " << core::strngs::comment_end() << "\n";
+}
+!!!2612656.cpp!!!	receive_data(in buf : string) : void
+UTILITY_REQUIRE( buf.empty(), "Can not receive a nul buffer." );
+if( this->is_serial_ )
+{
+  this->buffer_.append( buf );
+}
+else
+{
+  std::swap( this->buffer_, buf );
+}
+!!!2612912.cpp!!!	write(inout sink : base_sink) : void
+if( not this->buffer_.empty() )
+{
+  if( this->is_serial_ and sink.exists( this->label() ) )
+  {
+    sink.append( this->label(), this->buffer_ );
+  }
+  else
+  {
+    std::stringstream os;
+    sink.header( os );
+    this->do_header( os );
+    os << this->buffer_;
+    sink.write( this->label(), os.str() );
+  }
+  this->buffer_.clear();
+}

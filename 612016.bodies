@@ -25,58 +25,66 @@ return smplr;
 !!!1533872.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
 if( this->count_.count() > 0 )
 {
-  boost::format fmt_head( " %3s %3s %10s %10s %10s" );
-  out << boost::format( fmt_head ) % "REG" % "SPC" % "<COUNT>" % "VAR" % "<[]>" << "\n";
-  const static boost::format fmt_row( " %3d %3d %10.5f %10.4f %10.7f" );
-  const std::size_t nreg = this->count_.size() / this->nspec_;
-  UTILITY_CHECK( ( this->count_.size() % this->nspec_ ) == 0, "Array size is not a multiple of the number of species." );
-  for( size_t ireg = 0; ireg != nreg; ++ireg )
+  const std::string label( "specie-region-count.dat" );
+  if( not sink.has_dataset( label ) )
   {
-    const std::size_t offset = ireg * this->nspec_;
-    for( size_t ispec = 0; ispec != this->nspec_; ++ispec )
+    // need to give a data set definition
+    std::unique_ptr< observable::output_series >definition{ new observable::output_series( label, true ) };
+    definition->set_title( "Time series specie / region counts." );
     {
-      const double count_to_conc = core::constants::to_SI() / this->volume( offset + ispec );
-      out << boost::format( fmt_row ) % ireg % ispec % this->mean( offset + ispec ) % this->variance( offset + ispec ) % ( this->mean( offset + ispec )/count_to_conc ) << "\n";
+      std::unique_ptr< observable::output_field > field{ new observable::rank_output( "INDEX", "ORDINAL" ) };
+      definition->push_back_field( std::move( field ) );
     }
-  }
-  {
-    // Write out specie count data
-    const std::string filename { this->type_label_() + ".dat" };
-    const std::size_t index { this->count_.count() };
-
-    output_series dset {};
-    dset.set_title( "Time series pre-region specie counts" );
-
-    dset.push_back_entry( observable::output_field( "INDEX", "ORDINAL", [index]( std::ostream& os, std::size_t )
     {
-      os << index;
-    } ) );
-
-    for( size_t ireg = 0; ireg != nreg; ++ireg )
+      std::unique_ptr< observable::output_field > field{ new observable::sample_count_output( "SAMPLES", "ORDINAL" ) };
+      definition->push_back_field( std::move( field ) );
+    }
     {
-      const std::size_t offset = ireg * this->nspec_;
-      for( size_t ispec = 0; ispec != this->nspec_; ++ispec )
+      std::unique_ptr< observable::combined_output > combo{ new observable::combined_output };
       {
-        std::stringstream ss;
-        ss << "REGSPC[" << ireg << "," << ispec << "]";
-        double mean = this->mean( offset + ispec );
-        double var = this->variance( offset + ispec );
-        dset.push_back_entry( observable::output_field( ss.str() + "_MEAN" , "COUNT", [mean]( std::ostream& os, std::size_t )
+        std::unique_ptr< observable::key_output > field{ new observable::key_output( "REG.SPC", "INDEX", false ) };
+        // Add keys.
+        const std::size_t nreg = this->count_.size() / this->nspec_;
+        UTILITY_CHECK( ( this->count_.size() % this->nspec_ ) == 0, "Array size is not a multiple of the number of species." );
+        for( size_t ireg = 0; ireg != nreg; ++ireg )
         {
-          os << mean;
-        } ) );
-        dset.push_back_entry( observable::output_field( ss.str() + "_VAR" , "COUNT", [var]( std::ostream& os, std::size_t )
-        {
-          os << var;
-        } ) );
+          for( size_t idx = 0; idx != this->nspec_; ++idx )
+          {
+            std::stringstream hashval;
+            hashval << ireg << "." << idx;
+            field->push_back( hashval.str() );
+          }
+        }
+        combo->push_back_field( std::move( field ) );
       }
+      {
+        std::unique_ptr< observable::element_output > field{ new observable::element_output( "REG.SPC.VOL", "ANGSTROM3", false ) };
+        // Add keys.
+        const std::size_t nreg = this->count_.size() / this->nspec_;
+        UTILITY_CHECK( ( this->count_.size() % this->nspec_ ) == 0, "Array size is not a multiple of the number of species." );
+        for( size_t ireg = 0; ireg != nreg; ++ireg )
+        {
+          const std::size_t offset = ireg * this->nspec_;
+          for( size_t idx = 0; idx != this->nspec_; ++idx )
+          {
+            field->push_back( this->volume( offset + idx ) );
+          }
+        }
+        combo->push_back_field( std::move( field ) );
+      }
+      {
+        std::unique_ptr< observable::mean_variance_output > field{ new observable::mean_variance_output( "Count.mean Count.var", "Rate Rate2" ) };
+        combo->push_back_field( std::move( field ) );
+      }
+      definition->push_back_field( std::move( combo ) );
     }
-    dset.write( filename, sink, not sink.exists( filename ) );
+    sink.add_dataset( std::move( definition ) );
   }
+  std::unique_ptr< observable::output_series_datum > datum( new observable::output_series_datum{ this->rank_, new utility::estimate_array{ this->count_.size() } } );
+  datum->arr->swap( this->count_ );
+  sink.receive_data( label, std::move( datum ) );
+  ++this->rank_;
 }
-
-
-
 !!!1533872.python!!!	on_report(inout out : ostream, inout sink : base_sink) : void
 if self.count_ != None:
   print >>out, " %3s %7s %8s %8s %8s %8s"%("SPC","COUNT","[]","<COUNT>","<[]>","VAR")
@@ -153,6 +161,7 @@ for( std::size_t ireg = 0; ireg != gman.region_count(); ++ireg )
   }
 }
 this->count_.resize( this->nspec_ * nreg );
+this->rank_ = 0ul;
 !!!1534128.python!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
 if not self.count_ or len(self.count_) !=  sim.specie_count():
   self.count_ = []

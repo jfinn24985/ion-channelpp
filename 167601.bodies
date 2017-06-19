@@ -25,47 +25,55 @@ return smplr;
 !!!594865.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
 if( this->count_.count() > 0 )
 {
-  boost::format fmt_head( " %3s %10s %10s %10s" );
-  out << boost::format( fmt_head ) % "SPC" % "<COUNT>" % "VAR" % "<[]>" << "\n";
-  const static boost::format fmt_row( " %3d %10.5f %10.4f %10.7f" );
-  for( size_t idx = 0; idx != this->specie_list_.size(); ++idx )
+  const std::string label( "specie-count.dat" );
+  if( not sink.has_dataset( label ) )
   {
-    const double count_to_conc = core::constants::to_SI() / this->volume( idx );
-    out << boost::format( fmt_row ) % this->specie_key( idx ) % this->mean( idx ) % this->variance( idx ) % (this->mean( idx ) * count_to_conc) << "\n";
-  }
-  {
-    // Write out specie count data
-    const std::string filename { "specie-count.dat" }; 
-    const std::size_t index { this->count_.count() };
-
-    output_series dset {};
-    dset.set_title( "Time series specie counts" );
-
-    dset.push_back_entry( observable::output_field( "INDEX", "ORDINAL", [index]( std::ostream& os, std::size_t )
+    // need to give a data set definition
+    std::unique_ptr< observable::output_series >definition{ new observable::output_series( label, true ) };
+    definition->set_title( "Time series specie counts." );
     {
-      os << index;
-    } ) );
-
-    for( size_t idx = 0; idx != this->specie_list_.size(); ++idx )
-    {
-      std::stringstream ss;
-      ss << "SPC[" << this->specie_key( idx ) << "]";
-      double mean = this->mean( idx );
-      double var = this->variance( idx );
-      dset.push_back_entry( observable::output_field( ss.str() + "_MEAN" , "COUNT", [mean]( std::ostream& os, std::size_t )
-      {
-        os << mean;
-      } ) );
-      dset.push_back_entry( observable::output_field( ss.str() + "_VAR" , "COUNT", [var]( std::ostream& os, std::size_t )
-      {
-        os << var;
-      } ) );
+      std::unique_ptr< observable::output_field > field{ new observable::rank_output( "INDEX", "ORDINAL" ) };
+      definition->push_back_field( std::move( field ) );
     }
-
-    dset.write( filename, sink, not sink.exists( filename ) );
+    {
+      std::unique_ptr< observable::output_field > field{ new observable::sample_count_output( "SAMPLES", "ORDINAL" ) };
+      definition->push_back_field( std::move( field ) );
+    }
+    {
+      std::unique_ptr< observable::combined_output > combo{ new observable::combined_output };
+      {
+        std::unique_ptr< observable::key_output > field{ new observable::key_output( "SPC", "INDEX", false ) };
+        // Add keys.
+        for( size_t idx = 0; idx != this->specie_list_.size(); ++idx )
+        {
+          std::stringstream hashval;
+          hashval << this->specie_key( idx );
+          field->push_back( hashval.str() );
+        }
+        combo->push_back_field( std::move( field ) );
+      }
+      {
+        std::unique_ptr< observable::element_output > field{ new observable::element_output( "SPC.VOL", "ANGSTROM3", false ) };
+        // Add keys.
+        for( size_t idx = 0; idx != this->specie_list_.size(); ++idx )
+        {
+          field->push_back( this->volume( idx ) );
+        }
+        combo->push_back_field( std::move( field ) );
+      }
+      {
+        std::unique_ptr< observable::mean_variance_output > field{ new observable::mean_variance_output( "Count.mean Count.var", "Rate Rate2" ) };
+        combo->push_back_field( std::move( field ) );
+      }
+      definition->push_back_field( std::move( combo ) );
+    }
+    sink.add_dataset( std::move( definition ) );
   }
+  std::unique_ptr< observable::output_series_datum > datum( new observable::output_series_datum{ this->rank_, new utility::estimate_array{ this->count_.size() } } );
+  datum->arr->swap( this->count_ );
+  sink.receive_data( label, std::move( datum ) );
+  ++this->rank_;
 }
-
 !!!594865.python!!!	on_report(inout out : ostream, inout sink : base_sink) : void
 if self.count_ != None:
   print >>out, " %3s %7s %8s %8s %8s %8s"%("SPC","COUNT","[]","<COUNT>","<[]>","VAR")
@@ -113,6 +121,7 @@ if( not this->specie_list_.empty() )
 {
   this->count_.resize( this->specie_list_.size() );
 }
+this->rank_ = 0ul;
 !!!304305.python!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
 if not self.count_ or len(self.count_) !=  sim.specie_count():
   self.count_ = []

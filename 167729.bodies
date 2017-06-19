@@ -37,42 +37,28 @@ for( std::size_t ispec = 0; ispec != this->specie_count(); ++ispec )
 {
   for( std::size_t jspec = ispec; jspec != this->specie_count(); ++jspec )
   {
-    auto const& histo = this->get_histogram( ispec, jspec );
+    auto & histo = this->data_sets_[ this->get_index( ispec, jspec ) ];
+    const std::string label { "rdf-"+this->specie_labels_[ispec]+"-"+this->specie_labels_[jspec]+".dat" };
+    if( not sink.has_dataset( label ) )
+    {
+      // need to give a data set definition
+      std::unique_ptr< observable::output_series >definition{ new observable::output_series( label, false ) };
+      definition->set_title( "Radial distribution histogram for species "+this->specie_labels_[ispec]+" and "+this->specie_labels_[jspec] );
+      {
+        std::unique_ptr< observable::output_field > field( new observable::digitizer_output( "RMIN RMID RMAX", "ANGSTROM ANGSTROM ANGSTROM", histo.axis(), observable::digitizer_output::USE_ALL ) );
+        definition->push_back_field( std::move( field ) );
+      }
+      {
+        std::unique_ptr< observable::output_field > field( new observable::mean_variance_output( "P.mean P.var", "Rate Rate2" ) );
+        definition->push_back_field( std::move( field ) );
+      }
+      sink.add_dataset( std::move( definition ) );
+    }
+
     if( histo.count() > 0 )
     {
-      const std::string filename { "rdf-"+this->specie_labels_[ispec]+"-"+this->specie_labels_[jspec]+".dat" };
-
-      const std::size_t sz { histo.size() };
-
-      output_dataset dset { [&sz]() { return sz; } }; 
-      dset.set_title( "Radial distribution histogram for species "+this->specie_labels_[ispec]+" and "+this->specie_labels_[jspec] );
-
-      dset.push_back_entry( observable::output_field( "RMIN", "ANGSTROM", [&histo]( std::ostream& os, std::size_t ii )
-      {
-        os << histo.bin_minimum( ii );
-      } ) );
-
-      dset.push_back_entry( observable::output_field( "RMAX", "ANGSTROM", [& histo]( std::ostream& os, std::size_t ii )
-      {
-        os << histo.bin_maximum( ii );
-      } ) );
-
-      dset.push_back_entry( observable::output_field( "RMID", "ANGSTROM", [& histo]( std::ostream& os, std::size_t ii )
-      {
-        os << histo.bin_midpoint( ii );
-      } ) );
-
-      dset.push_back_entry( observable::output_field( "PMEAN", "COUNT", [& histo]( std::ostream& os, std::size_t ii )
-      {
-        os << histo.bin_mean( ii );
-      } ) );
-
-      dset.push_back_entry( observable::output_field( "PVAR", "COUNT**2", [& histo]( std::ostream& os, std::size_t ii )
-      {
-        os << histo.bin_variance( ii );
-      } ) );
-
-      dset.write( filename, sink );
+      std::unique_ptr< observable::output_series_datum > datum( new observable::output_series_datum{ 0ul, new utility::estimate_array( std::move( histo.release_data() ) ) } );
+      sink.receive_data( label, std::move( datum ) );
     }
   }
 }
@@ -148,11 +134,11 @@ UTILITY_CHECK( this->data_sets_.size() == sz, "Size not what was expected." );
 wr[ ix ].add_entry( core::strngs::fstype(), this->type_label_() );
 wr[ ix ].add_entry( "width", this->width_ );
 wr[ ix ].add_entry( "stepsize", this->stepsize_ );
-!!!1570480.cpp!!!	get_histogram(in ispec : size_t, in jspec : size_t) : histogram
+!!!2607920.cpp!!!	get_histogram(in ispec : size_t, in jspec : size_t) : histogram
 UTILITY_REQUIRE( ispec < this->specie_count(), "Specie index out of range." );
 UTILITY_REQUIRE( jspec < this->specie_count(), "Specie index out of range." );
 if( ispec > jspec )
 {
   std::swap( ispec, jspec );
 }
-return this->data_sets_[ (((2 * this->specie_count() + 1 - ispec) * ispec ) / 2) + (jspec - ispec) ];
+return this->data_sets_[ this->get_index( ispec, jspec ) ];

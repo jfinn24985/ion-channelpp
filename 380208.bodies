@@ -28,28 +28,25 @@ if( not this->data_.empty() )
     std::unique_ptr< observable::output_series >definition{ new observable::output_series( label, true ) };
     definition->set_title( "Trial acceptance and rate data." );
     {
-      std::unique_ptr< observable::key_output > formatter{ new observable::key_output( true ) };
+      std::unique_ptr< observable::key_output > field{ new observable::key_output( "Trial", "ID", true ) };
       // Add keys.
       for( auto const& entry : this->data_ )
       {
         std::stringstream hashval;
         hashval << entry.first;
-        formatter->push_back( hashval.str() );
+        field->push_back( hashval.str() );
       }
-      std::unique_ptr< observable::output_field > field{ new observable::output_field( "Trial", "ID", std::move( formatter ) ) };
-      definition->push_back_field( field );
+      definition->push_back_field( std::move( field ) );
     }
     {
-      std::unique_ptr< observable::mean_variance_output > formatter{ new observable::mean_variance_output };
-      std::unique_ptr< observable::output_field > field{ new observable::output_field{ "Accept.mean Accept.var", "Rate Rate2", std::move( formatter ) } };
-      definition->push_back_field( field );
+      std::unique_ptr< observable::mean_variance_output > field{ new observable::mean_variance_output( "Accept.mean Accept.var", "Rate Rate2" ) };
+      definition->push_back_field( std::move( field ) );
     }
     {
-      std::unique_ptr< observable::mean_variance_output > formatter{ new observable::mean_variance_output };
-      std::unique_ptr< observable::output_field > field{ new observable::output_field{ "Trial.mean Trial.var", "Rate Rate2", std::move( formatter ) } };
-      definition->push_back_field( field );
+      std::unique_ptr< observable::mean_variance_output > field{ new observable::mean_variance_output( "Trial.mean Trial.var", "Rate Rate2" ) };
+      definition->push_back_field( std::move( field ) );
     }
-    sink.add_dataset( definition );
+    sink.add_dataset( std::move( definition ) );
     this->locked_ = true; // Can not add any new trials.
   }
   // CHECK ALL COUNTS ARE EQUAL
@@ -59,9 +56,9 @@ if( not this->data_.empty() )
   for( auto & entry : this->data_ )
   {
     UTILITY_ENSURE( check_counter == entry.second.count(), "Serious error, estimater counters should all be equal" );
-    std::unique_ptr< utility::estimate_array > arr( new utility::estimate_array{ 2 } );
-    arr->swap( entry.second );
-    sink.receive_data( label, rank, arr );
+    std::unique_ptr< observable::output_series_datum > datum( new observable::output_series_datum{ rank, new utility::estimate_array{ 2 } } );
+    datum->arr->swap( entry.second );
+    sink.receive_data( label, std::move( datum ) );
     ++rank;
   }
 }
