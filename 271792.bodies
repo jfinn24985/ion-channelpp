@@ -94,7 +94,16 @@ sink.write( this->label(), os.str() );
 UTILITY_REQUIRE( arr, "Can not receive a nul pointer." );
 if( count < this->data_.size() )
 {
-  this->data_[ count ].merge( *arr );
+  auto & vec = this->data_[ count ];
+  if( vec.size() == 0 )
+  {
+    this->data_.replace( count, arr.release() );
+  }
+  else
+  {
+    UTILITY_REQUIRE( vec.size() == arr->size(), "Attempt to merge different sized vectors" );
+    vec.merge( *arr );
+  }
 }
 else if( count == this->data_.size() )
 {

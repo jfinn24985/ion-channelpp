@@ -1,0 +1,49 @@
+class output_rows
+!!!2621360.cpp!!!	write(inout sink : base_sink) : void
+if( not this->rows_.empty() )
+{
+  std::stringstream os;
+  // Do header
+  sink.header( os );
+  if ( not this->title().empty() )
+  {
+    os << core::strngs::comment_begin() << " TITLE: \"" << this->title() << "\" " << core::strngs::comment_end() << "\n";
+  }
+  os << core::strngs::comment_begin() << " FIELDS: ";
+  this->rows_.front().labels( os );
+  os << core::strngs::comment_end() << "\n";
+  os << core::strngs::comment_begin() << " UNITS: ";
+  this->rows_.front().units( os );
+  os << core::strngs::comment_end() << "\n";
+
+  // Do body
+  if( not this->is_serial_ )
+  {
+    this->rows_.front().row( os );
+    os << "\n";
+  }
+  else
+  {
+    for( auto const& row : this->rows_ )
+    {
+      row.row( os );
+      os << "\n";
+    }
+  }
+  // Save to sink
+  sink.write( this->label(), os.str() );
+}
+!!!2621488.cpp!!!	receive_data(in count : size_t, in arr : output_row) : void
+UTILITY_REQUIRE( arr, "Can not receive a nul pointer." );
+if( count < this->rows_.size() )
+{
+  this->rows_[ count ].merge( std::move( arr ) );
+}
+else if( count == this->rows_.size() )
+{
+  this->rows_.push_back( arr.release() );
+}
+else 
+{
+  UTILITY_REQUIRE( count <= this->rows_.size(), "Can only append array, not resize." ); 
+}
