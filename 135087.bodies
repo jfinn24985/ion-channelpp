@@ -67,57 +67,25 @@ return result;
 }
 // write data to output
 {
-  const std::string filename { "widom.dat" };
-
-  output_series dset {};
-  dset.set_title( "Series of Widom method chemical potential estimates" );
-  const std::size_t loopindex = this->loop_count_;
-
-  dset.push_back_entry( observable::output_field( "INDEX", "ORDINAL", [loopindex]( std::ostream& os, std::size_t )
+  const std::string label{ "widom.dat" };
+  if( not sink.has_dataset( label ) )
   {
-    os << loopindex;
-  } ) );
-
-  for( widom_datum const& datum : this->data_ )
-  {
-    dset.push_back_entry( observable::output_field( datum.label_ + "_EXCESS0" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
-    {
-      os << datum.excess_potential_;
-    } ) );
-    dset.push_back_entry( observable::output_field( datum.label_ + "_POTENTIAL" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
-    {
-      if( datum.exp_potential_.mean() == 0.0 )
-        os << 0.0;
-      else
-        os << -std::log( datum.exp_potential_.mean() );
-    } ) );
-    dset.push_back_entry( observable::output_field( datum.label_ + "_EXCESS" , "ENERGY", [&datum]( std::ostream& os, std::size_t )
-    {
-      if( datum.exp_potential_.mean() == 0.0 or datum.volume_ == 0.0 )
-        os << 0.0;
-      else
-        os << -std::log( datum.exp_potential_.mean() ) - std::log( core::constants::to_SI() * datum.specie_count_.mean() / datum.volume_ );
-    } ) );
-    dset.push_back_entry( observable::output_field( datum.label_ + "_COUNT" , "COUNT", [&datum]( std::ostream& os, std::size_t )
-    {
-      os << datum.exp_potential_.count();
-    } ) );
+    // need to give a data set definition
+    std::unique_ptr< observable::output_rows >definition{ new observable::output_rows( label, true ) };
+    definition->set_title( "Series of Widom method chemical potential estimates." );
+    sink.add_dataset( std::move( definition ) );
   }
+  std::unique_ptr< observable::widom_row > row( new observable::widom_row( this->loop_count_ ) );
+  row->append( this->data_.begin(), this->data_.end() );
 
-  dset.write( filename, sink, not sink.exists( filename ) );
-
+  std::unique_ptr< observable::output_row_datum > datum( new observable::output_row_datum( std::move( row ), this->rank_ ) );
+  sink.receive_data( label, std::move( datum ) );
+  ++this->rank_;
 }
 // reset accumulators
 for( widom_datum & datum : this->data_ )
 {
-  if( datum.specie_count_.count() > 0 )
-  {
-    datum.specie_count_.reset();
-    datum.exp_potential_.reset();
-  }
-  // reset the per-cycle iteration
-  // counter to zero.
-  datum.count_ = 0ul;
+  datum.reset();
 }
 !!!688048.cpp!!!	on_sample(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void
 ++this->loop_count_;
