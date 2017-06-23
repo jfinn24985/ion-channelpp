@@ -1,6 +1,6 @@
 format 75
 "observable" // observable
-  revision 249
+  revision 251
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -1518,7 +1518,7 @@ ${docstring}${body}
 	protected explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
-: data_(), dictionary_(), total_() {}
+: data_(), dictionary_(), total_(), locked_( false ) {}
 "
 	
 	
@@ -10538,7 +10538,7 @@ ${docstring}${body}
       end
 
       operation 474288 "~output_dataset"
-	public explicit_return_type ""
+	cpp_virtual public explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw} {}
 "
@@ -10908,6 +10908,23 @@ ${docstring}${body}
 	php ""
 	python ""
 	idl ""
+      end
+
+      operation 2662960 "is_serial"
+	const public explicit_return_type "bool"
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract}
+{
+  return this->${name}_;
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Whether to replace or append the buffer to the file"
       end
 
       operation 2621360 "write"
@@ -11340,7 +11357,7 @@ ${docstring}${body}
       end
 
       operation 471088 "~output_series"
-	public explicit_return_type ""
+	cpp_virtual public explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${virtual}${name}${(}${)}${volatile}${throw};
 "
@@ -11598,9 +11615,9 @@ ${docstring}${body}
 	nparams 2
 	  param in name "count" explicit_type "size_t"
 	  param in name "arr" type class_ref 175665 // estimate_array
-	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, std::unique_ptr< ${t1} >& ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}, std::unique_ptr< ${t1} > ${p1}${v1}${)}${const}${volatile}${throw}${abstract};
 "
-	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, std::unique_ptr< ${t1} >& ${p1}${)}${const}${volatile}${throw}
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}, std::unique_ptr< ${t1} > ${p1}${)}${const}${volatile}${throw}
 {
   ${body}
 }
@@ -11922,7 +11939,7 @@ ${docstring}${body}
 	  param in name "val" explicit_type "string"
 	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract}
 {
-  this->field_labels_ = ${p0};
+  this->units_ = ${p0};
 }
 "
 	
@@ -12272,7 +12289,7 @@ ${docstring}${body}
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
 {
-  sink.receive_data( this->count, this->arr );
+  sink.receive_data( this->count, std::move( this->arr ) );
 }
 "
 	
@@ -12291,7 +12308,7 @@ ${docstring}${body}
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
 {
-  UTILITY_REQUIRE( false, \"This output datum can not update a output_text object.\" );
+  UTILITY_REQUIRE( false, \"This output datum can not update an output_text object.\" );
 }
 "
 	
@@ -12310,7 +12327,7 @@ ${docstring}${body}
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
 {
-  UTILITY_REQUIRE( false, \"This output datum can not update a output_rows object.\" );
+  UTILITY_REQUIRE( false, \"This output datum can not update an output_rows object.\" );
 }
 "
 	
@@ -12459,7 +12476,7 @@ ${docstring}${body}
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
 {
-    UTILITY_REQUIRE( false, \"This output datum can not update a output_series object.\" );
+    UTILITY_REQUIRE( false, \"This output datum can not update an output_series object.\" );
 }
 "
 	
@@ -12497,7 +12514,7 @@ ${docstring}${body}
 "
 	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} & ${p0}${)}${const}${volatile}${throw}
 {
-  UTILITY_REQUIRE( false, \"This output datum can not update a output_rows object.\" );
+  UTILITY_REQUIRE( false, \"This output datum can not update an output_rows object.\" );
 }
 "
 	
@@ -15782,6 +15799,10 @@ BOOST_CLASS_EXPORT_KEY( observable::widom_row );
 #endif
 
 ${includes}
+// manual includes
+#include \"utility/utility.hpp\"
+// -
+// -
 ${namespace_start}
 ${members}
 ${namespace_end}
@@ -15834,6 +15855,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	artifact_ref 743984 // output_buffer_datum
 	artifact_ref 750512 // output_rows
 	artifact_ref 750640 // output_row_datum
+	artifact_ref 757168 // widom_row
 	artifact_ref 789807 // sampler_meta
       end
     end

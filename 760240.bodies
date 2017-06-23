@@ -1108,494 +1108,753 @@ const std::string unit4( "ordinal3" );
   std::unique_ptr< observable::digitizer_3d_output > fld( new observable::digitizer_3d_output( label1, unit1, axis, observable::digitizer_3d_output::USE_ALL ) );
   output_test_suite::base_output_field_test( std::move( fld ) );
 }
-!!!484912.cpp!!!	output_series_test() : void
+!!!2662448.cpp!!!	base_output_row_test(in data : output_row) : void
+// Use serialization to make copies of the datum.
+std::string capture;
+std::string labels, units, rows;
+{
+  std::stringstream store;
+  boost::archive::text_oarchive oa( store );
+  oa << data;
+  capture = store.str();
+  {
+    std::stringstream os;
+    data->labels( os );
+    labels = os.str();
+  }
+  {
+    std::stringstream os;
+    data->units( os );
+    units = os.str();
+  }
+  {
+    std::stringstream os;
+    data->row( os );
+    rows = os.str();
+  }
+}
+{
+  std::unique_ptr< observable::output_row > data2;
+  std::stringstream store( capture );
+  boost::archive::text_iarchive ia( store );
+  ia >> data2;
+
+  {
+    std::stringstream os;
+    data->labels( os );
+    BOOST_REQUIRE_EQUAL( labels, os.str() );
+  }
+  {
+    std::stringstream os;
+    data->units( os );
+    BOOST_REQUIRE_EQUAL( units, os.str() );
+  }
+  {
+    std::stringstream os;
+    data->row( os );
+    BOOST_REQUIRE_EQUAL( rows, os.str() );
+  }
+}
+// Try with output_rows object
+// ---------------------------
+{
+  std::unique_ptr< observable::output_row > data2;
+  std::stringstream store( capture );
+  boost::archive::text_iarchive ia( store );
+  ia >> data2;
+
+  observable::output_rows rws( "label", false );
+  // Output error
+  BOOST_CHECK_NO_THROW( rws.receive_data( 0, std::move( data2 ) ) );
+}
+!!!2662704.cpp!!!	output_test_row_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( std::is_default_constructible< output_test_suite::output_test_row >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< output_test_suite::output_test_row >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< output_test_suite::output_test_row >::type{} );
+  BOOST_CHECK( not ( std::is_assignable< output_test_suite::output_test_row, output_test_suite::output_test_row >::type{} ) );
+  BOOST_CHECK( std::has_virtual_destructor< output_test_suite::output_test_row >::type{} );
+}
+// ----------
+const std::string test_row{ "2345 3245.00" };
+{
+  output_test_suite::output_test_row arow;
+  arow.buffer = test_row;
+  {
+    std::stringstream os;
+    arow.labels( os );
+    BOOST_REQUIRE_EQUAL( "INDEX MEAN", os.str() );
+  }
+  {
+    std::stringstream os;
+    arow.units( os );
+    BOOST_REQUIRE_EQUAL( "ORDINAL RATE", os.str() );
+  }
+  {
+    std::stringstream os;
+    arow.row( os );
+    BOOST_REQUIRE_EQUAL( "2345 3245.00", os.str() );
+  }
+  {
+    std::unique_ptr< output_test_suite::output_test_row > rw;
+    rw.reset( new output_test_suite::output_test_row );
+    rw->buffer = "\n0 1.0";
+    arow.merge( std::move( rw ) );
+  }
+  {
+    std::stringstream os;
+    arow.row( os );
+    BOOST_REQUIRE_EQUAL( "2345 3245.00\n0 1.0", os.str() );
+  }
+}
+{
+  std::unique_ptr< output_test_suite::output_test_row > dtm;
+  dtm.reset( new output_test_suite::output_test_row );
+  dtm->buffer = test_row;
+  output_test_suite::base_output_row_test( std::move( dtm ) );
+}
+!!!2663088.cpp!!!	widom_row_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( not std::is_default_constructible< observable::widom_row >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< observable::widom_row >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< observable::widom_row >::type{} );
+  BOOST_CHECK( not ( std::is_assignable< observable::widom_row, observable::widom_row >::type{} ) );
+  BOOST_CHECK( std::has_virtual_destructor< observable::widom_row >::type{} );
+}
+// ----------
+{
+  observable::widom_row arow( 0 );
+  {
+    std::stringstream os;
+    arow.labels( os );
+    BOOST_REQUIRE_EQUAL( "INDEX ", os.str() );
+  }
+  {
+    std::stringstream os;
+    arow.units( os );
+    BOOST_REQUIRE_EQUAL( "ORDINAL ", os.str() );
+  }
+  {
+    std::stringstream os;
+    arow.row( os );
+    BOOST_REQUIRE_EQUAL( "0 ", os.str() );
+  }
+  {
+    observable::widom::widom_datum dtm( 0 );
+    dtm.count_ = 1;
+    dtm.specie_count_.append( 4 );
+    dtm.exp_potential_.append( 0.1 );
+    dtm.conc_ = 0.1;
+    dtm.excess_potential_ = 0.0;
+    dtm.label_ = "Na";
+    dtm.volume_ = 10000.0;
+    arow.append( &dtm, &dtm + 1 );
+  }
+  {
+    std::stringstream os;
+    arow.labels( os );
+    BOOST_CHECK_EQUAL( "INDEX Na_EXCESS0 Na_POTENTIAL Na_EXCESS Na_COUNT ", os.str() );
+  }
+  {
+    std::stringstream os;
+    arow.units( os );
+    BOOST_CHECK_EQUAL( "ORDINAL ENERGY ENERGY ENERGY COUNT ", os.str() );
+  }
+  {
+    std::stringstream os;
+    arow.row( os );
+    BOOST_CHECK_EQUAL( "0 0 2.30259 2.71173 1 ", os.str() );
+  }
+}
+{
+  //std::unique_ptr< observable::widom_row > dtm;
+  //dtm.reset( new observable::widom_row );
+  //dtm->buffer = test_row;
+  //output_test_suite::base_output_row_test( std::move( dtm ) );
+}
+!!!2661552.cpp!!!	base_output_datum_test(in data : output_datum, in usewith : short) : void
+const int16_t USE_SERIES{ 1 };
+const int16_t USE_TEXT{ 2 };
+const int16_t USE_ROW{ 4 };
+// Use serialization to make copies of the datum.
+std::string capture;
+{
+  std::stringstream store;
+  boost::archive::text_oarchive oa( store );
+  oa << data;
+  capture = store.str();
+}  
+const std::string label{ "label" };
+// Try with output_series object
+// -----------------------------
+{
+  std::unique_ptr< observable::output_datum > data2;
+  std::stringstream store( capture );
+  boost::archive::text_iarchive ia( store );
+  ia >> data2; 
+   
+  observable::output_series ser( label, false );
+  if( 0 != ( USE_SERIES & usewith ) )
+  {
+    BOOST_CHECK_NO_THROW( ser.accept( std::move( data2 ) ) );
+  }
+  else
+  {
+    // Output error
+    try
+    {
+      ser.accept( std::move( data2 ) );
+      BOOST_ERROR( "expected \"XXX.accept( std::move( data2 ) )\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "This output datum can not update an output_series object." ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"XXX.accept( std::move( data2 ) )\" was not expected type: " ) + err.what() );
+    }
+  }
+}
+// Try with output_text object
+// ---------------------------
+{
+  std::unique_ptr< observable::output_datum > data2;
+  std::stringstream store( capture );
+  boost::archive::text_iarchive ia( store );
+  ia >> data2; 
+   
+  observable::output_text txt( label, false );
+  if( 0 != ( USE_TEXT & usewith ) )
+  {
+    BOOST_CHECK_NO_THROW( txt.accept( std::move( data2 ) ) );
+  }
+  else
+  {
+    // Output error
+    try
+    {
+      txt.accept( std::move( data2 ) );
+      BOOST_ERROR( "expected \"XXX.accept( std::move( data2 ) )\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "This output datum can not update an output_text object." ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"XXX.accept( std::move( data2 ) )\" was not expected type: " ) + err.what() );
+    }
+  }
+}
+// Try with output_rows object
+// ---------------------------
+{
+  std::unique_ptr< observable::output_datum > data2;
+  std::stringstream store( capture );
+  boost::archive::text_iarchive ia( store );
+  ia >> data2; 
+   
+  observable::output_rows rws( label, false );
+  if( 0 != ( USE_ROW & usewith ) )
+  {
+    BOOST_CHECK_NO_THROW( rws.accept( std::move( data2 ) ) );
+  }
+  else
+  {
+    // Output error
+    try
+    {
+      rws.accept( std::move( data2 ) );
+      BOOST_ERROR( "expected \"XXX.accept( std::move( data2 ) )\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "This output datum can not update an output_rows object." ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"XXX.accept( std::move( data2 ) )\" was not expected type: " ) + err.what() );
+    }
+  }
+}
+!!!2661680.cpp!!!	output_test_datum_test() : void
 //XX {
 //XX   // Static Lifetime method tests
-//XX   BOOST_CHECK( std::is_default_constructible< observable::output_series >::type{} );
-//XX   BOOST_CHECK( std::is_copy_constructible< observable::output_series >::type{} );
-//XX   BOOST_CHECK( std::is_move_constructible< observable::output_series >::type{} );
-//XX   BOOST_CHECK( ( std::is_assignable< observable::output_series, observable::output_series >::type{} ) );
-//XX   BOOST_CHECK( not std::has_virtual_destructor< observable::output_series >::type{} );
+//XX   BOOST_CHECK( not std::is_default_constructible< observable::output_series >::type{} );
+//XX   BOOST_CHECK( not std::is_copy_constructible< observable::output_series >::type{} );
+//XX   BOOST_CHECK( not std::is_move_constructible< observable::output_series >::type{} );
+//XX   BOOST_CHECK( not ( std::is_assignable< observable::output_series, observable::output_series >::type{} ) );
+//XX   BOOST_CHECK( std::has_virtual_destructor< observable::output_series >::type{} );
 //XX }
-//XX // CTOR TESTS
-//XX // ----------
-//XX std::string emptr_str;
-//XX const std::string test_fname
-//XX { "result.dat"
-//XX };
-//XX const std::string test_title
-//XX { "Something or other."
-//XX };
-//XX {
-//XX   observable::output_series aset;
-//XX   BOOST_CHECK_EQUAL( aset.title(), emptr_str );
-//XX   BOOST_CHECK_EQUAL( aset.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( aset.empty(), true );
-//XX   BOOST_CHECK( aset.begin() == aset.end() );
-//XX 
-//XX   aset.set_title( test_title );
-//XX   BOOST_CHECK_EQUAL( aset.title(), test_title );
-//XX   BOOST_CHECK_EQUAL( aset.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( aset.empty(), true );
-//XX   BOOST_CHECK( aset.begin() == aset.end() );
-//XX 
-//XX   observable::output_series bset;
-//XX   BOOST_CHECK_EQUAL( bset.title(), emptr_str );
-//XX   BOOST_CHECK_EQUAL( aset.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( aset.empty(), true );
-//XX   BOOST_CHECK( aset.begin() == aset.end() );
-//XX 
-//XX   bset = aset;
-//XX   BOOST_CHECK_EQUAL( bset.title(), test_title );
-//XX   BOOST_CHECK_EQUAL( aset.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( aset.empty(), true );
-//XX   BOOST_CHECK( aset.begin() == aset.end() );
-//XX 
-//XX   observable::output_series cset( aset );
-//XX   BOOST_CHECK_EQUAL( cset.title(), test_title );
-//XX   BOOST_CHECK_EQUAL( aset.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( aset.empty(), true );
-//XX   BOOST_CHECK( aset.begin() == aset.end() );
-//XX 
-//XX   aset = aset;
-//XX   BOOST_CHECK_EQUAL( aset.title(), test_title );
-//XX   BOOST_CHECK_EQUAL( aset.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( aset.empty(), true );
-//XX   BOOST_CHECK( aset.begin() == aset.end() );
-//XX 
-//XX   observable::output_series dset( std::move( aset ) );
-//XX   BOOST_CHECK_EQUAL( dset.title(), test_title );
-//XX   BOOST_CHECK_EQUAL( aset.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( aset.empty(), true );
-//XX   BOOST_CHECK( aset.begin() == aset.end() );
-//XX 
-//XX   // Output error if no entries
-//XX   {
-//XX     observable::output_series dsetcp( dset );
-//XX     try
-//XX     {
-//XX       dsetcp.do_header( std::cout );
-//XX       BOOST_ERROR( "expected \"dsetcp.do_header( std::cout )\" exception not thrown" );
-//XX     }
-//XX     catch( std::runtime_error const& err )
-//XX     {
-//XX       const std::string msg( err.what() );
-//XX       //std::cout << msg << "\n";
-//XX       BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
-//XX     }
-//XX     catch( std::exception const& err )
-//XX     {
-//XX       BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX     }
-//XX   }
-//XX   {
-//XX     observable::output_series dsetcp( dset );
-//XX     try
-//XX     {
-//XX       dsetcp.do_body( std::cout );
-//XX       BOOST_ERROR( "expected \"dsetcp.do_body( std::cout )\" exception not thrown" );
-//XX     }
-//XX     catch( std::runtime_error const& err )
-//XX     {
-//XX       const std::string msg( err.what() );
-//XX       //std::cout << msg << "\n";
-//XX       BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
-//XX     }
-//XX     catch( std::exception const& err )
-//XX     {
-//XX       BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX     }
-//XX   }
-//XX   {
-//XX     observable::memory_sink sink;
-//XX     observable::output_series dsetcp( dset );
-//XX     try
-//XX     {
-//XX       dsetcp.write( test_fname, sink, true );
-//XX       BOOST_ERROR( "expected \"dsetcp.write( test_fname, sink, true )\" exception not thrown" );
-//XX     }
-//XX     catch( std::runtime_error const& err )
-//XX     {
-//XX       const std::string msg( err.what() );
-//XX       //std::cout << msg << "\n";
-//XX       BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
-//XX     }
-//XX     catch( std::exception const& err )
-//XX     {
-//XX       BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX     }
-//XX   }
-//XX   {
-//XX     observable::memory_sink sink;
-//XX     observable::output_series dsetcp( dset );
-//XX     try
-//XX     {
-//XX       dsetcp.write( test_fname, sink, false );
-//XX       BOOST_ERROR( "expected \"dsetcp.write( test_fname, sink, false )\" exception not thrown" );
-//XX     }
-//XX     catch( std::runtime_error const& err )
-//XX     {
-//XX       const std::string msg( err.what() );
-//XX       //std::cout << msg << "\n";
-//XX       BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
-//XX     }
-//XX     catch( std::exception const& err )
-//XX     {
-//XX       BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX     }
-//XX   }
-//XX }
-//XX struct person
-//XX {
-//XX   std::string name;
-//XX   std::size_t day_of_birth;
-//XX   std::size_t month_of_birth;
-//XX   std::size_t year_of_birth;
-//XX };
-//XX 
-//XX struct family
-//XX {
-//XX   std::vector< person > ppl;
-//XX   std::size_t day( std::size_t i ) const
-//XX   {
-//XX     return ppl[ i ].day_of_birth;
-//XX   }
-//XX   std::size_t month( std::size_t i ) const
-//XX   {
-//XX     return ppl[ i ].month_of_birth;
-//XX   }
-//XX   std::size_t year( std::size_t i ) const
-//XX   {
-//XX     return ppl[ i ].year_of_birth;
-//XX   }
-//XX   std::string name( std::size_t i ) const
-//XX   {
-//XX     return ppl[ i ].name;
-//XX   }
-//XX   std::size_t size() const
-//XX   {
-//XX     return ppl.size();
-//XX   }
-//XX };
-//XX 
-//XX const std::string label1( "name" );
-//XX const std::string label2( "day" );
-//XX const std::string label3( "month" );
-//XX const std::string label4( "year" );
-//XX const std::string unit1( "label" );
-//XX const std::string unit2( "ordinal1" );
-//XX const std::string unit3( "ordinal2" );
-//XX const std::string unit4( "ordinal3" );
-//XX {
-//XX   person me { "justin", 17, 4, 1965 };
-//XX 
-//XX   observable::output_series dset{};
-//XX   dset.set_title( test_title );
-//XX   dset.push_back_entry( observable::output_field( label1, unit1, [&me]( std::ostream& os, std::size_t )
-//XX   {
-//XX     os << me.name;
-//XX   } ) );
-//XX   dset.push_back_entry( observable::output_field( label2, unit2, [&me]( std::ostream& os, std::size_t )
-//XX   {
-//XX     os << me.day_of_birth;
-//XX   } ) );
-//XX   dset.push_back_entry( observable::output_field( label3, unit3, [&me]( std::ostream& os, std::size_t )
-//XX   {
-//XX     os << me.month_of_birth;
-//XX   } ) );
-//XX   dset.push_back_entry( observable::output_field( label4, unit4, [&me]( std::ostream& os, std::size_t )
-//XX   {
-//XX     os << me.year_of_birth;
-//XX   } ) );
-//XX 
-//XX   {
-//XX     std::stringstream store;
-//XX     dset.do_header( store );
-//XX     const std::string output
-//XX     {
-//XX       store.str()
-//XX     };
-//XX     BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
-//XX     BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
-//XX     BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
-//XX   }
-//XX   {
-//XX     std::stringstream store;
-//XX     dset.do_body( store );
-//XX     const std::string output
-//XX     {
-//XX       store.str()
-//XX     };
-//XX     BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
-//XX     BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
-//XX     BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
-//XX   }
-//XX }
-!!!471728.cpp!!!	output_dataset_test() : void
-//XX // CTOR TESTS
-//XX // ----------
-//XX std::string emptr_str;
-//XX const std::string test_fname { "result.dat" };
-//XX const std::string test_title { "Something or other." };
-//XX {
-//XX   observable::output_dataset aset;
-//XX   BOOST_CHECK_EQUAL( aset.title(), emptr_str );
-//XX   BOOST_CHECK_EQUAL( aset.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( aset.empty(), true );
-//XX   BOOST_CHECK( aset.begin() == aset.end() );
-//XX 
-//XX   aset.set_title( test_title );
-//XX   BOOST_CHECK_EQUAL( aset.title(), test_title );
-//XX   BOOST_CHECK_EQUAL( aset.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( aset.empty(), true );
-//XX   BOOST_CHECK( aset.begin() == aset.end() );
-//XX 
-//XX   observable::output_dataset bset;
-//XX   BOOST_CHECK_EQUAL( bset.title(), emptr_str );
-//XX   BOOST_CHECK_EQUAL( aset.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( aset.empty(), true );
-//XX   BOOST_CHECK( aset.begin() == aset.end() );
-//XX 
-//XX   bset = aset;
-//XX   BOOST_CHECK_EQUAL( bset.title(), test_title );
-//XX   BOOST_CHECK_EQUAL( aset.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( aset.empty(), true );
-//XX   BOOST_CHECK( aset.begin() == aset.end() );
-//XX 
-//XX   observable::output_dataset cset( aset );
-//XX   BOOST_CHECK_EQUAL( cset.title(), test_title );
-//XX   BOOST_CHECK_EQUAL( aset.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( aset.empty(), true );
-//XX   BOOST_CHECK( aset.begin() == aset.end() );
-//XX 
-//XX   aset = aset;
-//XX   BOOST_CHECK_EQUAL( aset.title(), test_title );
-//XX   BOOST_CHECK_EQUAL( aset.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( aset.empty(), true );
-//XX   BOOST_CHECK( aset.begin() == aset.end() );
-//XX 
-//XX   observable::output_dataset dset( std::move( aset ) );
-//XX   BOOST_CHECK_EQUAL( dset.title(), test_title );
-//XX   BOOST_CHECK_EQUAL( aset.size(), 0 );
-//XX   BOOST_CHECK_EQUAL( aset.empty(), true );
-//XX   BOOST_CHECK( aset.begin() == aset.end() );
-//XX 
-//XX   // Output error if no entries
-//XX   {
-//XX     observable::output_dataset dsetcp( dset );
-//XX     try
-//XX     {
-//XX       dsetcp.do_header( std::cout );
-//XX       BOOST_ERROR( "expected \"dsetcp.do_header( std::cout )\" exception not thrown" );
-//XX     }
-//XX     catch( std::runtime_error const& err )
-//XX     {
-//XX       const std::string msg( err.what() );
-//XX       //std::cout << msg << "\n";
-//XX       BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
-//XX     }
-//XX     catch( std::exception const& err )
-//XX     {
-//XX       BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX     }
-//XX   }
-//XX   {
-//XX     observable::output_dataset dsetcp( dset );
-//XX     try
-//XX     {
-//XX       dsetcp.do_body( std::cout );
-//XX       BOOST_ERROR( "expected \"dsetcp.do_body( std::cout )\" exception not thrown" );
-//XX     }
-//XX     catch( std::runtime_error const& err )
-//XX     {
-//XX       const std::string msg( err.what() );
-//XX       //std::cout << msg << "\n";
-//XX       BOOST_CHECK( msg.find( "Can not write data set without any fields" ) < msg.size() );
-//XX     }
-//XX     catch( std::exception const& err )
-//XX     {
-//XX       BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX     }
-//XX   }
-//XX   {
-//XX     observable::memory_sink sink;
-//XX     observable::output_dataset dsetcp( dset );
-//XX     try
-//XX     {
-//XX       dsetcp.write( test_fname, sink );
-//XX       BOOST_ERROR( "expected \"dsetcp.write( test_fname, sink )\" exception not thrown" );
-//XX     }
-//XX     catch( std::runtime_error const& err )
-//XX     {
-//XX       const std::string msg( err.what() );
-//XX       //std::cout << msg << "\n";
-//XX       BOOST_CHECK( msg.find( "Can not write data set without any fields" ) < msg.size() );
-//XX     }
-//XX     catch( std::exception const& err )
-//XX     {
-//XX       BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-//XX     }
-//XX   }
-//XX }
-//XX struct person
-//XX {
-//XX   std::string name;
-//XX   std::size_t day_of_birth;
-//XX   std::size_t month_of_birth;
-//XX   std::size_t year_of_birth;
-//XX };
-//XX 
-//XX struct family
-//XX {
-//XX   std::vector< person > ppl;
-//XX   std::size_t day( std::size_t i ) const
-//XX   {
-//XX     return ppl[ i ].day_of_birth;
-//XX   }
-//XX   std::size_t month( std::size_t i ) const
-//XX   {
-//XX     return ppl[ i ].month_of_birth;
-//XX   }
-//XX   std::size_t year( std::size_t i ) const
-//XX   {
-//XX     return ppl[ i ].year_of_birth;
-//XX   }
-//XX   std::string name( std::size_t i ) const
-//XX   {
-//XX     return ppl[ i ].name;
-//XX   }
-//XX   std::size_t size() const
-//XX   {
-//XX     return ppl.size();
-//XX   }
-//XX };
-//XX 
-//XX const std::string label1( "name" );
-//XX const std::string label2( "day" );
-//XX const std::string label3( "month" );
-//XX const std::string label4( "year" );
-//XX const std::string unit1( "label" );
-//XX const std::string unit2( "ordinal1" );
-//XX const std::string unit3( "ordinal2" );
-//XX const std::string unit4( "ordinal3" );
-//XX {
-//XX   person me { "justin", 17, 4, 1965 };
-//XX 
-//XX   observable::output_dataset dset( []()
-//XX   {
-//XX     return 1;
-//XX   } );
-//XX   dset.set_title( test_title );
-//XX   dset.push_back_entry( observable::output_field( label1, unit1, [&me]( std::ostream& os, std::size_t )
-//XX   {
-//XX     os << me.name;
-//XX   } ) );
-//XX   dset.push_back_entry( observable::output_field( label2, unit2, [&me]( std::ostream& os, std::size_t )
-//XX   {
-//XX     os << me.day_of_birth;
-//XX   } ) );
-//XX   dset.push_back_entry( observable::output_field( label3, unit3, [&me]( std::ostream& os, std::size_t )
-//XX   {
-//XX     os << me.month_of_birth;
-//XX   } ) );
-//XX   dset.push_back_entry( observable::output_field( label4, unit4, [&me]( std::ostream& os, std::size_t )
-//XX   {
-//XX     os << me.year_of_birth;
-//XX   } ) );
-//XX 
-//XX   {
-//XX     std::stringstream store;
-//XX     dset.do_header( store );
-//XX     const std::string output
-//XX     {
-//XX       store.str()
-//XX     };
-//XX     BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
-//XX     BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
-//XX     BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
-//XX   }
-//XX   {
-//XX     std::stringstream store;
-//XX     dset.do_body( store );
-//XX     const std::string output
-//XX     {
-//XX       store.str()
-//XX     };
-//XX     BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
-//XX     BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
-//XX     BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
-//XX   }
-//XX }
-//XX 
-//XX {
-//XX   family myfamily;
-//XX   myfamily.ppl.push_back( { "justin", 17, 4, 1965 } );
-//XX   myfamily.ppl.push_back( { "sean", 15, 4, 1969 } );
-//XX   myfamily.ppl.push_back( { "debi", 8, 2, 1963 } );
-//XX   myfamily.ppl.push_back( { "susan", 19, 6, 1953 } );
-//XX   myfamily.ppl.push_back( { "peabody", 1, 1, 2012 } );
-//XX   observable::output_dataset dset( [&myfamily]()
-//XX   {
-//XX     return myfamily.size();
-//XX   } );
-//XX   dset.push_back_entry( observable::output_field( label1, unit1, [&myfamily]( std::ostream& os, std::size_t i )
-//XX   {
-//XX     os << myfamily.name( i );
-//XX   } ) );
-//XX   dset.push_back_entry( observable::output_field( label2, unit2, [&myfamily]( std::ostream& os, std::size_t i )
-//XX   {
-//XX     os << myfamily.ppl[ i ].day_of_birth;
-//XX   } ) );
-//XX   dset.push_back_entry( observable::output_field( label3, unit3, [&myfamily]( std::ostream& os, std::size_t i )
-//XX   {
-//XX     os << myfamily.month( i );
-//XX   } ) );
-//XX   dset.push_back_entry( observable::output_field( label4, unit4, [&myfamily]( std::ostream& os, std::size_t i )
-//XX   {
-//XX     os << myfamily.year( i );
-//XX   } ) );
-//XX 
-//XX   {
-//XX     std::stringstream store;
-//XX     dset.do_header( store );
-//XX     const std::string output
-//XX     {
-//XX       store.str()
-//XX     };
-//XX     BOOST_CHECK_EQUAL( output.find( "TITLE" ), std::string::npos );
-//XX     BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
-//XX     BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
-//XX     BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
-//XX   }
-//XX   dset.set_title( test_title );
-//XX   {
-//XX     std::stringstream store;
-//XX     dset.do_header( store );
-//XX     const std::string output
-//XX     {
-//XX       store.str()
-//XX     };
-//XX     BOOST_CHECK_NE( output.find( "TITLE" ), std::string::npos );
-//XX     BOOST_CHECK_NE( output.find( test_title ), std::string::npos );
-//XX     BOOST_CHECK_EQUAL( output.find( "justin" ), std::string::npos );
-//XX     BOOST_CHECK_EQUAL( output.find( "1965" ), std::string::npos );
-//XX   }
-//XX   {
-//XX     std::stringstream store;
-//XX     dset.do_body( store );
-//XX     const std::string output
-//XX     {
-//XX       store.str()
-//XX     };
-//XX     BOOST_CHECK_EQUAL( output.find( "TITLE" ), std::string::npos );
-//XX     BOOST_CHECK_EQUAL( output.find( test_title ), std::string::npos );
-//XX     BOOST_CHECK_NE( output.find( "justin" ), std::string::npos );
-//XX     BOOST_CHECK_NE( output.find( "1965" ), std::string::npos );
-//XX     BOOST_CHECK_NE( output.find( "peabody" ), std::string::npos );
-//XX     BOOST_CHECK_EQUAL( std::count( output.begin(), output.end(), '\n' ), 5 );
-//XX   }
-//XX }
-//XX 
+// ----------
+output_test_suite::output_test_datum::buffer = "EMPTY ";
+std::string canon( "EMPTY SERIES TEXT ROWS " );
+{
+  std::unique_ptr< observable::output_datum > dtm( new output_test_suite::output_test_datum );
+  output_test_suite::base_output_datum_test( std::move( dtm ), 7 );
+  BOOST_CHECK_EQUAL( output_test_suite::output_test_datum::buffer, canon );
+}
+!!!2661808.cpp!!!	output_series_datum_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( std::is_default_constructible< observable::output_series_datum >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< observable::output_series_datum >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< observable::output_series_datum >::type{} );
+  BOOST_CHECK( not ( std::is_assignable< observable::output_series_datum, observable::output_series_datum >::type{} ) );
+  BOOST_CHECK( std::has_virtual_destructor< observable::output_series_datum >::type{} );
+}
+// ----------
+observable::memory_sink sink;
+{
+  std::unique_ptr< utility::estimate_array > arr( new utility::estimate_array( 2 ) );
+  arr->append( { 0.0, 0.1 } );
+  arr->append( { 0.1, 0.2 } );
+  arr->append( { 0.2, 0.3 } );
+  std::unique_ptr< observable::output_datum > dtm( new observable::output_series_datum( 0, std::move( arr ) ) );
+  observable::output_series aset( "test1.dat", false );
+  aset.push_back_field( std::move( std::unique_ptr< observable::output_field >( new observable::index_output( "INDEX", "ORDINAL" ) ) ) );
+  aset.push_back_field( std::move( std::unique_ptr< observable::output_field >( new observable::mean_output( "MEAN", "VALUE" ) ) ) );
+  aset.accept( std::move( dtm ) );
+  aset.write( sink );
+  BOOST_REQUIRE( sink.exists( "test1.dat" ) );
+}
+{
+  std::unique_ptr< utility::estimate_array > arr( new utility::estimate_array( 2 ) );
+  arr->append( { 0.0, 0.1 } );
+  arr->append( { 0.1, 0.2 } );
+  arr->append( { 0.2, 0.3 } );
+  observable::output_series aset( "test2.dat", false );
+  aset.push_back_field( std::move( std::unique_ptr< observable::output_field >( new observable::index_output( "INDEX", "ORDINAL" ) ) ) );
+  aset.push_back_field( std::move( std::unique_ptr< observable::output_field >( new observable::mean_output( "MEAN", "VALUE" ) ) ) );
+  aset.receive_data( 0, std::move( arr ) );
+  aset.write( sink );
+  BOOST_REQUIRE( sink.exists( "test2.dat" ) );
+}
+{
+  std::string buf1, buf2;
+  sink.read( "test1.dat", buf1 );
+  sink.read( "test2.dat", buf2 );
+  BOOST_CHECK_EQUAL( buf1, buf2 );
+}
+{
+  std::unique_ptr< utility::estimate_array > arr( new utility::estimate_array( 2 ) );
+  arr->append( { 0.0, 0.1 } );
+  arr->append( { 0.1, 0.2 } );
+  arr->append( { 0.2, 0.3 } );
+  std::unique_ptr< observable::output_datum > dtm( new observable::output_series_datum( 0, std::move( arr ) ) );
+  output_test_suite::base_output_datum_test( std::move( dtm ), 1 );
+}
+!!!2661936.cpp!!!	output_buffer_datum_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( std::is_default_constructible< observable::output_buffer_datum >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< observable::output_buffer_datum >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< observable::output_buffer_datum >::type{} );
+  BOOST_CHECK( not ( std::is_assignable< observable::output_buffer_datum, observable::output_buffer_datum >::type{} ) );
+  BOOST_CHECK( std::has_virtual_destructor< observable::output_buffer_datum >::type{} );
+}
+// ----------
+std::string canon( "0 1.2\n1 1.1\n2 1.2" );
+observable::memory_sink sink;
+{
+  std::unique_ptr< observable::output_datum > dtm( new observable::output_buffer_datum( canon ) );
+  observable::output_text aset( "test1.dat", false );
+  aset.set_field_labels( "INDEX MEAN" );
+  aset.set_units( "ORDINAL VALUE" );
+  aset.accept( std::move( dtm ) );
+  aset.write( sink );
+  BOOST_REQUIRE( sink.exists( "test1.dat" ) );
+}
+{
+  observable::output_text aset( "test2.dat", false );
+  aset.set_field_labels( "INDEX MEAN" );
+  aset.set_units( "ORDINAL VALUE" );
+  aset.receive_data( canon );
+  aset.write( sink );
+  BOOST_REQUIRE( sink.exists( "test2.dat" ) );
+}
+{
+  std::string buf1, buf2;
+  sink.read( "test1.dat", buf1 );
+  sink.read( "test2.dat", buf2 );
+  BOOST_CHECK_EQUAL( buf1, buf2 );
+}
+{
+  std::unique_ptr< observable::output_datum > dtm( new observable::output_buffer_datum( canon ) );
+  output_test_suite::base_output_datum_test( std::move( dtm ), 2 );
+}
+!!!2662576.cpp!!!	output_row_datum_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( std::is_default_constructible< observable::output_row_datum >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< observable::output_row_datum >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< observable::output_row_datum >::type{} );
+  BOOST_CHECK( not ( std::is_assignable< observable::output_row_datum, observable::output_row_datum >::type{} ) );
+  BOOST_CHECK( std::has_virtual_destructor< observable::output_row_datum >::type{} );
+}
+// ----------
+observable::memory_sink sink;
+{
+  std::unique_ptr< output_test_suite::output_test_row > rw( new output_test_suite::output_test_row );
+  rw->buffer = "0 1.1";
+  
+  std::unique_ptr< observable::output_row_datum > dtm( new observable::output_row_datum( std::move( rw ), 0ul ) );
+  observable::output_rows aset( "test1.dat", false );
+  aset.accept( std::move( dtm ) );
+  aset.write( sink );
+  BOOST_REQUIRE( sink.exists( "test1.dat" ) );
+}
+{
+  std::unique_ptr< output_test_suite::output_test_row > rw( new output_test_suite::output_test_row );
+  rw->buffer = "0 1.1";
+  observable::output_rows aset( "test2.dat", false );
+  aset.receive_data( 0ul, std::move( rw ) );
+  aset.write( sink );
+  BOOST_REQUIRE( sink.exists( "test2.dat" ) );
+}
+{
+  std::string buf1, buf2;
+  sink.read( "test1.dat", buf1 );
+  sink.read( "test2.dat", buf2 );
+  BOOST_CHECK_EQUAL( buf1, buf2 );
+}
+{
+  std::unique_ptr< output_test_suite::output_test_row > rw( new output_test_suite::output_test_row );
+  rw->buffer = "0 1.1";
+  std::unique_ptr< observable::output_row_datum > dtm( new observable::output_row_datum( std::move( rw ), 0ul ) );
+  output_test_suite::base_output_datum_test( std::move( dtm ), 4 );
+}
+!!!471728.cpp!!!	base_output_dataset_test(in data : output_dataset) : void
+std::stringstream store;
+std::string emptr_str;
+std::string output;
+const std::string label{ data->label() };
+const std::string title{ data->title() };
+{
+  const std::string test_title{ "Something or other." };
+  data->set_title( emptr_str );
+  BOOST_CHECK_EQUAL( data->title(), emptr_str );
+
+  data->set_title( test_title );
+  BOOST_CHECK_EQUAL( data->title(), test_title );
+
+  data->set_title( title );
+  BOOST_CHECK_EQUAL( data->title(), title );
+
+  // Output
+  observable::memory_sink sink;
+  data->write( sink );
+  sink.read( data->label(), output );
+ 
+  boost::archive::text_oarchive oa( store );
+  oa << data; 
+}
+{
+  std::unique_ptr< observable::output_dataset > data2;
+  boost::archive::text_iarchive ia( store );
+  ia >> data2; 
+  BOOST_CHECK_EQUAL( data2->label(), label );
+  BOOST_CHECK_EQUAL( data2->title(), title );
+  observable::memory_sink sink;
+  data2->write( sink );
+  std::string out;
+  sink.read( data->label(), out );
+  std::stringstream is1( output ), is2( out );
+  std::size_t count = 0;
+  for( std::string s1, s2; std::getline( is1, s1 ) and std::getline( is2, s2 ); )
+  {
+    ++count;
+    if( count == 1 )
+    {
+      continue;
+    }
+    // std::cout << "[" << s1 << "][" << s2 << "]\n";
+    BOOST_CHECK_EQUAL( s1, s2 );
+  }
+}
+!!!484912.cpp!!!	output_series_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( not std::is_default_constructible< observable::output_series >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< observable::output_series >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< observable::output_series >::type{} );
+  BOOST_CHECK( not ( std::is_assignable< observable::output_series, observable::output_series >::type{} ) );
+  BOOST_CHECK( std::has_virtual_destructor< observable::output_series >::type{} );
+}
+// CTOR TESTS
+// ----------
+std::string emptr_str;
+const std::string test_label{ "result123123.dat"};
+const std::string test_title{ "Something or other 23453245." };
+{
+  observable::output_series aset( test_label, true );
+  BOOST_CHECK_EQUAL( aset.label(), test_label );
+  BOOST_CHECK_EQUAL( aset.title(), emptr_str );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK_EQUAL( aset.is_serial(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
+
+  aset.set_title( test_title );
+  BOOST_CHECK_EQUAL( aset.title(), test_title );
+  BOOST_CHECK_EQUAL( aset.size(), 0 );
+  BOOST_CHECK_EQUAL( aset.empty(), true );
+  BOOST_CHECK( aset.begin() == aset.end() );
+}
+{
+  // Output error if no entries
+  try
+  {
+    observable::output_series aset( test_label, true );
+    aset.do_header( std::cout );
+    BOOST_ERROR( "expected \"dsetcp.do_header( std::cout )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+}
+{
+  try
+  {
+    observable::output_series aset( test_label, true );
+    aset.do_series_body( std::cout );
+    BOOST_ERROR( "expected \"dsetcp.do_body( std::cout )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+}
+{
+  try
+  {
+    observable::output_series aset( test_label, false );
+    aset.do_array_body( std::cout );
+    BOOST_ERROR( "expected \"dsetcp.do_body( std::cout )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+}
+{
+  observable::memory_sink sink;
+  observable::output_series aset( test_label, true );
+  try
+  {
+    aset.write( sink );
+    BOOST_ERROR( "expected \"dsetcp.write( sink )\" exception not thrown" );
+  }
+  catch( std::runtime_error const& err )
+  {
+    const std::string msg( err.what() );
+    //std::cout << msg << "\n";
+    BOOST_CHECK( msg.find( "Can not write output with no fields defined" ) < msg.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+}
+{
+  std::unique_ptr< utility::estimate_array > arr( new utility::estimate_array( 2 ) );
+  arr->append( { 0.0, 0.1 } );
+  arr->append( { 0.1, 0.2 } );
+  arr->append( { 0.2, 0.3 } );
+  std::unique_ptr< observable::output_series > aset( new observable::output_series( test_label, true ) );
+  aset->push_back_field( std::move( std::unique_ptr< observable::output_field >( new observable::index_output( "INDEX", "ORDINAL" ) ) ) );
+  aset->push_back_field( std::move( std::unique_ptr< observable::output_field >( new observable::mean_output( "MEAN", "VALUE" ) ) ) );
+  aset->receive_data( 0ul, std::move( arr ) );
+  output_test_suite::base_output_dataset_test( std::move( aset ) );
+}
+{
+  std::unique_ptr< utility::estimate_array > arr( new utility::estimate_array( 2 ) );
+  arr->append( { 0.0, 0.1 } );
+  arr->append( { 0.1, 0.2 } );
+  arr->append( { 0.2, 0.3 } );
+  std::unique_ptr< observable::output_series > aset( new observable::output_series( test_label, false ) );
+  aset->push_back_field( std::move( std::unique_ptr< observable::output_field >( new observable::index_output( "INDEX", "ORDINAL" ) ) ) );
+  aset->push_back_field( std::move( std::unique_ptr< observable::output_field >( new observable::mean_output( "MEAN", "VALUE" ) ) ) );
+  aset->receive_data( 0ul, std::move( arr ) );
+  output_test_suite::base_output_dataset_test( std::move( aset ) );
+}
+!!!2653616.cpp!!!	output_text_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( not std::is_default_constructible< observable::output_text >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< observable::output_text >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< observable::output_text >::type{} );
+  BOOST_CHECK( not ( std::is_assignable< observable::output_text, observable::output_text >::type{} ) );
+  BOOST_CHECK( std::has_virtual_destructor< observable::output_text >::type{} );
+}
+// CTOR TESTS
+// ----------
+std::string emptr_str;
+const std::string test_label{ "result123123.dat"};
+const std::string test_title{ "Something or other 23453245." };
+const std::string test_fields{ "INDEX PMEAN" };
+const std::string test_units{ "ORDINAL VALUE" };
+{
+  observable::output_text aset( test_label, true );
+  BOOST_CHECK_EQUAL( aset.label(), test_label );
+  BOOST_CHECK_EQUAL( aset.title(), emptr_str );
+  aset.set_title( test_title );
+  BOOST_CHECK_EQUAL( aset.title(), test_title );
+  aset.set_field_labels( test_fields );
+  aset.set_units( test_units );
+  BOOST_CHECK_EQUAL( aset.is_serial(), true );
+
+  aset.set_title( test_title );
+  BOOST_CHECK_EQUAL( aset.title(), test_title );
+}
+{
+  // Output error if no entries
+  try
+  {
+    std::stringstream os;
+    observable::output_text aset( test_label, true );
+    aset.set_title( test_title );
+    aset.set_field_labels( test_fields );
+    aset.set_units( test_units );
+    std::string buf{ "0 23.4" };
+    aset.receive_data( buf );
+    aset.do_header( os );
+    BOOST_CHECK_EQUAL( "# TITLE: \"Something or other 23453245.\" \n# FIELDS: INDEX PMEAN \n# UNITS: ORDINAL VALUE \n", os.str() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+}
+{
+  observable::memory_sink sink;
+  observable::output_text aset( test_label, true );
+  aset.set_title( test_title );
+  aset.set_field_labels( test_fields );
+  aset.set_units( test_units );
+  std::string buf{ "0 23.4" };
+  aset.receive_data( buf );
+  try
+  {
+    aset.write( sink );
+    std::string out;
+    sink.read( test_label, out );
+    const std::string canon( "# TITLE: \"Something or other 23453245.\" \n# FIELDS: INDEX PMEAN \n# UNITS: ORDINAL VALUE " );
+    BOOST_CHECK( out.find( canon ) < out.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+}
+{
+  std::unique_ptr< observable::output_text > aset( new observable::output_text( test_label, true ) );
+  aset->set_title( test_title );
+  aset->set_field_labels( test_fields );
+  aset->set_units( test_units );
+  std::string buf{ "0 23.4" };
+  aset->receive_data( buf );
+  output_test_suite::base_output_dataset_test( std::move( aset ) );
+}
+{
+  std::unique_ptr< observable::output_text > aset( new observable::output_text( test_label, false ) );
+  aset->set_title( test_title );
+  aset->set_field_labels( test_fields );
+  aset->set_units( test_units );
+  std::string buf{ "0 23.4" };
+  aset->receive_data( buf );
+  output_test_suite::base_output_dataset_test( std::move( aset ) );
+}
+!!!2662832.cpp!!!	output_rows_test() : void
+{
+  // Static Lifetime method tests
+  BOOST_CHECK( not std::is_default_constructible< observable::output_row >::type{} );
+  BOOST_CHECK( not std::is_copy_constructible< observable::output_row >::type{} );
+  BOOST_CHECK( not std::is_move_constructible< observable::output_row >::type{} );
+  BOOST_CHECK( not ( std::is_assignable< observable::output_row, observable::output_row >::type{} ) );
+  BOOST_CHECK( std::has_virtual_destructor< observable::output_row >::type{} );
+}
+// CTOR TESTS
+// ----------
+std::string emptr_str;
+const std::string test_label{ "result123123.dat"};
+const std::string test_title{ "Something or other 23453245." };
+{
+  observable::output_rows aset( test_label, true );
+  BOOST_CHECK_EQUAL( aset.label(), test_label );
+  BOOST_CHECK_EQUAL( aset.title(), emptr_str );
+  aset.set_title( test_title );
+  BOOST_CHECK_EQUAL( aset.title(), test_title );
+  BOOST_CHECK_EQUAL( aset.is_serial(), true );
+
+  aset.set_title( test_title );
+  BOOST_CHECK_EQUAL( aset.title(), test_title );
+}
+{
+  observable::memory_sink sink;
+  observable::output_rows aset( test_label, true );
+  aset.set_title( test_title );
+  std::unique_ptr< output_test_suite::output_test_row > rw( new output_test_suite::output_test_row );
+  rw->buffer = "0 1.1";
+  aset.receive_data( 0ul, std::move( rw ) );
+  try
+  {
+    aset.write( sink );
+    std::string out;
+    sink.read( test_label, out );
+    const std::string canon( "# TITLE: \"Something or other 23453245.\" \n# FIELDS: INDEX MEAN\n# UNITS: ORDINAL RATE" );
+    //std::cout << "\"" << out << "\"\n";
+    BOOST_CHECK( out.find( canon ) < out.size() );
+  }
+  catch( std::exception const& err )
+  {
+    BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
+  }
+}
+{
+  std::unique_ptr< observable::output_rows > aset( new observable::output_rows( test_label, true ) );
+  aset->set_title( test_title );
+  std::unique_ptr< output_test_suite::output_test_row > rw( new output_test_suite::output_test_row );
+  rw->buffer = "0 1.1";
+  aset->receive_data( 0ul, std::move( rw ) );
+  output_test_suite::base_output_dataset_test( std::move( aset ) );
+}
+{
+  std::unique_ptr< observable::output_rows > aset( new observable::output_rows( test_label, false ) );
+  aset->set_title( test_title );
+  std::unique_ptr< output_test_suite::output_test_row > rw( new output_test_suite::output_test_row );
+  rw->buffer = "0 1.1";
+  aset->receive_data( 0ul, std::move( rw ) );
+  output_test_suite::base_output_dataset_test( std::move( aset ) );
+}
 !!!512304.cpp!!!	test_archive_file() : void
 const std::string paxpath( "myar.pax" );
 const std::string zippath( "myar.zip" );
