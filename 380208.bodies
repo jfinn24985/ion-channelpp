@@ -22,7 +22,23 @@ return tmp;
 const std::string label( "acceptance.dat" );
 if( not this->data_.empty() )
 {
-  if( not sink.has_dataset( label ) )
+  // LOG OUTPUT
+  // ----------
+  {
+    const static boost::format title_str( " %14s %10s %10s %10s %10s" );
+    out << "Trial occurence data since last report.\n";
+    out << boost::format( title_str ) % "Trial" % "Accept.av" % "Accept.var" % "Trial.av" % "Trial.var" << "\n";
+    const static boost::format format_str( " %14s %10.8f %10.8f %10.8f %10.8f" );
+    for( auto const& entry : this->data_ )
+    {
+      std::stringstream hashval;
+      hashval << entry.first;
+      out << boost::format( format_str ) % hashval.str() % entry.second.mean( 0 ) % entry.second.variance( 0 ) % entry.second.mean( 1 ) % entry.second.variance( 1 ) << "\n";
+    }
+  }
+  // SAVED OUTPUT
+  // ------------
+  if( not this->locked_ )
   {
     // need to give a data set definition
     std::unique_ptr< observable::output_series >definition{ new observable::output_series( label, true ) };
@@ -46,7 +62,12 @@ if( not this->data_.empty() )
       std::unique_ptr< observable::mean_variance_output > field{ new observable::mean_variance_output( "Trial.mean Trial.var", "Rate Rate2" ) };
       definition->push_back_field( std::move( field ) );
     }
-    sink.add_dataset( std::move( definition ) );
+    if( not sink.has_dataset( label ) )
+    {
+      sink.add_dataset( std::move( definition ) );
+    }
+    // else
+    //  sink.replace_dataset( std::move( definition ) );
     this->locked_ = true; // Can not add any new trials.
   }
   // CHECK ALL COUNTS ARE EQUAL
@@ -84,7 +105,6 @@ for( auto & entry : this->dictionary_ )
   // iter->second.second : attempt chance
   if( this->data_.end() == iter )
   {
-    UTILITY_REQUIRE( not this->locked_, "Attempt to extend acceptance sampler after defining the first report.\n\n** Increase reporting interval or trial probability. **\n" );
     iter = this->data_.insert( std::make_pair( entry.first, utility::estimate_array{ 2ul } ) ).first;
     // for late added estimaters we need to increase their
     // counter
@@ -111,12 +131,13 @@ for( auto & entry : this->dictionary_ )
 // reset total count
 this->total_ = 0ul;
 !!!718000.cpp!!!	on_trial_end(in trial : change_set) : void
-++this->total_;
 auto iter = this->dictionary_.find( trial.id() );
 if( this->dictionary_.end() == iter )
 {
+  UTILITY_REQUIRE( not this->locked_, "Attempt to extend acceptance sampler after defining the first report.\n\n** Increase reporting interval or trial probability. **\n" );
   iter = this->dictionary_.insert( std::pair< particle::change_hash, std::pair< std::size_t, std::size_t > >( trial.id(), { 0ul, 0ul } ) ).first;
 }
+++this->total_;
 ++(iter->second.second);
 if (trial.accept())
 {
@@ -126,6 +147,7 @@ if (trial.accept())
 this->data_.clear();
 this->dictionary_.clear();
 this->total_ = 0ul;
+this->locked_ = false;
 !!!719408.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
 wr[ix].add_entry(core::strngs::fstype(), this->type_label_());
 

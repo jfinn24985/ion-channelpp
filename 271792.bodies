@@ -34,14 +34,21 @@ UTILITY_REQUIRE( not this->data_.empty(), "Can not write output with no data def
 for( std::size_t rank = 0; rank != this->data_.size(); ++rank )
 {
   auto const& arr = this->data_[ rank ];
-  for( std::size_t idx = 0; idx != this->entries_.size() - 1; ++idx )
+  for( std::size_t idx{ 0 }, fld{ 0 }; idx != arr.size();  )
   {
-    this->entries_[ idx ].write( os, arr, 0, rank );
-    os << " ";
-  }
-  for( std::size_t idx = 0; idx != arr.size(); ++idx )
-  {
-    this->entries_.back().write( os, arr, idx, rank );
+    this->entries_[ fld ].write( os, arr, idx, rank );
+    if( this->entries_[ fld ].consume_value() )
+    {
+      ++idx;
+    }
+    else
+    {
+      UTILITY_REQUIRE( fld != this->entries_.size(), "Last field must consume values" );
+    }
+    if( fld != this->entries_.size() - 1 )
+    {
+      ++fld;
+    }
     os << " ";
   }
   os << "\n";

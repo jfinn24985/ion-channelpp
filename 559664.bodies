@@ -366,16 +366,16 @@ std::stringstream store;
   BOOST_REQUIRE( pvar != nullptr );
 
   std::vector< particle::change_hash > dummy_trials;
-  dummy_trials.push_back( { 0, 1, 1, 0 } ); // A 1 0
-  dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 0 1
-  dummy_trials.push_back( { 0, 1, 1, 1 } ); // C 1 0
-  dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 0 0
-  dummy_trials.push_back( { 0, 1, 1, 1 } ); // C 1 1
-  dummy_trials.push_back( { 0, 1, 1, 0 } ); // A 0 0
-  dummy_trials.push_back( { 0, 1, 1, 0 } ); // A 1 0
-  dummy_trials.push_back( { 0, 1, 1, 1 } ); // C 0 1
-  dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 1 0
-  dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 0 0
+  dummy_trials.push_back( { 0, 1, 1, 0 } ); // A 1
+  dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 0
+  dummy_trials.push_back( { 0, 1, 1, 1 } ); // C 1
+  dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 0
+  dummy_trials.push_back( { 0, 1, 1, 1 } ); // C 1
+  dummy_trials.push_back( { 0, 1, 1, 0 } ); // A 0
+  dummy_trials.push_back( { 0, 1, 1, 0 } ); // A 1
+  dummy_trials.push_back( { 0, 1, 1, 1 } ); // C 0
+  dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 1
+  dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 0
   // Out first set of dummy trials
   {
     typedef boost::tuples::tuple< particle::change_hash, std::size_t, std::size_t, double, double > result_t;
@@ -407,8 +407,10 @@ std::stringstream store;
     {
       BOOST_REQUIRE( pvar->has_datum( boost::tuples::get< 0 >( res ) ) );
       BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).mean( 0 ), boost::tuples::get< 3 >( res ), 0.00000001 );
+      BOOST_CHECK_EQUAL( pvar->get_datum( boost::tuples::get< 0 >( res ) ).variance( 0 ), 0.0 );
       BOOST_CHECK_EQUAL( pvar->get_datum( boost::tuples::get< 0 >( res ) ).count(), 1ul );
       BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).mean( 1 ), boost::tuples::get< 4 >( res ), 0.00000001 );
+      BOOST_CHECK_EQUAL( pvar->get_datum( boost::tuples::get< 0 >( res ) ).variance( 1 ), 0.0 );
     }
   }
   {
@@ -423,11 +425,21 @@ std::stringstream store;
   }
   // Second set of dummy trials
   {
-    typedef boost::tuples::tuple< particle::change_hash, std::size_t, std::size_t, double, double, double, double > result_t;
+    typedef boost::tuples::tuple< particle::change_hash, std::size_t, std::size_t, double, double > result_t;
     std::vector< result_t > dummy_results;
-    dummy_results.push_back( result_t( { 0, 1, 1, 0 }, 0, 3, 0.33333333333333, 0.2222222222222, 0.3, 0.0 ) );
-    dummy_results.push_back( result_t( { 1, 1, 1, 0 }, 1, 4, 0.25, 0.0, 0.4, 0.0 ) );
-    dummy_results.push_back( result_t( { 0, 1, 1, 1 }, 2, 3, 0.66666666666667, 0.0, 0.3, 0.0 ) );
+    dummy_results.push_back( result_t( { 0, 1, 1, 0 }, 0, 3, 0, 0.3 ) );
+    dummy_results.push_back( result_t( { 1, 1, 1, 0 }, 1, 4, 0.25, 0.4 ) );
+    dummy_results.push_back( result_t( { 0, 1, 1, 1 }, 2, 3, 0.66666666666667, 0.3 ) );
+    // A 0
+    // B 1
+    // C 0
+    // B 0
+    // C 1
+    // A 0
+    // A 0
+    // C 1
+    // B 0
+    // B 0
 
     std::size_t counter = 0;
     for( auto id : dummy_trials )
@@ -452,75 +464,15 @@ std::stringstream store;
     {
       BOOST_REQUIRE( pvar->has_datum( boost::tuples::get< 0 >( res ) ) );
       BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).mean( 0 ), boost::tuples::get< 3 >( res ), 0.00000001 );
-      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).variance( 0 ), boost::tuples::get< 4 >( res ), 0.00000001 );
-      BOOST_CHECK_EQUAL( pvar->get_datum( boost::tuples::get< 0 >( res ) ).count(), 2ul );
-      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).mean( 1 ), boost::tuples::get< 5 >( res ), 0.00000001 );
-      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).variance( 1 ), boost::tuples::get< 6 >( res ), 0.00000001 );
+      BOOST_CHECK_EQUAL( pvar->get_datum( boost::tuples::get< 0 >( res ) ).variance( 0 ), 0.0 );
+      BOOST_CHECK_EQUAL( pvar->get_datum( boost::tuples::get< 0 >( res ) ).count(), 1ul );
+      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).mean( 1 ), boost::tuples::get< 4 >( res ), 0.00000001 );
+      BOOST_CHECK_EQUAL( pvar->get_datum( boost::tuples::get< 0 >( res ) ).variance( 1 ), 0.0 );
     }
   }
   {
+    std::string canon_log = "          Trial  Accept.av Accept.var   Trial.av  Trial.var\n   (0, 1, 1, 0) 0.00000000 0.00000000 0.30000000 0.00000000\n   (0, 1, 1, 1) 0.66666667 0.00000000 0.30000000 0.00000000\n   (1, 1, 1, 0) 0.25000000 0.00000000 0.40000000 0.00000000";
     std::stringstream out;
-    var->on_report( out, sink );
-    // std::cout << out.str() << "\n";
-    sink.write_dataset();
-    BOOST_REQUIRE( sink.exists( "acceptance.dat" ) );
-    // std::string buf;
-    // sink.read( "acceptance.dat", buf );
-    // std::cout << buf << "\n";
-  }
-  // Third set of dummy trials with new id keys
-  //0 dummy_trials.push_back( { 0, 1, 1, 0 } ); // A 1
-  dummy_trials[ 1 ] = { 1, 1, 1, 1 };           // D 0
-  //2 dummy_trials.push_back( { 0, 1, 1, 1 } ); // C 1
-  //3 dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 0
-  //4 dummy_trials.push_back( { 0, 1, 1, 1 } ); // C 1
-  dummy_trials[ 5 ] = { 1, 1, 1, 1 };           // D 0
-  //6 dummy_trials.push_back( { 0, 1, 1, 0 } ); // A 1
-  dummy_trials[ 7 ] = { 1, 1, 1, 1 };            // D 0
-  //8 dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 1
-  //9 dummy_trials.push_back( { 1, 1, 1, 0 } ); // B 0
-  // Out first set of dummy trials
-  {
-    typedef boost::tuples::tuple< particle::change_hash, std::size_t, std::size_t, double, double, double, double > result_t;
-    std::vector< result_t > dummy_results;
-    dummy_results.push_back( result_t( { 0, 1, 1, 0 }, 2, 2, 0.55555555555555558, 0.2592592592592593, 8.0/30.0, 0.00333333333333333 ) );
-    dummy_results.push_back( result_t( { 1, 1, 1, 0 }, 1, 3, 0.27777777777777778, 0.002314814814814815, 11.0/30.0, 0.00333333333333333 ) );
-    dummy_results.push_back( result_t( { 0, 1, 1, 1 }, 2, 2, 0.77777777777777779, 0.03703703703703704, 8.0/30.0, 0.00333333333333333 ) );
-    dummy_results.push_back( result_t( { 1, 1, 1, 1 }, 0, 3, 0.0, 0.0, 0.1, 0.03 ) );
-
-    std::size_t counter = 0;
-    for( auto id : dummy_trials )
-    {
-      particle::change_set tmp;
-      tmp.id( id );
-      if( ( counter % 2 ) == 0 )
-      {
-        tmp.set_accept( true );
-      }
-      var->on_trial_end( tmp );
-      ++counter;
-    }
-    for( auto const& res : dummy_results )
-    {
-      BOOST_REQUIRE( pvar->has_sample( boost::tuples::get< 0 >( res ) ) );
-      BOOST_CHECK_EQUAL( pvar->get_sample( boost::tuples::get< 0 >( res ) ).first, boost::tuples::get< 1 >( res ) );
-      BOOST_CHECK_EQUAL( pvar->get_sample( boost::tuples::get< 0 >( res ) ).second, boost::tuples::get< 2 >( res ) );
-    }
-    var->on_sample( *pman, *gman, *eman );
-    for( auto const& res : dummy_results )
-    {
-      BOOST_REQUIRE( pvar->has_datum( boost::tuples::get< 0 >( res ) ) );
-      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).mean( 0 ), boost::tuples::get< 3 >( res ), 0.00000001 );
-      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).variance( 0 ), boost::tuples::get< 4 >( res ), 0.00000001 );
-      BOOST_CHECK_EQUAL( pvar->get_datum( boost::tuples::get< 0 >( res ) ).count(), 3ul );
-      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).mean( 1 ), boost::tuples::get< 5 >( res ), 0.00000001 );
-      BOOST_CHECK_CLOSE( pvar->get_datum( boost::tuples::get< 0 >( res ) ).variance( 1 ), boost::tuples::get< 6 >( res ), 0.00000001 );
-    }
-  }
-  {
-    std::stringstream out;
-    std::string canon_log = "          Trial  Accept.av Accept.var   Trial.av  Trial.var\n   (0, 1, 1, 0) 0.55555556 0.25925926 0.26666667 0.00333333\n   (0, 1, 1, 1) 0.77777778 0.03703704 0.26666667 0.00333333\n   (1, 1, 1, 0) 0.27777778 0.00231481 0.36666667 0.00333333\n   (1, 1, 1, 1) 0.00000000 0.00000000 0.10000000 0.03000000";
-    std::string canon_rep = "\n# TITLE: \"Trial acceptance and rate data.\" \n# FIELDS: TRIAL ACCEPT.MEAN ACCEPT.VAR ATTEMPT.MEAN ATTEMPT.VARIANCE \n# UNITS: CHANGE_HASH RATE RATE RATE RATE \n(0, 1, 1, 0) 0.555556 0.259259 0.266667 0.00333333 \n(0, 1, 1, 1) 0.777778 0.037037 0.266667 0.00333333 \n(1, 1, 1, 0) 0.277778 0.00231481 0.366667 0.00333333 \n(1, 1, 1, 1) 0 0 0.1 0.03 ";
     var->on_report( out, sink );
     //std::cout << out.str() << "\n";
     BOOST_CHECK_LT( out.str().find( canon_log ), out.str().size() );
@@ -528,8 +480,31 @@ std::stringstream store;
     BOOST_REQUIRE( sink.exists( "acceptance.dat" ) );
     std::string buf;
     sink.read( "acceptance.dat", buf );
-    BOOST_CHECK_LT( buf.find( canon_rep ), buf.size() );
     //std::cout << buf << "\n";
+
+    std::string canon_rep = "# TITLE: \"Trial acceptance and rate data.\" \n# FIELDS: Trial Accept.mean Accept.var Trial.mean Trial.var \n# UNITS: ID Rate Rate2 Rate Rate2 \n(0, 1, 1, 0) 0.333333 0.222222 0.3 0 \n(0, 1, 1, 1) 0.666667 0 0.3 0 \n(1, 1, 1, 0) 0.25 0 0.4 0";
+    BOOST_CHECK_LT( buf.find( canon_rep ), buf.size() );
+  }
+  // Trial with new id key
+  {
+    particle::change_set tmp;
+    tmp.id( { 1, 1, 1, 1 } );
+    tmp.set_accept( true );
+    try
+    {
+      var->on_trial_end( tmp );
+      BOOST_ERROR( "expected \"var->on_trial_end( tmp )\" exception not thrown" );
+    }
+    catch( std::runtime_error const& err )
+    {
+      const std::string msg( err.what() );
+      //std::cout << msg << "\n";
+      BOOST_CHECK( msg.find( "Attempt to extend acceptance sampler after defining the first report.\n\n** Increase reporting interval or trial probability. **\n" ) < msg.size() );
+    }
+    catch( std::exception const& err )
+    {
+      BOOST_ERROR( std::string( "exception thrown by \"var->on_trial_end( tmp )\" was not expected type: " ) + err.what() );
+    }
   }
 }
 
@@ -723,14 +698,6 @@ const std::vector< std::string > filenames { { "d3df-CA.dat", "d3df-CO.dat", "d3
     std::stringstream out;
     var->on_report( out, sink );
     //std::cout << out.str() << "\n";
-    sink.write_dataset();
-    for( auto filename : filenames )
-    {
-      BOOST_REQUIRE( sink.exists( filename ) );
-    }
-    //std::string buf;
-    //sink.read( "specie-count.dat", buf );
-    //std::cout << buf << "\n";
   }
   // second sample and report
   var->on_sample( *pman, *gman, *eman );
@@ -738,9 +705,6 @@ const std::vector< std::string > filenames { { "d3df-CA.dat", "d3df-CO.dat", "d3
     std::stringstream out;
     var->on_report( out, sink );
     //std::cout << out.str() << "\n";
-    //std::string buf;
-    //sink.read( "specie-count.dat", buf );
-    //std::cout << buf << "\n";
   }
   // need to add/convert a particle
   {
@@ -771,36 +735,40 @@ const std::vector< std::string > filenames { { "d3df-CA.dat", "d3df-CO.dat", "d3
   {
     std::stringstream out;
     const std::string uuid_head { "# UUID:" };
-    const std::string label_head { "# FIELDS: X_MID Y_MID Z_MID PMEAN PVAR" };
-    const std::string unit_head { "# UNITS: ANGSTROM ANGSTROM ANGSTROM COUNT COUNT**2" };
+    const std::string label_head { "# FIELDS: XMID YMID ZMID P.mean P.var" };
+    const std::string unit_head { "# UNITS: ANGSTROM ANGSTROM ANGSTROM Rate Rate2" };
+    const std::string count_head { "# SAMPLE COUNT: 3" };
 
-    std::vector< std::string > canon_titles {
+    const std::vector< std::string > canon_titles {
       "# TITLE: \"3D density distribution histogram for specie CA\"",
       "# TITLE: \"3D density distribution histogram for specie CO\"",
       "# TITLE: \"3D density distribution histogram for specie OX\"",
       "# TITLE: \"3D density distribution histogram for specie Na\"",
       "# TITLE: \"3D density distribution histogram for specie Cl\""
     };
-    std::vector< std::string > interesting_rows { {
-        "3.000000 3.000000 1.000000   1.000000   0.000000",
-        "1.000000 1.000000 3.000000   1.000000   0.000000",
-        "3.000000 1.000000 3.000000   1.000000   0.000000",
-        "1.000000 1.000000 1.000000   0.666667   0.333333",
-        "1.000000 1.000000 1.000000   0.333333   0.333333"
+    const std::vector< std::string > interesting_rows { {
+        "3 3 1 1 0",
+        "1 1 3 1 0",
+        "3 1 3 1 0",
+        "1 1 1 0.666667 0.333333",
+        "1 1 1 0.333333 0.333333"
       }
     };
 
     var->on_report( out, sink );
+    sink.write_dataset();
     //std::cout << out.str() << "\n";
     // should be no output on "out"
     BOOST_CHECK_EQUAL( out.str().size(), 0 );
-    std::string buf;
     for( std::size_t idx = 0; idx != filenames.size(); ++idx )
     {
+      std::string buf;
+      BOOST_REQUIRE( sink.exists( filenames[ idx ] ) );
       sink.read( filenames[ idx ], buf );
       BOOST_CHECK_LT( buf.find( uuid_head ), buf.size() );
       BOOST_CHECK_LT( buf.find( label_head ), buf.size() );
       BOOST_CHECK_LT( buf.find( unit_head ), buf.size() );
+      BOOST_CHECK_LT( buf.find( count_head ), buf.size() );
       BOOST_CHECK_LT( buf.find( canon_titles[ idx ] ), buf.size() );
       BOOST_CHECK_LT( buf.find( interesting_rows[ idx ] ), buf.size() );
       //std::cout << buf << "\n";
@@ -847,21 +815,10 @@ const std::vector< std::string > filenames { { "gz-CA.dat", "gz-CO.dat", "gz-OX.
   // first sample and report
   var->on_sample( *pman, *gman, *eman );
   {
-    for( auto filename : filenames )
-    {
-      BOOST_REQUIRE( not sink.exists( filename ) );
-    }
     std::stringstream out;
     var->on_report( out, sink );
-    sink.write_dataset();
     //std::cout << out.str() << "\n";
-    for( auto filename : filenames )
-    {
-      BOOST_REQUIRE( sink.exists( filename ) );
-    }
-    //std::string buf;
-    //sink.read( "specie-count.dat", buf );
-    //std::cout << buf << "\n";
+    BOOST_CHECK_EQUAL( out.str().size(), 0 );
   }
   // second sample and report
   var->on_sample( *pman, *gman, *eman );
@@ -869,9 +826,7 @@ const std::vector< std::string > filenames { { "gz-CA.dat", "gz-CO.dat", "gz-OX.
     std::stringstream out;
     var->on_report( out, sink );
     //std::cout << out.str() << "\n";
-    //std::string buf;
-    //sink.read( "specie-count.dat", buf );
-    //std::cout << buf << "\n";
+    BOOST_CHECK_EQUAL( out.str().size(), 0 );
   }
   // need to add/convert a particle
   {
@@ -902,9 +857,10 @@ const std::vector< std::string > filenames { { "gz-CA.dat", "gz-CO.dat", "gz-OX.
   {
     std::stringstream out;
     const std::string uuid_head { "# UUID:" };
-    const std::string label_head { "# FIELDS: ZMIN ZMAX ZMID PMEAN PVAR \n# UNITS: ANGSTROM ANGSTROM ANGSTROM COUNT COUNT**2" };
+    const std::string label_head { "# FIELDS: ZMIN ZMID ZMAX P.mean P.var \n# UNITS: ANGSTROM ANGSTROM ANGSTROM Rate Rate2" };
+    const std::string count_head { "# SAMPLE COUNT: 3" };
 
-    std::vector< std::string > canon_titles { {
+    const std::vector< std::string > canon_titles { {
         "# TITLE: \"Z-axial distribution histogram for specie 0\"",
         "# TITLE: \"Z-axial distribution histogram for specie 1\"",
         "# TITLE: \"Z-axial distribution histogram for specie 2\"",
@@ -912,12 +868,12 @@ const std::vector< std::string > filenames { { "gz-CA.dat", "gz-CO.dat", "gz-OX.
         "# TITLE: \"Z-axial distribution histogram for specie 4\""
       }
     };
-    std::vector< std::string > interesting_rows { {
-        "0 0.5 0.25 1 0",
-        "2 2.5 2.25 1 0",
-        "2 2.5 2.25 1 0",
-        "0 0.5 0.25 1.66667 0.333333",
-        "0 0.5 0.25 1.33333 0.333333"
+    const std::vector< std::string > interesting_rows { {
+        "0 0.25 0.5 1 0",
+        "2 2.25 2.5 1 0",
+        "2 2.25 2.5 1 0",
+        "0 0.25 0.5 1.66667 0.333333",
+        "0 0.25 0.5 1.33333 0.333333"
       }
     };
 
@@ -925,12 +881,19 @@ const std::vector< std::string > filenames { { "gz-CA.dat", "gz-CO.dat", "gz-OX.
     //std::cout << out.str() << "\n";
     // should be no output on "out"
     BOOST_CHECK_EQUAL( out.str().size(), 0 );
-    std::string buf;
+    for( auto filename : filenames )
+    {
+      BOOST_REQUIRE( not sink.exists( filename ) );
+    }
+    sink.write_dataset();
     for( std::size_t idx = 0; idx != filenames.size(); ++idx )
     {
+      std::string buf;
+      BOOST_REQUIRE( sink.exists( filenames[ idx ] ) );
       sink.read( filenames[ idx ], buf );
       BOOST_CHECK_LT( buf.find( uuid_head ), buf.size() );
       BOOST_CHECK_LT( buf.find( label_head ), buf.size() );
+      BOOST_CHECK_LT( buf.find( count_head ), buf.size() );
       BOOST_CHECK_LT( buf.find( canon_titles[ idx ] ), buf.size() );
       BOOST_CHECK_LT( buf.find( interesting_rows[ idx ] ), buf.size() );
       //std::cout << buf << "\n";
@@ -991,15 +954,8 @@ const std::string filename = "metropolis.dat";
     }
     // first sample and report
     var->on_sample( *pman, *gman, *eman );
-    BOOST_REQUIRE( not sink.exists( filename ) );
     std::stringstream out;
     var->on_report( out, sink );
-    sink.write_dataset();
-    //std::cout << out.str() << "\n";
-    BOOST_REQUIRE( sink.exists( filename ) );
-    //std::string buf;
-    //sink.read( filename, buf );
-    //std::cout << buf << "\n";
   }
   // second sample and report
   {
@@ -1016,10 +972,6 @@ const std::string filename = "metropolis.dat";
     {
       std::stringstream out;
       var->on_report( out, sink );
-      //std::cout << out.str() << "\n";
-      //std::string buf;
-      //sink.read( "specie-count.dat", buf );
-      //std::cout << buf << "\n";
     }
   }
   // need to add/convert a particle
@@ -1058,38 +1010,42 @@ const std::string filename = "metropolis.dat";
     std::stringstream out;
     const std::string canon_out { "metropolis : P_mean       = 0.49397 var = 0.132581\n           : -log(P_mean) = 0.705281 var = -2.02056\n----------------------------------------------------------------------" };
     const std::string uuid_head { "# UUID:" };
-    const std::string label_head { "# FIELDS: EMIN EMAX EMID PMEAN PVAR" };
+    const std::string count_head { "# SAMPLE COUNT: 3" };
+    const std::string label_head { "# FIELDS: EMIN EMID EMAX P.mean P.var" };
 
     std::string canon_title { "# TITLE: \"Energy distribution histogram\"" };
     std::vector< std::string > interesting_rows {
-      "0 0.01 0.005 0.333333 0.333333",
-      "0.01 0.02 0.015 0.333333 0.333333",
-      "0.02 0.03 0.025 0.333333 0.333333",
-      "0.11 0.12 0.115 0.333333 0.333333",
-      "0.13 0.14 0.135 0.333333 0.333333",
-      "0.16 0.17 0.165 0.333333 0.333333",
-      "0.23 0.24 0.235 0.333333 0.333333",
-      "0.27 0.28 0.275 0.333333 0.333333",
-      "0.31 0.32 0.315 0.333333 0.333333",
-      "0.37 0.38 0.375 0.333333 0.333333",
-      "0.4 0.41 0.405 0.333333 0.333333",
-      "0.44 0.45 0.445 0.333333 0.333333",
-      "0.51 0.52 0.515 0.333333 0.333333",
-      "0.54 0.55 0.545 0.333333 0.333333",
-      "0.58 0.59 0.585 0.333333 0.333333",
-      "0.89 0.9 0.895 0.333333 0.333333",
-      "0.9 0.91 0.905 0.333333 0.333333",
-      "0.91 0.92 0.915 0.333333 0.333333",
-      "1 1.01 1.005 1.33333 0.333333"
+      "0 0.005 0.01 0.333333 0.333333",
+      "0.01 0.015 0.02 0.333333 0.333333",
+      "0.02 0.025 0.03 0.333333 0.333333",
+      "0.11 0.115 0.12 0.333333 0.333333",
+      "0.13 0.135 0.14 0.333333 0.333333",
+      "0.16 0.165 0.17 0.333333 0.333333",
+      "0.23 0.235 0.24 0.333333 0.333333",
+      "0.27 0.275 0.28 0.333333 0.333333",
+      "0.31 0.315 0.32 0.333333 0.333333",
+      "0.37 0.375 0.38 0.333333 0.333333",
+      "0.4 0.405 0.41 0.333333 0.333333",
+      "0.44 0.445 0.45 0.333333 0.333333",
+      "0.51 0.515 0.52 0.333333 0.333333",
+      "0.54 0.545 0.55 0.333333 0.333333",
+      "0.58 0.585 0.59 0.333333 0.333333",
+      "0.89 0.895 0.9 0.333333 0.333333",
+      "0.9 0.905 0.91 0.333333 0.333333",
+      "0.91 0.915 0.92 0.333333 0.333333",
+      "1 1.005 1.01 1.33333 0.333333"
     };
     var->on_report( out, sink );
+    BOOST_REQUIRE( not sink.exists( filename ) );
+    sink.write_dataset();
     //std::cout << out.str() << "\n";
-    // should be no output on "out"
+    BOOST_REQUIRE( sink.exists( filename ) );
     BOOST_CHECK_LT( out.str().find( canon_out ), out.str().size() );
     std::string buf; 
     sink.read( filename, buf );
     BOOST_CHECK_LT( buf.find( uuid_head ), buf.size() );
     BOOST_CHECK_LT( buf.find( label_head ), buf.size() );
+    BOOST_CHECK_LT( buf.find( count_head ), buf.size() );
     BOOST_CHECK_LT( buf.find( canon_title ), buf.size() );
     for( auto interesting_row : interesting_rows )
     {
@@ -1150,22 +1106,10 @@ const std::vector< std::string > filenames { "rdf-CA-CA.dat", "rdf-CA-CO.dat", "
   // first sample and report
   var->on_sample( *pman, *gman, *eman );
   {
-    for( auto filename : filenames )
-    {
-      BOOST_REQUIRE( not sink.exists( filename ) );
-    }
     std::stringstream out;
     var->on_report( out, sink );
-    sink.write_dataset();
     // nothing written to output
     BOOST_REQUIRE_EQUAL( out.str().size(), 0 );
-    for( auto filename : filenames )
-    {
-      BOOST_REQUIRE( sink.exists( filename ) );
-    }
-    //std::string buf;
-    //sink.read( "specie-count.dat", buf );
-    //std::cout << buf << "\n";
   }
   // second sample and report
   var->on_sample( *pman, *gman, *eman );
@@ -1202,7 +1146,9 @@ const std::vector< std::string > filenames { "rdf-CA-CA.dat", "rdf-CA-CO.dat", "
   {
     std::stringstream out;
     const std::string uuid_head { "# UUID:" };
-    const std::string label_head { "# FIELDS: RMIN RMAX RMID PMEAN PVAR \n# UNITS: ANGSTROM ANGSTROM ANGSTROM COUNT COUNT**2" };
+    const std::string label_head { "# FIELDS: RMIN RMID RMAX P.mean P.var" };
+    const std::string unit_head { "# UNITS: ANGSTROM ANGSTROM ANGSTROM Rate Rate2" };
+    const std::string count_head { "# SAMPLE COUNT: 3" };
 
     std::vector< std::string > canon_titles { 
         "# TITLE: \"Radial distribution histogram for species CA and CA\"",
@@ -1222,36 +1168,47 @@ const std::vector< std::string > filenames { "rdf-CA-CA.dat", "rdf-CA-CO.dat", "
         "# TITLE: \"Radial distribution histogram for species Cl and Cl\""
     };
     std::vector< std::string > interesting_rows { 
-        "0.22 0.72 0.47 0 0",
-        "3.23 3.73 3.48 1 0",
-        "2.73 3.23 2.98 1 0",
-        "2.73 3.23 2.98 0.666667 0.333333",
-        "2.81 3.31 3.06 0.333333 0.333333",
-        "0.24 0.74 0.49 0 0",
-        "1.74 2.24 1.99 1 0",
-        "1.74 2.24 1.99 0.666667 0.333333",
-        "1.82 2.32 2.07 0.333333 0.333333",
-        "0.24 0.74 0.49 0 0",
-        "2.74 3.24 2.99 0.666667 0.333333",
-        "2.82 3.32 3.07 0.333333 0.333333 \n3.32 3.82 3.57 1 0",
-        "1.74 2.24 1.99 0.666667 0.333333",
-        "1.82 2.32 2.07 1 0 \n2.32 2.82 2.57 0 0 \n2.82 3.32 3.07 1 0",
-        "1.9 2.4 2.15 0.333333 0.333333"
+        "0.22 0.47 0.72 0 0",
+        "3.23 3.48 3.73 1 0",
+        "2.73 2.98 3.23 1 0",
+        "2.73 2.98 3.23 0.666667 0.333333",
+        "2.81 3.06 3.31 0.333333 0.333333",
+        "0.24 0.49 0.74 0 0",
+        "1.74 1.99 2.24 1 0",
+        "1.74 1.99 2.24 0.666667 0.333333",
+        "1.82 2.07 2.32 0.333333 0.333333",
+        "0.24 0.49 0.74 0 0",
+        "2.74 2.99 3.24 0.666667 0.333333",
+        "2.82 3.07 3.32 0.333333 0.333333 \n3.32 3.57 3.82 1 0",
+        "1.74 1.99 2.24 0.666667 0.333333",
+        "1.82 2.07 2.32 1 0 \n2.32 2.57 2.82 0 0 \n2.82 3.07 3.32 1 0",
+        "1.9 2.15 2.4 0.333333 0.333333"
     };
     BOOST_CHECK_EQUAL( filenames.size(), canon_titles.size() );
     BOOST_CHECK_EQUAL( filenames.size(), interesting_rows.size() );
 
     var->on_report( out, sink );
     // should be no output on "out"
+    BOOST_REQUIRE_EQUAL( out.str().size(), 0 );
+    for( auto filename : filenames )
+    {
+      BOOST_REQUIRE( not sink.exists( filename ) );
+    }
+    sink.write_dataset();
+    for( auto filename : filenames )
+    {
+      BOOST_REQUIRE( sink.exists( filename ) );
+    }
     std::string buf;
     for( std::size_t idx = 0; idx != canon_titles.size(); ++idx )
     {
       sink.read( filenames[ idx ], buf );
-      // std::cout << buf << "\n";
       BOOST_CHECK_LT( buf.find( uuid_head ), buf.size() );
       BOOST_CHECK_LT( buf.find( label_head ), buf.size() );
+      BOOST_CHECK_LT( buf.find( unit_head ), buf.size() );
       BOOST_CHECK_LT( buf.find( canon_titles[ idx ] ), buf.size() );
       BOOST_CHECK_LT( buf.find( interesting_rows[ idx ] ), buf.size() );
+      //std::cout << buf << "\n";
     }
   }
 }
@@ -1306,15 +1263,8 @@ const std::vector< std::string > filenames { "rdf-CA-CA.dat", "rdf-CA-CO.dat", "
     }
   }
   {
-    BOOST_REQUIRE( not sink.exists( "specie-count.dat" ) );
     std::stringstream out;
     var->on_report( out, sink );
-    sink.write_dataset();
-    //std::cout << out.str() << "\n";
-    BOOST_REQUIRE( sink.exists( "specie-count.dat" ) );
-    //std::string buf;
-    //sink.read( "specie-count.dat", buf );
-    //std::cout << buf << "\n";
   }
   // second sample and report
   {
@@ -1329,10 +1279,6 @@ const std::vector< std::string > filenames { "rdf-CA-CA.dat", "rdf-CA-CO.dat", "
   {
     std::stringstream out;
     var->on_report( out, sink );
-    //std::cout << out.str() << "\n";
-    //std::string buf;
-    //sink.read( "specie-count.dat", buf );
-    //std::cout << buf << "\n";
   }
   // need to add/convert a particle
   {
@@ -1360,24 +1306,37 @@ const std::vector< std::string > filenames { "rdf-CA-CA.dat", "rdf-CA-CO.dat", "
 
     var->on_sample( *pman, *gman, *eman );
 
-    means[ 3 ] = 1.6666666666666667;
-    means[ 4 ] = 1.3333333333333333;
+    means[ 3 ] = 1;
+    means[ 4 ] = 2;
     for( std::size_t idx = 0; idx != pvar->size(); ++idx )
     {
       const std::size_t ispec = pvar->specie_key( idx );
       BOOST_CHECK_CLOSE( pvar->mean( idx ), means[ ispec ], 0.00000001 );
-      BOOST_CHECK_CLOSE( pvar->variance( idx ), 0.3333333333333333, 0.00000001 );
+      BOOST_CHECK_CLOSE( pvar->variance( idx ), 0.0, 0.00000001 );
     }
   }
   {
     std::stringstream out;
-    std::string canon_log = " SPC    <COUNT>        VAR       <[]>\n   3    1.66667     0.3333";
-    std::string canon_rep = "\n# TITLE: \"Time series specie counts\" \n# FIELDS: INDEX SPC[3]_MEAN SPC[3]_VAR SPC[4]_MEAN SPC[4]_VAR \n# UNITS: ORDINAL COUNT COUNT COUNT COUNT \n1 2 0 1 0 \n2 2 0 1 0 \n3 1.66667 0.333333 1.33333 0.333333 ";
+    const std::string canon_log_title = " SPC    <COUNT>        VAR       <[]>";
+    const std::string canon_log_s3 = "   3    1.00000     0.0000 13.2843142";
+    const std::string canon_log_s4 = "   4    2.00000     0.0000 26.5686284";
+    const std::string canon_title = "# TITLE: \"Time series specie counts.\"";
+    const std::string canon_labels = "# FIELDS: INDEX SAMPLES SPC SPC.VOL Count.mean Count.var";
+    const std::string canon_units = "# UNITS: ORDINAL ORDINAL INDEX ANGSTROM3 Rate Rate2";
+    const std::string canon_rep = "0 1 3 125 2 0  4 125 1 0  \n1 1 3 125 2 0  4 125 1 0  \n2 1 3 125 1 0  4 125 2 0";
     var->on_report( out, sink );
     //std::cout << out.str() << "\n";
-    BOOST_CHECK_LT( out.str().find( canon_log ), out.str().size() );
+    BOOST_CHECK_LT( out.str().find( canon_log_title ), out.str().size() );
+    BOOST_CHECK_LT( out.str().find( canon_log_s3 ), out.str().size() );
+    BOOST_CHECK_LT( out.str().find( canon_log_s4 ), out.str().size() );
+    BOOST_REQUIRE( not sink.exists( "specie-count.dat" ) );
+    sink.write_dataset();
+    BOOST_REQUIRE( sink.exists( "specie-count.dat" ) );
     std::string buf;
     sink.read( "specie-count.dat", buf );
+    BOOST_CHECK_LT( buf.find( canon_title ), buf.size() );
+    BOOST_CHECK_LT( buf.find( canon_labels ), buf.size() );
+    BOOST_CHECK_LT( buf.find( canon_units ), buf.size() );
     BOOST_CHECK_LT( buf.find( canon_rep ), buf.size() );
     //std::cout << buf << "\n";
   }
