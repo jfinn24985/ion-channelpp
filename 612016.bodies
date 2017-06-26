@@ -25,6 +25,24 @@ return smplr;
 !!!1533872.cpp!!!	on_report(inout out : ostream, inout sink : base_sink) : void
 if( this->count_.count() > 0 )
 {
+  // LOG OUTPUT
+  // ----------
+  boost::format fmt_head( " %3s %3s %10s %10s %10s" );
+  out << boost::format( fmt_head ) % "REG" % "SPC" % "<COUNT>" % "VAR" % "<[]>" << "\n";
+  const static boost::format fmt_row( " %3d %3d %10.5f %10.4f %10.7f" );
+  const std::size_t nreg = this->count_.size() / this->nspec_;
+  UTILITY_CHECK( ( this->count_.size() % this->nspec_ ) == 0, "Array size is not a multiple of the number of species." );
+  for( size_t ireg = 0; ireg != nreg; ++ireg )
+  {
+    const std::size_t offset = ireg * this->nspec_;
+    for( size_t ispec = 0; ispec != this->nspec_; ++ispec )
+    {
+      const double count_to_conc = this->volume( offset + ispec ) / core::constants::to_SI();
+      out << boost::format( fmt_row ) % ireg % ispec % this->mean( offset + ispec ) % this->variance( offset + ispec ) % ( this->mean( offset + ispec ) * count_to_conc ) << "\n";
+    }
+  }  
+  // SINK OUTPUT
+  // -----------
   const std::string label( "specie-region-count.dat" );
   if( not sink.has_dataset( label ) )
   {
@@ -42,7 +60,7 @@ if( this->count_.count() > 0 )
     {
       std::unique_ptr< observable::combined_output > combo{ new observable::combined_output };
       {
-        std::unique_ptr< observable::key_output > field{ new observable::key_output( "REG.SPC", "INDEX", false ) };
+        std::unique_ptr< observable::key_output > field{ new observable::key_output( "REG:SPC", "INDEX", false ) };
         // Add keys.
         const std::size_t nreg = this->count_.size() / this->nspec_;
         UTILITY_CHECK( ( this->count_.size() % this->nspec_ ) == 0, "Array size is not a multiple of the number of species." );
@@ -51,14 +69,14 @@ if( this->count_.count() > 0 )
           for( size_t idx = 0; idx != this->nspec_; ++idx )
           {
             std::stringstream hashval;
-            hashval << ireg << "." << idx;
+            hashval << ireg << ":" << idx;
             field->push_back( hashval.str() );
           }
         }
         combo->push_back_field( std::move( field ) );
       }
       {
-        std::unique_ptr< observable::element_output > field{ new observable::element_output( "REG.SPC.VOL", "ANGSTROM3", false ) };
+        std::unique_ptr< observable::element_output > field{ new observable::element_output( "REG:SPC:VOL", "ANGSTROM3", false ) };
         // Add keys.
         const std::size_t nreg = this->count_.size() / this->nspec_;
         UTILITY_CHECK( ( this->count_.size() % this->nspec_ ) == 0, "Array size is not a multiple of the number of species." );

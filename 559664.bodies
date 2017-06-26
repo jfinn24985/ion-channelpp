@@ -1318,8 +1318,8 @@ const std::vector< std::string > filenames { "rdf-CA-CA.dat", "rdf-CA-CO.dat", "
   {
     std::stringstream out;
     const std::string canon_log_title = " SPC    <COUNT>        VAR       <[]>";
-    const std::string canon_log_s3 = "   3    1.00000     0.0000 13.2843142";
-    const std::string canon_log_s4 = "   4    2.00000     0.0000 26.5686284";
+    const std::string canon_log_s3 = "   3    1.00000     0.0000  0.0752768";
+    const std::string canon_log_s4 = "   4    2.00000     0.0000  0.1505535";
     const std::string canon_title = "# TITLE: \"Time series specie counts.\"";
     const std::string canon_labels = "# FIELDS: INDEX SAMPLES SPC SPC.VOL Count.mean Count.var";
     const std::string canon_units = "# UNITS: ORDINAL ORDINAL INDEX ANGSTROM3 Rate Rate2";
@@ -1397,15 +1397,8 @@ const std::string filename( "specie-region-count.dat" );
     }
   }
   {
-    BOOST_REQUIRE( not sink.exists( filename ) );
     std::stringstream out;
     var->on_report( out, sink );
-    sink.write_dataset();
-    //std::cout << out.str() << "\n";
-    BOOST_REQUIRE( sink.exists( filename ) );
-    //std::string buf;
-    //sink.read( "specie-count.dat", buf );
-    //std::cout << buf << "\n";
   }
   // second sample and report
   {
@@ -1423,10 +1416,6 @@ const std::string filename( "specie-region-count.dat" );
   {
     std::stringstream out;
     var->on_report( out, sink );
-    //std::cout << out.str() << "\n";
-    //std::string buf;
-    //sink.read( "specie-count.dat", buf );
-    //std::cout << buf << "\n";
   }
   // need to add/convert a particle
   {
@@ -1454,10 +1443,10 @@ const std::string filename( "specie-region-count.dat" );
 
     var->on_sample( *pman, *gman, *eman );
 
-    means[ 3 ] = 1.6666666666666667;
-    means[ 4 ] = 1.3333333333333333;
-    vars[ 3 ] = 0.3333333333333333;
-    vars[ 4 ] = 0.3333333333333333;
+    means[ 3 ] = 1;
+    means[ 4 ] = 2;
+    vars[ 3 ] = 0;
+    vars[ 4 ] = 0;
     for( std::size_t ireg = 0; ireg != gman->region_count(); ++ireg )
     {
       const std::size_t offset = ireg * pman->specie_count();
@@ -1470,16 +1459,30 @@ const std::string filename( "specie-region-count.dat" );
   }
   {
     std::stringstream out;
-    std::string canon_log = " REG SPC    <COUNT>        VAR       <[]>\n   0   0    1.00000     0.0000  0.0752767\n   0   1    1.00000     0.0000  0.0752767\n   0   2    1.00000     0.0000  0.0752767\n   0   3    1.66667     0.3333  0.1254612\n   0   4    1.33333     0.3333  0.1003690\n   1   0    1.00000     0.0000  0.0385417\n   1   1    1.00000     0.0000  0.0385417\n   1   2    1.00000     0.0000  0.0385417\n   1   3    1.66667     0.3333  0.0642362\n   1   4    1.33333     0.3333  0.0513889";
+    const std::string canon_log = "REG SPC    <COUNT>        VAR       <[]>\n   0   0    1.00000     0.0000  0.0752768\n   0   1    1.00000     0.0000  0.0752768\n   0   2    1.00000     0.0000  0.0752768\n   0   3    1.00000     0.0000  0.0752768\n   0   4    2.00000     0.0000  0.1505535\n   1   0    1.00000     0.0000  0.0385417\n   1   1    1.00000     0.0000  0.0385417\n   1   2    1.00000     0.0000  0.0385417\n   1   3    1.00000     0.0000  0.0385417\n   1   4    2.00000     0.0000  0.0770834";
 
-    std::string canon_rep = "\n# TITLE: \"Time series pre-region specie counts\" \n# FIELDS: INDEX REGSPC[0,0]_MEAN REGSPC[0,0]_VAR REGSPC[0,1]_MEAN REGSPC[0,1]_VAR REGSPC[0,2]_MEAN REGSPC[0,2]_VAR REGSPC[0,3]_MEAN REGSPC[0,3]_VAR REGSPC[0,4]_MEAN REGSPC[0,4]_VAR REGSPC[1,0]_MEAN REGSPC[1,0]_VAR REGSPC[1,1]_MEAN REGSPC[1,1]_VAR REGSPC[1,2]_MEAN REGSPC[1,2]_VAR REGSPC[1,3]_MEAN REGSPC[1,3]_VAR REGSPC[1,4]_MEAN REGSPC[1,4]_VAR \n# UNITS: ORDINAL COUNT COUNT COUNT COUNT COUNT COUNT COUNT COUNT COUNT COUNT COUNT COUNT COUNT COUNT COUNT COUNT COUNT COUNT COUNT COUNT \n1 1 0 1 0 1 0 2 0 1 0 1 0 1 0 1 0 2 0 1 0 \n2 1 0 1 0 1 0 2 0 1 0 1 0 1 0 1 0 2 0 1 0 \n3 1 0 1 0 1 0 1.66667 0.333333 1.33333 0.333333 1 0 1 0 1 0 1.66667 0.333333 1.33333 0.333333 ";
+    const std::string canon_title = "# TITLE: \"Time series specie / region counts.\"";
+    const std::string canon_labels = "# FIELDS: INDEX SAMPLES REG:SPC REG:SPC:VOL Count.mean Count.var";
+    const std::string canon_units = "# UNITS: ORDINAL ORDINAL INDEX ANGSTROM3 Rate Rate2";
+    std::string canon_rep1 = "0 1 0:0 125 1 0  0:1 125 1 0  0:2 125 1 0  0:3 125 2 0  0:4 125 1 0  1:0 64 1 0  1:1 64 1 0  1:2 64 1 0  1:3 64 2 0  1:4 64 1 0";
+    std::string canon_rep2 = "1 1 0:0 125 1 0  0:1 125 1 0  0:2 125 1 0  0:3 125 2 0  0:4 125 1 0  1:0 64 1 0  1:1 64 1 0  1:2 64 1 0  1:3 64 2 0  1:4 64 1 0";
+    std::string canon_rep3 = "2 1 0:0 125 1 0  0:1 125 1 0  0:2 125 1 0  0:3 125 1 0  0:4 125 2 0  1:0 64 1 0  1:1 64 1 0  1:2 64 1 0  1:3 64 1 0  1:4 64 2 0";
 
     var->on_report( out, sink );
     //std::cout << out.str() << "\n";
     BOOST_CHECK_LT( out.str().find( canon_log ), out.str().size() );
+
+    BOOST_REQUIRE( not sink.exists( filename ) );
+    sink.write_dataset();
+    BOOST_REQUIRE( sink.exists( filename ) );
     std::string buf;
     sink.read( filename, buf );
-    BOOST_CHECK_LT( buf.find( canon_rep ), buf.size() );
+    BOOST_CHECK_LT( buf.find( canon_title ), buf.size() );
+    BOOST_CHECK_LT( buf.find( canon_labels ), buf.size() );
+    BOOST_CHECK_LT( buf.find( canon_units ), buf.size() );
+    BOOST_CHECK_LT( buf.find( canon_rep1 ), buf.size() );
+    BOOST_CHECK_LT( buf.find( canon_rep2 ), buf.size() );
+    BOOST_CHECK_LT( buf.find( canon_rep3 ), buf.size() );
     //std::cout << buf << "\n";
   }
 }
@@ -1575,9 +1578,34 @@ const std::string filename { "trial-log.dat" };
     std::string buf;
     sink.read( filename, buf );
     const std::string ulog { "# UUID: " };
-    const std::string blog { "# TITLE: \"Record of each trial\"\n# FIELDS: CHANGE_ID ENERGY PROB_FACTOR EXP_FACTOR FAIL ACCEPT\n# UNITS: (A,B,C,D) ENERGY NUMBER NUMBER BOOLEAN BOOLEAN\n(0, 1, 1, 0) 0.1 0.5 1 0 1\n(1, 1, 1, 0) 0.2 1 0 0 0\n(0, 1, 1, 1) 0.3 1 0 0 1\n(1, 1, 1, 0) 0.4 1 0 0 0\n(0, 1, 1, 1) 0.5 2.5 -1 0 1\n(0, 1, 1, 0) 0.6 1 0 0 0\n(0, 1, 1, 0) 0.7 0.5 1 0 1\n(0, 1, 1, 1) 0.8 1 0 0 0\n(1, 1, 1, 0) 0.9 1 0 0 1\n(1, 1, 1, 0) 0.1 1 0 1 0" };
+    const std::string blog_title { "# TITLE: \"Record of each trial\"" };
+    const std::string blog_labels { "# FIELDS: CHANGE_ID ENERGY PROB_FACTOR EXP_FACTOR FAIL ACCEPT" };
+    const std::string blog_units { "# UNITS: (A,B,C,D) ENERGY NUMBER NUMBER BOOLEAN BOOLEAN" };
+    const std::string blog1 { "(0, 1, 1, 0) 0.1 0.5 1 0 1" };
+    const std::string blog2 { "(1, 1, 1, 0) 0.2 1 0 0 0" };
+    const std::string blog3 { "(0, 1, 1, 1) 0.3 1 0 0 1" };
+    const std::string blog4 { "(1, 1, 1, 0) 0.4 1 0 0 0" };
+    const std::string blog5 { "(0, 1, 1, 1) 0.5 2.5 -1 0 1" };
+    const std::string blog6 { "(0, 1, 1, 0) 0.6 1 0 0 0" };
+    const std::string blog7 { "(0, 1, 1, 0) 0.7 0.5 1 0 1" };
+    const std::string blog8 { "(0, 1, 1, 1) 0.8 1 0 0 0" };
+    const std::string blog9 { "(1, 1, 1, 0) 0.9 1 0 0 1" };
+    const std::string blogA { "(1, 1, 1, 0) 0.1 1 0 1 0" };
+ 
     BOOST_CHECK( buf.find( ulog ) != std::string::npos );
-    BOOST_CHECK( buf.find( blog ) != std::string::npos );
+    BOOST_CHECK( buf.find( blog_title ) != std::string::npos );
+    BOOST_CHECK( buf.find( blog_labels ) != std::string::npos );
+    BOOST_CHECK( buf.find( blog_units ) != std::string::npos );
+    BOOST_CHECK( buf.find( blog1 ) != std::string::npos );
+    BOOST_CHECK( buf.find( blog2 ) != std::string::npos );
+    BOOST_CHECK( buf.find( blog3 ) != std::string::npos );
+    BOOST_CHECK( buf.find( blog4 ) != std::string::npos );
+    BOOST_CHECK( buf.find( blog5 ) != std::string::npos );
+    BOOST_CHECK( buf.find( blog6 ) != std::string::npos );
+    BOOST_CHECK( buf.find( blog7 ) != std::string::npos );
+    BOOST_CHECK( buf.find( blog8 ) != std::string::npos );
+    BOOST_CHECK( buf.find( blog9 ) != std::string::npos );
+    BOOST_CHECK( buf.find( blogA ) != std::string::npos );
     //std::cout << buf << "\n";
   }
 }
@@ -1629,15 +1657,8 @@ const std::string filename { "widom.dat" };
   // first sample and report
   var->on_sample( *pman, *gman, *eman );
   {
-    BOOST_REQUIRE( not sink.exists( filename ) );
     std::stringstream out;
     var->on_report( out, sink );
-    //std::cout << out.str() << "\n";
-    sink.write_dataset();
-    BOOST_REQUIRE( sink.exists( filename ) );
-    //std::string buf;
-    //sink.read( "specie-count.dat", buf );
-    //std::cout << buf << "\n";
   }
   // second sample and report
   var->on_sample( *pman, *gman, *eman );
@@ -1680,22 +1701,25 @@ const std::string filename { "widom.dat" };
     const std::string uuid_head { "# UUID:" };
     const std::string label_head { "# FIELDS: INDEX Na_EXCESS0 Na_POTENTIAL Na_EXCESS Na_COUNT Cl_EXCESS0 Cl_POTENTIAL Cl_EXCESS Cl_COUNT" };
     const std::string units_head { "# UNITS: ORDINAL ENERGY ENERGY ENERGY COUNT ENERGY ENERGY ENERGY COUNT" };
-
-    const std::string canon_title { "# TITLE: \"Series of Widom method chemical potential estimates\"" };
+    const std::string canon_title { "# TITLE: \"Series of Widom method chemical potential estimates.\"" };
     const std::string interesting_row { "3 0.123 -25.3801 -27.9667 10000 0.3123 -6.95822 -10.2379 10000" };
 
     var->on_report( out, sink );
     // should be output on "out"
     {
       const std::string outstr { out.str() };
+      //std::cout << outstr << "\n";
       BOOST_CHECK_LT( outstr.find( out_title ), outstr.size() );
       BOOST_CHECK_LT( outstr.find( out_head ), outstr.size() );
       BOOST_CHECK_LT( outstr.find( out_row1 ), outstr.size() );
       BOOST_CHECK_LT( outstr.find( out_row2 ), outstr.size() );
     }
+    BOOST_REQUIRE( not sink.exists( filename ) );
+    sink.write_dataset();
+    BOOST_REQUIRE( sink.exists( filename ) );
     std::string buf;
     sink.read( filename, buf );
-    //td::cout << buf << "\n";
+    //std::cout << buf << "\n";
     BOOST_CHECK_LT( buf.find( uuid_head ), buf.size() );
     BOOST_CHECK_LT( buf.find( label_head ), buf.size() );
     BOOST_CHECK_LT( buf.find( units_head ), buf.size() );
@@ -1732,15 +1756,8 @@ const std::string filename { "widom.dat" };
   // first sample and report
   var->on_sample( *pman, *gman, *eman );
   {
-    BOOST_REQUIRE( not sink.exists( filename ) );
     std::stringstream out;
     var->on_report( out, sink );
-    //std::cout << out.str() << "\n";
-    sink.write_dataset();
-    BOOST_REQUIRE( sink.exists( filename ) );
-    //std::string buf;
-    //sink.read( "specie-count.dat", buf );
-    //std::cout << buf << "\n";
   }
   // second sample and report
   var->on_sample( *pman, *gman, *eman );
@@ -1780,12 +1797,15 @@ const std::string filename { "widom.dat" };
     const std::string label_head { "# FIELDS: INDEX Na_EXCESS0 Na_POTENTIAL Na_EXCESS Na_COUNT" };
     const std::string units_head { "# UNITS: ORDINAL ENERGY ENERGY ENERGY COUNT" };
 
-    const std::string canon_title { "# TITLE: \"Series of Widom method chemical potential estimates\"" };
+    const std::string canon_title { "# TITLE: \"Series of Widom method chemical potential estimates.\"" };
     const std::string interesting_row { "3 0.123 -24.1507 -26.7372 10000" };
 
     var->on_report( out, sink );
-    // should be no output on "out"
+    // Output checked in widom_method_test
     //std::cout << out.str() << "\n";
+    BOOST_REQUIRE( not sink.exists( filename ) );
+    sink.write_dataset();
+    BOOST_REQUIRE( sink.exists( filename ) );
     std::string buf;
     sink.read( filename, buf );
     //std::cout << buf << "\n";
