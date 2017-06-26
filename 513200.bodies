@@ -3,25 +3,27 @@ class add_specie
 std::unique_ptr< particle::change_set > resultset( new particle::change_set( this->key() ) );
 // ADD
 // ---
+particle::change_atom result;
+result.key = this->key().key();
 const auto& ens = particles.get_ensemble();
 if( ens.count() + 1 >= std::max(64ul,2ul * particles.target_count()) )
 {
   resultset->set_fail(); // Too many particles
-  return resultset;
 }
-particle::change_atom result;
-result.key = this->key().key();
-result.do_old = false;
-const auto& spc = particles.get_specie( result.key );
+else
+{
+  result.do_old = false;
+  const auto& spc = particles.get_specie( result.key );
 
-// give particle a random position within boundary
-result.new_position = regions.system_region().new_position( rgnr, spc.radius() );
+  // give particle a random position within boundary
+  result.new_position = regions.system_region().new_position( rgnr, spc.radius() );
 
-// Use ensemble size as 'invalid' particle index
-result.index = ens.size();
+  // Use ensemble size as 'invalid' particle index
+  result.index = ens.size();
 
-resultset->update_exponential_factor( spc.chemical_potential() );
-resultset->update_probability_factor( regions.system_region().volume( spc.radius() ) / ( ens.specie_count( result.key ) + 1 ) );
+  resultset->update_exponential_factor( spc.chemical_potential() );
+  resultset->update_probability_factor( regions.system_region().volume( spc.radius() ) / ( ens.specie_count( result.key ) + 1 ) );
+}
 resultset->add_atom( result );
 return resultset;
 

@@ -93,118 +93,120 @@ if ( param_set.count( amx_label ) != 0 )
 std::unique_ptr< base_evaluator > result( cc.release() );
 return result;
 !!!538160.cpp!!!	compute_potential(in pman : particle_manager, in gman : geometry_manager, inout changes : change_set) : void
-//
-// Calculate the electric field at each tile. This
-//   should be the same as the previous field adjusted
-//   for the changes. We also calculate ripnew
-//   distance arrays for any changes with new positions
-//
-// O(changes.size() * icc.size())
-std::copy( this->c_.begin(), this->c_.end(), this->cnew_.begin() );
-
-std::valarray< double > valency_array( pman.specie_count() );
-for( std::size_t idx = 0; idx != valency_array.size(); ++idx )
+if( not changes.fail() )
 {
-  valency_array[ idx ] = pman.get_specie( idx ).valency();
-}
+  //
+  // Calculate the electric field at each tile. This
+  //   should be the same as the previous field adjusted
+  //   for the changes. We also calculate ripnew
+  //   distance arrays for any changes with new positions
+  //
+  // O(changes.size() * icc.size())
+  std::copy( this->c_.begin(), this->c_.end(), this->cnew_.begin() );
 
-// Check size of ripnew
-if ( this->ripnew_.size() < changes.size() )
-{
-   this->ripnew_.resize( changes.size(), std::vector< double >( this->size() ) );
-}
+  std::valarray< double > valency_array( pman.specie_count() );
+  for( std::size_t idx = 0; idx != valency_array.size(); ++idx )
+  {
+    valency_array[ idx ] = pman.get_specie( idx ).valency();
+  }
 
-const double epsw{ this->epsw_ };
-const particle::ensemble &ens{ pman.get_ensemble() };
-//
-//   C = (1/4.pi.eps) SUM{ (q_i dot(r_ip,u_i) / ||r_ip||^3 ) }
-//
-for (std::size_t cursor = 0; cursor != changes.size(); ++cursor)
-{
-   auto const& atom = changes[ cursor ];
-   const double valency = valency_array[ atom.key ];
-   if ( atom.do_old )
-   {
+  // Check size of ripnew
+  if ( this->ripnew_.size() < changes.size() )
+  {
+    this->ripnew_.resize( changes.size(), std::vector< double >( this->size() ) );
+  }
+
+  const double epsw{ this->epsw_ };
+  const particle::ensemble &ens{ pman.get_ensemble() };
+  //
+  //   C = (1/4.pi.eps) SUM{ (q_i dot(r_ip,u_i) / ||r_ip||^3 ) }
+  //
+  for (std::size_t cursor = 0; cursor != changes.size(); ++cursor)
+  {
+    auto const& atom = changes[ cursor ];
+    const double valency = valency_array[ atom.key ];
+    if ( atom.do_old )
+    {
       // Subtract field from old position from cnew
       // (that actually means we add to cnew)
       std::array< std::size_t, 2 > idx;
       idx[ 0 ] = atom.index;
       for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
       {
-         idx[ 1 ] = ipch;
-         // vector is from tile to charge
-         const double rxki = atom.old_position.x - this->grid_->x( ipch );
-         const double ryki = atom.old_position.y - this->grid_->y( ipch );
-         const double rzki = atom.old_position.z - this->grid_->z( ipch );
-         const double rip  = this->rip_( idx );
-         const double rki  = rxki * this->grid_->ux( ipch )
-                             + ryki * this->grid_->uy( ipch )
-                             + rzki * this->grid_->uz( ipch );
-         const double delta_eps { this->grid_->eps_in( ipch ) - this->grid_->eps_out( ipch ) };
-         this->cnew_[ ipch ] += valency * rki * delta_eps /
-                                (4 * core::constants::pi() * epsw * std::pow( rip, 3 ) );
+        idx[ 1 ] = ipch;
+        // vector is from tile to charge
+        const double rxki = atom.old_position.x - this->grid_->x( ipch );
+        const double ryki = atom.old_position.y - this->grid_->y( ipch );
+        const double rzki = atom.old_position.z - this->grid_->z( ipch );
+        const double rip  = this->rip_( idx );
+        const double rki  = rxki * this->grid_->ux( ipch )
+                            + ryki * this->grid_->uy( ipch )
+                            + rzki * this->grid_->uz( ipch );
+        const double delta_eps { this->grid_->eps_in( ipch ) - this->grid_->eps_out( ipch ) };
+        this->cnew_[ ipch ] += valency * rki * delta_eps /
+                               (4 * core::constants::pi() * epsw * std::pow( rip, 3 ) );
       }
-   }
-   if ( atom.do_new )
-   {
+    }
+    if ( atom.do_new )
+    {
       // Add field from new position to cnew
       // (that actually means we subtract from cnew)
       for (std::size_t ipch = 0; ipch != this->size(); ++ipch )
       {
-         const double rxki = atom.new_position.x - this->grid_->x( ipch );
-         const double ryki = atom.new_position.y - this->grid_->y( ipch );
-         const double rzki = atom.new_position.z - this->grid_->z( ipch );
-         const double rip  = std::sqrt( std::pow( rxki, 2 ) + std::pow( ryki, 2 ) + std::pow( rzki, 2 ) );
-         const double rki  = rxki * this->grid_->ux( ipch )
-                             + ryki * this->grid_->uy( ipch )
-                             + rzki * this->grid_->uz( ipch );
-         const double delta_eps { this->grid_->eps_in( ipch ) - this->grid_->eps_out( ipch ) };
-         this->cnew_[ ipch ] -= valency * rki * delta_eps /
-                                (4 * core::constants::pi() * epsw * std::pow( rip, 3 ) );
-         // Calculate and store distances between patches and particle
-         this->ripnew_[ cursor ][ ipch ] = rip;
+        const double rxki = atom.new_position.x - this->grid_->x( ipch );
+        const double ryki = atom.new_position.y - this->grid_->y( ipch );
+        const double rzki = atom.new_position.z - this->grid_->z( ipch );
+        const double rip  = std::sqrt( std::pow( rxki, 2 ) + std::pow( ryki, 2 ) + std::pow( rzki, 2 ) );
+        const double rki  = rxki * this->grid_->ux( ipch )
+                            + ryki * this->grid_->uy( ipch )
+                            + rzki * this->grid_->uz( ipch );
+        const double delta_eps { this->grid_->eps_in( ipch ) - this->grid_->eps_out( ipch ) };
+        this->cnew_[ ipch ] -= valency * rki * delta_eps /
+                               (4 * core::constants::pi() * epsw * std::pow( rip, 3 ) );
+        // Calculate and store distances between patches and particle
+        this->ripnew_[ cursor ][ ipch ] = rip;
       }
-   }
-}
+    }
+  }
 #ifdef CHECK_CH
-std::vector< double > cchk( this->size(), 0.0 );
-for (std::size_t ii = 0; ii != ens.size(); ++ii)
-{
-   const std::size_t ispec = ens.key( ii );
-   if (ispec == particle::specie_key::nkey)
-   {
+  std::vector< double > cchk( this->size(), 0.0 );
+  for (std::size_t ii = 0; ii != ens.size(); ++ii)
+  {
+    const std::size_t ispec = ens.key( ii );
+    if (ispec == particle::specie_key::nkey)
+    {
       continue;
-   }
-   bool skip_index( false );
-   switch( changes.size() )
-   {
-   case 2ul:
+    }
+    bool skip_index( false );
+    switch( changes.size() )
+    {
+    case 2ul:
       if (ii == changes[ 1 ].index) continue;
-      // fall through
-   case 1ul:
+    // fall through
+    case 1ul:
       if (ii == changes[ 0 ].index) continue;
       break;
-   default:
+    default:
       for (size_t cursor = 0; cursor != changes.size(); ++cursor)
       {
-         if (ii == changes[ cursor ].index)
-         {
-            skip_index = true;
-            break;
-         }
+        if (ii == changes[ cursor ].index)
+        {
+          skip_index = true;
+          break;
+        }
       }
       break;
-   }
-   if (skip_index) continue;
-   const double valency = valency_array[ ispec ];
-   const geometry::coordinate pos( ens.position( ii ) );
-   //
-   //  calculate ( r_ij . n_i ) / | r_ij |^3
-   //
-   //  NOTE: direction of vector r_ij is important for the
-   //  dot product. The vector goes from tile i to particle j.
-   for (std::size_t ipch = 0; ipch != this->size(); ++ipch )
-   {
+    }
+    if (skip_index) continue;
+    const double valency = valency_array[ ispec ];
+    const geometry::coordinate pos( ens.position( ii ) );
+    //
+    //  calculate ( r_ij . n_i ) / | r_ij |^3
+    //
+    //  NOTE: direction of vector r_ij is important for the
+    //  dot product. The vector goes from tile i to particle j.
+    for (std::size_t ipch = 0; ipch != this->size(); ++ipch )
+    {
       const double rxki = pos.x - this->grid_->x( ipch );
       const double ryki = pos.y - this->grid_->y( ipch );
       const double rzki = pos.z - this->grid_->z( ipch );
@@ -215,12 +217,12 @@ for (std::size_t ii = 0; ii != ens.size(); ++ii)
       // Scale by change in eps over boundary.
       const double delta_eps { this->grid_->eps_in( ipch ) - this->grid_->eps_out( ipch ) };
       cchk[ ipch ] -= valency * delta_eps * rki / (epsw * 4 * core::constants::pi() * std::pow( rip, 3 ) );
-   }
-}
-for (auto const& atom : changes )
-{
-   if (atom.do_new)
-   {
+    }
+  }
+  for (auto const& atom : changes )
+  {
+    if (atom.do_new)
+    {
       const double valency = valency_array[ atom.key ];
       const geometry::coordinate pos( atom.new_position );
       const double epsw = epsw;
@@ -231,186 +233,187 @@ for (auto const& atom : changes )
       //  dot product. The vector goes from tile i to particle j.
       for (std::size_t ipch = 0; ipch != this->size(); ++ipch )
       {
-         const double rxki = pos.x - this->grid_->x( ipch );
-         const double ryki = pos.y - this->grid_->y( ipch );
-         const double rzki = pos.z - this->grid_->z( ipch );
-         const double rip  = std::sqrt( std::pow( rxki, 2 ) + std::pow( ryki, 2 ) + std::pow( rzki, 2 ) );
-         const double rki  = rxki * this->grid_->ux( ipch )
-                             + ryki * this->grid_->uy( ipch )
-                             + rzki * this->grid_->uz( ipch );
-         // Scale by change in eps over boundary.
-         const double delta_eps { this->grid_->eps_in( ipch ) - this->grid_->eps_out( ipch ) };
-         cchk[ ipch ] -= valency * delta_eps * rki / (epsw * 4 * core::constants::pi() * std::pow( rip, 3 ) );
+        const double rxki = pos.x - this->grid_->x( ipch );
+        const double ryki = pos.y - this->grid_->y( ipch );
+        const double rzki = pos.z - this->grid_->z( ipch );
+        const double rip  = std::sqrt( std::pow( rxki, 2 ) + std::pow( ryki, 2 ) + std::pow( rzki, 2 ) );
+        const double rki  = rxki * this->grid_->ux( ipch )
+                            + ryki * this->grid_->uy( ipch )
+                            + rzki * this->grid_->uz( ipch );
+        // Scale by change in eps over boundary.
+        const double delta_eps { this->grid_->eps_in( ipch ) - this->grid_->eps_out( ipch ) };
+        cchk[ ipch ] -= valency * delta_eps * rki / (epsw * 4 * core::constants::pi() * std::pow( rip, 3 ) );
       }
-   }
-}
-bool pass_cchk = true;
-for (size_t index = 0; index != cchk.size(); ++index)
-{
-   if (not utility::feq(cchk[index], this->cnew_[index]))
-   {
+    }
+  }
+  bool pass_cchk = true;
+  for (size_t index = 0; index != cchk.size(); ++index)
+  {
+    if (not utility::feq(cchk[index], this->cnew_[index]))
+    {
       std::cerr << "INDEX: " << index;
       switch( changes.size() )
       {
       case 2ul:
-         std::cerr << " CHANGE[1].index: " << changes[1].index;
-         // fall through
+        std::cerr << " CHANGE[1].index: " << changes[1].index;
+      // fall through
       case 1ul:
-         std::cerr << " CHANGE[0].index: " << changes[0].index;
-         break;
+        std::cerr << " CHANGE[0].index: " << changes[0].index;
+        break;
       default:
-         for (size_t cursor = 0; cursor != changes.size(); ++cursor)
-         {
-            std::cerr << " CHANGE[" << cursor << "].index: " << changes[0].index;
-         }
-         break;
+        for (size_t cursor = 0; cursor != changes.size(); ++cursor)
+        {
+          std::cerr << " CHANGE[" << cursor << "].index: " << changes[0].index;
+        }
+        break;
       }
       std::cerr << " C_OLD: " << this->c_[index];
       std::cerr << " C_NEW: " << this->cnew_[index];
       std::cerr << " C_CHK: " << cchk[index];
       std::cerr << " DELTA: " << (cchk[index]- this->cnew_[index]) << "\n";
       pass_cchk = false;
-   }
-}
+    }
+  }
 #endif // CHECK_CH
 //
 // Calculate the new H
 //
-std::copy( this->cnew_.begin(), this->cnew_.end(), this->hnew_.begin() );
+  std::copy( this->cnew_.begin(), this->cnew_.end(), this->hnew_.begin() );
 
-this->amx_.back_substitute( this->hnew_ );
+  this->amx_.back_substitute( this->hnew_ );
 
 #ifdef CHECK_CH
-bool pass_hchk = true;
-this->amx_.back_substitute( cchk );
+  bool pass_hchk = true;
+  this->amx_.back_substitute( cchk );
 
-for (size_t index = 0; index != cchk.size(); ++index)
-{
-   if (std::abs(cchk[index] - this->hnew_[index]) > 1E-20)
-   {
+  for (size_t index = 0; index != cchk.size(); ++index)
+  {
+    if (std::abs(cchk[index] - this->hnew_[index]) > 1E-20)
+    {
       std::cerr << "INDEX: " << index;
       switch( changes.size() )
       {
       case 2ul:
-         std::cerr << " CHANGE[1].index: " << changes[1].index;
-         // fall through
+        std::cerr << " CHANGE[1].index: " << changes[1].index;
+      // fall through
       case 1ul:
-         std::cerr << " CHANGE[0].index: " << changes[0].index;
-         break;
+        std::cerr << " CHANGE[0].index: " << changes[0].index;
+        break;
       default:
-         for (size_t cursor = 0; cursor != changes.size(); ++cursor)
-         {
-            std::cerr << " CHANGE[" << cursor << "].index: " << changes[0].index;
-         }
-         break;
+        for (size_t cursor = 0; cursor != changes.size(); ++cursor)
+        {
+          std::cerr << " CHANGE[" << cursor << "].index: " << changes[0].index;
+        }
+        break;
       }
       std::cerr << " H_OLD: " << this->h_[index];
       std::cerr << " H_NEW: " << this->hnew_[index];
       std::cerr << " H_CHK: " << cchk[index];
       std::cerr << " DELTA: " << (cchk[index]- this->hnew_[index]) << "\n";
       pass_cchk = false;
-   }
-}
-UTILITY_ALWAYS(pass_cchk and pass_hchk, "Error computing C_new at index ");
+    }
+  }
+  UTILITY_ALWAYS(pass_cchk and pass_hchk, "Error computing C_new at index ");
 #endif // CHECK_CH
 
-//
-// Calculate new potential
-//
-//   U = (1/4.pi.eps) SUM{ z_i . h_p . area_p / 2 ||r_ip|| }
-//
-// O(ens.size() * icc.size())
-//
-double old_potential = 0.0;
+  //
+  // Calculate new potential
+  //
+  //   U = (1/4.pi.eps) SUM{ z_i . h_p . area_p / 2 ||r_ip|| }
+  //
+  // O(ens.size() * icc.size())
+  //
+  double old_potential = 0.0;
 #ifdef CHECK_OLD_POTENTIAL
-// cache charge density * area calculation.
-std::valarray< double > surface_field( this->size() );
+  // cache charge density * area calculation.
+  std::valarray< double > surface_field( this->size() );
 #endif // CHECK_OLD_POTENTIAL
-double new_potential = 0.0;
-// cache charge density * area calculation.
-std::valarray< double > surface_field_new( this->size() );
-for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
-{
+  double new_potential = 0.0;
+  // cache charge density * area calculation.
+  std::valarray< double > surface_field_new( this->size() );
+  for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
+  {
 #ifdef CHECK_OLD_POTENTIAL
-   surface_field[ ipch ] = this->h_[ ipch ] * this->grid_->area( ipch );
+    surface_field[ ipch ] = this->h_[ ipch ] * this->grid_->area( ipch );
 #endif // CHECK_OLD_POTENTIAL
-   surface_field_new[ ipch ] = this->hnew_[ ipch ] * this->grid_->area( ipch );
-}
+    surface_field_new[ ipch ] = this->hnew_[ ipch ] * this->grid_->area( ipch );
+  }
 
-// POTENTIAL OPENMP LOOP
-for (std::size_t ii = 0; ii != ens.size(); ++ii)
-{
-   const std::size_t ispec( ens.key( ii ) );
-   if (ispec != particle::specie_key::nkey )
-   {
+  // POTENTIAL OPENMP LOOP
+  for (std::size_t ii = 0; ii != ens.size(); ++ii)
+  {
+    const std::size_t ispec( ens.key( ii ) );
+    if (ispec != particle::specie_key::nkey )
+    {
       std::array< std::size_t, 2 > idx;
       idx[ 0 ] = ii;
       const double valency = valency_array[ ispec ];
       for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
       {
-         idx[ 1 ] = ipch;
+        idx[ 1 ] = ipch;
 #ifdef CHECK_OLD_POTENTIAL
-         old_potential += valency * surface_field[ ipch ] / ( 2 * this->rip_( idx ) );
+        old_potential += valency * surface_field[ ipch ] / ( 2 * this->rip_( idx ) );
 #endif // CHECK_OLD_POTENTIAL
-         new_potential += valency * surface_field_new[ ipch ] / ( 2 * this->rip_( idx ) );
+        new_potential += valency * surface_field_new[ ipch ] / ( 2 * this->rip_( idx ) );
 #ifdef CHECK_RIP
-         const geometry::coordinate pos( ens.position( ii ) );
-         const double rxki = pos.x - this->grid_->x( ipch );
-         const double ryki = pos.y - this->grid_->y( ipch );
-         const double rzki = pos.z - this->grid_->z( ipch );
-         const double rip  = std::sqrt( std::pow( rxki, 2 ) + std::pow( ryki, 2 ) + std::pow( rzki, 2 ) );
-         if (this->rip_( idx ) != rip)
-         {
-            std::cerr << "RIP ERROR: PATCH: " << ipch << " INDEX: " << ii;
-            std::cerr << "RIP(P,I): " << this->rip_( idx );
-            std::cerr << "RIP: " << rip;
-            std::cerr << "DELTA: " << (this->rip_( idx ) - rip) << "\n";
-         }
+        const geometry::coordinate pos( ens.position( ii ) );
+        const double rxki = pos.x - this->grid_->x( ipch );
+        const double ryki = pos.y - this->grid_->y( ipch );
+        const double rzki = pos.z - this->grid_->z( ipch );
+        const double rip  = std::sqrt( std::pow( rxki, 2 ) + std::pow( ryki, 2 ) + std::pow( rzki, 2 ) );
+        if (this->rip_( idx ) != rip)
+        {
+          std::cerr << "RIP ERROR: PATCH: " << ipch << " INDEX: " << ii;
+          std::cerr << "RIP(P,I): " << this->rip_( idx );
+          std::cerr << "RIP: " << rip;
+          std::cerr << "DELTA: " << (this->rip_( idx ) - rip) << "\n";
+        }
 #endif // CHECK_RIP
       }
-   }
-}
-// Remove effect of changes from new_potential
-for (std::size_t cursor = 0; cursor != changes.size(); ++cursor)
-{
-   auto const& atom = changes[ cursor ];
-   const double valency = valency_array[ atom.key ];
-   std::array< std::size_t, 2 > idx;
-   if ( atom.do_old )
-   {
+    }
+  }
+  // Remove effect of changes from new_potential
+  for (std::size_t cursor = 0; cursor != changes.size(); ++cursor)
+  {
+    auto const& atom = changes[ cursor ];
+    const double valency = valency_array[ atom.key ];
+    std::array< std::size_t, 2 > idx;
+    if ( atom.do_old )
+    {
       // Subtract potential from old position
       idx[ 0 ] = atom.index;
       for ( std::size_t ipch = 0; ipch != this->size(); ++ipch )
       {
-         idx[ 1 ] = ipch;
-         new_potential -= valency * surface_field_new[ ipch ] / (2 * this->rip_( idx ) );
+        idx[ 1 ] = ipch;
+        new_potential -= valency * surface_field_new[ ipch ] / (2 * this->rip_( idx ) );
       }
-   }
-   if ( atom.do_new )
-   {
+    }
+    if ( atom.do_new )
+    {
       // Add potential from new position
       for (std::size_t ipch = 0; ipch != this->size(); ++ipch )
       {
-         new_potential += valency * surface_field_new[ ipch ] / (2 * this->ripnew_[ cursor ][ ipch ] );
+        new_potential += valency * surface_field_new[ ipch ] / (2 * this->ripnew_[ cursor ][ ipch ] );
       }
-   }
-}
-// Scale energy to correct units (k_BT) + SI
-new_potential *= this->alfa_;
+    }
+  }
+  // Scale energy to correct units (k_BT) + SI
+  new_potential *= this->alfa_;
 #ifdef CHECK_OLD_POTENTIAL
-old_potential *= this->alfa_;
-if (std::abs(this->old_potential_ - old_potential) > 5E-16)
-{
-   std::cerr << "OLD POTENTIAL MISMATCH: CACHE: " << this->old_potential_;
-   std::cerr << " CALC: " << old_potential;
-   std::cerr << " DELTA: " << (this->old_potential_ - old_potential) << "\n";
-}
+  old_potential *= this->alfa_;
+  if (std::abs(this->old_potential_ - old_potential) > 5E-16)
+  {
+    std::cerr << "OLD POTENTIAL MISMATCH: CACHE: " << this->old_potential_;
+    std::cerr << " CALC: " << old_potential;
+    std::cerr << " DELTA: " << (this->old_potential_ - old_potential) << "\n";
+  }
 #endif // CHECK_OLD_POTENTIAL
-old_potential = this->old_potential_;
-this->new_potential_ = new_potential;
-// Set potential energy on first atom in change set
-changes.begin()->energy_old += old_potential;
-changes.begin()->energy_new += new_potential;
+  old_potential = this->old_potential_;
+  this->new_potential_ = new_potential;
+  // Set potential energy on first atom in change set
+  changes.begin()->energy_old += old_potential;
+  changes.begin()->energy_new += new_potential;
+}
 !!!539056.cpp!!!	compute_total_potential(in pman : particle_manager, in gman : geometry_manager) : double
 return this->old_potential_;
 !!!537776.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager) : void

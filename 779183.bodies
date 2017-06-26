@@ -1,46 +1,49 @@
 class coulomb
 !!!247985.cpp!!!	compute_potential(in pman : particle_manager, in gman : geometry_manager, inout changes : change_set) : void
-auto const& spcs = pman.get_species();
-auto const& ens = pman.get_ensemble();
-// For each atom
-for (auto &atom : changes)
+if( not changes.fail() )
 {
-  const std::size_t idx = atom.index;
-  double energy_old = 0.0;
-  double energy_new = 0.0;
-  // Ensure rij data exists.
-  atom.ensure_rij();
-  // Cache minimum inter-particle distances
-  const double ri =  spcs[ atom.key ].radius();
-  for (std::size_t j = 0; j != ens.size(); ++j)
+  auto const& spcs = pman.get_species();
+  auto const& ens = pman.get_ensemble();
+  // For each atom
+  for (auto &atom : changes)
   {
-    // Only use active particles.
-    if (j != idx and particle::specie_key::nkey != ens.key (j))
+    const std::size_t idx = atom.index;
+    double energy_old = 0.0;
+    double energy_new = 0.0;
+    // Ensure rij data exists.
+    atom.ensure_rij();
+    // Cache minimum inter-particle distances
+    const double ri =  spcs[ atom.key ].radius();
+    for (std::size_t j = 0; j != ens.size(); ++j)
     {
-      if (atom.do_new)
+      // Only use active particles.
+      if (j != idx and particle::specie_key::nkey != ens.key (j))
       {
-        // NEW
-        // --------------------------------
-        // Check for overlap
-        if ( atom.new_rij[j] < spcs[ ens.key (j) ].radius() + ri )
+        if (atom.do_new)
         {
-          changes.set_fail();
-          return;
+          // NEW
+          // --------------------------------
+          // Check for overlap
+          if ( atom.new_rij[j] < spcs[ ens.key (j) ].radius() + ri )
+          {
+            changes.set_fail();
+            return;
+          }
+          // Use atom.new_rij
+          energy_new += (spcs[ ens.key (j) ].valency() / atom.new_rij[j]);
         }
-        // Use atom.new_rij
-        energy_new += (spcs[ ens.key (j) ].valency() / atom.new_rij[j]);
-      }
-      if (atom.do_old)
-      {
-        // OLD
-        // --------------------------------
-        // Use atom.old_rij
-        energy_old += (spcs[ ens.key (j) ].valency() / atom.old_rij[j]);
+        if (atom.do_old)
+        {
+          // OLD
+          // --------------------------------
+          // Use atom.old_rij
+          energy_old += (spcs[ ens.key (j) ].valency() / atom.old_rij[j]);
+        }
       }
     }
+    atom.energy_old += energy_old * spcs[ atom.key ].valency() * this->scalar_;
+    atom.energy_new += energy_new * spcs[ atom.key ].valency() * this->scalar_;
   }
-  atom.energy_old += energy_old * spcs[ atom.key ].valency() * this->scalar_;
-  atom.energy_new += energy_new * spcs[ atom.key ].valency() * this->scalar_;
 }
 !!!247985.python!!!	compute_potential(in pman : particle_manager, in gman : geometry_manager, inout changes : change_set) : void
 if changes.fail:

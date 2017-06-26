@@ -3,25 +3,26 @@ class remove_specie
 std::unique_ptr< particle::change_set > result( new particle::change_set( this->key() ) );
 // REMOVE
 // ------
+particle::change_atom atom{}; // change being built
+atom.key = this->key().key();
 const auto& ens = particles.get_ensemble();
 auto specie_count = ens.specie_count( this->key().key() );
 if (specie_count == 0)
 {
-   result->set_fail(); // No particles of this specie
-   return result;
+  result->set_fail(); // No particles of this specie
 }
-particle::change_atom atom{}; // change being built
-atom.key = this->key().key();
-atom.do_new = false;
+else
+{
+  atom.do_new = false;
 // Choose any particle of this specie
-atom.index = ens.nth_specie_index( atom.key, rgnr.randint( 0, specie_count - 1));
+  atom.index = ens.nth_specie_index( atom.key, rgnr.randint( 0, specie_count - 1));
 // Set old position
-atom.old_position = ens.position( atom.index );
+  atom.old_position = ens.position( atom.index );
 
-auto const& spc = particles.get_specie( atom.key );
-result->update_exponential_factor( -spc.chemical_potential() );
-result->update_probability_factor( specie_count / regions.system_region().volume( spc.radius() ) );
-
+  auto const& spc = particles.get_specie( atom.key );
+  result->update_exponential_factor( -spc.chemical_potential() );
+  result->update_probability_factor( specie_count / regions.system_region().volume( spc.radius() ) );
+}
 result->add_atom( atom );
 return result;
 !!!1163056.python!!!	generate(in particles : particle_manager, in regions : geometry_manager, inout rgnr : random_distribution) : change_set

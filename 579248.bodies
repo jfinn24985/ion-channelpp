@@ -1,45 +1,47 @@
 class lennard_jones
 !!!1416112.cpp!!!	compute_potential(in pman : particle_manager, in gman : geometry_manager, inout changes : change_set) : void
-auto const& ens = pman.get_ensemble();
-// For each atom
-for( auto &atom : changes )
+if( not changes.fail() )
 {
-  const std::size_t idx = atom.index;
-  const std::size_t cache_offset = idx * pman.specie_count();
-  double energy_old = 0.0;
-  double energy_new = 0.0;
-  // Use cache epsilon and sigma
-  for( std::size_t j = 0; j != ens.size(); ++j )
+  auto const& ens = pman.get_ensemble();
+  // For each atom
+  for( auto &atom : changes )
   {
-    // Only use active particles.
-    if( j != idx and particle::specie_key::nkey != ens.key( j ) )
+    const std::size_t idx = atom.index;
+    const std::size_t cache_offset = idx * pman.specie_count();
+    double energy_old = 0.0;
+    double energy_new = 0.0;
+    // Use cache epsilon and sigma
+    for( std::size_t j = 0; j != ens.size(); ++j )
     {
-      const std::size_t jspec = ens.key( j );
-      const double eps_ij{ this->epsilon_cache_[ cache_offset + jspec ] };
-      const double sig_ij2{ std::pow( this->sigma_cache_[ cache_offset + jspec ], 2 ) };
-      if( atom.do_new )
+      // Only use active particles.
+      if( j != idx and particle::specie_key::nkey != ens.key( j ) )
       {
-        // NEW
-        // Use atom.new_rij2
-        const double r6 { std::pow( sig_ij2 / atom.new_rij2[ j ], 3 ) };
-        const double r12 { std::pow( r6, 2 ) };
-        energy_new += eps_ij * ( r12 - r6 );
-      }
-      if( atom.do_old )
-      {
-        // OLD
-        // --------------------------------
-        // Use atom.old_rij2
-        const double r6 { std::pow( sig_ij2 / atom.old_rij2[ j ], 3 ) };
-        const double r12 { std::pow( r6, 2 ) };
-        energy_old += eps_ij * ( r12 - r6 );
+        const std::size_t jspec = ens.key( j );
+        const double eps_ij{ this->epsilon_cache_[ cache_offset + jspec ] };
+        const double sig_ij2{ std::pow( this->sigma_cache_[ cache_offset + jspec ], 2 ) };
+        if( atom.do_new )
+        {
+          // NEW
+          // Use atom.new_rij2
+          const double r6 { std::pow( sig_ij2 / atom.new_rij2[ j ], 3 ) };
+          const double r12 { std::pow( r6, 2 ) };
+          energy_new += eps_ij * ( r12 - r6 );
+        }
+        if( atom.do_old )
+        {
+          // OLD
+          // --------------------------------
+          // Use atom.old_rij2
+          const double r6 { std::pow( sig_ij2 / atom.old_rij2[ j ], 3 ) };
+          const double r12 { std::pow( r6, 2 ) };
+          energy_old += eps_ij * ( r12 - r6 );
+        }
       }
     }
+    atom.energy_new += energy_new;
+    atom.energy_old += energy_old;
   }
-  atom.energy_new += energy_new;
-  atom.energy_old += energy_old;
 }
-
 !!!1416112.python!!!	compute_potential(in pman : particle_manager, in gman : geometry_manager, inout changes : change_set) : void
 if changes.fail:
   return
