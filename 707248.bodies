@@ -77,41 +77,45 @@ with open("chex.dat","a") as f:
     mean.append(spc.excess_potential())
   print >>f,""
 !!!2097584.cpp!!!	write_output(in sim : simulation) : void
-const std::string filename { "igcmc.dat" };
+const std::string label { "igcmc.dat" };
 
 const std::size_t loopindex { dynamic_cast< const imc_simulation& >( sim.manager() ).count() + 1 };
-
-observable::output_series dset {};
-dset.set_title( "Series of chemical potential estimates" );
-
-dset.push_back_entry( observable::output_field( "INDEX", "ORDINAL", [loopindex](std::ostream& os, std::size_t)
-{
-   os << loopindex;
-} ) );
-
 const particle::particle_manager& pman = sim.particles();
+auto & sink = sim.report().get_sink();
+
+if( not sink.has_dataset( label ) )
+{
+  std::unique_ptr< observable::output_text >definition{ new observable::output_text( label, true ) };
+  definition->set_title( "Series of chemical potential estimates." );
+  std::stringstream lbls, unts;
+  lbls << "INDEX ";
+  unts << "ORDINAL ";
+  for (std::size_t ispec = 0; ispec != this->chemical_potentials_.size(); ++ispec)
+  {
+   const std::string slabel = pman.get_specie( ispec ).label();
+   lbls << "SPECIE " << label << "_CURRENT " << label << "_MEAN " << label << "_VAR ";
+   unts << "LABEL ENERGY ENERGY ENERGY ";
+  }
+  std::string labels( lbls.str() );
+  std::string units( unts.str() );
+  labels.pop_back();
+  units.pop_back();
+  definition->set_field_labels( labels );
+  definition->set_units( units );
+
+  sink.add_dataset( std::move( definition ) );
+}
+std::stringstream os;
+os << loopindex << " ";
 for (std::size_t ispec = 0; ispec != this->chemical_potentials_.size(); ++ispec)
 {
    const double mu_ex = pman.get_specie( ispec ).excess_potential();
-   const std::string label = pman.get_specie( ispec ).label();
    const double mean = this->chemical_potentials_.mean( ispec );
    const double var = this->chemical_potentials_.variance( ispec );
-   dset.push_back_entry( observable::output_field( label + "_CURRENT" , "COUNT", [mu_ex](std::ostream& os, std::size_t)
-   {
-      os << mu_ex;
-   } ) );
-   dset.push_back_entry( observable::output_field( label + "_MEAN" , "COUNT", [mean](std::ostream& os, std::size_t)
-   {
-      os << mean;
-   } ) );
-   dset.push_back_entry( observable::output_field( label + "_VAR" , "COUNT", [var](std::ostream& os, std::size_t)
-   {
-      os << var;
-   } ) );
+   os << pman.get_specie( ispec ).label() << " " << mu_ex << " " << mean << " " << var << " ";
 }
-
-dset.write( filename, sim.report().get_sink(), 1 == loopindex );
-
+std::unique_ptr< observable::output_datum > dtm( new observable::output_buffer_datum( os.str() ) );
+sink.receive_data( label, std::move( dtm ) );
 !!!542897.cpp!!!	charge_correction_factor(in sim : simulation) : double
 //namespace cc = core::constants;
 //static const double csloth { ( 6*std::log( 2 + std::sqrt(3.0)) - cc::pi() )
