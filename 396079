@@ -1,6 +1,6 @@
 format 75
 "observable" // observable
-  revision 254
+  revision 255
   modified_by 48 "finnerty"
   owner 48 "finnerty"
   // class settings
@@ -3010,7 +3010,9 @@ ${docstring}${members}
       classrelation 938160 // energy_ (<directional composition>)
 	relation 937264 *-->
 	  a role_name "energy_" multiplicity "1" private
-	    comment "Histogram of the energy"
+	    comment "Histogram of the energy
+
+ NOTE: The energy histogram is extendable until the first call to \"on_report\""
 	    cpp default "    ${comment}${static}${mutable}${volatile}${const}${type} ${name}${value};
 "
 	    python "${comment}${self}${name} = ${type}()
@@ -3037,7 +3039,7 @@ ${docstring}${members}
 : tracked_observable()
 , boltzmann_factor_()
 , energy_change_()
-, energy_( 0.0, 1.0, 0.01, true )
+, energy_( 0.0, 30.0, 0.01, true )
 {}
 "
 	
@@ -3264,7 +3266,9 @@ ${docstring}${body}
 	
 	
 	
-	comment " Reporting operations."
+	comment " Reporting operations.
+
+ NOTE: The energy histogram is extendable only until first call to \"on_report\""
       end
 
       operation 174641 "prepare"
@@ -4719,7 +4723,7 @@ ${docstring}${members}
       end
 
       operation 633777 "specie_count"
-	private explicit_return_type ""
+	protected explicit_return_type ""
 	nparams 0
 	cpp_decl "    ${comment}${inline}${name}${(}${)}${volatile}${throw}
 : base_observable()
@@ -5012,6 +5016,34 @@ ${docstring}${body}
 	comment " Do we have any estimates of specie count"
       end
 
+      operation 2679344 "local_index"
+	const public explicit_return_type "size_t"
+	nparams 1
+	  param in name "ispec" explicit_type "size_t"
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${t0} ${p0}${v0}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${t0} ${p0}${)}${const}${volatile}${throw}
+{
+  for( std::size_t idx = 0; idx < this->size(); ++idx )
+  {
+    if ( this->specie_list_[ idx ].first == ${p0} ) return idx;
+  }
+  return this->size();
+}
+"
+	
+	
+	python_def "${@}${static}${abstract}def ${name}${(}${p0}${v0}${)}:
+${docstring}${body}
+"
+	
+	comment " Convert specie index/key into a local index.
+
+ If specie is not in list return \"size\"
+
+ \\post idx <= size"
+      end
+
       operation 1519024 "mean"
 	const public explicit_return_type "double"
 	nparams 1
@@ -5028,7 +5060,8 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Mean count of specie at given index
+	comment " Mean count of specie at given index (see specie_key to
+ convert index into specie index.)
 
  \\pre idx < size"
       end
@@ -5066,7 +5099,7 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Mean count of specie at given index
+	comment " Convert index into specie index/key
 
  \\pre idx < size"
       end
@@ -5087,7 +5120,8 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Variance of the count of specie at given index
+	comment " Variance of the count of specie at given index (see specie_key to
+ convert index into specie index.)
 
  \\pre idx < size"
       end
@@ -5108,7 +5142,8 @@ ${docstring}${body}
 ${docstring}${body}
 "
 	
-	comment " Mean count of specie at given index
+	comment " Accesible cell volume for the specie at local index (see specie_key to
+ convert local index into specie index.)
 
  \\pre idx < size"
       end

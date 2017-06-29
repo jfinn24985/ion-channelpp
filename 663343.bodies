@@ -28,6 +28,11 @@ if( not trial.fail() )
   this->boltzmann_factor_.append( trial.metropolis_factor() );
   const double tmp = std::exp( -trial.energy() );
   this->energy_change_.append( tmp );
+  if( not this->energy_.auto_extendable() and not this->energy_.in_range( tmp ) )
+  {
+    // ignore values outside range if not extendable
+    return;
+  }
   this->energy_.sample_datum( tmp );
 }
 else
@@ -55,6 +60,11 @@ out << core::strngs::horizontal_bar() << "\n";
 if( this->energy_.count() > 0 )
 {
   std::string label( metropolis_sampler::type_label_() + ".dat" );
+  // Lock histogram to present size
+  if( this->energy_.auto_extendable() )
+  {
+    this->energy_.auto_extendable( false );
+  }
   auto & data = this->energy_;
   if( not sink.has_dataset( label ) )
   {
