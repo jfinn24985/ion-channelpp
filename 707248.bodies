@@ -1,8 +1,23 @@
 class chemical_potential_update
+!!!2679216.cpp!!!	counts() : specie_monitor
+if( not this->counts_ )
+{
+  this->counts_.reset( new specie_monitor );
+}
+return *(this->counts_);
 !!!2098480.cpp!!!	prepare(inout sim : simulation) : void
+if( not this->counts_ )
+{
+  this->counts_.reset( new specie_monitor );
+}
 this->chemical_potentials_.clear();
 this->chemical_potentials_.resize( sim.particles().specie_count() );
+if( not sim.report().has_sample( this->counts_->get_label() ) )
+{
+  sim.get_report_manager().add_sample( this->counts_ );
+}
 this->do_prepare( sim );
+
 !!!2098480.python!!!	prepare(inout sim : simulation) : void
 # Set up chemex estimator
 from estimater import estimater
@@ -93,7 +108,7 @@ if( not sink.has_dataset( label ) )
   for (std::size_t ispec = 0; ispec != this->chemical_potentials_.size(); ++ispec)
   {
    const std::string slabel = pman.get_specie( ispec ).label();
-   lbls << "SPECIE " << label << "_CURRENT " << label << "_MEAN " << label << "_VAR ";
+   lbls << "SPECIE " << slabel << "_CURRENT " << slabel << "_MEAN " << slabel << "_VAR ";
    unts << "LABEL ENERGY ENERGY ENERGY ";
   }
   std::string labels( lbls.str() );
@@ -114,6 +129,7 @@ for (std::size_t ispec = 0; ispec != this->chemical_potentials_.size(); ++ispec)
    const double var = this->chemical_potentials_.variance( ispec );
    os << pman.get_specie( ispec ).label() << " " << mu_ex << " " << mean << " " << var << " ";
 }
+os << "\n";
 std::unique_ptr< observable::output_datum > dtm( new observable::output_buffer_datum( os.str() ) );
 sink.receive_data( label, std::move( dtm ) );
 !!!542897.cpp!!!	charge_correction_factor(in sim : simulation) : double

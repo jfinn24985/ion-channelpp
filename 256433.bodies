@@ -26,23 +26,30 @@ pass
 // Get mean concentration from specie_count sampler.
 //
 // NOTE: we could use specie_count::type_label_()
-boost::any means_any = sys.report().get_sample("specie-count")->get_value();
-utility::estimate_array const& means = *(boost::any_cast< utility::estimate_array const* >(means_any));
 particle::particle_manager& pman = sys.particles();
-auto const& sysreg = sys.regions().system_region();
+
 for (size_t ispec = 0; ispec != pman.specie_count(); ++ispec)
 {
   particle::specie & spcobj = pman.get_specie(ispec);
   // only solute species have interesting chemical potentials
   if (spcobj.is_solute())
   {
-    double bulk_density = means.mean(ispec)/sysreg.volume( spcobj.radius() );
-    if (not utility::feq(bulk_density,0.0))
+    const std::size_t localidx{ this->counts().local_index( ispec ) };
+    if( localidx != this->counts().size() )
     {
-      spcobj.set_excess_potential(spcobj.chemical_potential() - std::log(bulk_density));
+      // NOTE: localidx = this->counts().size() if specie not recorded.
+      const double volume{ this->counts().volume( localidx ) };
+      if ( volume != 0.0 )
+      {
+        const double bulk_density = this->counts().mean( localidx )/volume;
+        if (not utility::feq(bulk_density,0.0))
+        {
+          spcobj.set_excess_potential(spcobj.chemical_potential() - std::log(bulk_density));
+        }
+      }
     }
   }
-} 
+}
 !!!458801.python!!!	do_update(inout sys : simulation, inout oslog : ostream) : void
 import math
 for ispec, (mean, spc) in enumerate(zip(self.bulk_count_,sys.get_species())):

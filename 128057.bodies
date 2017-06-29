@@ -5,28 +5,37 @@ os << " Estimate the excess chemical potential parameters required\n";
 os << " to maintain the target concentrations of solute species.\n\n";
 os << "   S. Lamperski, Mol. Simul. 33, 1193, 2007\n\n";
 !!!128185.cpp!!!	do_update(inout sys : simulation, inout oslog : ostream) : void
-// Lamperski: 
-//  Add or subtract "delta" depending on whether average 
+// Lamperski:
+//  Add or subtract "delta" depending on whether average
 // density is greater or less than desired
 //
 // Use mean concentration from specie_count sampler.
 //
 // NOTE: we could use specie_count::type_label_()
-boost::any means_any = sys.report().get_sample("specie-count")->get_value();
-utility::estimate_array const& means = *(boost::any_cast< utility::estimate_array const* >(means_any));
 auto & pman = sys.particles();
-auto const& sysreg = sys.regions().system_region();
 
 for (size_t ispec = 0; ispec != pman.specie_count(); ++ispec)
 {
   particle::specie & spcobj = pman.get_specie(ispec);
-  // only solute species exist when using IGCMC
-  double actual_concentration = means.mean(ispec)*core::constants::to_SI()/sysreg.volume( spcobj.radius() );
-  if (not utility::feq(actual_concentration,0.0))
+  // only look at solute species
+  if (spcobj.is_solute())
   {
-    const double change = (this->use_random_ ? this->delta_ * sys.get_random().uniform(): this->delta_ );
-    const double chempi = spcobj.excess_potential() + (spcobj.concentration() > actual_concentration? change : -change);
-    spcobj.set_excess_potential( chempi );
+    const std::size_t localidx{ this->counts().local_index( ispec ) };
+    if( localidx != this->counts().size() )
+    {
+      // NOTE: localidx = this->counts().size() if specie not recorded.
+      const double volume{ this->counts().volume( localidx ) };
+      if ( volume != 0.0 )
+      {
+        double actual_concentration = this->counts().mean( localidx )*core::constants::to_SI()/volume;
+        if (not utility::feq(actual_concentration,0.0))
+        {
+          const double change = (this->use_random_ ? this->delta_ * sys.get_random().uniform(): this->delta_ );
+          const double chempi = spcobj.excess_potential() + (spcobj.concentration() > actual_concentration? change : -change);
+          spcobj.set_excess_potential( chempi );
+        }
+      }
+    }
   }
 }
 !!!218160.cpp!!!	do_write_part_document(inout wr : input_document, in ix : size_t) : void

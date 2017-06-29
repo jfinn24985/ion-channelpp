@@ -1,0 +1,31 @@
+class specie_monitor
+!!!2677168.cpp!!!	description(inout out : ostream) : void
+out << " " << this->get_label() << "\n";
+out << " " << std::string( this->get_label().size(), '-' ) << "\n";
+out << "    Sample average specie numbers for a client observer. This\n";
+out << "    observer can not be created from the input file.\n";
+!!!2677168.python!!!	description(inout out : ostream) : void
+print >>os, "[observable]",self.type_label()
+print >>os, " Sample the average particle number in the whole"
+print >>os, " cell of each specie."
+print >>os, " Provides signals:",self.type_label()+"-mean",self.type_label()+"-variance"
+pass
+!!!2677680.python!!!	on_report(inout out : ostream, inout sink : base_sink) : void
+if self.count_ != None:
+  print >>out, " %3s %7s %8s %8s %8s %8s"%("SPC","COUNT","[]","<COUNT>","<[]>","VAR")
+  from constants import constants
+  for ispec, (runr, spc) in enumerate( zip( self.count_, sim.get_species() ) ):
+    count_to_conc = constants.to_SI()/sim.get_cell_region().volume( ispec )
+    if spc.count == None:
+      print >>out," %3s ########"% (spc.label())
+    else:
+      if runr.count() == 0:
+        print >>out," %3s %7d %8.4f ######## ######## ########"% (spc.label(),spc.count(),(spc.count()*count_to_conc))
+      else:
+        print >>out," %3s %7d %8.4f %8.4f %8.4f %8.4f"% (spc.label(),spc.count(),(spc.count()*count_to_conc),runr.mean(),(runr.mean()*count_to_conc),runr.variance())
+pass
+
+!!!2678192.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
+// Not from input file, delete the section.
+wr.remove_section( ix );
+
