@@ -646,27 +646,324 @@ if( result.empty() )
   throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::non_empty_value_message() );
 }
 target = result;
+!!!2699056.cpp!!!	bool_input(in param : base_input_parameter, in title : string, in section_name : string, inout target : bool, in has_default : bool, in default_value : bool) : void
+if( value.empty() )
+{
+  if( has_default )
+  {
+    target = default_value;
+    return;
+  }
+  else
+  {
+    if( value.empty() )
+    {
+      throw input_error::missing_value_error( title, section_name, name, reader );
+    }
+  }
+}
+else
+{
+  std::string astr{ dequote( value ) };
+  boost::trim( astr );
+  boost::to_upper( astr );
+  if( astr.empty() )
+  {
+    if( has_default )
+    {
+      target = default_value;
+      return;
+    }
+    else
+    {
+      if( astr.empty() )
+      {
+        throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::non_empty_value_message() );
+      }
+    }
+  }
+  switch (astr.size())
+  {
+  case 1:
+    if (astr == "1")
+    {
+      target = true;
+      return;
+    }
+    else if (astr == "0")
+    {
+      target = false;
+      return;
+    }
+    else if (astr == "F")
+    {
+      target = false;
+      return;
+    }
+    else if (astr == "T")
+    {
+      target = true;
+      return;
+    }
+    break;
+  case 3:
+    if (astr == ".F.")
+    {
+      target = false;
+      return;
+    }
+    else if (astr == ".T.")
+    {
+      target = true;
+      return;
+    }
+    break;
+  case 4:
+    if (astr == "TRUE")
+    {
+      target = true;
+      return;
+    }
+    break;
+  case 5:
+    if (astr == "FALSE")
+    {
+      target = false;
+      return;
+    }
+    break;
+  case 6:
+    if (astr == ".TRUE.")
+    {
+      target = true;
+      return;
+    }
+    break;
+  case 7:
+    if (astr == ".FALSE.")
+    {
+      target = false;
+      return;
+    }
+    break;
+  default:
+    break;
+  }
+  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::bad_boolean_message() );
+}
+
+!!!2698928.cpp!!!	float_input(in param : base_input_parameter, in title : string, in section_name : string, inout target : double, in above_zero : bool, in equal_zero : bool) : void
+if( param.value().empty() )
+{
+  throw input_error::missing_value_error( title, section_name, param );
+}
+std::string value{ param.value() };
+std::replace(value.begin(), value.end(), 'D', 'E');
+std::replace(value.begin(), value.end(), 'd', 'E');
+const char *start = value.c_str();
+// Move past any whitespace
+while( not *start == '\0' and std::isspace( *start ) ) ++start;
+if( *start == '\0')
+{
+  throw input_error::parameter_value_error( title, section_name, param, input_error::non_empty_value_message() );
+}
+char *end;
+double result;
+errno = 0;
+result = std::strtod(start, &end);
+if( errno == ERANGE )
+{
+  throw input_error::parameter_value_error( title, section_name, param, input_error::number_outside_range_message() );
+}
+if( std::isnan( result ) )
+{
+  throw input_error::parameter_value_error( title, section_name, param, input_error::number_nan_message() );
+}
+if( std::isinf( result ) )
+{
+  throw input_error::parameter_value_error( title, section_name, param, input_error::number_inf_message() );
+}
+if( *end != '\0' )
+{
+  while( not *end == '\0' and std::isspace( *end ) ) ++end;
+  if( *end != '\0' )
+  {
+    throw input_error::parameter_value_error( title, section_name, param, input_error::number_bad_message() );
+  }
+}
+if( above_zero )
+{
+  if( equal_zero )
+  {
+    if ( result < 0.0 )
+    {
+      throw input_error::parameter_value_error( title, section_name, param, input_error::number_negative_message() );
+    }
+  }
+  else if ( result <= 0.0 )
+  {
+    throw input_error::parameter_value_error( title, section_name, param, input_error::number_zero_message() );
+  }
+}
+target = result;
+!!!2698800.cpp!!!	floats_input(in param : base_input_parameter, in title : string, in section_name : string, inout target : double, in name : string = std::string()) : void
+input_parameter_memo lparam( param );
+if( not name.empty() )
+{
+  lparam.set_name( name );
+  lparam.set_value( param.line() );
+}
+if( lparam.value().empty() )
+{
+  throw input_error::missing_value_error( title, section_name, lparam );
+}
+std::string value{ lparam.value() };
+std::replace(value.begin(), value.end(), 'D', 'E');
+std::replace(value.begin(), value.end(), 'd', 'E');
+const char *start = value.c_str();
+std::vector< double > rlist;
+// Move past any whitespace
+while( not *start == '\0' and std::isspace( *start ) ) ++start;
+if( *start == '\0')
+{
+  throw input_error::parameter_value_error( title, section_name, lparam, input_error::non_empty_value_message() );
+}
+char *end;
+errno = 0;
+for (double result = std::strtod(start, &end); start != end; result = std::strtod(start, &end))
+{
+  if( errno == ERANGE )
+  {
+    while( not *start == '\0' and std::isspace( *start ) ) ++start;
+    std::string element( start, std::size_t(end - start) );
+    throw input_error::parameter_value_error( title, section_name, lparam, "Element " + element + ": " + input_error::number_outside_range_message() );
+  }
+  if( std::isnan( result ) )
+  {
+    while( not *start == '\0' and std::isspace( *start ) ) ++start;
+    std::string element( start, std::size_t(end - start) );
+    throw input_error::parameter_value_error( title, section_name, lparam, "Element " + element + ": " + input_error::number_nan_message() );
+  }
+  if( std::isinf( result ) )
+  {
+    while( not *start == '\0' and std::isspace( *start ) ) ++start;
+    std::string element( start, std::size_t(end - start) );
+    throw input_error::parameter_value_error( title, section_name, lparam, "Element " + element + ": " + input_error::number_inf_message() );
+  }
+  start = end;
+  while( not *start == '\0' and std::isspace( *start ) ) ++start;
+  rlist.push_back( result );
+  errno = 0;
+}
+if( *end != '\0' and not std::isspace( *end ) )
+{
+  std::string element( start ); // may be list but only want first element.
+  std::stringstream s( element );
+  s >> element;
+  throw input_error::parameter_value_error( title, section_name, lparam, "Element " + element + ": " + input_error::number_bad_message() );
+}
+std::swap( rlist, target );
+!!!2698672.cpp!!!	key_input(in param : base_input_parameter, in title : string, in section_name : string, inout target : size_t, in keylist : string) : void
+if( param.value().empty() )
+{
+  throw input_error::missing_value_error( title, section_name, param );
+}
+// Remove quotes and outer whitespace.
+std::string protokey = input_base_reader::dequote( param.value() );
+boost::algorithm::trim( protokey );
+if( protokey.empty() )
+{
+  throw input_error::parameter_value_error( title, section_name, param, input_error::non_empty_value_message() );
+}
+for( std::size_t idx = 0; idx != keylist.size(); ++idx)
+{
+  if( keylist[ idx ].find( protokey ) == 0 )
+  {
+    target = idx;
+    return;
+  }
+}
+// If here then key not found.
+std::stringstream os;
+os << "(";
+for( auto key : keylist )
+{
+  os << key << ",";
+}
+std::string list{ os.str() };
+list.back() = ')';
+throw input_error::parameter_value_error( title, section_name, param, (input_error::bad_key_message_format() % list).str() );
+!!!2698544.cpp!!!	ordinal_input(in param : base_input_parameter, in title : string, in section_name : string, inout target : size_t) : void
+if( param.value().empty() )
+{
+  throw input_error::missing_value_error( title, section_name, param );
+}
+const char *start = param.value().c_str();
+// Move past any whitespace
+while( not *start == '\0' and std::isspace( *start ) ) ++start;
+if( *start == '\0')
+{
+  throw input_error::parameter_value_error( title, section_name, param, input_error::non_empty_value_message() );
+}
+// Check for negative sign
+if( *start == '-' )
+{
+  throw input_error::parameter_value_error( title, section_name, param, input_error::number_negative_message() );
+}
+char *end;
+std::size_t result;
+errno = 0;
+// Expect base ten.
+result = std::strtoul(start, &end, 0);
+if( errno == ERANGE )
+{
+  throw input_error::parameter_value_error( title, section_name, param, input_error::number_outside_range_message() );
+}
+if( *end != '\0' and not std::isspace( *end ) )
+{
+  throw input_error::parameter_value_error( title, section_name, param, input_error::number_bad_message() );
+}
+target = result;
+!!!2698416.cpp!!!	text_input(in param : base_input_parameter, in title : string, in section_name : string, inout target : string) : void
+if( param.value().empty() )
+{
+  throw input_error::missing_value_error( title, section_name, param );
+}
+// Remove quotes.
+std::string result = input_base_reader::dequote( param.value() );
+if( result.empty() )
+{
+  throw input_error::parameter_value_error( title, section_name, param, input_error::non_empty_value_message() );
+}
+target = result;
 !!!1938736.cpp!!!	get_ordinal(in title : string, in section_name : string) : size_t
 std::size_t result{ 0 };
-ordinal_input( this->name(), this->value(), title, section_name, result, this );
+input_parameter_reference param( this );
+ordinal_input( param, title, section_name, result );
 return result;
 !!!1938864.cpp!!!	get_bool(in name : string, in title : string, in section_name : string, in has_default : bool, in default_value : bool) : bool
 bool result { false };
-bool_input( this->name(), this->value(), title, section_name, result, has_default, default_value, this );
+input_parameter_reference param( this );
+bool_input( param, title, section_name, result, has_default, default_value );
 return result;
 !!!1938992.cpp!!!	get_float(in title : string, in section_name : string, in above_zero : bool, in equal_zero : bool) : double
 double result{ 0 };
-float_input( this->name(), this->value(), title, section_name, result, above_zero, equal_zero, this );
+input_parameter_reference param( this );
+float_input( param, title, section_name, result, above_zero, equal_zero );
 return result;
 !!!2290992.cpp!!!	get_text(in title : string, in section_name : string) : string
 std::string result;
-text_input( this->name(), this->value(), title, section_name, result, this );
+input_parameter_reference param( this );
+text_input( param, title, section_name, result );
 return result;
 !!!2291120.cpp!!!	get_key(in title : string, in section_name : string, in keylist : string) : size_t
 std::size_t result{0};
-key_input( this->name(), this->value(), title, section_name, result, keylist, this );
+input_parameter_reference param( this );
+key_input( param, title, section_name, result, keylist );
 return result;
 !!!2299184.cpp!!!	get_floats(in title : string, in section_name : string, inout target : double) : void
-floats_input( this->name(), this->value(), title, section_name, target, this );
+input_parameter_reference param( this );
+floats_input( param, title, section_name, target, true );
 !!!2305712.cpp!!!	get_line_as_floats(in name : string, in title : string, in section_name : string, inout target : double) : void
-floats_input( name, this->line(), title, section_name, target, this );
+input_parameter_reference param( this );
+floats_input( param, title, section_name, target, false );
