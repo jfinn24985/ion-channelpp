@@ -1797,14 +1797,14 @@ if( not particle::specie_meta::has_keyword( "ratmov" ) )
   BOOST_CHECK( var1.is_solute() );
   BOOST_CHECK_EQUAL( var1.label(), "Ca" );
   BOOST_CHECK_EQUAL( var1.rate(), 1.0 );
-  BOOST_CHECK_EQUAL( var1.parameter( "ratmov" ), "1.0" );
-  BOOST_CHECK_EQUAL( var1.parameter( "ratexc" ), "2.0" );
-  BOOST_CHECK_EQUAL( var1.parameter( "ratgr" ), "3.0" );
+  BOOST_CHECK_EQUAL( var1.parameter( "ratmov" ).value(), "1.0" );
+  BOOST_CHECK_EQUAL( var1.parameter( "ratexc" ).value(), "2.0" );
+  BOOST_CHECK_EQUAL( var1.parameter( "ratgr" ).value(), "3.0" );
   BOOST_CHECK_EQUAL( var1.valency(), 2.0 );
   BOOST_CHECK_EQUAL( var1.radius(), 0.55 );
   BOOST_CHECK_EQUAL( var1.excess_potential(), 0.792 );
   BOOST_CHECK_EQUAL( var1.is_solute(), true );
-  BOOST_CHECK_EQUAL( var1.parameter( "ratreg" ), "0.3 0.3 0.3 0.1" );
+  BOOST_CHECK_EQUAL( var1.parameter( "ratreg" ).value(), "0.3 0.3 0.3 0.1" );
 }
 {
   boost::shared_ptr< particle::particle_manager > appl( new particle::particle_manager );
@@ -1980,16 +1980,16 @@ auto specie_validation = []( particle::specie const& aspec )
     BOOST_CHECK( spc.is_solute() );
     BOOST_CHECK( spc.is_valid() );
 
-    BOOST_CHECK( spc.has_parameter( k1 ) );
-    BOOST_CHECK_EQUAL( spc.parameter( k1 ), v1 );
-    BOOST_CHECK( spc.has_parameter( k2 ) );
-    BOOST_CHECK_EQUAL( spc.parameter( k2 ), v2 );
-    BOOST_CHECK( spc.has_parameter( k3 ) );
-    BOOST_CHECK_EQUAL( spc.parameter( k3 ), v3 );
-    BOOST_CHECK( spc.has_parameter( k4 ) );
-    BOOST_CHECK_EQUAL( spc.parameter( k4 ), v4 );
-    BOOST_CHECK( spc.has_parameter( k5 ) );
-    BOOST_CHECK_EQUAL( spc.parameter( k5 ), v5 );
+    BOOST_REQUIRE( spc.has_parameter( k1 ) );
+    BOOST_CHECK_EQUAL( spc.parameter( k1 ).value(), v1 );
+    BOOST_REQUIRE( spc.has_parameter( k2 ) );
+    BOOST_CHECK_EQUAL( spc.parameter( k2 ).value(), v2 );
+    BOOST_REQUIRE( spc.has_parameter( k3 ) );
+    BOOST_CHECK_EQUAL( spc.parameter( k3 ).value(), v3 );
+    BOOST_REQUIRE( spc.has_parameter( k4 ) );
+    BOOST_CHECK_EQUAL( spc.parameter( k4 ).value(), v4 );
+    BOOST_REQUIRE( spc.has_parameter( k5 ) );
+    BOOST_CHECK_EQUAL( spc.parameter( k5 ).value(), v5 );
 
     BOOST_CHECK_EQUAL( spc.get_position( 0 ), pos1 );
     BOOST_CHECK_EQUAL( spc.get_position( 1 ), pos2 );
@@ -2013,11 +2013,17 @@ auto specie_validation = []( particle::specie const& aspec )
     BOOST_CHECK_EQUAL( var.get_position( 0 ), pos1 );
     BOOST_CHECK_EQUAL( var.get_position( 1 ), pos2 );
     BOOST_CHECK_EQUAL( var.get_position( 2 ), pos3 );
-    BOOST_CHECK_NO_THROW( var.set_parameter( k1, v1 ) );
-    BOOST_CHECK_NO_THROW( var.set_parameter( k2, v2 ) );
-    BOOST_CHECK_NO_THROW( var.set_parameter( k3, v3 ) );
-    BOOST_CHECK_NO_THROW( var.set_parameter( k4, v4 ) );
-    BOOST_CHECK_NO_THROW( var.set_parameter( k5, v5 ) );
+    core::input_parameter_memo tmp;
+    tmp.set_name( k1 ); tmp.set_value( v1 );
+    BOOST_CHECK_NO_THROW( var.set_parameter( tmp ) );
+    tmp.set_name( k2 ); tmp.set_value( v2 );
+    BOOST_CHECK_NO_THROW( var.set_parameter( tmp ) );
+    tmp.set_name( k3 ); tmp.set_value( v3 );
+    BOOST_CHECK_NO_THROW( var.set_parameter( tmp ) );
+    tmp.set_name( k4 ); tmp.set_value( v4 );
+    BOOST_CHECK_NO_THROW( var.set_parameter( tmp ) );
+    tmp.set_name( k5 ); tmp.set_value( v5 );
+    BOOST_CHECK_NO_THROW( var.set_parameter( tmp ) );
     specie_validation( var );
     test_specie( var );
     // Test serialization
@@ -2059,8 +2065,7 @@ auto specie_validation = []( particle::specie const& aspec )
     ia >> var;
 
     specie_validation( var );
-    test_specie( var );
-
+    test_specie( var ); 
   }
 }
 
@@ -2254,31 +2259,39 @@ auto specie_validation = []( particle::specie const& aspec )
     BOOST_CHECK( var.is_solute() );
     BOOST_CHECK( var.is_valid() );
     // Test parameter handling
+    {
+    core::input_parameter_memo tmp;
+
     BOOST_CHECK( not var.has_parameter( k1 ) );
-    BOOST_CHECK_NO_THROW( var.set_parameter( k1, v1 ) );
+    tmp.set_name( k1 ); tmp.set_value( v1 );
+    BOOST_CHECK_NO_THROW( var.set_parameter( tmp ) );
     BOOST_CHECK( var.has_parameter( k1 ) );
-    BOOST_CHECK_EQUAL( var.parameter( k1 ), v1 );
+    BOOST_CHECK_EQUAL( var.parameter( k1 ).value(), v1 );
 
     BOOST_CHECK( not var.has_parameter( k2 ) );
-    BOOST_CHECK_NO_THROW( var.set_parameter( k2, v2 ) );
+    tmp.set_name( k2 ); tmp.set_value( v2 );
+    BOOST_CHECK_NO_THROW( var.set_parameter( tmp ) );
     BOOST_CHECK( var.has_parameter( k2 ) );
-    BOOST_CHECK_EQUAL( var.parameter( k2 ), v2 );
+    BOOST_CHECK_EQUAL( var.parameter( k2 ).value(), v2 );
 
     BOOST_CHECK( not var.has_parameter( k3 ) );
-    BOOST_CHECK_NO_THROW( var.set_parameter( k3, v3 ) );
+    tmp.set_name( k3 ); tmp.set_value( v3 );
+    BOOST_CHECK_NO_THROW( var.set_parameter( tmp ) );
     BOOST_CHECK( var.has_parameter( k3 ) );
-    BOOST_CHECK_EQUAL( var.parameter( k3 ), v3 );
+    BOOST_CHECK_EQUAL( var.parameter( k3 ).value(), v3 );
 
     BOOST_CHECK( not var.has_parameter( k4 ) );
-    BOOST_CHECK_NO_THROW( var.set_parameter( k4, v4 ) );
+    tmp.set_name( k4 ); tmp.set_value( v4 );
+    BOOST_CHECK_NO_THROW( var.set_parameter( tmp ) );
     BOOST_CHECK( var.has_parameter( k4 ) );
-    BOOST_CHECK_EQUAL( var.parameter( k4 ), v4 );
+    BOOST_CHECK_EQUAL( var.parameter( k4 ).value(), v4 );
 
     BOOST_CHECK( not var.has_parameter( k5 ) );
-    BOOST_CHECK_NO_THROW( var.set_parameter( k5, v5 ) );
+    tmp.set_name( k5 ); tmp.set_value( v5 );
+    BOOST_CHECK_NO_THROW( var.set_parameter( tmp ) );
     BOOST_CHECK( var.has_parameter( k5 ) );
-    BOOST_CHECK_EQUAL( var.parameter( k5 ), v5 );
-
+    BOOST_CHECK_EQUAL( var.parameter( k5 ).value(), v5 );
+    }
     // Make copy of specie for later tests without
     // predefined particles for later tests
     //////////////////////////////////////////////
@@ -2298,25 +2311,27 @@ auto specie_validation = []( particle::specie const& aspec )
     // overwrite existing value not allowed
     {
       particle::specie var2( var );
-      BOOST_CHECK( var2.has_parameter( k1 ) );
+      BOOST_REQUIRE( var2.has_parameter( k1 ) );
       const std::string fncall { "var2.set_parameter( k1, v2 )" };
       try
       {
-        var2.set_parameter( k1, v2 );
+        core::input_parameter_memo tmp;
+        tmp.set_name( k1 ); tmp.set_value( v2 );
+        var2.set_parameter( tmp );
         BOOST_ERROR( "expected \"" + fncall + "\" exception not thrown" );
       }
       catch( std::runtime_error const& err )
       {
         const std::string msg( err.what() );
         //std::cout << msg << "\n";
-        BOOST_CHECK( msg.find( "Can not change value of an existing parameter" ) < msg.size() );
+        BOOST_CHECK( msg.find( "Can not change an existing parameter" ) < msg.size() );
       }
       catch( std::exception const& err )
       {
         BOOST_ERROR( "exception thrown by \"" + fncall + "\" was not expected type: " + err.what() );
       }
-      BOOST_CHECK( var2.has_parameter( k1 ) );
-      BOOST_CHECK_EQUAL( var2.parameter( k1 ), v1 );
+      BOOST_REQUIRE( var2.has_parameter( k1 ) );
+      BOOST_CHECK_EQUAL( var2.parameter( k1 ).value(), v1 );
     }
 
     // Attempts to add particles using "update_position" to MOBILE specie
@@ -2741,7 +2756,7 @@ reader.add_buffer( "dummy", canon_input );
 BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
 BOOST_CHECK_EQUAL( appl->specie_count(), 1 );
 BOOST_CHECK( appl->get_specie( 0 ).has_parameter( "ratreg" ) );
-BOOST_CHECK_EQUAL( appl->get_specie( 0 ).parameter( "ratreg" ), "0.3 -0.3 0.3 0.1" );
+BOOST_CHECK_EQUAL( appl->get_specie( 0 ).parameter( "ratreg" ).value(), "0.3 -0.3 0.3 0.1" );
 
 
 !!!958512.cpp!!!	specie_input_missing_name_value_test() : void
@@ -3226,7 +3241,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Expecting a position definition parameter \"n\" with value (0.3 0.1 0.4 0.1 0.2 f.0 3.4) in section \"specie\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 12.\n** Element f.0: A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Expecting a position definition parameter \"n\" with value (0.3 0.1 0.4 0.1 0.2 f.0 3.4) in section \"specie\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 12.\n   >>0.3 0.1 0.4 0.1 0.2 f.0 3.4<<\n** Element f.0: A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -3254,7 +3269,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Expecting a position definition parameter \"n\" with value (0.3 D.1 0.4 0.1 0.2 0.0 3.4) in section \"specie\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 12.\n** Element E.1: A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Expecting a position definition parameter \"n\" with value (0.3 D.1 0.4 0.1 0.2 0.0 3.4) in section \"specie\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 12.\n   >>0.3 D.1 0.4 0.1 0.2 0.0 3.4<<\n** Element E.1: A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
