@@ -647,7 +647,7 @@ if( result.empty() )
 }
 target = result;
 !!!2699056.cpp!!!	bool_input(in param : base_input_parameter, in title : string, in section_name : string, inout target : bool, in has_default : bool, in default_value : bool) : void
-if( value.empty() )
+if( param.value().empty() )
 {
   if( has_default )
   {
@@ -656,15 +656,15 @@ if( value.empty() )
   }
   else
   {
-    if( value.empty() )
+    if( param.value().empty() )
     {
-      throw input_error::missing_value_error( title, section_name, name, reader );
+      throw input_error::missing_value_error( title, section_name, param );
     }
   }
 }
 else
 {
-  std::string astr{ dequote( value ) };
+  std::string astr{ dequote( param.value() ) };
   boost::trim( astr );
   boost::to_upper( astr );
   if( astr.empty() )
@@ -678,7 +678,7 @@ else
     {
       if( astr.empty() )
       {
-        throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::non_empty_value_message() );
+        throw input_error::parameter_value_error( title, section_name, param, input_error::non_empty_value_message() );
       }
     }
   }
@@ -749,7 +749,7 @@ else
   default:
     break;
   }
-  throw input_error::parameter_value_error( title, section_name, name, value, reader, input_error::bad_boolean_message() );
+  throw input_error::parameter_value_error( title, section_name, param, input_error::bad_boolean_message() );
 }
 
 !!!2698928.cpp!!!	float_input(in param : base_input_parameter, in title : string, in section_name : string, inout target : double, in above_zero : bool, in equal_zero : bool) : void
@@ -806,18 +806,12 @@ if( above_zero )
   }
 }
 target = result;
-!!!2698800.cpp!!!	floats_input(in param : base_input_parameter, in title : string, in section_name : string, inout target : double, in name : string = std::string()) : void
-input_parameter_memo lparam( param );
-if( not name.empty() )
+!!!2698800.cpp!!!	floats_input(in param : base_input_parameter, in title : string, in section_name : string, inout target : double) : void
+if( param.value().empty() )
 {
-  lparam.set_name( name );
-  lparam.set_value( param.line() );
+  throw input_error::missing_value_error( title, section_name, param );
 }
-if( lparam.value().empty() )
-{
-  throw input_error::missing_value_error( title, section_name, lparam );
-}
-std::string value{ lparam.value() };
+std::string value{ param.value() };
 std::replace(value.begin(), value.end(), 'D', 'E');
 std::replace(value.begin(), value.end(), 'd', 'E');
 const char *start = value.c_str();
@@ -826,7 +820,7 @@ std::vector< double > rlist;
 while( not *start == '\0' and std::isspace( *start ) ) ++start;
 if( *start == '\0')
 {
-  throw input_error::parameter_value_error( title, section_name, lparam, input_error::non_empty_value_message() );
+  throw input_error::parameter_value_error( title, section_name, param, input_error::non_empty_value_message() );
 }
 char *end;
 errno = 0;
@@ -836,19 +830,19 @@ for (double result = std::strtod(start, &end); start != end; result = std::strto
   {
     while( not *start == '\0' and std::isspace( *start ) ) ++start;
     std::string element( start, std::size_t(end - start) );
-    throw input_error::parameter_value_error( title, section_name, lparam, "Element " + element + ": " + input_error::number_outside_range_message() );
+    throw input_error::parameter_value_error( title, section_name, param, "Element " + element + ": " + input_error::number_outside_range_message() );
   }
   if( std::isnan( result ) )
   {
     while( not *start == '\0' and std::isspace( *start ) ) ++start;
     std::string element( start, std::size_t(end - start) );
-    throw input_error::parameter_value_error( title, section_name, lparam, "Element " + element + ": " + input_error::number_nan_message() );
+    throw input_error::parameter_value_error( title, section_name, param, "Element " + element + ": " + input_error::number_nan_message() );
   }
   if( std::isinf( result ) )
   {
     while( not *start == '\0' and std::isspace( *start ) ) ++start;
     std::string element( start, std::size_t(end - start) );
-    throw input_error::parameter_value_error( title, section_name, lparam, "Element " + element + ": " + input_error::number_inf_message() );
+    throw input_error::parameter_value_error( title, section_name, param, "Element " + element + ": " + input_error::number_inf_message() );
   }
   start = end;
   while( not *start == '\0' and std::isspace( *start ) ) ++start;
@@ -860,7 +854,7 @@ if( *end != '\0' and not std::isspace( *end ) )
   std::string element( start ); // may be list but only want first element.
   std::stringstream s( element );
   s >> element;
-  throw input_error::parameter_value_error( title, section_name, lparam, "Element " + element + ": " + input_error::number_bad_message() );
+  throw input_error::parameter_value_error( title, section_name, param, "Element " + element + ": " + input_error::number_bad_message() );
 }
 std::swap( rlist, target );
 !!!2698672.cpp!!!	key_input(in param : base_input_parameter, in title : string, in section_name : string, inout target : size_t, in keylist : string) : void
@@ -938,32 +932,35 @@ if( result.empty() )
 target = result;
 !!!1938736.cpp!!!	get_ordinal(in title : string, in section_name : string) : size_t
 std::size_t result{ 0 };
-input_parameter_reference param( this );
+input_parameter_reference param( *this );
 ordinal_input( param, title, section_name, result );
 return result;
 !!!1938864.cpp!!!	get_bool(in name : string, in title : string, in section_name : string, in has_default : bool, in default_value : bool) : bool
 bool result { false };
-input_parameter_reference param( this );
+input_parameter_reference param( *this );
 bool_input( param, title, section_name, result, has_default, default_value );
 return result;
 !!!1938992.cpp!!!	get_float(in title : string, in section_name : string, in above_zero : bool, in equal_zero : bool) : double
 double result{ 0 };
-input_parameter_reference param( this );
+input_parameter_reference param( *this );
 float_input( param, title, section_name, result, above_zero, equal_zero );
 return result;
 !!!2290992.cpp!!!	get_text(in title : string, in section_name : string) : string
 std::string result;
-input_parameter_reference param( this );
+input_parameter_reference param( *this );
 text_input( param, title, section_name, result );
 return result;
 !!!2291120.cpp!!!	get_key(in title : string, in section_name : string, in keylist : string) : size_t
 std::size_t result{0};
-input_parameter_reference param( this );
+input_parameter_reference param( *this );
 key_input( param, title, section_name, result, keylist );
 return result;
 !!!2299184.cpp!!!	get_floats(in title : string, in section_name : string, inout target : double) : void
-input_parameter_reference param( this );
-floats_input( param, title, section_name, target, true );
+input_parameter_reference param( *this );
+floats_input( param, title, section_name, target );
 !!!2305712.cpp!!!	get_line_as_floats(in name : string, in title : string, in section_name : string, inout target : double) : void
-input_parameter_reference param( this );
-floats_input( param, title, section_name, target, false );
+UTILITY_REQUIRE( not name.empty(), "Require name for parameter." );
+input_parameter_memo param( *this );
+param.set_name( name );
+param.set_value( param.line() );
+floats_input( param, title, section_name, target );
