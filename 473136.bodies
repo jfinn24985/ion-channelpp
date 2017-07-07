@@ -68,12 +68,15 @@ wr[ix].add_entry( width_label, this->length_ );
 wr[ix].add_entry( origin_label, this->origin_ );
 wr[ix].add_entry( isopen_label, this->is_open_ );
 
-!!!1069360.cpp!!!	region_factory(in label : string, in params : string, in reader : input_base_reader) : base_region
+!!!1069360.cpp!!!	region_factory(in label : string, in params : input_parameter_memo) : base_region
 // needed information
+// FROM label PARAMETER
 // label : from label arg
+// FROM params PARAMETER
 // origin : from param arg
 // width : from param arg
 // open : from param arg or default:true
+std::size_t mask{ 0ul };
 double width {};
 geometry::coordinate origin {};
 bool isopen { true }; // default is true
@@ -82,29 +85,37 @@ const std::string width_label { "width" };
 const std::string origin_label { "origin" };
 const std::string isopen_label { "open" };
 // check for required parameters.
+for( auto const& param : params )
 {
-  std::string miss_params;
-  if( params.count( width_label ) == 0 ) miss_params = width_label;
-  if( params.count( origin_label ) == 0 ) miss_params += ( miss_params.empty() ? "" : " " ) + origin_label;
-  if( not miss_params.empty() ) reader.missing_parameters_error( "Cube", core::strngs::fsregn(), miss_params );
+  if( param.name() == width_label )
+  {
+    width = param.get_float( "Cube size", core::strngs::fsregn(), true, false );
+    mask |= 1ul;
+  }
+  else if( param.name() == origin_label )
+  {
+    geometry::coordinate::coordinate_input( param, "Cube location", core::strngs::fsregn(), origin );
+    mask |= 2ul;
+  }
+  else if( param.name() == isopen_label )
+  {
+    isopen = param.get_bool( "Cube wall permeability", core::strngs::fsregn(), true, true );
+  }
 }
+std::string miss_params;
+if( ( mask & 1ul ) == 0ul ) miss_params = width_label;
+if( ( mask & 2ul ) == 0ul ) miss_params += ( miss_params.empty() ? "" : " " ) + origin_label;
 
-core::input_base_reader::float_input( width_label, params.at( width_label ), "Cube size", core::strngs::fsregn(), width, true, false, &reader );
-
-geometry::coordinate::coordinate_input( origin_label, params.at( origin_label ), "Cube location", core::strngs::fsregn(), origin, &reader );
-
-if ( params.count( isopen_label ) == 1 )
+if( not miss_params.empty() )
 {
-  core::input_base_reader::bool_input( isopen_label, params.at( isopen_label ), "Cube wall permeability", core::strngs::fsregn(), isopen, true, true, &reader );
+  UTILITY_CHECK( params.back().name() == core::strngs::fsend(), "Missing guard entry in vector." );
+  throw core::input_error::missing_parameters_error( "Cube", core::strngs::fsregn(), miss_params, params.back().filename(), params.back().line_number() );
 }
 
 // build region object.
 boost::shared_ptr< geometry::base_region > current;
 current.reset( new cube_region( label, width, origin, isopen ) );
 return current;
-
-
-
 !!!1069488.cpp!!!	add_definition(inout meta : region_meta) : void
 std::string desc( "A non-periodic cube region. The cube surfaces can be permeable (open=true) or impermeable (open=false) to simulation particles." );
 std::unique_ptr< region_definition > cube_defn( new region_definition( type_label(), desc, &cube_region::region_factory ) );

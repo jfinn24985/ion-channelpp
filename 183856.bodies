@@ -80,28 +80,40 @@ wr[ix].add_entry( core::strngs::fstype(), type_label() );
 wr[ix].add_entry( half_length_label, this->half_length_ );
 wr[ix].add_entry( radius_label, this->radius_ );
 
-!!!1093296.cpp!!!	region_factory(in label : string, in params : string, in reader : input_base_reader) : base_region
+!!!1093296.cpp!!!	region_factory(in label : string, in params : input_parameter_memo) : base_region
 // needed information
 // label : from label arg
 // radius : from param arg
 // half_length : from param arg
 double half_length {};
 double radius {};
-
+size_t mask{ 0ul };
 const std::string half_length_label { "half-length" };
 const std::string radius_label { "radius" };
+for( auto const& param : params )
 {
-  std::string bad_params;
-  // check for required parameters.
-  if( params.count( half_length_label ) == 0 ) bad_params = half_length_label;
-  if( params.count( radius_label ) == 0 ) bad_params += (bad_params.empty() ? "": " ") + radius_label;
-  if( not bad_params.empty() ) reader.missing_parameters_error( "Cylinder", core::strngs::fsregn(), bad_params );
+  if( param.name() == half_length_label )
+  {
+    half_length = param.get_float( "Cylinder size", core::strngs::fsregn(), true, false );
+    mask |= 1ul;
+  }
+  else if( param.name() == radius_label )
+  {
+    radius = param.get_float( "Cylinder size", core::strngs::fsregn(), true, false );
+    mask |= 2ul;
+  }
 }
-
-core::input_base_reader::float_input( half_length_label, params.at( half_length_label ), "Cylinder size", core::strngs::fsregn(), half_length, true, false, &reader );
-
-core::input_base_reader::float_input( radius_label, params.at( radius_label ), "Cylinder size", core::strngs::fsregn(), radius, true, false, &reader );
-
+{
+  std::string missing_params;
+  // check for required parameters.
+  if( ( mask & 1ul ) == 0 ) missing_params = half_length_label;
+  if( ( mask & 2ul ) == 0 ) missing_params += (missing_params.empty() ? "": " ") + radius_label;
+  if( not missing_params.empty() )
+  {
+    UTILITY_CHECK( params.back().name() == core::strngs::fsend(), "Missing guard entry in vector." );
+    throw core::input_error::missing_parameters_error( "Cylinder", core::strngs::fsregn(), missing_params, params.back().filename(), params.back().line_number() );
+  }
+}
 // build region object.
 boost::shared_ptr< geometry::base_region > current;
 current.reset( new cylinder_region( label, radius, half_length ) );

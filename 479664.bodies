@@ -65,11 +65,11 @@ else
 {
   // --------------------
   // Region subtype specific parameters
-  reader.duplicate_test( 0 == this->parameter_set_.count( reader.name() ), this->section_label() );
-  this->parameter_set_.insert( std::make_pair( reader.name(), reader.value() ) );
+  const std::string lname{ reader.name() };
+  reader.duplicate_test( 0 == std::count_if( this->parameter_set_.begin(), this->parameter_set_.end(), [&lname](const core::input_parameter_memo& param){ return lname == param.name(); } ), this->section_label() );
+  this->parameter_set_.push_back( core::input_parameter_memo( reader ) );
 }
 return true;
-
 !!!1061936.cpp!!!	do_read_end(in reader : input_base_reader) : void
 {
   std::string bad_params;
@@ -89,11 +89,13 @@ for( auto const& defn : this->type_to_object_ )
     for( auto const& entry : this->parameter_set_ )
     {
       // check for required parameters.
-      if( not defn.has_definition( entry.first ) ) bad_params += (bad_params.empty() ? "": " ") + entry.first;
+      if( not defn.has_definition( entry.name() ) ) bad_params += (bad_params.empty() ? "": " ") + entry.name();
     }
     if( not bad_params.empty() ) reader.invalid_parameter_subtype_error( core::strngs::fsregn(), this->type_name_, bad_params );
+    // push "end" tag onto parameter set.
+    this->parameter_set_.push_back( core::input_parameter_memo( reader ) );
     // build object and add to manager.
-    this->manager_->add_region( defn( this->label_, this->parameter_set_, reader ) );
+    this->manager_->add_region( defn( this->label_, this->parameter_set_ ) );
     return;
   }
 }

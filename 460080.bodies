@@ -62,7 +62,7 @@ wr[ix].add_entry( half_length_label, this->half_length() );
 wr[ix].add_entry( radius_label, this->radius() );
 wr[ix].add_entry( offset_label, this->offset() );
 
-!!!1093808.cpp!!!	region_factory(in label : string, in params : string, in reader : input_base_reader) : base_region
+!!!1093808.cpp!!!	region_factory(in label : string, in params : input_parameter_memo) : base_region
 // needed information
 // label : from label arg
 // radius : from param arg
@@ -71,32 +71,45 @@ wr[ix].add_entry( offset_label, this->offset() );
 double half_length {};
 double radius {};
 double offset {};
+size_t mask{ 0ul };
 
 const std::string half_length_label { "half-length" };
 const std::string radius_label { "radius" };
 const std::string offset_label { "offset" };
+for( auto const& param : params )
 {
-  std::string bad_params;
-  // check for required parameters.
-  if( params.count( half_length_label ) == 0 ) bad_params = half_length_label;
-  if( params.count( radius_label ) == 0 ) bad_params += (bad_params.empty() ? "": " ") + radius_label;
-  if( params.count( offset_label ) == 0 ) bad_params += (bad_params.empty() ? "": " ") + offset_label;
-  if( not bad_params.empty() ) reader.missing_parameters_error( "Cylinder", core::strngs::fsregn(), bad_params );
+  if( param.name() == half_length_label )
+  {
+    half_length = param.get_float( "Split cylinder size", core::strngs::fsregn(), true, false );
+    mask |= 1ul;
+  }
+  else if( param.name() == radius_label )
+  {
+    radius = param.get_float( "Split cylinder size", core::strngs::fsregn(), true, false );
+    mask |= 2ul;
+  }
+  else if( param.name() == offset_label )
+  {
+    offset = param.get_float( "Split cylinder split", core::strngs::fsregn(), true, false );
+    mask |= 4ul;
+  }
 }
-
-core::input_base_reader::float_input( half_length_label, params.at( half_length_label ), "Split cylinder size", core::strngs::fsregn(), half_length, true, false, &reader );
-
-core::input_base_reader::float_input( radius_label, params.at( radius_label ), "Split cylinder size", core::strngs::fsregn(), radius, true, false, &reader );
-
-core::input_base_reader::float_input( offset_label, params.at( offset_label ), "Split cylinder split", core::strngs::fsregn(), offset, true, false, &reader );
-
+{
+  std::string missing_params;
+  // check for required parameters.
+  if( ( mask & 1ul ) == 0ul ) missing_params = half_length_label;
+  if( ( mask & 2ul ) == 0ul ) missing_params += (missing_params.empty() ? "": " ") + radius_label;
+  if( ( mask & 4ul ) == 0ul ) missing_params += (missing_params.empty() ? "": " ") + offset_label;
+  if( not missing_params.empty() )
+  {
+    UTILITY_CHECK( params.back().name() == core::strngs::fsend(), "Missing guard entry in vector." );
+    throw core::input_error::missing_parameters_error( "Split cylinder", core::strngs::fsregn(), missing_params, params.back().filename(), params.back().line_number() );
+  }
+}
 // build region object.
 boost::shared_ptr< geometry::base_region > current;
 current.reset( new open_split_cylinder_region( label, radius, half_length, offset ) );
 return current;
-
-
-
 !!!1093680.cpp!!!	add_definition(inout meta : region_meta) : void
 std::string desc( "A cylindrical region centred on the origin with linear axis in z direction. All walls are considered soft. Cylinder is cut in the centre and the two parts displaced \"offset\" from the origin along the z-axis." );
 std::unique_ptr< region_definition > cylinder_defn( new region_definition( type_label(), desc, &open_split_cylinder_region::region_factory ) );

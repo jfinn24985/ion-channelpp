@@ -100,17 +100,31 @@ const std::string width_label { "width" };
 wr[ix].add_entry( core::strngs::fstype(), type_label() );
 wr[ix].add_entry( width_label, this->length() );
 
-!!!1085232.cpp!!!	region_factory(in label : string, in params : string, in reader : input_base_reader) : base_region
+!!!1085232.cpp!!!	region_factory(in label : string, in params : input_parameter_memo) : base_region
 // needed information
 // label : from label arg
 // width : from param arg
 double width {};
+bool found_width{ false };
 
 const std::string width_label { "width" };
-// check for required parameter.
-if( params.count( width_label ) == 0 ) reader.missing_parameters_error( "Periodic cube", core::strngs::fsregn(), width_label );
 
-core::input_base_reader::float_input( width_label, params.at( width_label ), "Periodic cube size", core::strngs::fsregn(), width, true, false, &reader );
+for( auto const& param : params )
+{
+  if( param.name() == width_label )
+  {
+    width = param.get_float( "Periodic cube size", core::strngs::fsregn(), true, false );
+    found_width = true;
+  }
+}
+{
+  // check for required parameters.
+  if( not found_width )
+  {
+    UTILITY_CHECK( params.back().name() == core::strngs::fsend(), "Missing guard entry in vector." );
+    throw core::input_error::missing_parameters_error( "Periodic cube", core::strngs::fsregn(), width_label, params.back().filename(), params.back().line_number() );
+  }
+}
 
 // build region object.
 boost::shared_ptr< geometry::base_region > current;
