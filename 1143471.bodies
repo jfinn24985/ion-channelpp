@@ -74,15 +74,18 @@ else if( reader.name().find( core::strngs::fsspec() ) == 0 )
 {
   // --------------------
   // Allowed/disallowed specie list
-  reader.duplicate_test( this->specie_list_.empty(), this->section_label() );
-  this->specie_list_ = reader.get_text( "Specie inclusion list", this->section_label() );
+  reader.duplicate_test( this->specie_list_.name().empty(), this->section_label() );
+  core::input_parameter_memo tmp( reader );
+  tmp.set_value( reader.get_text( "Specie inclusion list", core::strngs::fstry() ) ); 
+  this->specie_list_.swap( tmp );
 }
 else
 {
   // --------------------
   // Assume choice specific parameters
-  reader.duplicate_test( 0 == this->parameter_set_.count( reader.name() ), this->section_label() );
-  this->parameter_set_.insert( std::make_pair( reader.name(), reader.value() ) );
+  const std::string lname{ reader.name() };
+  reader.duplicate_test( 0 == std::count_if( this->parameter_set_.begin(), this->parameter_set_.end(), [&lname](const core::input_parameter_memo& param){ return lname == param.name(); } ), this->section_label() );
+  this->parameter_set_.push_back( core::input_parameter_memo( reader ) );
 }
 return true;
 
@@ -109,21 +112,28 @@ auto const& defn = this->type_to_object_[ idx ];
 // use definiton to check parameter names
 if( not this->parameter_set_.empty() )
 {
+  std::string bad_params;
   for( auto const& entry : this->parameter_set_ )
   {
-    if( not defn.has_definition( entry.first ) )
+    if( not defn.has_definition( entry.name() ) )
     {
-      reader.invalid_parameter_subtype_error( this->section_label(), this->type_, entry.first );
+      bad_params += (bad_params.empty() ? "": " ") + entry.name();
     }
   }
+  if( not bad_params.empty() )
+  {
+    reader.invalid_parameter_subtype_error( this->section_label(), this->type_, bad_params );
+  } 
 }
-
+// push "end" tag onto parameter set.
+this->parameter_set_.push_back( core::input_parameter_memo( reader ) );
 // Use generator to create the chooser object.
 this->manager_->add_chooser( defn( this->parameter_set_, this->type_, this->specie_list_, this->rate_ ) );
 !!!1171376.cpp!!!	do_reset() : void
 this->missing_required_tags_.set();
 this->parameter_set_.clear();
 this->rate_ = 0.0;
-this->specie_list_.clear();
+core::input_parameter_memo tmp;
+this->specie_list_.swap( tmp );
 this->type_.clear();
 

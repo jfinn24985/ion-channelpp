@@ -71,29 +71,28 @@ std::unique_ptr< trial::choice_definition > defn( new trial::choice_definition( 
 }
 UTILITY_CHECK( not meta.has_trial_type( defn->label() ), "This type has already been added to this meta object." );
 meta.add_trial_type( defn );
-!!!1178800.cpp!!!	make_choice(in ispec : size_t, in gman : geometry_manager, in params : string) : move_choice
+!!!1178800.cpp!!!	make_choice(in ispec : size_t, in gman : geometry_manager, in params : input_parameter_memo) : move_choice
 // needed information
 // ispec : from ispec arg
 // delta : from param arg
 double delta {};
 const std::string delta_label { "delta" }; 
-
+bool have_delta { false };
 // check for required parameters.
-if( params.count( delta_label ) == 1 )
+for( auto & param : params )
 {
-  // will use non-default delta. Get and validate value.
-  core::input_base_reader::float_input( delta_label, params.at( delta_label ), "Move trial", core::strngs::fstry(), delta, true, false, nullptr );
+  if( param.name() == delta_label )
+  {
+    // will use non-default delta. Get and validate value.
+    delta = param.get_float( "Move trial", core::strngs::fstry(), true, false );
+    have_delta = true;
+  }
 }
-
 // build region object.
 std::unique_ptr< move_choice > current;
 current.reset( new move_choice( ispec ) );
-if( params.count( delta_label ) == 1 )
+if( have_delta )
 {
   current->set_max_displacement( delta );
 }
 return current;
-
-
-
-

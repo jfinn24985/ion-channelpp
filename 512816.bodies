@@ -68,40 +68,48 @@ std::unique_ptr< trial::choice_definition > defn( new trial::choice_definition( 
 }
 UTILITY_CHECK( not meta.has_trial_type( defn->label() ), "This type has already been added to this meta object." );
 meta.add_trial_type( defn );
-!!!1207984.cpp!!!	make_choice(in ispec : size_t, in gman : geometry_manager, in params : string) : jump_in
+!!!1207984.cpp!!!	make_choice(in ispec : size_t, in gman : geometry_manager, in params : input_parameter_memo) : jump_in
 // needed information
 // ispec : from ispec arg
 // region_name : from param arg
-std::string region_name {};
-const std::string region_name_label { core::strngs::fsregn() }; 
-
+std::size_t region_index {0ul};
+const std::string region_name_label { core::strngs::fsregn() };
+bool have_region{ false };
 // --------------------
 // region label (required)
 // check for required parameters.
-if( params.count( region_name_label ) ==  0 )
+for( auto & param : params )
 {
-  throw core::input_error::missing_parameters_error( "Jump-in subtype trial", core::strngs::fstry(), region_name_label, nullptr );
-}
-core::input_base_reader::text_input( region_name_label, params.at( region_name_label ), "Jump-in target region", core::strngs::fstry(), region_name, nullptr );
-boost::algorithm::trim( region_name );
-const std::size_t region_index = gman.region_key( region_name );
-if( region_index == gman.region_count() )
-{
-  // make list of region labels.
-  std::stringstream rss{};
-  rss << "(";
-  for( std::size_t ireg = 0; ireg != gman.region_count(); ++ireg )
+  if( param.name() == region_name_label )
   {
-    rss << gman.get_region( ireg ).label() << ",";
+    std::string region_name = param.get_text( "Jump-in target region", core::strngs::fstry() );
+    have_region = true;
+    boost::algorithm::trim( region_name );
+    const std::size_t region_index = gman.region_key( region_name );
+    if( region_index == gman.region_count() )
+    {
+      // make list of region labels.
+      std::stringstream rss{};
+      rss << "(";
+      for( std::size_t ireg = 0; ireg != gman.region_count(); ++ireg )
+      {
+        rss << gman.get_region( ireg ).label() << ",";
+      }
+      std::string list( rss.str() );
+      list.back() = ')';
+      throw core::input_error::parameter_value_error( "Jump-in target region", core::strngs::fstry(), param, ( core::input_error::bad_key_message_format() % list ).str() );
+    }
+    if( region_index == 0 )
+    {
+      throw core::input_error::parameter_value_error( "Jump-in target region", core::strngs::fstry(), param, "Jump-in target region cannot be the system region" );
+    }
   }
-  std::string list( rss.str() );
-  list.back() = ')';
-  throw core::input_error::parameter_value_error( "Jump-in target region", core::strngs::fstry(), region_name_label, params.at( region_name_label ), nullptr, ( core::input_error::bad_key_message_format() % list ).str() );
 }
-if( region_index == 0 )
+if( not have_region )
 {
-  throw core::input_error::parameter_value_error( "Jump-in target region", core::strngs::fstry(), region_name_label, params.at( region_name_label ), nullptr, "Jump-in target region cannot be the system region" );
+  throw core::input_error::missing_parameters_error( "Jump-in subtype trial", core::strngs::fstry(), region_name_label, params.back().filename(), params.back().line_number() );
 }
+
 // build choice object.
 std::unique_ptr< jump_in > current( new jump_in( ispec, region_index ) );
 return current;

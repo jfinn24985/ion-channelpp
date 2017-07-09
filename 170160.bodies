@@ -4,12 +4,13 @@ static const boost::format header(" %6s %7.2f");
 os << boost::format(header) % this->type_ % (100.0*this->rate_) << "\n";
 !!!230832.cpp!!!	prepare_choices(in species : specie, in gman : geometry_manager, inout choices : base_choice) : void
 std::set< std::string > include, exclude;
-if( this->parameter_set_.find( core::strngs::fsspec() ) != this->parameter_set_.end() )
+if( this->has_specie_list() )
 {
   std::string bad_labels;
   // Have inclusion/exclusion list
   boost::char_separator< char > sep( " " );
-  boost::tokenizer< boost::char_separator< char > > tok( this->parameter_set_.at( core::strngs::fsspec() ), sep );
+  std::string value( this->specie_list_.value() );
+  boost::tokenizer< boost::char_separator< char > > tok( value, sep );
   for( auto const& entry : tok )
   {
     bool is_include{ true };
@@ -47,7 +48,9 @@ if( this->parameter_set_.find( core::strngs::fsspec() ) != this->parameter_set_.
       }
       std::string list( sps.str() );
       list.back() = ')';
-      throw core::input_error::parameter_value_error( "Include/exclude specie list", core::strngs::fstry(), core::strngs::fsspec(), label, nullptr, ( core::input_error::bad_key_message_format() % list ).str() );
+      core::input_parameter_memo tmp( this->specie_list_ );
+      tmp.set_value( label );
+      throw core::input_error::parameter_value_error( "Include/exclude specie list", core::strngs::fstry(), tmp, ( core::input_error::bad_key_message_format() % list ).str() );
     }
     if( is_include )
     {
@@ -57,7 +60,6 @@ if( this->parameter_set_.find( core::strngs::fsspec() ) != this->parameter_set_.
     {
       include.insert( entry.substr( 0, 2 ) );
     }
-
   }
 }
 // Require that species are not in both include and exclude lists
@@ -67,7 +69,7 @@ if( not include.empty() and not exclude.empty() )
   {
     if( 0 != exclude.count( entry ) )
     {
-      throw core::input_error::parameter_value_error( "Specie label list", core::strngs::fstry(), core::strngs::fsspec(), entry, nullptr, "Specie label "+entry+" set as both included and excluded" );
+      throw core::input_error::parameter_value_error( "Specie label list", core::strngs::fstry(), this->specie_list_, "Specie label "+entry+" set as both included and excluded" );
     }
   }
 }
@@ -109,17 +111,18 @@ if( not new_choices.empty() )
   // Move choices to result list.
   choices.transfer( choices.end(), new_choices );
 }
-
-
 !!!240176.cpp!!!	write_document(inout wr : input_document) : void
 std::size_t ix = wr.add_section( core::strngs::fstry() );
 wr[ ix ].add_entry( core::strngs::fstype(), this->type_ );
-if( not this->specie_list_.empty() )
+if( not this->specie_list_.value().empty() )
 {
-  wr[ ix ].add_entry( core::strngs::fsspec(), this->specie_list_ );
+  wr[ ix ].add_entry( this->specie_list_.name(), this->specie_list_.value() );
 }
 wr[ ix ].add_entry( core::strngs::rate_label(), this->rate_ );
-for (auto const& param : this->parameter_set_)
+for( auto const& param : this->parameter_set_ )
 {
-  wr[ ix ].add_entry( param.first, param.second );
+  if( param.name() != core::strngs::fsend() )
+  {
+    wr[ ix ].add_entry( param.name(), param.value() );
+  }
 }
