@@ -257,48 +257,46 @@ defn->add_definition( { "epsilon", "list(specie label,number)", "", "required", 
 defn->add_definition( { "sigma", "list(specie label,number)", "", "required", "A list of specie labels and the distance at the energy minima between two ideal particles of the labelled type." } );
 
 meta.add_definition( defn );
-!!!1417392.cpp!!!	make_evaluator(in param_set : string, in reader : input_base_reader) : base_evaluator
+!!!1417392.cpp!!!	make_evaluator(in param_set : input_parameter_memo) : base_evaluator
 // Check no parameters have been set
 const std::string eps_label( "epsilon" );
 const std::string sig_label( "sigma" );
+std::size_t eps_idx = param_set.size();
+std::size_t sig_idx = param_set.size();
+for( std::size_t idx{ 0ul }; idx != param_set.size(); ++idx )
 {
-  std::string missing{};
-  if( param_set.count( eps_label ) == 0 )
+  if( param_set[ idx ].name() == eps_label )
   {
-    missing = eps_label;
+    eps_idx = idx;
   }
-  if( param_set.count( sig_label ) == 0 )
+  else if( param_set[ idx ].name() == sig_label )
   {
-    missing = ( missing.empty() ? sig_label : missing + " " + sig_label );
+    sig_idx = idx;
   }
-  if( not missing.empty() )
+  else
   {
-    reader.missing_parameters_error( "Lennard-Jones function", core::strngs::evaluator_label(), missing );
+    UTILITY_REQUIRE( param_set[ idx ].name() == core::strngs::fsend(), "Parameter check should have been performed in reader.do_read_end" );
   }
 }
-if( param_set.size() > 2 )
+std::string missing{};
+if( param_set.size() == eps_idx )
 {
-  std::string bad_params;
-  for( auto const& entry : param_set )
-  {
-    if( entry.first == eps_label ) continue;
-    if( entry.first == sig_label ) continue;
-    if( bad_params.empty() )
-    {
-      bad_params = entry.first;
-    }
-    else
-    {
-      bad_params += " " + entry.first;
-    }
-  }
-  reader.invalid_parameter_subtype_error( core::strngs::evaluator_label(), type_label_(), bad_params );
+  missing = eps_label;
+}
+if( param_set.size() == sig_idx )
+{
+  missing = ( missing.empty() ? sig_label : missing + " " + sig_label );
+}
+if( not missing.empty() )
+{
+  throw core::input_error::missing_parameters_error( "Lennard-Jones function", core::strngs::evaluator_label(), missing, param_set.back().filename(), param_set.back().line_number() );
 }
 
 std::unique_ptr< lennard_jones > cc( new lennard_jones );
 std::map< std::string, double > eps, sig;
 {
-  std::stringstream is( param_set.at( eps_label ) );
+  std::string value{ param_set[ eps_idx ].get_text( "Epsilon data list", core::strngs::evaluator_label() ) };
+  std::stringstream is( value );
   while( not is.eof() )
   {
     std::string label;
@@ -310,17 +308,18 @@ std::map< std::string, double > eps, sig;
     boost::algorithm::trim( label );
     if( label.size() != 2 )
     {
-      throw core::input_error::parameter_value_error( "Specie data list", core::strngs::evaluator_label(), eps_label, param_set.at( eps_label ), &reader, "Specie label found (" + label + ") should have two letters." );
+      throw core::input_error::parameter_value_error( "Specie label in list", core::strngs::evaluator_label(), param_set[ eps_idx ], "Specie labels (" + label + ") have two letters." );
     }
     eps.insert( std::make_pair( label, val ) );
   }
   if( not is.eof() )
   {
-    throw core::input_error::parameter_value_error( "Specie data list", core::strngs::evaluator_label(), eps_label, param_set.at( eps_label ), &reader, "Could not convert value into a list of (label value) pairs." );
+    throw core::input_error::parameter_value_error( "Epsilon data list", core::strngs::evaluator_label(), param_set[ eps_idx ], "Could not convert value into a list of (label value) pairs." );
   }
 }
 {
-  std::stringstream is( param_set.at( sig_label ) );
+  std::string value{ param_set[ sig_idx ].get_text( "Sigma data list", core::strngs::evaluator_label() ) };
+  std::stringstream is( value );
   while( not is.eof() )
   {
     std::string label;
@@ -332,26 +331,23 @@ std::map< std::string, double > eps, sig;
     boost::algorithm::trim( label );
     if( label.size() != 2 )
     {
-      throw core::input_error::parameter_value_error( "Specie data list", core::strngs::evaluator_label(), sig_label, param_set.at( sig_label ), &reader, "Specie label found (" + label + ") should have two letters." );
+      throw core::input_error::parameter_value_error( "Specie label in list", core::strngs::evaluator_label(), param_set[ sig_idx ], "Specie labels (" + label + ") have two letters." );
+    }
+    // Check that maps contain the same specie labels
+    if( eps.count( label ) == 0 )
+    {
+      throw core::input_error::input_logic_error( "Specie data lists \"" + eps_label + "\" value (" + param_set[ eps_idx ].value() + ") has different entries in list to parameter \"" + sig_label + "\" value (" + param_set[ sig_idx ].value() + ") in type \"" + type_label_() + "\"", core::strngs::evaluator_label(), "Both lists should contain the same set of specie labels." );
     }
     sig.insert( std::make_pair( label, val ) );
   }
   if( not is.eof() )
   {
-    throw core::input_error::parameter_value_error( "Specie data list", core::strngs::evaluator_label(), sig_label, param_set.at( sig_label ), &reader, "Could not convert value into a list of (label value) pairs." );
+    throw core::input_error::parameter_value_error( "Sigma data list", core::strngs::evaluator_label(), param_set[ sig_idx ], "Could not convert value into a list of (label value) pairs." );
   }
 }
 if( eps.size() != sig.size() )
 {
-  throw core::input_error::input_logic_error( "Specie data lists \"" + eps_label + "\" value (" + param_set.at( eps_label ) + ") has a different size list to parameter \"" + sig_label + "\" value (" + param_set.at( sig_label ) + ") in type \"" + type_label_() + "\"", core::strngs::evaluator_label(), "Both lists should contain the same number of pairs." );
-}
-// Check that maps contain the same specie labels
-for( auto const& entry : eps )
-{
-  if( sig.count( entry.first ) == 0 )
-  {
-    throw core::input_error::input_logic_error( "Specie data lists \"" + eps_label + "\" value (" + param_set.at( eps_label ) + ") has different entries in list to parameter \"" + sig_label + "\" value (" + param_set.at( sig_label ) + ") in type \"" + type_label_() + "\"", core::strngs::evaluator_label(), "Both lists should contain the same set of specie labels." );
-  }
+  throw core::input_error::input_logic_error( "Specie data lists \"" + eps_label + "\" value (" + param_set[ eps_idx ].value() + ") has a different size list to parameter \"" + sig_label + "\" value (" + param_set[ sig_idx ].value() + ") in type \"" + type_label_() + "\"", core::strngs::evaluator_label(), "Both lists should contain the same number of pairs." );
 }
 std::swap( cc->epsilon_, eps );
 std::swap( cc->sigma_, sig );

@@ -5,37 +5,30 @@ std::unique_ptr< evaluator_definition > defn( new evaluator_definition( localize
 // Add parameter definitions.
 defn->add_definition( { core::strngs::fskmob(), "number", ">0", "4.5", "The spring factor of the harmonic localization force. The default value is 4.5. This value when paired with R values equal to 2 x X-ray B-factor/RMSD give a force field that should produce an atom distribution similar to that of the X-ray or atomic simulation." } );
 meta.add_definition( defn );
-!!!276016.cpp!!!	make_evaluator(in param_set : string, in reader : input_base_reader) : base_evaluator
+!!!276016.cpp!!!	make_evaluator(in param_set : input_parameter_memo) : base_evaluator
 // Evaluator meta should ensure only valid parameters were
 // set.
-std::unique_ptr< localizer > cc( new localizer );
-if( not param_set.empty() )
+bool has_kmob{ false };
+double spring_factor;
+if( param_set.size() != 1 )
 {
-  std::string bad_params;
-  for( auto& entry : param_set )
+  for( std::size_t idx{ 0ul }; idx != param_set.size(); ++idx )
   {
-    if( entry.first.find( core::strngs::fskmob() ) == 0 )
+    if( core::strngs::fskmob() == param_set[ idx ].name() )
     {
-      double spring_factor;
-      reader.float_input( core::strngs::fskmob(), entry.second, "Harmonic potential factor", core::strngs::evaluator_label(), spring_factor, true, true, &reader );
-      cc->spring_factor( spring_factor );
+      spring_factor = param_set[ idx ].get_float( "Harmonic potential factor", core::strngs::evaluator_label(), true, true );
+      has_kmob = true;
     }
     else
     {
-      if( bad_params.empty() )
-      {
-        bad_params = entry.first;
-      }
-      else
-      {
-        bad_params += " " + entry.first;
-      }
+      UTILITY_REQUIRE( param_set[ idx ].name() == core::strngs::fsend(), "Parameter check should have been performed in reader.do_read_end" );
     }
   }
-  if( not bad_params.empty() )
-  {
-    reader.invalid_parameter_subtype_error( core::strngs::evaluator_label(), type_label_(), bad_params );
-  }
+}
+std::unique_ptr< localizer > cc( new localizer );
+if( has_kmob )
+{
+  cc->spring_factor( spring_factor );
 }
 std::unique_ptr< base_evaluator > result( cc.release() );
 return result;

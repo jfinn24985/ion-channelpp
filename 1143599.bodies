@@ -64,8 +64,9 @@ else
 {
   // --------------------
   // Choice specific parameters
-  reader.duplicate_test( 0 == this->parameter_set_.count( reader.name() ), this->section_label() );
-  this->parameter_set_.insert( std::make_pair( reader.name(), reader.value() ) );
+  const std::string lname{ reader.name() };
+  reader.duplicate_test( 0 == std::count_if( this->parameter_set_.begin(), this->parameter_set_.end(), [&lname](const core::input_parameter_memo& param){ return lname == param.name(); } ), this->section_label() );
+  this->parameter_set_.push_back( { reader } );
 }
 return true;
 
@@ -82,12 +83,14 @@ for( const auto& defn : this->type_to_object_ )
     // check parameters are in definition
     for( const auto& entry : this->parameter_set_ )
     {
-      if( not defn.has_definition( entry.first ) )
+      if( not defn.has_definition( entry.name() ) )
       {
-        reader.invalid_parameter_subtype_error( this->section_label(), this->type_, entry.first );
+        throw core::input_error::invalid_parameter_subtype_error( this->section_label(), this->type_, entry );
       }
     }
-    this->manager_->add_evaluator( defn( this->parameter_set_, reader ) );
+    // push "end" tag onto parameter set.
+    this->parameter_set_.push_back( { reader } );
+    this->manager_->add_evaluator( defn( this->parameter_set_ ) );
     return;
   }
 }

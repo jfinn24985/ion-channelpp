@@ -33,63 +33,60 @@ defn->add_definition( { patch_file_label(), "file path", "", "(optional)", "If t
 defn->add_definition( { amx_file_label(), "file path", "", "(optional)", "If this option is present, the A matrix is written into a file of the given name." } );
 
 meta.add_definition( defn );
-!!!2503984.cpp!!!	make_evaluator(in param_set : string, in reader : input_base_reader) : base_evaluator
+!!!2503984.cpp!!!	make_evaluator(in param_set : input_parameter_memo) : base_evaluator
 std::unique_ptr< icc_fortran > cc( new icc_fortran );
-
-if ( param_set.count( core::strngs::fsdxf() ) != 0 )
-{
-  double dxf{};
-  reader.float_input( core::strngs::fsdxf(), param_set.at( core::strngs::fsdxf() ), "Angular integration factor", core::strngs::evaluator_label(), dxf, true, false, &reader );
-  cc->set_dxf( dxf );
-}
-if ( param_set.count( core::strngs::fsdxw() ) != 0 )
-{
-  double dxw{};
-  reader.float_input( core::strngs::fsdxw(), param_set.at( core::strngs::fsdxw() ), "Axial integration factor", core::strngs::evaluator_label(), dxw, true, false, &reader );
-  cc->set_dxw( dxw );
-}
-if ( param_set.count( core::strngs::fsnsub() ) != 0 )
-{
-  std::size_t nsub0{};
-  reader.ordinal_input( core::strngs::fsnsub(), param_set.at( core::strngs::fsnsub() ), "Subpatch integration factor", core::strngs::evaluator_label(), nsub0, &reader );
-  if( nsub0 == 0ul )
-  {
-    throw core::input_error::parameter_value_error( "Subpatch integration factor", core::strngs::evaluator_label(), core::strngs::fsnsub(), param_set.at( core::strngs::fsnsub() ), &reader, core::input_error::number_zero_message() );
-  }
-  cc->set_nsub0( nsub0 );
-}
-if ( param_set.count( core::strngs::fsepsp() ) != 0 )
-{
-  double epspr{};
-  reader.float_input( core::strngs::fsepsp(), param_set.at( core::strngs::fsepsp() ), "Protein relative permittivity", core::strngs::evaluator_label(), epspr, true, false, &reader );
-  cc->set_protein_permittivity( epspr );
-}
-if ( param_set.count( core::strngs::fsgrl4() ) != 0 )
-{
-  double radius{};
-  reader.float_input( core::strngs::fsgrl4(), param_set.at( core::strngs::fsgrl4() ), "Protein outer radius", core::strngs::evaluator_label(), radius, true, false, &reader );
-  cc->set_protein_radius( radius );
-}
-if ( param_set.count( core::strngs::fsgrlc() ) != 0 )
-{
-  double radius{};
-  reader.float_input( core::strngs::fsgrlc(), param_set.at( core::strngs::fsgrlc() ), "Protein outer arc radius", core::strngs::evaluator_label(), radius, true, false, &reader );
-  cc->set_membrane_arc_radius( radius );
-}
-
 const std::string patch_label{ patch_file_label() };
 const std::string amx_label{ amx_file_label() };
-if ( param_set.count( patch_label ) != 0 )
+for( auto & param : param_set )
 {
-  std::string filename{};
-  reader.text_input( patch_label, param_set.at( patch_label ), "Patch file path", core::strngs::evaluator_label(), filename, &reader );
-  cc->set_patch_filename( filename );
-}
-if ( param_set.count( amx_label ) != 0 )
-{
-  std::string filename{};
-  reader.text_input( amx_label, param_set.at( amx_label ), "Patch file path", core::strngs::evaluator_label(), filename, &reader );
-  cc->set_a_matrix_filename( filename );
+  if ( core::strngs::fsdxf() == param.name() )
+  {
+    const double dxf{ param.get_float( "Angular integration factor", core::strngs::evaluator_label(), true, false ) };
+    cc->set_dxf( dxf );
+  }
+  else if ( core::strngs::fsdxw() == param.name() )
+  {
+    const double dxw{ param.get_float( "Axial integration factor", core::strngs::evaluator_label(), true, false ) };
+    cc->set_dxw( dxw );
+  }
+  else if ( core::strngs::fsnsub() == param.name() )
+  {
+    const std::size_t nsub0{ param.get_ordinal( "Subpatch integration factor", core::strngs::evaluator_label() ) };
+    if( nsub0 == 0ul )
+    {
+      throw core::input_error::parameter_value_error( "Subpatch integration factor", core::strngs::evaluator_label(), param, core::input_error::number_zero_message() );
+    }
+    cc->set_nsub0( nsub0 );
+  }
+  else if ( core::strngs::fsepsp() == param.name() )
+  {
+    const double epspr{ param.get_float( "Protein relative permittivity", core::strngs::evaluator_label(), true, false ) };
+    cc->set_protein_permittivity( epspr );
+  }
+  else if ( core::strngs::fsgrl4() == param.name() )
+  {
+    const double radius{ param.get_float( "Protein outer radius", core::strngs::evaluator_label(), true, false ) };
+    cc->set_protein_radius( radius );
+  }
+  else if ( core::strngs::fsgrlc() == param.name() )
+  {
+    const double radius{ param.get_float( "Protein outer arc radius", core::strngs::evaluator_label(), true, false ) };
+    cc->set_membrane_arc_radius( radius );
+  }
+  else if ( patch_label == param.name() )
+  {
+    std::string filename{ param.get_text( "Patch file path", core::strngs::evaluator_label() ) };
+    cc->set_patch_filename( filename );
+  }
+  else if ( amx_label == param.name() )
+  {
+    std::string filename{ param.get_text( "Patch file path", core::strngs::evaluator_label() ) };
+    cc->set_a_matrix_filename( filename );
+  }
+  else
+  {
+    UTILITY_REQUIRE( param.name() == core::strngs::fsend(), "Parameter check should have been performed in reader.do_read_end" );
+  }
 }
 std::unique_ptr< base_evaluator > result( cc.release() );
 return result;

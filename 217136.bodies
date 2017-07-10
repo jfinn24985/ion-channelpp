@@ -124,7 +124,7 @@ std::stringstream store;
 const std::string defn_label( "evaluator" );
 const std::string defn_desc( "blah blech blab." );
 {
-  evaluator::evaluator_definition defn( defn_label, defn_desc, [](std::map<std::string, std::string>, core::input_base_reader const&)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; });
+  evaluator::evaluator_definition defn( defn_label, defn_desc, [](const std::vector< core::input_parameter_memo >&)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; });
   BOOST_CHECK_EQUAL( defn.label(), defn_label );
   BOOST_CHECK_EQUAL( defn.description(), defn_desc );
   BOOST_CHECK_EQUAL( defn.size(), 0 );
@@ -150,7 +150,7 @@ const std::string meta_label( "evaluator" );
   BOOST_CHECK_EQUAL( meta.size(), 0 );
   BOOST_CHECK( meta.empty() );
 
-  meta.add_definition( std::unique_ptr< evaluator::evaluator_definition >( new evaluator::evaluator_definition( "coloumb", "blah blab blech.", [](std::map<std::string, std::string>, const core::input_base_reader&)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; }) ) );
+  meta.add_definition( std::unique_ptr< evaluator::evaluator_definition >( new evaluator::evaluator_definition( "coloumb", "blah blab blech.", [](const std::vector< core::input_parameter_memo >&)->std::unique_ptr< evaluator::base_evaluator>{ return std::unique_ptr< evaluator::base_evaluator>{}; }) ) );
   
   BOOST_CHECK_EQUAL( meta.size(), 1 );
   BOOST_CHECK( not meta.empty() );
@@ -182,7 +182,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Unknown parameter \"mobk\" in section \"evaluator\" subtype \"coulomb\" detected at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 4.\n** Parameter \"mobk\" is not expected in this section and type. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Unknown parameter \"mobk\" in section \"evaluator\" subtype \"coulomb\" detected at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 3.\n** Parameter \"mobk\" is not expected in this section and type. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -305,8 +305,7 @@ const std::string defn_label( "coulomb" );
 
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
 
-  core::input_preprocess reader;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::coulomb::make_evaluator( {}, reader ) );
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::coulomb::make_evaluator( evaluator_test::mockup_params() ) );
   BOOST_REQUIRE( eval_ptr );
   evaluator::coulomb *clmb_ptr = dynamic_cast< evaluator::coulomb* >( eval_ptr.get() );
   BOOST_REQUIRE( clmb_ptr != nullptr );
@@ -618,8 +617,7 @@ const std::string defn_label( "hard-sphere" );
 const std::string defn_label( "hard-sphere" );
 {
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  core::input_preprocess reader;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::hard_sphere_overlap::make_evaluator( {}, reader ) );
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::hard_sphere_overlap::make_evaluator( evaluator_test::mockup_params() ) );
   BOOST_REQUIRE( eval_ptr );
   evaluator::hard_sphere_overlap *clmb_ptr = dynamic_cast< evaluator::hard_sphere_overlap* >( eval_ptr.get() );
   BOOST_REQUIRE( clmb_ptr != nullptr );
@@ -675,8 +673,7 @@ evaluator::evaluator_manager eman;
 
 std::stringstream store;
 {
-  core::input_preprocess reader;
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::hard_sphere_overlap::make_evaluator( {}, reader ) );
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::hard_sphere_overlap::make_evaluator( evaluator_test::mockup_params() ) );
   evaluator::hard_sphere_overlap* llp = dynamic_cast< evaluator::hard_sphere_overlap* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -899,8 +896,7 @@ geometry::geometry_manager gman( sys_rgn );
 evaluator::evaluator_manager eman;
 
 {
-  core::input_preprocess reader;
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::hard_sphere_overlap::make_evaluator( {}, reader ) );
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::hard_sphere_overlap::make_evaluator( evaluator_test::mockup_params() ) );
   evaluator::hard_sphere_overlap* llp = dynamic_cast< evaluator::hard_sphere_overlap* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -1161,8 +1157,7 @@ const std::string defn_label( "object-overlap" );
 const std::string defn_label( "object-overlap" );
 {
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  core::input_preprocess reader;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::object_overlap::make_evaluator( {}, reader ) );
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::object_overlap::make_evaluator( evaluator_test::mockup_params() ) );
   BOOST_REQUIRE( eval_ptr );
   evaluator::object_overlap *clmb_ptr = dynamic_cast< evaluator::object_overlap* >( eval_ptr.get() );
   BOOST_REQUIRE( clmb_ptr != nullptr );
@@ -1218,8 +1213,7 @@ evaluator::evaluator_manager eman;
 
 std::stringstream store;
 {
-  core::input_preprocess reader;
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::object_overlap::make_evaluator( {}, reader ) );
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::object_overlap::make_evaluator( evaluator_test::mockup_params() ) );
   evaluator::object_overlap* llp = dynamic_cast< evaluator::object_overlap* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -1383,8 +1377,7 @@ for( std::size_t idx = 0; idx != pman.get_ensemble().size(); ++idx )
 
 evaluator::evaluator_manager eman;
 
-core::input_preprocess reader;
-std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::object_overlap::make_evaluator( {}, reader ) );
+std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::object_overlap::make_evaluator( evaluator_test::mockup_params() ) );
 evaluator::object_overlap* llp = dynamic_cast< evaluator::object_overlap* >( eval_ptr.get() );
 BOOST_REQUIRE( nullptr != llp );
 
@@ -1534,8 +1527,7 @@ const std::string defn_label( core::strngs::localizer_label() );
   BOOST_CHECK_EQUAL( evaluator::localizer::type_label_(), defn_label );
 
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  core::input_preprocess reader;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( {}, reader ) );
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( evaluator_test::mockup_params() ) );
   BOOST_REQUIRE( eval_ptr );
   evaluator::localizer *clmb_ptr = dynamic_cast< evaluator::localizer* >( eval_ptr.get() );
   BOOST_REQUIRE( clmb_ptr != nullptr );
@@ -1637,12 +1629,15 @@ const double spring_factor( 2.0 );
 
 }
 {
-  std::map< std::string, std::string > params;
-  params[ core::strngs::fskmob() ] = "1.0";
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( core::strngs::fskmob() );
+  params.back().set_value( "1.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
+
   // One arg list with "mobk"
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  core::input_preprocess reader;
-  BOOST_CHECK_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( params, reader ) );
+  BOOST_CHECK_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( params ) );
 
   evaluator::localizer* llp = dynamic_cast< evaluator::localizer* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
@@ -1722,11 +1717,14 @@ geometry::geometry_manager gman( sys_rgn );
 evaluator::evaluator_manager eman;
 
 {
-  std::map< std::string, std::string > params;
-  params.insert( std::make_pair( core::strngs::fskmob(), "1.0" ) );
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( core::strngs::fskmob() );
+  params.back().set_value( "1.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
+
   std::unique_ptr< base_evaluator > eval_ptr;
-  core::input_preprocess reader;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( params, reader ) );
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::localizer::make_evaluator( params ) );
 
   double energy = 0.0;
 
@@ -1866,7 +1864,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Harmonic potential factor parameter \"mobk\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 4.\n** Expected a value. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Harmonic potential factor parameter \"mobk\" in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 3.\n   >>mobk #one<<\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -1895,7 +1893,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Harmonic potential factor parameter \"mobk\" with value (one) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 4.\n** A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Harmonic potential factor parameter \"mobk\" with value (one) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 3.\n   >>mobk one<<\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -1923,11 +1921,16 @@ const std::string defn_label( "lennard-jones" );
   BOOST_CHECK_EQUAL( evaluator::lennard_jones::type_label_(), defn_label );
 
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  std::map< std::string, std::string > params;
-  params[ "epsilon" ] = "Na 1.0 Cl 1.0";
-  params[ "sigma" ] = "Na 1.0 Cl 1.0";
-  core::input_preprocess reader;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params, reader ) );
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( "epsilon" );
+  params.back().set_value( "Na 1.0 Cl 1.0" );
+  params.push_back( {} );
+  params.back().set_name( "sigma" );
+  params.back().set_value( "Na 1.0 Cl 1.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
+
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params ) );
   BOOST_REQUIRE( eval_ptr );
   evaluator::lennard_jones *lj_ptr = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( lj_ptr != nullptr );
@@ -1985,20 +1988,25 @@ geometry::geometry_manager gman( sys_rgn );
 evaluator::evaluator_manager eman;
 
 {
-  std::map< std::string, std::string > params;
-  params[ "epsilon" ] = "Na 1.0";
-  params[ "sigma" ] = "Na 1.0 Cl 1.0";
-  core::input_preprocess reader;
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( "epsilon" );
+  params.back().set_value( "Na 1.0 Cl 1.0" );
+  params.push_back( {} );
+  params.back().set_name( "sigma" );
+  params.back().set_value( "Na 1.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
+
   try
   {
-    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
+    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
     BOOST_ERROR( "expected \"evaluator::lennard_jones::make_evaluator\" exception not thrown" );
   }
   catch( core::input_error const& err )
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Specie data lists \"epsilon\" value (Na 1.0) has a different size list to parameter \"sigma\" value (Na 1.0 Cl 1.0) in type \"lennard-jones\" in section \"evaluator\".\n** Both lists should contain the same number of pairs. **" ) < msg.size() );
+    BOOST_CHECK( msg.find( "Specie data lists \"epsilon\" value (Na 1.0 Cl 1.0) has a different size list to parameter \"sigma\" value (Na 1.0) in type \"lennard-jones\" in section \"evaluator\".\n** Both lists should contain the same number of pairs. **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -2050,13 +2058,16 @@ geometry::geometry_manager gman( sys_rgn );
 evaluator::evaluator_manager eman;
 
 {
-  std::map< std::string, std::string > params;
-  // params[ "epsilon" ] = "Na 1.0 Cl 1.0";
-  params[ "sigma" ] = "Na 1.0 Cl 1.0";
-  core::input_preprocess reader;
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  // params.back().set_name( "epsilon" );
+  // params.back().set_value( "Na 1.0 Cl 1.0" );
+  params.back().set_name( "sigma" );
+  params.back().set_value( "Na 1.0 Cl 1.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
   try
   {
-    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
+    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
     BOOST_ERROR( "expected \"evaluator::lennard_jones::make_evaluator\" exception not thrown" );
   }
   catch( core::input_error const& err )
@@ -2115,13 +2126,16 @@ geometry::geometry_manager gman( sys_rgn );
 evaluator::evaluator_manager eman;
 
 {
-  std::map< std::string, std::string > params;
-  params[ "epsilon" ] = "Na 1.0 Cl 1.0";
-  // params[ "sigma" ] = "Na 1.0 Cl 1.0";
-  core::input_preprocess reader;
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( "epsilon" );
+  params.back().set_value( "Na 1.0 Cl 1.0" );
+  //params.back().set_name( "sigma" );
+  //params.back().set_value( "Na 1.0 Cl 1.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
   try
   {
-    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
+    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
     BOOST_ERROR( "expected \"evaluator::lennard_jones::make_evaluator\" exception not thrown" );
   }
   catch( core::input_error const& err )
@@ -2180,13 +2194,17 @@ geometry::geometry_manager gman( sys_rgn );
 evaluator::evaluator_manager eman;
 
 {
-  std::map< std::string, std::string > params;
-  params[ "epsilon" ] = "Na 1.0 Cl 1.0";
-  params[ "sigma" ] = "Ca 1.0 Cl 1.0";
-  core::input_preprocess reader;
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( "epsilon" );
+  params.back().set_value( "Na 1.0 Cl 1.0" );
+  params.push_back( {} );
+  params.back().set_name( "sigma" );
+  params.back().set_value( "Ca 1.0 Cl 1.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
   try
   {
-    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
+    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
     BOOST_ERROR( "expected \"evaluator::lennard_jones::make_evaluator\" exception not thrown" );
   }
   catch( core::input_error const& err )
@@ -2245,12 +2263,16 @@ geometry::geometry_manager gman( sys_rgn );
 evaluator::evaluator_manager eman;
 
 {
-  std::map< std::string, std::string > params;
-  params[ "epsilon" ] = "Ca 1.0 Cl 1.0";
-  params[ "sigma" ] = "Ca 1.0 Cl 1.0";
-  core::input_preprocess reader;
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( "epsilon" );
+  params.back().set_value( "Ca 1.0 Cl 1.0" );
+  params.push_back( {} );
+  params.back().set_name( "sigma" );
+  params.back().set_value( "Ca 1.0 Cl 1.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params, reader ) );
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params ) );
   try
   {
     eval_ptr->prepare( pman, gman, eman );
@@ -2310,12 +2332,16 @@ geometry::geometry_manager gman( sys_rgn );
 evaluator::evaluator_manager eman;
 
 {
-  std::map< std::string, std::string > params;
-  params[ "epsilon" ] = "Ca 1.0 Na 1.0 Cl 1.0";
-  params[ "sigma" ] = "Ca 1.0 Na 1.0 Cl 1.0";
-  core::input_preprocess reader;
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( "epsilon" );
+  params.back().set_value( "Ca 1.0 Na 1.0 Cl 1.0" );
+  params.push_back( {} );
+  params.back().set_name( "sigma" );
+  params.back().set_value( "Ca 1.0 Na 1.0 Cl 1.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params, reader ) );
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params ) );
   try
   {
     eval_ptr->prepare( pman, gman, eman );
@@ -2375,12 +2401,16 @@ geometry::geometry_manager gman( sys_rgn );
 evaluator::evaluator_manager eman;
 
 {
-  std::map< std::string, std::string > params;
-  params[ "epsilon" ] = "Cl 1.0";
-  params[ "sigma" ] = "Cl 1.0";
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( "epsilon" );
+  params.back().set_value( "Cl 1.0" );
+  params.push_back( {} );
+  params.back().set_name( "sigma" );
+  params.back().set_value( "Cl 1.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  core::input_preprocess reader;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params, reader ) );
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params ) );
   try
   {
     eval_ptr->prepare( pman, gman, eman );
@@ -2442,11 +2472,15 @@ evaluator::evaluator_manager eman;
 std::stringstream store;
 double expected_value = 0.0;
 {
-  std::map< std::string, std::string > params;
-  params[ "epsilon" ] = "Na 1.0 Cl 1.0";
-  params[ "sigma" ] = "Na 1.0 Cl 1.0";
-  core::input_preprocess reader;
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( "epsilon" );
+  params.back().set_value( "Na 1.0 Cl 1.0" );
+  params.push_back( {} );
+  params.back().set_name( "sigma" );
+  params.back().set_value( "Na 1.0 Cl 1.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
   evaluator::lennard_jones* llp = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -2516,11 +2550,15 @@ evaluator::evaluator_manager eman;
 std::stringstream store;
 double expected_value = 0.0;
 {
-  std::map< std::string, std::string > params;
-  params[ "epsilon" ] = "Na 1.0 Cl 1.0";
-  params[ "sigma" ] = "Na 2.0 Cl 3.0";
-  core::input_preprocess reader;
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( "epsilon" );
+  params.back().set_value( "Na 1.0 Cl 1.0" );
+  params.push_back( {} );
+  params.back().set_name( "sigma" );
+  params.back().set_value( "Na 2.0 Cl 3.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
   evaluator::lennard_jones* llp = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -2599,11 +2637,15 @@ evaluator::evaluator_manager eman;
 std::stringstream store;
 double expected_value = 0.0;
 {
-  std::map< std::string, std::string > params;
-  params[ "epsilon" ] = "Na 0.5 Cl 0.3";
-  params[ "sigma" ] = "Na 1.0 Cl 1.0";
-  core::input_preprocess reader;
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( "epsilon" );
+  params.back().set_value( "Na 0.5 Cl 0.3" );
+  params.push_back( {} );
+  params.back().set_name( "sigma" );
+  params.back().set_value( "Na 1.0 Cl 1.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
   evaluator::lennard_jones* llp = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -2675,11 +2717,15 @@ evaluator::evaluator_manager eman;
 std::stringstream store;
 double expected_value = 0.0;
 {
-  std::map< std::string, std::string > params;
-  params[ "epsilon" ] = "Na 0.5 Cl 0.3";
-  params[ "sigma" ] = "Na 2.0 Cl 3.0";
-  core::input_preprocess reader;
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params, reader ) );
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( "epsilon" );
+  params.back().set_value( "Na 0.5 Cl 0.3" );
+  params.push_back( {} );
+  params.back().set_name( "sigma" );
+  params.back().set_value( "Na 2.0 Cl 3.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
   evaluator::lennard_jones* llp = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -2777,7 +2823,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Unknown parameter \"mobk\" in section \"evaluator\" subtype \"lennard-jones\" detected at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 5.\n** Parameter \"mobk\" is not expected in this section and type. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Unknown parameter \"mobk\" in section \"evaluator\" subtype \"lennard-jones\" detected at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 4.\n** Parameter \"mobk\" is not expected in this section and type. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -2794,7 +2840,7 @@ core::input_delegater dg( 1 );
   dg.add_input_delegate( m );
 }
 
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 1.0 #Cl 1.0\nsigma \"Na\" 1.0 Cl 1.0\nend\n\n" );
+std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 1.0 Cl 1.0\nsigma \"Na\" 1.0\nend\n\n" );
 
 core::input_preprocess reader;
 reader.add_buffer( "dummy", canon_input );
@@ -2807,7 +2853,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Specie data lists \"epsilon\" value (Na 1.0) has a different size list to parameter \"sigma\" value (\"Na\" 1.0 Cl 1.0) in type \"lennard-jones\" in section \"evaluator\".\n** Both lists should contain the same number of pairs. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Specie data lists \"epsilon\" value (Na 1.0 Cl 1.0) has a different size list to parameter \"sigma\" value (\"Na\" 1.0) in type \"lennard-jones\" in section \"evaluator\".\n** Both lists should contain the same number of pairs. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -3627,11 +3673,9 @@ std::stringstream log;
 {
   // Construction as if from an input file with no parameters
   boost::shared_ptr< evaluator::base_evaluator > eval;
-  core::input_preprocess reader;
 
-  std::map< std::string, std::string > params;
   // Empty parameter list allowed
-  BOOST_REQUIRE_NO_THROW( eval = evaluator::induced_charge::make_evaluator( params, reader ) );
+  BOOST_REQUIRE_NO_THROW( eval = evaluator::induced_charge::make_evaluator( evaluator_test::mockup_params() ) );
 
   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( eval.get() );
   BOOST_REQUIRE( nullptr != llp );
@@ -3654,14 +3698,21 @@ std::stringstream log;
 {
   // Construction as if from an input file with valid parameters
   boost::shared_ptr< evaluator::base_evaluator > eval;
-  core::input_preprocess reader;
 
-  std::map< std::string, std::string > params;
-  params[ core::strngs::fsdxf() ] = "4.0";
-  params[ core::strngs::fsdxw() ] = "6.0";
-  params[ core::strngs::fsnsub() ] = "50";
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( core::strngs::fsdxf() );
+  params.back().set_value( "4.0" );
+  params.push_back( {} );
+  params.back().set_name( core::strngs::fsdxw() );
+  params.back().set_value( "6.0" );
+  params.push_back( {} );
+  params.back().set_name( core::strngs::fsnsub() );
+  params.back().set_value( "50" );
+  params.push_back( evaluator_test::mockup_params().back() );
+
   // Empty parameter list allowed
-  BOOST_REQUIRE_NO_THROW( eval = evaluator::induced_charge::make_evaluator( params, reader ) );
+  BOOST_REQUIRE_NO_THROW( eval = evaluator::induced_charge::make_evaluator( params ) );
 
   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( eval.get() );
   BOOST_REQUIRE( nullptr != llp );
@@ -3672,11 +3723,12 @@ std::stringstream log;
 {
   // Construction as if from an input file with valid parameters
   boost::shared_ptr< evaluator::base_evaluator > eval;
-  core::input_preprocess reader;
-
-  std::map< std::string, std::string > params;
-  params[ core::strngs::fsdxf() ] = "4";
-  BOOST_REQUIRE_NO_THROW( eval = evaluator::induced_charge::make_evaluator( params, reader ) );
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( core::strngs::fsdxf() );
+  params.back().set_value( "4.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
+  BOOST_REQUIRE_NO_THROW( eval = evaluator::induced_charge::make_evaluator( params ) );
 
   evaluator::induced_charge const* llp = dynamic_cast< evaluator::induced_charge const* >( eval.get() );
   BOOST_REQUIRE( nullptr != llp );
@@ -3685,31 +3737,37 @@ std::stringstream log;
 {
   // Construction as if from an input file with invalid parameters : invalid value
   boost::shared_ptr< evaluator::base_evaluator > eval;
-  core::input_preprocess reader;
-
-  std::map< std::string, std::string > params;
-  params[ core::strngs::fsdxf() ] = "four";
-  BOOST_REQUIRE_THROW( eval = evaluator::induced_charge::make_evaluator( params, reader ), core::input_error );
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( core::strngs::fsdxf() );
+  params.back().set_value( "four" );
+  params.push_back( evaluator_test::mockup_params().back() );
+  BOOST_REQUIRE_THROW( eval = evaluator::induced_charge::make_evaluator( params ), core::input_error );
 }
 {
   // Construction as if from an input file with invalid parameters : invalid name
   boost::shared_ptr< evaluator::base_evaluator > eval;
-  core::input_preprocess reader;
-
-  std::map< std::string, std::string > params;
-  params[ core::strngs::fsnsub() ] = "-4";
-  BOOST_REQUIRE_THROW( eval = evaluator::induced_charge::make_evaluator( params, reader ), core::input_error );
+ 
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( core::strngs::fsdxf() );
+  params.back().set_value( "-4" );
+  params.push_back( evaluator_test::mockup_params().back() );
+ 
+  BOOST_REQUIRE_THROW( eval = evaluator::induced_charge::make_evaluator( params ), core::input_error );
 }
 {
   // Construction as if from an input file with invalid parameters we would
   // like to be valid
   boost::shared_ptr< evaluator::base_evaluator > eval;
-  core::input_preprocess reader;
-
-  std::map< std::string, std::string > params;
-  params[ evaluator::induced_charge::amx_file_label() ] = "amx.txt";
-  params[ evaluator::induced_charge::patch_file_label() ] = "";
-  BOOST_REQUIRE_THROW( eval = evaluator::induced_charge::make_evaluator( params, reader ), core::input_error );
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( evaluator::induced_charge::amx_file_label() );
+  params.back().set_value( "amx.txt" );
+  params.push_back( {} );
+  params.back().set_name( evaluator::induced_charge::patch_file_label() );
+  params.push_back( evaluator_test::mockup_params().back() );
+  BOOST_REQUIRE_THROW( eval = evaluator::induced_charge::make_evaluator( params ), core::input_error );
 }
 !!!2492208.cpp!!!	input_induced_charge_test() : void
 // Test read input (specie meta)
@@ -3771,7 +3829,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Unknown parameter \"mobk\" in section \"evaluator\" subtype \"patch\" detected at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Parameter \"mobk\" is not expected in this section and type. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Unknown parameter \"mobk\" in section \"evaluator\" subtype \"patch\" detected at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 5.\n** Parameter \"mobk\" is not expected in this section and type. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -3801,7 +3859,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Patch file path parameter \"amx_file\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Patch file path parameter \"amx_file\" in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n   >>amx_file <<\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -3831,7 +3889,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Patch file path parameter \"amx_file\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a non-empty value. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Patch file path parameter \"amx_file\" with value (\"\") in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 5.\n   >>amx_file \"\"<<\n** Expected a non-empty value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -3861,7 +3919,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Patch file path parameter \"patch_file\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Patch file path parameter \"patch_file\" in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n   >>patch_file <<\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -3891,7 +3949,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Patch file path parameter \"patch_file\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a non-empty value. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Patch file path parameter \"patch_file\" with value (\"\") in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 5.\n   >>patch_file \"\"<<\n** Expected a non-empty value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -3921,7 +3979,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 3.\n   >>dxf<<\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -3951,7 +4009,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" with value (\"\") in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 3.\n   >>dxf \"\"<<\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -3981,7 +4039,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" with value (three) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" with value (three) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 3.\n   >>dxf three<<\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4011,7 +4069,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" with value (0.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" with value (0.0) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 3.\n   >>dxf 0.0<<\n** Input value must be greater than zero. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4041,7 +4099,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" with value (-0.5) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Angular integration factor parameter \"dxf\" with value (-0.5) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 3.\n   >>dxf -0.5<<\n** Input value must be greater than zero. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4071,7 +4129,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 3.\n   >>dxw<<\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4101,7 +4159,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" with value (\"\") in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 3.\n   >>dxw \"\"<<\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4131,7 +4189,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" with value (three) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" with value (three) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 3.\n   >>dxw three<<\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4161,7 +4219,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" with value (0.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" with value (0.0) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 3.\n   >>dxw 0.0<<\n** Input value must be greater than zero. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4191,7 +4249,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" with value (-0.5) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Axial integration factor parameter \"dxw\" with value (-0.5) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 3.\n   >>dxw -0.5<<\n** Input value must be greater than zero. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4221,7 +4279,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 6.\n   >>epspr<<\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4251,7 +4309,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" with value (\"\") in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 6.\n   >>epspr \"\"<<\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4281,7 +4339,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" with value (three) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" with value (three) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 6.\n   >>epspr three<<\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4311,7 +4369,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" with value (0.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" with value (0.0) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 6.\n   >>epspr 0.0<<\n** Input value must be greater than zero. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4341,7 +4399,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" with value (-3.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein relative permittivity parameter \"epspr\" with value (-3.0) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 6.\n   >>epspr -3.0<<\n** Input value must be greater than zero. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4371,7 +4429,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 7.\n   >>rl4 <<\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4401,7 +4459,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" with value (\"\") in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 7.\n   >>rl4 \"\"<<\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4431,7 +4489,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" with value (ten) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" with value (ten) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 7.\n   >>rl4 ten<<\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4461,7 +4519,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" with value (0.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" with value (0.0) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 7.\n   >>rl4 0.0<<\n** Input value must be greater than zero. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4491,7 +4549,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" with value (-30.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein outer radius parameter \"rl4\" with value (-30.0) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 7.\n   >>rl4 -30.0<<\n** Input value must be greater than zero. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4521,7 +4579,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 8.\n   >>rlcurv <<\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4551,7 +4609,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" with value (\"\") in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 8.\n   >>rlcurv \"\"<<\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4581,7 +4639,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" with value (ten) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" with value (ten) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 8.\n   >>rlcurv ten<<\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4611,7 +4669,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" with value (0.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" with value (0.0) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 8.\n   >>rlcurv 0.0<<\n** Input value must be greater than zero. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4641,7 +4699,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" with value (-10.0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Protein outer arc radius parameter \"rlcurv\" with value (-10.0) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 8.\n   >>rlcurv -10.0<<\n** Input value must be greater than zero. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4671,7 +4729,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Expected a value. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 5.\n   >>nsub<<\n** Expected a value. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4701,7 +4759,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" with value (\"\") in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" with value (\"\") in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 5.\n   >>nsub \"\"<<\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4731,7 +4789,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" with value (three) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 9.\n** A numeric value was expected. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" with value (three) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 5.\n   >>nsub three<<\n** A numeric value was expected. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4761,7 +4819,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" with value (0) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than zero. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" with value (0) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 5.\n   >>nsub 0<<\n** Input value must be greater than zero. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -4791,7 +4849,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" with value (-20) in section \"evaluator\" ending at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 10.\n** Input value must be greater than or equal to zero. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Subpatch integration factor parameter \"nsub\" with value (-20) in section \"evaluator\" at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 5.\n   >>nsub -20<<\n** Input value must be greater than or equal to zero. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
@@ -5626,11 +5684,8 @@ std::stringstream log;
 {
   // Construction as if from an input file with no parameters
   boost::shared_ptr< evaluator::base_evaluator > eval;
-  core::input_preprocess reader;
-
-  std::map< std::string, std::string > params;
   // Empty parameter list allowed
-  BOOST_REQUIRE_NO_THROW( eval = evaluator::icc_fortran::make_evaluator( params, reader ) );
+  BOOST_REQUIRE_NO_THROW( eval = evaluator::icc_fortran::make_evaluator( evaluator_test::mockup_params() ) );
 
   evaluator::icc_fortran const* llp = dynamic_cast< evaluator::icc_fortran const* >( eval.get() );
   BOOST_REQUIRE( nullptr != llp );
@@ -5653,14 +5708,20 @@ std::stringstream log;
 {
   // Construction as if from an input file with valid parameters
   boost::shared_ptr< evaluator::base_evaluator > eval;
-  core::input_preprocess reader;
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( core::strngs::fsdxf() );
+  params.back().set_value( "4.0" );
+  params.push_back( {} );
+  params.back().set_name( core::strngs::fsdxw() );
+  params.back().set_value( "6.0" );
+  params.push_back( {} );
+  params.back().set_name( core::strngs::fsnsub() );
+  params.back().set_value( "50" );
+  params.push_back( evaluator_test::mockup_params().back() );
 
-  std::map< std::string, std::string > params;
-  params[ core::strngs::fsdxf() ] = "4.0";
-  params[ core::strngs::fsdxw() ] = "6.0";
-  params[ core::strngs::fsnsub() ] = "50";
-  // Empty parameter list allowed
-  BOOST_REQUIRE_NO_THROW( eval = evaluator::icc_fortran::make_evaluator( params, reader ) );
+ // Empty parameter list allowed
+  BOOST_REQUIRE_NO_THROW( eval = evaluator::icc_fortran::make_evaluator( params ) );
 
   evaluator::icc_fortran const* llp = dynamic_cast< evaluator::icc_fortran const* >( eval.get() );
   BOOST_REQUIRE( nullptr != llp );
@@ -5671,11 +5732,12 @@ std::stringstream log;
 {
   // Construction as if from an input file with valid parameters
   boost::shared_ptr< evaluator::base_evaluator > eval;
-  core::input_preprocess reader;
-
-  std::map< std::string, std::string > params;
-  params[ core::strngs::fsdxf() ] = "4";
-  BOOST_REQUIRE_NO_THROW( eval = evaluator::icc_fortran::make_evaluator( params, reader ) );
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( core::strngs::fsdxf() );
+  params.back().set_value( "4.0" );
+  params.push_back( evaluator_test::mockup_params().back() );
+  BOOST_REQUIRE_NO_THROW( eval = evaluator::icc_fortran::make_evaluator( params ) );
 
   evaluator::icc_fortran const* llp = dynamic_cast< evaluator::icc_fortran const* >( eval.get() );
   BOOST_REQUIRE( nullptr != llp );
@@ -5684,31 +5746,35 @@ std::stringstream log;
 {
   // Construction as if from an input file with invalid parameters : invalid value
   boost::shared_ptr< evaluator::base_evaluator > eval;
-  core::input_preprocess reader;
-
-  std::map< std::string, std::string > params;
-  params[ core::strngs::fsdxf() ] = "four";
-  BOOST_REQUIRE_THROW( eval = evaluator::icc_fortran::make_evaluator( params, reader ), core::input_error );
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( core::strngs::fsdxf() );
+  params.back().set_value( "four" );
+  params.push_back( evaluator_test::mockup_params().back() );
+  BOOST_REQUIRE_THROW( eval = evaluator::icc_fortran::make_evaluator( params ), core::input_error );
 }
 {
   // Construction as if from an input file with invalid parameters : invalid name
   boost::shared_ptr< evaluator::base_evaluator > eval;
-  core::input_preprocess reader;
-
-  std::map< std::string, std::string > params;
-  params[ core::strngs::fsnsub() ] = "-4";
-  BOOST_REQUIRE_THROW( eval = evaluator::icc_fortran::make_evaluator( params, reader ), core::input_error );
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( core::strngs::fsdxf() );
+  params.back().set_value( "-4" );
+  params.push_back( evaluator_test::mockup_params().back() );
+  BOOST_REQUIRE_THROW( eval = evaluator::icc_fortran::make_evaluator( params ), core::input_error );
 }
 {
   // Construction as if from an input file with invalid parameters we would
   // like to be valid
   boost::shared_ptr< evaluator::base_evaluator > eval;
-  core::input_preprocess reader;
-
-  std::map< std::string, std::string > params;
-  params[ evaluator::icc_fortran::amx_file_label() ] = "amx.txt";
-  params[ evaluator::icc_fortran::patch_file_label() ] = "";
-  BOOST_REQUIRE_THROW( eval = evaluator::icc_fortran::make_evaluator( params, reader ), core::input_error );
+  std::vector< core::input_parameter_memo > params;
+  params.push_back( {} );
+  params.back().set_name( evaluator::induced_charge::amx_file_label() );
+  params.back().set_value( "amx.txt" );
+  params.push_back( {} );
+  params.back().set_name( evaluator::induced_charge::patch_file_label() );
+  params.push_back( evaluator_test::mockup_params().back() );
+  BOOST_REQUIRE_THROW( eval = evaluator::icc_fortran::make_evaluator( params ), core::input_error );
 }
 !!!2517296.cpp!!!	input_icc_fortran_test() : void
 // Test read input (specie meta)
