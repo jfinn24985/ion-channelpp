@@ -15,18 +15,22 @@ out << "    - Trials per sampling loop : " << this->trials_ << "\n";
 !!!695984.cpp!!!	get_value() : boost::any
 boost::any result = this->data_;
 return result;
-!!!2175279.cpp!!!	make_sampler(in params : string) : tracked_observable
+!!!2175279.cpp!!!	make_sampler(in params : input_parameter_memo) : tracked_observable
 std::unique_ptr< widom > smplr( new widom );
 // Check parameters for usable values
-for( auto const& item : params )
+for( auto & param : params )
 {
-  if( item.first == core::strngs::fsiwid() )
+  if( param.name() == core::strngs::fsiwid() )
   {
-    core::input_base_reader::ordinal_input( item.first, item.second, "Widom insertion counts/cycle", core::strngs::sampler_label(), smplr->trials_, nullptr );
+    smplr->trials_ = param.get_ordinal( "Widom insertion counts/cycle", core::strngs::sampler_label() );
   }
-  else if( item.first == core::strngs::fsspec() )
+  else if( param.name() == core::strngs::fsspec() )
   {
-    core::input_base_reader::text_input( item.first, item.second, "Specie label list", core::strngs::sampler_label(),smplr->key_labels_, nullptr );
+    smplr->key_labels_ = param.get_text( "Specie label list", core::strngs::sampler_label() );
+  }
+  else
+  {
+    UTILITY_REQUIRE( param.name() == core::strngs::fsend(), "Parameter names should have been checked in meta.do_read_end" );
   }
 }
 boost::shared_ptr< tracked_observable > result;

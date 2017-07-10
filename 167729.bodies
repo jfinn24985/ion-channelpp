@@ -15,16 +15,23 @@ out << "    - Default histogram bin width : " << rdf_sampler::default_bin_width(
 !!!672816.cpp!!!	get_value() : boost::any
 boost::any result = &this->data_sets_;
 return result;
-!!!336305.cpp!!!	make_sampler(in param_set : string) : base_observable
+!!!336305.cpp!!!	make_sampler(in param_set : input_parameter_memo) : base_observable
 double width = rdf_sampler::default_width();
 double stepsize = rdf_sampler::default_bin_width();
-if (param_set.count("width") != 0)
+for( auto& param : param_set )
 {
-  core::input_base_reader::float_input( "width", param_set.at( "width" ), "Radial Distribution function total width", core::strngs::sampler_label(), width, true, false, nullptr );
-}
-if (0 != param_set.count("stepsize"))
-{
-  core::input_base_reader::float_input( "stepsize", param_set.at( "stepsize" ), "Radial Distribution histgram bin width", core::strngs::sampler_label(), stepsize, true, false, nullptr );
+  if( "width" == param.name() )
+  {
+    width = param.get_float( "Radial Distribution function total width", core::strngs::sampler_label(), true, false );
+  }
+  else if( "stepsize" == param.name() )
+  {
+    stepsize = param.get_float( "Radial Distribution histgram bin width", core::strngs::sampler_label(), true, false );
+  }
+  else
+  {
+    UTILITY_REQUIRE( param.name() == core::strngs::fsend(), "Parameter names should have been checked in meta.do_read_end" );
+  }
 }
 std::unique_ptr< rdf_sampler > result(new rdf_sampler);
 result->width_ = width;

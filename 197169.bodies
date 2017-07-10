@@ -21,27 +21,29 @@ os << d3_distribution::default_bin_width() << ")\n";
 !!!1607728.cpp!!!	get_value() : boost::any
 boost::any result = &this->distributions_;
 return result;
-!!!365617.cpp!!!	make_sampler(in paramset : string) : base_observable
-std::string region_list;
-double stepsize = d3_distribution::default_bin_width();
-if (paramset.count( core::strngs::fsregn() ) != 0)
-{
-  core::input_base_reader::text_input( core::strngs::fsregn(), paramset.at( core::strngs::fsregn() ), "3D distribution " + d3_distribution::type_label_(), core::strngs::sampler_label(), region_list, nullptr );
-}
-if (0 != paramset.count("stepsize"))
-{
-  core::input_base_reader::float_input( "stepsize", paramset.at( "stepsize" ), d3_distribution::type_label_(), core::strngs::sampler_label(), stepsize, true, false, nullptr );
-}
+!!!365617.cpp!!!	make_sampler(in paramset : input_parameter_memo) : base_observable
 std::unique_ptr<d3_distribution> result( new d3_distribution );
-if( not region_list.empty() )
+result->stepsize_ = d3_distribution::default_bin_width();
+for( auto& param : paramset )
 {
-  result->regions_ = d3_distribution::process_region_list( region_list );
-  if( result->regions_.empty() )
+  if( core::strngs::fsregn() == param.name() )
   {
-    throw core::input_error::parameter_value_error( "Volume selection", core::strngs::sampler_label(), core::strngs::fsregn(), paramset.at( core::strngs::fsregn() ), nullptr, "Unable to convert value into a list of region labels." );
+    std::string region_list = param.get_text( "3D distribution " + d3_distribution::type_label_(), core::strngs::sampler_label() );
+    result->regions_ = d3_distribution::process_region_list( region_list );
+    if( result->regions_.empty() )
+    {
+      throw core::input_error::parameter_value_error( "Volume selection", core::strngs::sampler_label(), param, "Unable to convert value into a list of region labels." );
+    }
+  }
+  else if ( "stepsize" == param.name())
+  {
+    result->stepsize_ = param.get_float( d3_distribution::type_label_(), core::strngs::sampler_label(), true, false );
+  }
+  else
+  {
+    UTILITY_REQUIRE( param.name() == core::strngs::fsend(), "Parameter names should have been checked in meta.do_read_end" );
   }
 }
-result->stepsize_ = stepsize;
 boost::shared_ptr< base_observable > tmp(result.release());
 return tmp;
 !!!365745.cpp!!!	prepare(in pman : particle_manager, in gman : geometry_manager, in eman : evaluator_manager, in sman : report_manager) : void
@@ -69,7 +71,10 @@ if( not this->regions_.empty() )
       }
       std::string reg_list( region_os.str() );
       reg_list.back() = ')';
-      throw core::input_error::parameter_value_error( "Volume selection", core::strngs::sampler_label(), core::strngs::fsregn(), entry.second, nullptr, (core::input_error::bad_key_message_format() % reg_list).str() );
+      core::input_parameter_memo tmp;
+      tmp.set_name( core::strngs::fsregn() );
+      tmp.set_value( entry.second );
+      throw core::input_error::parameter_value_error( "Volume selection", core::strngs::sampler_label(), tmp, (core::input_error::bad_key_message_format() % reg_list).str() );
     }
   }
 }

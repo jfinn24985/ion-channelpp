@@ -14,12 +14,19 @@ out << "    - Default histogram bin width   : " << this->stepsize_ << "\n";
 !!!672560.cpp!!!	get_value() : boost::any
 boost::any result = &this->data_sets_;
 return result;
-!!!498864.cpp!!!	make_sampler(in param_set : string) : base_observable
+!!!498864.cpp!!!	make_sampler(in param_set : input_parameter_memo) : base_observable
 double stepsize = density_zaxis::default_stepsize();
 const std::string param_name = "stepsize";
-if (0 != param_set.count( param_name ))
+for( auto& param : param_set )
 {
-  core::input_base_reader::float_input( param_name, param_set.at( param_name ), density_zaxis::type_label_(), core::strngs::sampler_label(), stepsize, true, false, nullptr );
+  if ( param_name == param.name() )
+  {
+    stepsize = param.get_float( density_zaxis::type_label_(), core::strngs::sampler_label(), true, false );
+  }
+  else
+  {
+    UTILITY_REQUIRE( param.name() == core::strngs::fsend(), "Parameter names should have been checked in meta.do_read_end" );
+  }
 }
 std::unique_ptr< density_zaxis > result( new density_zaxis );
 result->stepsize_ = stepsize;
