@@ -45,31 +45,22 @@ wr[ ix ].add_entry( "use-random", this->use_random_ );
 defn.add_definition( { "delta", "number", ">0", "0.1", "(lamperski update) The magnitude of the change in chemical potential to use in updates." } );
 defn.add_definition( { "use-random", "boolean", "", "false", "(lamperski update) Scale the magnitude of the change in chemical potential by a random factor during updates.." } );
 return type_label_();
-!!!2113200.cpp!!!	make_updater(in params : string) : imc_update
+!!!2113200.cpp!!!	make_updater(in params : input_parameter_memo) : imc_update
 std::unique_ptr< lamperski_igcmc > smplr(new lamperski_igcmc);
 // Check parameters for usable values
-std::string unknown_param{};
 for (auto const& item : params)
 {
-  if (item.first == "delta")
+  if( item.name() == "delta" )
   {
-    double delta{ 0.0 };
-    core::input_base_reader::float_input( item.first, item.second, "Lamperski IMC", core::strngs::simulator_label(), delta, true, false, nullptr );
-    smplr->delta_ = delta;
+    smplr->delta_ = item.get_float( "Lamperski IMC", core::strngs::simulator_label(), true, false );
   }
-  else if (item.first == "use-random")
+  else if (item.name() == "use-random")
   {
-    bool do_random{ false };
-    core::input_base_reader::bool_input( item.first, item.second, "Lamperski IMC", core::strngs::simulator_label(), do_random, true, false, nullptr );
-    smplr->use_random_ = do_random;
+    smplr->use_random_ = item.get_bool( "Lamperski IMC", core::strngs::simulator_label(), true, false );
   }
-  else
+  else if( core::strngs::fsend() != item.name() )
   {
-    unknown_param += ( unknown_param.empty() ? "" : " " ) + item.first;
+    throw core::input_error::invalid_parameter_subtype_error( core::strngs::simulator_label(), type_label_(), item );
   }
-}
-if( not unknown_param.empty() )
-{
-  throw core::input_error::invalid_parameter_subtype_error( core::strngs::simulator_label(), type_label_(), unknown_param, nullptr );
 }
 return boost::shared_ptr< imc_update >( smplr.release() );

@@ -91,9 +91,10 @@ else if( reader.name().find( core::strngs::fstype() ) == 0 )
 else
 {
   // --------------------
-  // Choice specific parameters
-  reader.duplicate_test( 0 == this->parameter_set_.count( reader.name() ), this->section_label() );
-  this->parameter_set_.insert( std::make_pair( reader.name(), reader.value() ) );
+  // Storage specific parameters
+  const std::string lname{ reader.name() };
+  reader.duplicate_test( 0 == std::count_if( this->parameter_set_.begin(), this->parameter_set_.end(), [&lname](const core::input_parameter_memo& param){ return lname == param.name(); } ), this->section_label() );
+  this->parameter_set_.push_back( { reader } );
 }
 return true;
 !!!1884336.cpp!!!	do_read_end(in reader : input_base_reader) : void
@@ -109,11 +110,14 @@ for( const auto& defn : this->types_ )
     // check parameters.
     for( auto const& entry : this->parameter_set_ )
     {
-      if( not defn.has_definition( entry.first ) )
+      if( not defn.has_definition( entry.name() ) )
       {
-        reader.invalid_parameter_subtype_error( this->section_label(), this->type_, entry.first );
+        throw core::input_error::invalid_parameter_subtype_error( this->section_label(), this->type_, entry );
       }
     }
+    // push "end" tag onto parameter set.
+    this->parameter_set_.push_back( { reader } );
+
     this->fstype_->set_parameters( this->parameter_set_ );
     return;
   }

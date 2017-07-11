@@ -24,44 +24,62 @@ os << " (*will be 1 except after restart.)\n";
 print >>os, " - Number of repeats : ", self.super_loop_size_ 
 print >>os, " - Current loop*     : ", self.super_loop_count_ + 1 
 print >>os, " (*Will be one except after restart.)"
-!!!2098864.cpp!!!	make_simulation_manager(in params : string) : simulation_manager
-const std::string number_of_iterations_label{ "niter" };
-const std::string updater_label{ "update" };
-if( params.find( updater_label ) == params.end() )
-{
-  throw core::input_error::missing_parameters_error( "Simulation configuration", core::strngs::simulator_label(), updater_label, nullptr );
-}
+!!!2098864.cpp!!!	make_simulation_manager(in params : input_parameter_memo) : simulation_manager
 std::unique_ptr< imc_simulation > result{ new imc_simulation };
 // make copy of params so we can remove used parameters
-std::map< std::string, std::string > subparams( params );
-
-if( subparams.find( number_of_iterations_label ) != subparams.end() )
+std::vector< core::input_parameter_memo > lparams{ params };
+// -------------------
+// Find number of iterations (optional)
+// -------------------
 {
-  // -------------------
-  std::size_t niter{};
-  core::input_base_reader::ordinal_input( number_of_iterations_label, subparams.at( number_of_iterations_label ), "Iterative Monte Carlo", core::strngs::simulator_label(), niter, nullptr );
-  if( niter <= 1 )
+  const std::string number_of_iterations_label{ "niter" };
+  for( std::size_t niter_idx = 0; niter_idx != lparams.size(); ++niter_idx )
   {
-    throw core::input_error::parameter_value_error( "Iterative Monte Carlo", core::strngs::simulator_label(),  number_of_iterations_label, subparams.at( number_of_iterations_label ), nullptr, "Iterative procedure requires more than one iteration." );
+    if( number_of_iterations_label == lparams[ niter_idx ].name() )
+    {
+      std::size_t niter = lparams[ niter_idx ].get_ordinal( "Iterative Monte Carlo", core::strngs::simulator_label() );
+      if( niter <= 1 )
+      {
+        throw core::input_error::parameter_value_error( "Iterative Monte Carlo", core::strngs::simulator_label(), lparams[ niter_idx ], "Iterative procedure requires more than one iteration." );
+      }
+      result->set_loop_size( niter );
+      auto iter = lparams.begin();
+      std::advance( iter, niter_idx );
+      lparams.erase( iter );
+      break;
+    }
   }
-  result->set_loop_size( niter );
-  subparams.erase( subparams.find( number_of_iterations_label ) );
 }
-// subparams.find( "update" ) tested above
+// -------------------
+// Set updater type (required)
+// -------------------
 {
-  // -------------------
-  const std::vector< std::string > keys{ malasics_igcmc::type_label_(), lamperski_igcmc::type_label_() };
-  std::size_t idx;
-  core::input_base_reader::key_input( updater_label, subparams.at( updater_label ), "Iterative Monte Carlo", core::strngs::simulator_label(), idx, keys, nullptr );
-  subparams.erase( subparams.find( updater_label ) );
-  switch( idx )
+  const std::string updater_label{ "update" };
+  std::size_t updater_idx{};
+  for( updater_idx = 0; updater_idx != lparams.size(); ++updater_idx )
   {
-  case 0:
-    result->updater_ = malasics_igcmc::make_updater( subparams );
-    break;
-  case 1:
-    result->updater_ = lamperski_igcmc::make_updater( subparams );
-    break;
+    if( updater_label == lparams[ updater_idx ].name() )
+    {
+      const std::vector< std::string > keys{ malasics_igcmc::type_label_(), lamperski_igcmc::type_label_() };
+      const std::size_t idx = lparams[ updater_idx ].get_key( "Iterative Monte Carlo", core::strngs::simulator_label(), keys );
+      auto iter = lparams.begin();
+      std::advance( iter, updater_idx );
+      lparams.erase( iter );
+      switch( idx )
+      {
+      case 0:
+        result->updater_ = malasics_igcmc::make_updater( lparams );
+        break;
+      case 1:
+        result->updater_ = lamperski_igcmc::make_updater( lparams );
+        break;
+      }
+      break;
+    }
+  }
+  if( updater_idx == lparams.size() )
+  {
+    throw core::input_error::missing_parameters_error( "Simulation configuration", core::strngs::simulator_label(), updater_label, lparams.back().filename(), lparams.back().line_number() );
   }
 }
 return boost::shared_ptr< simulation_manager >( result.release() );
