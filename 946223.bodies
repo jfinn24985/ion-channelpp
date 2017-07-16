@@ -1,8 +1,9 @@
 class specie_meta
-!!!2078895.cpp!!!	add_keyword(in name : string) : void
-UTILITY_REQUIRE( not specie_meta::is_standard_keyword( name ), "Attempt to register keyword \""+name+"\" that is the same as a standard keyword" );
+!!!2078895.cpp!!!	add_keyword(in entry : help_entry) : void
+UTILITY_REQUIRE( not specie_meta::is_standard_keyword( entry.title() ), "Attempt to register keyword \""+entry.title()+"\" that is the same as a standard keyword" );
+UTILITY_REQUIRE( not specie_meta::has_keyword( entry.title() ), "Attempt to register keyword \""+entry.title()+"\" more than once" );
 
-specie_meta::known_keywords_.insert( name );
+specie_meta::known_keywords_.push_back( entry );
 !!!267952.cpp!!!	is_standard_keyword(in name : string) : bool
 // Check keyword is not a 'standard' word
 std::size_t match_standard_keyword(0);
@@ -12,7 +13,9 @@ for ( std::string kw : { core::strngs::fsname(), core::strngs::fstype(), core::s
 }
 return match_standard_keyword != 0;
 !!!2086575.cpp!!!	has_keyword(in name : string) : bool
-return 0 != specie_meta::known_keywords_.count( name );
+return specie_meta::known_keywords_.size() > 0 
+  and ( 0 != std::count_if(specie_meta::known_keywords_.begin(),
+  specie_meta::known_keywords_.end(), [name](const core::help_entry &e){ return e.title() ==name; } ) );
 !!!915248.cpp!!!	publish_help(inout helper : input_help) : void
 const std::string seclabel( core::strngs::fsspec() );
 const std::string freeonly( "required: only valid for \"" + core::strngs::fsfree() + "\"" );
@@ -315,7 +318,7 @@ else
 {
   // --------------------
   // Other (usually) evaluator specific specie parameters
-  if( 0 == this->known_keywords_.count( reader.name() ) )
+  if( not this->has_keyword( reader.name() ) )
   {
     reader.invalid_parameter_error( this->section_label(), reader.name() );
   }
