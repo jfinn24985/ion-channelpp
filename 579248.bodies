@@ -151,20 +151,6 @@ for atom in changes.changes:
   atom.energy_new += energy_new * spcs[ atom.key ].valency() * self.scalar_
 !!!1416368.cpp!!!	do_description(inout os : ostream) : void
 os << " Compute the change in pair-wise Lennard-Jones potential\n";
-auto getkeys = [](decltype(*this->epsilon_.begin()) & it) {
-  return it.first; };
-std::vector< std::string > keys(this->epsilon_.size());
-std::transform( this->epsilon_.begin(), this->epsilon_.end(), keys.begin(), getkeys );
-std::stringstream title, eps, sig;
-for( auto const& label : keys )
-{
-  title << std::setw(6) << label << " ";
-  eps   << std::setw(6) << std::setprecision(2) << this->epsilon_.at( label ) << " ";
-  sig   << std::setw(6) << std::setprecision(2) << this->sigma_.at( label )   << " ";
-}
-os << " Species  : " << title.str() << "\n";
-os << " Epsilons : " << eps.str() << "\n";
-os << " Sigmas   : " << sig.str() << "\n";
 !!!1416368.python!!!	do_description(inout os : ostream) : void
 print >>os, "[evaluator] coulomb"
 print >>os, " Calculate the change in interparticle Coulomb"
@@ -177,11 +163,6 @@ pass
 // matching entry in epsilon or sigma
 const std::string eps_label( "epsilon" );
 const std::string sig_label( "sigma" );
-if( pman.specie_count() != this->epsilon_.size() )
-{
-  throw core::input_error::input_logic_error( "Specie data lists \"" + eps_label + "\" and \"" + sig_label + "\" in type \"" + type_label_() + "\"", core::strngs::evaluator_label(), "Size of lists should equal the number of defined species." );
-}
-// Do not need to check sigma as we know its size matches epsilon
 
 // calculate "half" the epsilon and sigma value
 std::vector< double > eps( pman.specie_count() );
@@ -189,28 +170,23 @@ std::vector< double > sig( pman.specie_count() );
 for( std::size_t ispec = 0; ispec != pman.specie_count(); ++ispec )
 {
   auto const& spc = pman.get_specie( ispec );
-  if( this->epsilon_.count( spc.label() ) == 0 )
+  std::string missing;
+  if( not spc.has_parameter( eps_label ) )
   {
-    std::stringstream sps, lss;
-    lss << "(";
-    for( auto const& entry : this->epsilon_ )
-    {
-      lss << entry.first << ",";
-    }
-    sps << "(";
-    for(  std::size_t ispec = 0; ispec != pman.specie_count(); ++ispec )
-    {
-      sps << pman.get_specie( ispec ).label() << ",";
-    }
-    std::string list( lss.str() );
-    list.back() = ')';
-    std::string slist( sps.str() );
-    slist.back() = ')';
-    throw core::input_error::input_logic_error( "Mismatch between \"" + eps_label + "\" and \"" + sig_label + "\" values and defined species in type \"" + type_label_() + "\"", core::strngs::evaluator_label(), "List of specie labels "+list+" in \"" + eps_label + "\" and \"" + sig_label + "\" should match defined specie labels "+slist+"." );
+    missing = eps_label;
   }
-  // Do not need to check sigma as we know it has the same keys as epsilon
-  eps[ ispec ] = std::sqrt( this->epsilon_.at( spc.label() ) );
-  sig[ ispec ] = this->sigma_.at( spc.label() ) / 2;
+  if( not spc.has_parameter( sig_label ) )
+  {
+    if( missing.empty() ) { missing = sig_label; }
+    else { missing += " " + sig_label; }
+  }
+  if( not missing.empty() )
+  {
+    auto & end = spc.parameter( core::strngs::fsend() );
+    throw core::input_error::missing_parameters_error( "Lennard-Jones parameter(s) in", core::strngs::fsspec(), missing, end.filename(), end.line_number() );
+  }
+  eps[ ispec ] = std::sqrt( spc.parameter( eps_label ).get_float( "Lennard-Jones parameter", core::strngs::fsspec(), true, false ) );
+  sig[ ispec ] = spc.parameter( sig_label ).get_float( "Lennard-Jones parameter", core::strngs::fsspec(), true, false ) / 2;
 }
 // Build epsilon and sigma value cache
 std::vector< double > epsilon( pman.specie_count() * pman.specie_count() );
@@ -228,127 +204,21 @@ for( std::size_t ispec = 0; ispec != pman.specie_count(); ++ispec )
 }
 std::swap( this->epsilon_cache_, epsilon );
 std::swap( this->sigma_cache_, sigma );
-!!!1417008.cpp!!!	do_write_document(inout wr : input_document, in ix : size_t) : void
-{
-  std::stringstream val;
-  for( auto const& entry : this->epsilon_ )
-  {
-    val << entry.first << " " << entry.second << " ";
-  }
-  std::string value( val.str() );
-  value.resize( value.size() - 1 );
-  wr[ ix ].add_entry( "epsilon", value );
-}
-{
-  std::stringstream val;
-  for( auto const& entry : this->sigma_ )
-  {
-    val << entry.first << " " << entry.second << " ";
-  }
-  std::string value( val.str() );
-  value.resize( value.size() - 1 );
-  wr[ ix ].add_entry( "sigma", value );
-}
 !!!1417136.cpp!!!	add_definition(inout meta : evaluator_meta) : void
 std::string desc( "Calculates the pairwise 6/12 Lennard-Jones potential between species, without cut-off." );
 std::unique_ptr< evaluator_definition > defn( new evaluator_definition( lennard_jones::type_label_(), desc, &lennard_jones::make_evaluator ) );
-// add parameter definitions.
-defn->add_definition( { "epsilon", "list(specie label,number)", "", "required", "A list of specie labels and energy minima between two ideal particles of the labelled type." } );
-defn->add_definition( { "sigma", "list(specie label,number)", "", "required", "A list of specie labels and the distance at the energy minima between two ideal particles of the labelled type." } );
-
+// add parameter definitions to specie.
+if( not particle::specie_meta::has_keyword( "epsilon" ) )
+{
+  particle::specie_meta::add_keyword( { "epsilon", "list(specie label,number)", "", "required", "A list of specie labels and energy minima between two ideal particles of the labelled type." } );
+}
+if( not particle::specie_meta::has_keyword( "sigma" ) )
+{
+  particle::specie_meta::add_keyword( { "sigma", "list(specie label,number)", "", "required", "A list of specie labels and the distance at the energy minima between two ideal particles of the labelled type." } );
+}
 meta.add_definition( defn );
 !!!1417392.cpp!!!	make_evaluator(in param_set : input_parameter_memo) : base_evaluator
 // Check no parameters have been set
-const std::string eps_label( "epsilon" );
-const std::string sig_label( "sigma" );
-std::size_t eps_idx = param_set.size();
-std::size_t sig_idx = param_set.size();
-for( std::size_t idx{ 0ul }; idx != param_set.size(); ++idx )
-{
-  if( param_set[ idx ].name() == eps_label )
-  {
-    eps_idx = idx;
-  }
-  else if( param_set[ idx ].name() == sig_label )
-  {
-    sig_idx = idx;
-  }
-  else
-  {
-    UTILITY_REQUIRE( param_set[ idx ].name() == core::strngs::fsend(), "Parameter check should have been performed in reader.do_read_end" );
-  }
-}
-std::string missing{};
-if( param_set.size() == eps_idx )
-{
-  missing = eps_label;
-}
-if( param_set.size() == sig_idx )
-{
-  missing = ( missing.empty() ? sig_label : missing + " " + sig_label );
-}
-if( not missing.empty() )
-{
-  throw core::input_error::missing_parameters_error( "Lennard-Jones function", core::strngs::evaluator_label(), missing, param_set.back().filename(), param_set.back().line_number() );
-}
-
+UTILITY_REQUIRE( param_set.size() == 1, "Lennard-Jones evaluator expects no parameters." );
 std::unique_ptr< lennard_jones > cc( new lennard_jones );
-std::map< std::string, double > eps, sig;
-{
-  std::string value{ param_set[ eps_idx ].get_text( "Epsilon data list", core::strngs::evaluator_label() ) };
-  std::stringstream is( value );
-  while( not is.eof() )
-  {
-    std::string label;
-    double val;
-    is >> label >> val;
-    // Conversion failed so no more labels/numbers for conversion ?
-    if( not is ) break;
-    label = core::input_base_reader::dequote( label );
-    boost::algorithm::trim( label );
-    if( label.size() != 2 )
-    {
-      throw core::input_error::parameter_value_error( "Specie label in list", core::strngs::evaluator_label(), param_set[ eps_idx ], "Specie labels (" + label + ") have two letters." );
-    }
-    eps.insert( std::make_pair( label, val ) );
-  }
-  if( not is.eof() )
-  {
-    throw core::input_error::parameter_value_error( "Epsilon data list", core::strngs::evaluator_label(), param_set[ eps_idx ], "Could not convert value into a list of (label value) pairs." );
-  }
-}
-{
-  std::string value{ param_set[ sig_idx ].get_text( "Sigma data list", core::strngs::evaluator_label() ) };
-  std::stringstream is( value );
-  while( not is.eof() )
-  {
-    std::string label;
-    double val;
-    is >> label >> val;
-    // Conversion failed so no more labels/numbers for conversion ?
-    if( not is ) break;
-    label = core::input_base_reader::dequote( label );
-    boost::algorithm::trim( label );
-    if( label.size() != 2 )
-    {
-      throw core::input_error::parameter_value_error( "Specie label in list", core::strngs::evaluator_label(), param_set[ sig_idx ], "Specie labels (" + label + ") have two letters." );
-    }
-    // Check that maps contain the same specie labels
-    if( eps.count( label ) == 0 )
-    {
-      throw core::input_error::input_logic_error( "Specie data lists \"" + eps_label + "\" value (" + param_set[ eps_idx ].value() + ") has different entries in list to parameter \"" + sig_label + "\" value (" + param_set[ sig_idx ].value() + ") in type \"" + type_label_() + "\"", core::strngs::evaluator_label(), "Both lists should contain the same set of specie labels." );
-    }
-    sig.insert( std::make_pair( label, val ) );
-  }
-  if( not is.eof() )
-  {
-    throw core::input_error::parameter_value_error( "Sigma data list", core::strngs::evaluator_label(), param_set[ sig_idx ], "Could not convert value into a list of (label value) pairs." );
-  }
-}
-if( eps.size() != sig.size() )
-{
-  throw core::input_error::input_logic_error( "Specie data lists \"" + eps_label + "\" value (" + param_set[ eps_idx ].value() + ") has a different size list to parameter \"" + sig_label + "\" value (" + param_set[ sig_idx ].value() + ") in type \"" + type_label_() + "\"", core::strngs::evaluator_label(), "Both lists should contain the same number of pairs." );
-}
-std::swap( cc->epsilon_, eps );
-std::swap( cc->sigma_, sig );
 return std::unique_ptr< base_evaluator >( cc.release() );

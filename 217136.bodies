@@ -1921,16 +1921,8 @@ const std::string defn_label( "lennard-jones" );
   BOOST_CHECK_EQUAL( evaluator::lennard_jones::type_label_(), defn_label );
 
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  std::vector< core::input_parameter_memo > params;
-  params.push_back( {} );
-  params.back().set_name( "epsilon" );
-  params.back().set_value( "Na 1.0 Cl 1.0" );
-  params.push_back( {} );
-  params.back().set_name( "sigma" );
-  params.back().set_value( "Na 1.0 Cl 1.0" );
-  params.push_back( evaluator_test::mockup_params().back() );
 
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params ) );
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( evaluator_test::mockup_params() ) );
   BOOST_REQUIRE( eval_ptr );
   evaluator::lennard_jones *lj_ptr = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( lj_ptr != nullptr );
@@ -1940,12 +1932,11 @@ const std::string defn_label( "lennard-jones" );
   evaluator::evaluator_meta m( eman );
   BOOST_REQUIRE_NO_THROW( evaluator::lennard_jones::add_definition( m ) );
   BOOST_REQUIRE( m.has_definition( defn_label ) );
-  auto const& defn = m.get_definition( defn_label );
-  BOOST_CHECK( defn.has_definition( "epsilon" ) );
-  BOOST_CHECK( defn.has_definition( "sigma" ) );
+  BOOST_CHECK( particle::specie_meta::has_keyword( "epsilon" ) );
+  BOOST_CHECK( particle::specie_meta::has_keyword( "sigma" ) );
 }
 
-!!!1425072.cpp!!!	lennard_jones_param_different_size_list_test() : void
+!!!1425712.cpp!!!	lennard_jones_species_no_epsilon_test() : void
 // Build basic system.
 particle::particle_manager pman;
 {
@@ -1961,6 +1952,23 @@ particle::particle_manager pman;
   spc1.append_position( geometry::coordinate( 1.0, 1.0, 0.0 ) );
   spc1.append_position( geometry::coordinate( 0.0, 1.0, 1.0 ) );
   spc1.append_position( geometry::coordinate( 1.0, 0.0, 1.0 ) );
+  {
+    core::input_parameter_memo eps;
+    eps.set_name( "epsilon" );
+    eps.set_value( "0.24" );
+    spc1.set_parameter( eps );
+  }
+  {
+    core::input_parameter_memo sig;
+    sig.set_name( "sigma" );
+    sig.set_value( "0.48" );
+    spc1.set_parameter( sig );
+  }
+  {
+    core::input_parameter_memo end;
+    end.set_name( "end" );
+    spc1.set_parameter( end );
+  }
   pman.add_specie( spc1 );
 }
 {
@@ -1976,6 +1984,17 @@ particle::particle_manager pman;
   spc1.append_position( geometry::coordinate( 1.0, 0.0, 0.0 ) );
   spc1.append_position( geometry::coordinate( 0.0, 0.0, 1.0 ) );
   spc1.append_position( geometry::coordinate( 1.0, 1.0, 1.0 ) );
+  {
+    core::input_parameter_memo sig;
+    sig.set_name( "sigma" );
+    sig.set_value( "0.48" );
+    spc1.set_parameter( sig );
+  }
+  {
+    core::input_parameter_memo end;
+    end.set_name( "end" );
+    spc1.set_parameter( end );
+  }
   pman.add_specie( spc1 );
 }
 pman.add_predefined_particles();
@@ -1988,291 +2007,8 @@ geometry::geometry_manager gman( sys_rgn );
 evaluator::evaluator_manager eman;
 
 {
-  std::vector< core::input_parameter_memo > params;
-  params.push_back( {} );
-  params.back().set_name( "epsilon" );
-  params.back().set_value( "Na 1.0 Cl 1.0" );
-  params.push_back( {} );
-  params.back().set_name( "sigma" );
-  params.back().set_value( "Na 1.0" );
-  params.push_back( evaluator_test::mockup_params().back() );
-
-  try
-  {
-    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
-    BOOST_ERROR( "expected \"evaluator::lennard_jones::make_evaluator\" exception not thrown" );
-  }
-  catch( core::input_error const& err )
-  {
-    const std::string msg( err.what() );
-    //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Specie data lists \"epsilon\" value (Na 1.0 Cl 1.0) has a different size list to parameter \"sigma\" value (Na 1.0) in type \"lennard-jones\" in section \"evaluator\".\n** Both lists should contain the same number of pairs. **" ) < msg.size() );
-  }
-  catch( std::exception const& err )
-  {
-    BOOST_ERROR( std::string( "exception thrown by \"evaluator::lennard_jones::make_evaluator\" was not expected type: " ) + err.what() );
-  }
-}
-
-
-!!!1425200.cpp!!!	lennard_jones_no_epsilon_test() : void
-// Build basic system.
-particle::particle_manager pman;
-{
-  particle::specie spc1;
-  spc1.set_label( "Na" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.12 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( 1.0 );
-  spc1.set_excess_potential( 0.123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-{
-  particle::specie spc1;
-  spc1.set_label( "Cl" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.2 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( -1.0 );
-  spc1.set_excess_potential( 0.3123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-pman.add_predefined_particles();
-BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
-BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
-
-boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
-geometry::geometry_manager gman( sys_rgn );
-
-evaluator::evaluator_manager eman;
-
-{
-  std::vector< core::input_parameter_memo > params;
-  params.push_back( {} );
-  // params.back().set_name( "epsilon" );
-  // params.back().set_value( "Na 1.0 Cl 1.0" );
-  params.back().set_name( "sigma" );
-  params.back().set_value( "Na 1.0 Cl 1.0" );
-  params.push_back( evaluator_test::mockup_params().back() );
-  try
-  {
-    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
-    BOOST_ERROR( "expected \"evaluator::lennard_jones::make_evaluator\" exception not thrown" );
-  }
-  catch( core::input_error const& err )
-  {
-    const std::string msg( err.what() );
-    //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Lennard-Jones function section \"evaluator\" is missing some required parameters.\n** Add the following parameters to the section: epsilon **" ) < msg.size() );
-  }
-  catch( std::exception const& err )
-  {
-    BOOST_ERROR( std::string( "exception thrown by \"evaluator::lennard_jones::make_evaluator\" was not expected type: " ) + err.what() );
-  }
-}
-
-
-!!!1425328.cpp!!!	lennard_jones_no_sigma_test() : void
-// Build basic system.
-particle::particle_manager pman;
-{
-  particle::specie spc1;
-  spc1.set_label( "Na" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.12 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( 1.0 );
-  spc1.set_excess_potential( 0.123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-{
-  particle::specie spc1;
-  spc1.set_label( "Cl" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.2 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( -1.0 );
-  spc1.set_excess_potential( 0.3123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-pman.add_predefined_particles();
-BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
-BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
-
-boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
-geometry::geometry_manager gman( sys_rgn );
-
-evaluator::evaluator_manager eman;
-
-{
-  std::vector< core::input_parameter_memo > params;
-  params.push_back( {} );
-  params.back().set_name( "epsilon" );
-  params.back().set_value( "Na 1.0 Cl 1.0" );
-  //params.back().set_name( "sigma" );
-  //params.back().set_value( "Na 1.0 Cl 1.0" );
-  params.push_back( evaluator_test::mockup_params().back() );
-  try
-  {
-    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
-    BOOST_ERROR( "expected \"evaluator::lennard_jones::make_evaluator\" exception not thrown" );
-  }
-  catch( core::input_error const& err )
-  {
-    const std::string msg( err.what() );
-    //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Lennard-Jones function section \"evaluator\" is missing some required parameters.\n** Add the following parameters to the section: sigma **" ) < msg.size() );
-  }
-  catch( std::exception const& err )
-  {
-    BOOST_ERROR( std::string( "exception thrown by \"evaluator::lennard_jones::make_evaluator\" was not expected type: " ) + err.what() );
-  }
-}
-
-
-!!!1425456.cpp!!!	lennard_jones_different_species_in_list_test() : void
-// Build basic system.
-particle::particle_manager pman;
-{
-  particle::specie spc1;
-  spc1.set_label( "Na" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.12 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( 1.0 );
-  spc1.set_excess_potential( 0.123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-{
-  particle::specie spc1;
-  spc1.set_label( "Cl" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.2 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( -1.0 );
-  spc1.set_excess_potential( 0.3123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-pman.add_predefined_particles();
-BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
-BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
-
-boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
-geometry::geometry_manager gman( sys_rgn );
-
-evaluator::evaluator_manager eman;
-
-{
-  std::vector< core::input_parameter_memo > params;
-  params.push_back( {} );
-  params.back().set_name( "epsilon" );
-  params.back().set_value( "Na 1.0 Cl 1.0" );
-  params.push_back( {} );
-  params.back().set_name( "sigma" );
-  params.back().set_value( "Ca 1.0 Cl 1.0" );
-  params.push_back( evaluator_test::mockup_params().back() );
-  try
-  {
-    std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
-    BOOST_ERROR( "expected \"evaluator::lennard_jones::make_evaluator\" exception not thrown" );
-  }
-  catch( core::input_error const& err )
-  {
-    const std::string msg( err.what() );
-    //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Specie data lists \"epsilon\" value (Na 1.0 Cl 1.0) has different entries in list to parameter \"sigma\" value (Ca 1.0 Cl 1.0) in type \"lennard-jones\" in section \"evaluator\".\n** Both lists should contain the same set of specie labels. **" ) < msg.size() );
-  }
-  catch( std::exception const& err )
-  {
-    BOOST_ERROR( std::string( "exception thrown by \"evaluator::lennard_jones::make_evaluator\" was not expected type: " ) + err.what() );
-  }
-}
-
-
-!!!1425584.cpp!!!	lennard_jones_different_species_to_pman_test() : void
-// Build basic system.
-particle::particle_manager pman;
-{
-  particle::specie spc1;
-  spc1.set_label( "Na" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.12 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( 1.0 );
-  spc1.set_excess_potential( 0.123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-{
-  particle::specie spc1;
-  spc1.set_label( "Cl" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.2 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( -1.0 );
-  spc1.set_excess_potential( 0.3123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-pman.add_predefined_particles();
-BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
-BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
-
-boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
-geometry::geometry_manager gman( sys_rgn );
-
-evaluator::evaluator_manager eman;
-
-{
-  std::vector< core::input_parameter_memo > params;
-  params.push_back( {} );
-  params.back().set_name( "epsilon" );
-  params.back().set_value( "Ca 1.0 Cl 1.0" );
-  params.push_back( {} );
-  params.back().set_name( "sigma" );
-  params.back().set_value( "Ca 1.0 Cl 1.0" );
-  params.push_back( evaluator_test::mockup_params().back() );
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params ) );
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( evaluator_test::mockup_params() ) );
   try
   {
     eval_ptr->prepare( pman, gman, eman );
@@ -2282,14 +2018,14 @@ evaluator::evaluator_manager eman;
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Mismatch between \"epsilon\" and \"sigma\" values and defined species in type \"lennard-jones\" in section \"evaluator\".\n** List of specie labels (Ca,Cl) in \"epsilon\" and \"sigma\" should match defined specie labels (Na,Cl). **" ) < msg.size() );
+    BOOST_CHECK( msg.find( "Lennard-Jones parameter(s) in section \"specie\" is missing some required parameters.\n** Add the following parameters to the section: epsilon **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
     BOOST_ERROR( std::string( "exception thrown by \"evaluator::lennard_jones::make_evaluator\" was not expected type: " ) + err.what() );
   }
 }
-!!!1425712.cpp!!!	lennard_jones_extra_species_to_pman_test() : void
+!!!1424944.cpp!!!	lennard_jones_species_no_sigma_test() : void
 // Build basic system.
 particle::particle_manager pman;
 {
@@ -2305,6 +2041,23 @@ particle::particle_manager pman;
   spc1.append_position( geometry::coordinate( 1.0, 1.0, 0.0 ) );
   spc1.append_position( geometry::coordinate( 0.0, 1.0, 1.0 ) );
   spc1.append_position( geometry::coordinate( 1.0, 0.0, 1.0 ) );
+  {
+    core::input_parameter_memo eps;
+    eps.set_name( "epsilon" );
+    eps.set_value( "0.24" );
+    spc1.set_parameter( eps );
+  }
+  {
+    core::input_parameter_memo sig;
+    sig.set_name( "sigma" );
+    sig.set_value( "0.48" );
+    spc1.set_parameter( sig );
+  }
+  {
+    core::input_parameter_memo end;
+    end.set_name( "end" );
+    spc1.set_parameter( end );
+  }
   pman.add_specie( spc1 );
 }
 {
@@ -2320,6 +2073,17 @@ particle::particle_manager pman;
   spc1.append_position( geometry::coordinate( 1.0, 0.0, 0.0 ) );
   spc1.append_position( geometry::coordinate( 0.0, 0.0, 1.0 ) );
   spc1.append_position( geometry::coordinate( 1.0, 1.0, 1.0 ) );
+  {
+    core::input_parameter_memo eps;
+    eps.set_name( "epsilon" );
+    eps.set_value( "0.48" );
+    spc1.set_parameter( eps );
+  }
+  {
+    core::input_parameter_memo end;
+    end.set_name( "end" );
+    spc1.set_parameter( end );
+  }
   pman.add_specie( spc1 );
 }
 pman.add_predefined_particles();
@@ -2332,16 +2096,8 @@ geometry::geometry_manager gman( sys_rgn );
 evaluator::evaluator_manager eman;
 
 {
-  std::vector< core::input_parameter_memo > params;
-  params.push_back( {} );
-  params.back().set_name( "epsilon" );
-  params.back().set_value( "Ca 1.0 Na 1.0 Cl 1.0" );
-  params.push_back( {} );
-  params.back().set_name( "sigma" );
-  params.back().set_value( "Ca 1.0 Na 1.0 Cl 1.0" );
-  params.push_back( evaluator_test::mockup_params().back() );
   std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params ) );
+  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( evaluator_test::mockup_params() ) );
   try
   {
     eval_ptr->prepare( pman, gman, eman );
@@ -2351,76 +2107,7 @@ evaluator::evaluator_manager eman;
   {
     const std::string msg( err.what() );
     //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Specie data lists \"epsilon\" and \"sigma\" in type \"lennard-jones\" in section \"evaluator\".\n** Size of lists should equal the number of defined species. **" ) < msg.size() );
-  }
-  catch( std::exception const& err )
-  {
-    BOOST_ERROR( std::string( "exception thrown by \"evaluator::lennard_jones::make_evaluator\" was not expected type: " ) + err.what() );
-  }
-}
-!!!1424944.cpp!!!	lennard_jones_missing_species_to_pman_test() : void
-// Build basic system.
-particle::particle_manager pman;
-{
-  particle::specie spc1;
-  spc1.set_label( "Na" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.12 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( 1.0 );
-  spc1.set_excess_potential( 0.123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-{
-  particle::specie spc1;
-  spc1.set_label( "Cl" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.2 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( -1.0 );
-  spc1.set_excess_potential( 0.3123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-pman.add_predefined_particles();
-BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
-BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
-
-boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
-geometry::geometry_manager gman( sys_rgn );
-
-evaluator::evaluator_manager eman;
-
-{
-  std::vector< core::input_parameter_memo > params;
-  params.push_back( {} );
-  params.back().set_name( "epsilon" );
-  params.back().set_value( "Cl 1.0" );
-  params.push_back( {} );
-  params.back().set_name( "sigma" );
-  params.back().set_value( "Cl 1.0" );
-  params.push_back( evaluator_test::mockup_params().back() );
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr;
-  BOOST_REQUIRE_NO_THROW( eval_ptr = evaluator::lennard_jones::make_evaluator( params ) );
-  try
-  {
-    eval_ptr->prepare( pman, gman, eman );
-    BOOST_ERROR( "expected \"evaluator::lennard_jones::make_evaluator\" exception not thrown" );
-  }
-  catch( core::input_error const& err )
-  {
-    const std::string msg( err.what() );
-    //std::cout << msg << "\n";
-    BOOST_CHECK( msg.find( "Specie data lists \"epsilon\" and \"sigma\" in type \"lennard-jones\" in section \"evaluator\".\n** Size of lists should equal the number of defined species. **" ) < msg.size() );
+    BOOST_CHECK( msg.find( "Lennard-Jones parameter(s) in section \"specie\" is missing some required parameters.\n** Add the following parameters to the section: sigma **" ) < msg.size() );
   }
   catch( std::exception const& err )
   {
@@ -2443,6 +2130,23 @@ particle::particle_manager pman;
   spc1.append_position( geometry::coordinate( 1.0, 1.0, 0.0 ) );
   spc1.append_position( geometry::coordinate( 0.0, 1.0, 1.0 ) );
   spc1.append_position( geometry::coordinate( 1.0, 0.0, 1.0 ) );
+  {
+    core::input_parameter_memo eps;
+    eps.set_name( "epsilon" );
+    eps.set_value( "1.0" );
+    spc1.set_parameter( eps );
+  }
+  {
+    core::input_parameter_memo sig;
+    sig.set_name( "sigma" );
+    sig.set_value( "1.0" );
+    spc1.set_parameter( sig );
+  }
+  {
+    core::input_parameter_memo end;
+    end.set_name( "end" );
+    spc1.set_parameter( end );
+  }
   pman.add_specie( spc1 );
 }
 {
@@ -2458,6 +2162,23 @@ particle::particle_manager pman;
   spc1.append_position( geometry::coordinate( 1.0, 0.0, 0.0 ) );
   spc1.append_position( geometry::coordinate( 0.0, 0.0, 1.0 ) );
   spc1.append_position( geometry::coordinate( 1.0, 1.0, 1.0 ) );
+  {
+    core::input_parameter_memo eps;
+    eps.set_name( "epsilon" );
+    eps.set_value( "1.0" );
+    spc1.set_parameter( eps );
+  }
+  {
+    core::input_parameter_memo sig;
+    sig.set_name( "sigma" );
+    sig.set_value( "1.0" );
+    spc1.set_parameter( sig );
+  }
+  {
+    core::input_parameter_memo end;
+    end.set_name( "end" );
+    spc1.set_parameter( end );
+  }
   pman.add_specie( spc1 );
 }
 pman.add_predefined_particles();
@@ -2472,15 +2193,7 @@ evaluator::evaluator_manager eman;
 std::stringstream store;
 double expected_value = 0.0;
 {
-  std::vector< core::input_parameter_memo > params;
-  params.push_back( {} );
-  params.back().set_name( "epsilon" );
-  params.back().set_value( "Na 1.0 Cl 1.0" );
-  params.push_back( {} );
-  params.back().set_name( "sigma" );
-  params.back().set_value( "Na 1.0 Cl 1.0" );
-  params.push_back( evaluator_test::mockup_params().back() );
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( evaluator_test::mockup_params() ) );
   evaluator::lennard_jones* llp = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -2521,6 +2234,23 @@ particle::particle_manager pman;
   spc1.append_position( geometry::coordinate( 1.0, 1.0, 0.0 ) );
   spc1.append_position( geometry::coordinate( 0.0, 1.0, 1.0 ) );
   spc1.append_position( geometry::coordinate( 1.0, 0.0, 1.0 ) );
+  {
+    core::input_parameter_memo eps;
+    eps.set_name( "epsilon" );
+    eps.set_value( "1.0" );
+    spc1.set_parameter( eps );
+  }
+  {
+    core::input_parameter_memo sig;
+    sig.set_name( "sigma" );
+    sig.set_value( "2.0" );
+    spc1.set_parameter( sig );
+  }
+  {
+    core::input_parameter_memo end;
+    end.set_name( "end" );
+    spc1.set_parameter( end );
+  }
   pman.add_specie( spc1 );
 }
 {
@@ -2536,6 +2266,23 @@ particle::particle_manager pman;
   spc1.append_position( geometry::coordinate( 1.0, 0.0, 0.0 ) );
   spc1.append_position( geometry::coordinate( 0.0, 0.0, 1.0 ) );
   spc1.append_position( geometry::coordinate( 1.0, 1.0, 1.0 ) );
+  {
+    core::input_parameter_memo eps;
+    eps.set_name( "epsilon" );
+    eps.set_value( "1.0" );
+    spc1.set_parameter( eps );
+  }
+  {
+    core::input_parameter_memo sig;
+    sig.set_name( "sigma" );
+    sig.set_value( "3.0" );
+    spc1.set_parameter( sig );
+  }
+  {
+    core::input_parameter_memo end;
+    end.set_name( "end" );
+    spc1.set_parameter( end );
+  }
   pman.add_specie( spc1 );
 }
 pman.add_predefined_particles();
@@ -2550,15 +2297,7 @@ evaluator::evaluator_manager eman;
 std::stringstream store;
 double expected_value = 0.0;
 {
-  std::vector< core::input_parameter_memo > params;
-  params.push_back( {} );
-  params.back().set_name( "epsilon" );
-  params.back().set_value( "Na 1.0 Cl 1.0" );
-  params.push_back( {} );
-  params.back().set_name( "sigma" );
-  params.back().set_value( "Na 2.0 Cl 3.0" );
-  params.push_back( evaluator_test::mockup_params().back() );
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( evaluator_test::mockup_params() ) );
   evaluator::lennard_jones* llp = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -2572,7 +2311,7 @@ double expected_value = 0.0;
   const double r2_cc = r2_cc6 * ( r2_cc6 - 1.0 );
   const double r3_cn6 = std::pow( 2.5, 6 ) / 27.0;
   const double r3_cn = r3_cn6 * ( r3_cn6 - 1.0 );
- 
+
   expected_value = 6 * ( 2 * r1_nc + r2_nn + r2_cc ) + 4 * r3_cn;
 
   double energy = 0.0;
@@ -2608,6 +2347,23 @@ particle::particle_manager pman;
   spc1.append_position( geometry::coordinate( 1.0, 1.0, 0.0 ) );
   spc1.append_position( geometry::coordinate( 0.0, 1.0, 1.0 ) );
   spc1.append_position( geometry::coordinate( 1.0, 0.0, 1.0 ) );
+  {
+    core::input_parameter_memo eps;
+    eps.set_name( "epsilon" );
+    eps.set_value( "0.5" );
+    spc1.set_parameter( eps );
+  }
+  {
+    core::input_parameter_memo sig;
+    sig.set_name( "sigma" );
+    sig.set_value( "1.0" );
+    spc1.set_parameter( sig );
+  }
+  {
+    core::input_parameter_memo end;
+    end.set_name( "end" );
+    spc1.set_parameter( end );
+  }
   pman.add_specie( spc1 );
 }
 {
@@ -2623,6 +2379,23 @@ particle::particle_manager pman;
   spc1.append_position( geometry::coordinate( 1.0, 0.0, 0.0 ) );
   spc1.append_position( geometry::coordinate( 0.0, 0.0, 1.0 ) );
   spc1.append_position( geometry::coordinate( 1.0, 1.0, 1.0 ) );
+  {
+    core::input_parameter_memo eps;
+    eps.set_name( "epsilon" );
+    eps.set_value( "0.3" );
+    spc1.set_parameter( eps );
+  }
+  {
+    core::input_parameter_memo sig;
+    sig.set_name( "sigma" );
+    sig.set_value( "1.0" );
+    spc1.set_parameter( sig );
+  }
+  {
+    core::input_parameter_memo end;
+    end.set_name( "end" );
+    spc1.set_parameter( end );
+  }
   pman.add_specie( spc1 );
 }
 pman.add_predefined_particles();
@@ -2637,15 +2410,7 @@ evaluator::evaluator_manager eman;
 std::stringstream store;
 double expected_value = 0.0;
 {
-  std::vector< core::input_parameter_memo > params;
-  params.push_back( {} );
-  params.back().set_name( "epsilon" );
-  params.back().set_value( "Na 0.5 Cl 0.3" );
-  params.push_back( {} );
-  params.back().set_name( "sigma" );
-  params.back().set_value( "Na 1.0 Cl 1.0" );
-  params.push_back( evaluator_test::mockup_params().back() );
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( evaluator_test::mockup_params() ) );
   evaluator::lennard_jones* llp = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -2688,6 +2453,23 @@ particle::particle_manager pman;
   spc1.append_position( geometry::coordinate( 1.0, 1.0, 0.0 ) );
   spc1.append_position( geometry::coordinate( 0.0, 1.0, 1.0 ) );
   spc1.append_position( geometry::coordinate( 1.0, 0.0, 1.0 ) );
+  {
+    core::input_parameter_memo eps;
+    eps.set_name( "epsilon" );
+    eps.set_value( "0.5" );
+    spc1.set_parameter( eps );
+  }
+  {
+    core::input_parameter_memo sig;
+    sig.set_name( "sigma" );
+    sig.set_value( "2.0" );
+    spc1.set_parameter( sig );
+  }
+  {
+    core::input_parameter_memo end;
+    end.set_name( "end" );
+    spc1.set_parameter( end );
+  }
   pman.add_specie( spc1 );
 }
 {
@@ -2703,6 +2485,23 @@ particle::particle_manager pman;
   spc1.append_position( geometry::coordinate( 1.0, 0.0, 0.0 ) );
   spc1.append_position( geometry::coordinate( 0.0, 0.0, 1.0 ) );
   spc1.append_position( geometry::coordinate( 1.0, 1.0, 1.0 ) );
+  {
+    core::input_parameter_memo eps;
+    eps.set_name( "epsilon" );
+    eps.set_value( "0.3" );
+    spc1.set_parameter( eps );
+  }
+  {
+    core::input_parameter_memo sig;
+    sig.set_name( "sigma" );
+    sig.set_value( "3.0" );
+    spc1.set_parameter( sig );
+  }
+  {
+    core::input_parameter_memo end;
+    end.set_name( "end" );
+    spc1.set_parameter( end );
+  }
   pman.add_specie( spc1 );
 }
 pman.add_predefined_particles();
@@ -2717,15 +2516,7 @@ evaluator::evaluator_manager eman;
 std::stringstream store;
 double expected_value = 0.0;
 {
-  std::vector< core::input_parameter_memo > params;
-  params.push_back( {} );
-  params.back().set_name( "epsilon" );
-  params.back().set_value( "Na 0.5 Cl 0.3" );
-  params.push_back( {} );
-  params.back().set_name( "sigma" );
-  params.back().set_value( "Na 2.0 Cl 3.0" );
-  params.push_back( evaluator_test::mockup_params().back() );
-  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( params ) );
+  std::unique_ptr< evaluator::base_evaluator > eval_ptr( evaluator::lennard_jones::make_evaluator( evaluator_test::mockup_params() ) );
   evaluator::lennard_jones* llp = dynamic_cast< evaluator::lennard_jones* >( eval_ptr.get() );
   BOOST_REQUIRE( nullptr != llp );
 
@@ -2740,7 +2531,7 @@ double expected_value = 0.0;
   const double r2_cc = r2_cc6 * ( r2_cc6 - 1.0 );
   const double r3_cn6 = std::pow( 2.5, 6 ) / 27.0;
   const double r3_cn = r3_cn6 * ( r3_cn6 - 1.0 );
- 
+
   expected_value = 12 * eps_nc * r1_nc + 6 * ( 0.5 * r2_nn + 0.3 * r2_cc ) + 4 * eps_nc * ( r3_cn );
 
   double energy = 0.0;
@@ -2774,13 +2565,11 @@ core::input_delegater dg( 1 );
     std::stringstream ss;
     hlpr.write( ss );
     BOOST_CHECK( ss.str().find( "lennard-jones" ) < ss.str().size() );
-    BOOST_CHECK( ss.str().find( "epsilon" ) < ss.str().size() );
-    BOOST_CHECK( ss.str().find( "sigma" ) < ss.str().size() );
   }
   dg.add_input_delegate( m );
 }
 
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 0.5 Cl 0.3\nsigma \"Na\" 2.0 Cl 3.0\nend\n\n" );
+std::string canon_input( "evaluator\ntype \"lennard-jones\"\nend\n\n" );
 
 core::input_preprocess reader;
 reader.add_buffer( "dummy", canon_input );
@@ -2789,7 +2578,7 @@ BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
 BOOST_REQUIRE_EQUAL( mngr->size(), 1ul );
 BOOST_CHECK_EQUAL( mngr->get_evaluators()[ 0 ].type_label(), "lennard-jones" );
 
-std::string canon( "evaluator\nepsilon Cl 0.3 Na 0.5\nsigma Cl 3 Na 2\ntype lennard-jones\nend\n" );
+std::string canon( "evaluator\ntype lennard-jones\nend\n" );
 
 core::input_document wrtr( 1ul );
 mngr->write_document( wrtr );
@@ -2810,7 +2599,7 @@ core::input_delegater dg( 1 );
   dg.add_input_delegate( m );
 }
 
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 0.5 Cl 0.3\nmobk \"Na\" 2.0 Cl 3.0\nend\n\n" );
+std::string canon_input( "evaluator\ntype \"lennard-jones\"\nmobk \"Na\" 2.0 Cl 3.0\nend\n\n" );
 
 core::input_preprocess reader;
 reader.add_buffer( "dummy", canon_input );
@@ -2823,337 +2612,7 @@ catch( core::input_error const& err )
 {
   const std::string msg( err.what() );
   //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Unknown parameter \"mobk\" in section \"evaluator\" subtype \"lennard-jones\" detected at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 4.\n** Parameter \"mobk\" is not expected in this section and type. **" ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1426096.cpp!!!	input_lennard_jones_different_size_list_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 1.0 Cl 1.0\nsigma \"Na\" 1.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( core::input_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Specie data lists \"epsilon\" value (Na 1.0 Cl 1.0) has a different size list to parameter \"sigma\" value (\"Na\" 1.0) in type \"lennard-jones\" in section \"evaluator\".\n** Both lists should contain the same number of pairs. **" ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1426224.cpp!!!	input_lennard_jones_no_epsilon_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\n#epsilon Na 1.0 Cl 1.0\nsigma \"Na\" 1.0 Cl 1.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( core::input_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Lennard-Jones function section \"evaluator\" is missing some required parameters at input file \"" + boost::filesystem::current_path().native() + "/dummy\" in section ending at line 5.\n** Add the following parameters to the section: epsilon **" ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1426352.cpp!!!	input_lennard_jones_no_sigma_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 1.0 Cl 1.0\n#sigma \"Na\" 1.0 Cl 1.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( core::input_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Lennard-Jones function section \"evaluator\" is missing some required parameters at input file \"" + boost::filesystem::current_path().native() + "/dummy\" in section ending at line 5.\n** Add the following parameters to the section: sigma **" ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1426480.cpp!!!	input_lennard_jones_different_species_in_list_test() : void
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 1.0 Cl 1.0\nsigma \"Ca\" 1.0 Cl 1.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-try
-{
-  dg.read_input( reader );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( core::input_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Specie data lists \"epsilon\" value (Na 1.0 Cl 1.0) has different entries in list to parameter \"sigma\" value (\"Ca\" 1.0 Cl 1.0) in type \"lennard-jones\" in section \"evaluator\".\n** Both lists should contain the same set of specie labels. **" ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1426608.cpp!!!	input_lennard_jones_different_species_to_pman_test() : void
-// Build basic system.
-particle::particle_manager pman;
-{
-  particle::specie spc1;
-  spc1.set_label( "Na" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.12 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( 1.0 );
-  spc1.set_excess_potential( 0.123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-{
-  particle::specie spc1;
-  spc1.set_label( "Cl" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.2 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( -1.0 );
-  spc1.set_excess_potential( 0.3123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-pman.add_predefined_particles();
-BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
-BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
-
-boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
-geometry::geometry_manager gman( sys_rgn );
-
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Ca 1.0 Cl 1.0\nsigma \"Ca\" 1.0 Cl 1.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-try
-{
-  mngr->prepare( pman, gman );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( core::input_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Mismatch between \"epsilon\" and \"sigma\" values and defined species in type \"lennard-jones\" in section \"evaluator\".\n** List of specie labels (Ca,Cl) in \"epsilon\" and \"sigma\" should match defined specie labels (Na,Cl). **" ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1426736.cpp!!!	input_lennard_jones_extra_species_to_pman_test() : void
-// Build basic system.
-particle::particle_manager pman;
-{
-  particle::specie spc1;
-  spc1.set_label( "Na" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.12 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( 1.0 );
-  spc1.set_excess_potential( 0.123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-{
-  particle::specie spc1;
-  spc1.set_label( "Cl" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.2 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( -1.0 );
-  spc1.set_excess_potential( 0.3123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-pman.add_predefined_particles();
-BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
-BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
-
-boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
-geometry::geometry_manager gman( sys_rgn );
-
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Na 1.0 Ca 1.0 Cl 1.0\nsigma \"Ca\" 1.0 \"Na\" 1.0 Cl 1.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-try
-{
-  mngr->prepare( pman, gman );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( core::input_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Specie data lists \"epsilon\" and \"sigma\" in type \"lennard-jones\" in section \"evaluator\".\n** Size of lists should equal the number of defined species. **" ) < msg.size() );
-}
-catch( std::exception const& err )
-{
-  BOOST_ERROR( std::string( "exception thrown by \"dg.read_input( reader )\" was not expected type: " ) + err.what() );
-}
-!!!1424816.cpp!!!	input_lennard_jones_missing_species_to_pman_test() : void
-// Build basic system.
-particle::particle_manager pman;
-{
-  particle::specie spc1;
-  spc1.set_label( "Na" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.12 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( 1.0 );
-  spc1.set_excess_potential( 0.123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-{
-  particle::specie spc1;
-  spc1.set_label( "Cl" );
-  spc1.set_concentration( 1.0 );
-  spc1.set_radius( 0.2 );
-  spc1.set_rate( 0.1 );
-  spc1.set_valency( -1.0 );
-  spc1.set_excess_potential( 0.3123 );
-  spc1.set_type( particle::specie::SOLUTE );
-  spc1.append_position( geometry::coordinate( 0.0, 1.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 0.0, 0.0 ) );
-  spc1.append_position( geometry::coordinate( 0.0, 0.0, 1.0 ) );
-  spc1.append_position( geometry::coordinate( 1.0, 1.0, 1.0 ) );
-  pman.add_specie( spc1 );
-}
-pman.add_predefined_particles();
-BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
-BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 8 );
-
-boost::shared_ptr< geometry::base_region > sys_rgn( new geometry::periodic_cube_region( "cell", 10.0 ) );
-geometry::geometry_manager gman( sys_rgn );
-
-// Test read input (specie meta)
-boost::shared_ptr< evaluator::evaluator_manager > mngr( new evaluator::evaluator_manager {} );
-core::input_delegater dg( 1 );
-{
-  boost::shared_ptr< evaluator::evaluator_meta > m( new evaluator::evaluator_meta( mngr ) );
-  evaluator::lennard_jones::add_definition( *m );
-
-  dg.add_input_delegate( m );
-}
-
-std::string canon_input( "evaluator\ntype \"lennard-jones\"\nepsilon Cl 1.0\nsigma Cl 1.0\nend\n\n" );
-
-core::input_preprocess reader;
-reader.add_buffer( "dummy", canon_input );
-BOOST_REQUIRE_NO_THROW( dg.read_input( reader ) );
-try
-{
-  mngr->prepare( pman, gman );
-  BOOST_ERROR( "expected \"dg.read_input( reader )\" exception not thrown" );
-}
-catch( core::input_error const& err )
-{
-  const std::string msg( err.what() );
-  //std::cout << msg << "\n";
-  BOOST_CHECK( msg.find( "Specie data lists \"epsilon\" and \"sigma\" in type \"lennard-jones\" in section \"evaluator\".\n** Size of lists should equal the number of defined species. **" ) < msg.size() );
+  BOOST_CHECK( msg.find( "Unknown parameter \"mobk\" in section \"evaluator\" subtype \"lennard-jones\" detected at input file \"" + boost::filesystem::current_path().native() + "/dummy\" line 3.\n** Parameter \"mobk\" is not expected in this section and type. **" ) < msg.size() );
 }
 catch( std::exception const& err )
 {
