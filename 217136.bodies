@@ -4806,7 +4806,11 @@ evaluator::patch_matrix_fixture fix;
     // Build basic system.
     particle::particle_manager pman;
     icceval.compute_initial_c_h( pman );
+    // No charges in system.
+    // ---------------------
     std::cout << " gaussbox 0 " << icceval.gaussbox() << "\n";
+    // Two opposite charges inside channel.
+    // ------------------------------------
     {
       particle::specie spc1;
       spc1.set_label( "Na" );
@@ -4838,7 +4842,8 @@ evaluator::patch_matrix_fixture fix;
     std::cout << " gaussbox 1 " << icceval.gaussbox() << "\n";
   }
   {
-    // positive charge in membrane.
+    // negative charge in channel, positive charge inside membrane.
+    // ------------------------------------------------------------
     particle::particle_manager pman;
     {
       particle::specie spc1;
@@ -4872,6 +4877,7 @@ evaluator::patch_matrix_fixture fix;
   }
   {
     // positive and negative charge in membrane.
+    // -----------------------------------------
     particle::particle_manager pman;
     {
       particle::specie spc1;
@@ -4902,6 +4908,74 @@ evaluator::patch_matrix_fixture fix;
     BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 2 );
     icceval.compute_initial_c_h( pman );
     std::cout << " gaussbox 3 " << icceval.gaussbox() << "\n";
+  }
+  {
+    // double negative in channel, positive charge inside membrane.
+    // ------------------------------------------------------------
+    particle::particle_manager pman;
+    {
+      particle::specie spc1;
+      spc1.set_label( "Na" );
+      spc1.set_concentration( 1.0 );
+      spc1.set_radius( 0.12 );
+      spc1.set_rate( 0.1 );
+      spc1.set_valency( 2.0 );
+      spc1.set_excess_potential( 0.123 );
+      spc1.set_type( particle::specie::SOLUTE );
+      spc1.append_position( geometry::coordinate( 0.0, 13.0, -3.0 ) );
+      pman.add_specie( spc1 );
+    }
+    {
+      particle::specie spc1;
+      spc1.set_label( "Cl" );
+      spc1.set_concentration( 1.0 );
+      spc1.set_radius( 0.2 );
+      spc1.set_rate( 0.1 );
+      spc1.set_valency( -2.0 );
+      spc1.set_excess_potential( 0.3123 );
+      spc1.set_type( particle::specie::SOLUTE );
+      spc1.append_position( geometry::coordinate( 0.0, 0.0, 3.0 ) );
+      pman.add_specie( spc1 );
+    }
+    pman.add_predefined_particles();
+    BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
+    BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 2 );
+    icceval.compute_initial_c_h( pman );
+    std::cout << " gaussbox 2x2 " << icceval.gaussbox() << "\n";
+  }
+  {
+    // positive charge in channel, negative charge inside membrane.
+    // ------------------------------------------------------------
+    particle::particle_manager pman;
+    {
+      particle::specie spc1;
+      spc1.set_label( "F" );
+      spc1.set_concentration( 1.0 );
+      spc1.set_radius( 0.12 );
+      spc1.set_rate( 0.1 );
+      spc1.set_valency( -1.0 );
+      spc1.set_excess_potential( 0.123 );
+      spc1.set_type( particle::specie::SOLUTE );
+      spc1.append_position( geometry::coordinate( 0.0, 13.0, -3.0 ) );
+      pman.add_specie( spc1 );
+    }
+    {
+      particle::specie spc1;
+      spc1.set_label( "K" );
+      spc1.set_concentration( 1.0 );
+      spc1.set_radius( 0.2 );
+      spc1.set_rate( 0.1 );
+      spc1.set_valency( 1.0 );
+      spc1.set_excess_potential( 0.3123 );
+      spc1.set_type( particle::specie::SOLUTE );
+      spc1.append_position( geometry::coordinate( 0.0, 0.0, 3.0 ) );
+      pman.add_specie( spc1 );
+    }
+    pman.add_predefined_particles();
+    BOOST_REQUIRE_EQUAL( pman.specie_count(), 2 );
+    BOOST_REQUIRE_EQUAL( pman.get_ensemble().count(), 2 );
+    icceval.compute_initial_c_h( pman );
+    std::cout << " gaussbox 5 " << icceval.gaussbox() << "\n";
   }
 
   // We assume this simple size test means that the surface grid
