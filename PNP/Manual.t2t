@@ -1,0 +1,190 @@
+Poisson-Nernst Planck Theory
+pnp_project
+2011
+
+= Introduction =
+
+The Poisson-Nernst-Planck Theory allows us to determine the free
+energy of ionic species diffusing along a 1D axis of known
+cross-sectional areas in a continuous medium.
+
+= Objective =
+
+To provide a framework for using the continuum PNP theory with
+atomistic modelling.  The framework shall provide mechanisms for
+(1) translating the modelled environment between the atomistic model and
+the PNP model. (2) translating the PNP computed free energy into the 
+atomistic model.
+
+= Source code and algorithm =
+
+== Assumptions ==
+
++ Orientation: The 1d PNP model is defined as a series of diffusion
+fronts along a linear axis.  (in older code referred to as "x" with
+increasing from left to right)  [Code and documentation will be
+refactored to refer to axis as "z" with intra-cellular domain being
+down and extra-cellular being up and values increasing from down to
+up.] External code must coordinate this axis with its own frame of
+reference.  In the code "left" always refers to lower valued corrdinates
+
++ Diffusion front shape: Existing code sets front shape as circles.  I
+do not know if this is a requirement of the theoretical derivation or
+if other shapes are valid. [QUESTION]
+
++ Pore walls: I assume that x-section area changing linearly
+between fronts of different size is a requirement of the theory.
+
+== Introduction ==
+
+This code has been adapted from two major sources. 
+
++ A C-language version from Uwe Hollerbach and related version from
+Nonner.  This version only solved the 1d axis case.  This is the
+base-line version for the stand-alone continuum PNP theory.
+
++ A Fortran-language version from Doda that used the PNP 1d case as
+part of a Monte-Carlo simulation.  This is the base-line for the
+interface of PNP theory with a atomistic model.
+
+
+Introductions to these earlier version appear below.  It must be
+understood that much of what is discussed is no longer relevant to the
+current version.  The documentation of methods and attributes in the
+current version attempts to detail the corresponding functions and
+variables in these earlier versions.
+
+In this documentation and that of the code we assume that the 1D axis 
+increases from left to right. 
+
+=== Introduction to Hollerbach/Nonner versions ca. 1998 ===
+
+These functions let you set up a dynamic workspace adapted to your current
+PNP problem (involving a number of ion species and a geometrical grid) and
+solve the PNP equations in a given geometry and using given boundary
+conditions and PNP parameters. The layout of a pore geometry and the
+translation of far-bulk into domain-boundary conditions are not topics of
+the PNP solver (they are facilitated by other library modules).
+
+PNP theory is solved here in one dimension, assuming homogeneity in the others.
+The metrics of the domain are expressed by an axial coordinate and the
+area of the surface of homogeneity that belongs to the axial coordinate.
+Exact solutions are obtained for both cylindrical and conical domains (with 
+flat or spherically curved surfaces, respectively). Approximate solutions are
+obtained for domains that are piecewise cylindrical and conical (an example
+is a domain that includes a cylindrical pore proper, tapered atria, and
+hemispherical subdomains of the bulks). The PNP solver is given the domain
+metrics as an array of axial grid coordinates and the corresponding domain
+surface areas; it is otherwise unaware of the shape of the domain, and thus
+capable of dealing with arbitrary geometries. Furthermore, it works with
+the grid defined by the given axial coordinates. This grid generally will be
+non-uniform (with intervals made proportional to domain surface area).
+
+The implemented theory makes provisions to account for two forms of specific
+short-range interaction that ions may experience in a PNP domain. (1) binding to
+saturable sites (which immobilizes the ion), and (2) non-saturable partitioning
+(with potential effects on ion mobility as expressed in the diffusion coefficient).
+For instance, form (1) may apply to protons that protonize structural carboxyl
+groups, whereas form (2) may apply to alkali cations that interact with an array
+of structural carbonyl groups. Form (2) is suitable also for introducing Born
+energy variations associated with a non-uniform dielectric permittivity (see below).
+
+Several PNP parameters are allowed to vary along the axial coordinate and need to
+be specified as axial profiles (on the grid of the axial coordinate array):
+
+  - area of domain surface (see above)
+  - relative dielectric permittivity
+  - diffusion coefficients of ions
+  - 'partition energies' of ions (standard chemical potentials)
+  - structural fixed-charge concentration
+
+Saturable binding also is allowed to vary along the pore axis. This is specified
+in a client-provided function that computes 'total' ion concentrations along
+the pore from the given 'free' concentrations (a simple equilibrium computation,
+since the 'free' concentrations in a stationary flux are constant in time).
+
+The PNP solver treats the bulk boundaries as providing flux-independent ion
+concentrations and electric potentials. For PNP domains that extend well into
+the bulks, the solver can use the far-bulk values. Other boundary treatments
+(like Donnan or Guy-Chapman theory) are possible; then the PNP solver is given
+the domain-side boundary values produced by the respective boundary treatment.
+
+The first part of this library sets up PNP domains of two basic geometries:
+
+(1) PNP is set up for a cylindrical domain with flat boundaries to the bulks. The
+grid is uniform.
+
+(2) PNP is set up for a domain comprising a cylindrical pore proper, two atria of
+variable taper, and two hemispherical subdomains of bulk. The grid is non-uniform,
+with a mesh width that increases in proportion to domain area. Domain area is
+computed as the area of the spherical surface that intersects the domain axis at
+the respective grid node and is normal to the walls of the domain at its edge.
+Atrial tapers are defined by client-provided functions that compute wall angle
+(with domain axis) for a given array of axis grid nodes.
+
+   
+NOTE: geometry builders implicitly invoke build_PNP_ws and init_PNP_var.
+      A builder itself may allocate and de-allocate some memory in addition to
+      that needed for the PNP workspace.
+
+
+// ----------------------------------------------------------------------
+// IN-CODE TESTING.
+//
+// The system in use in this program consists of four checking
+// conditionals and an input value conditional. All have the same
+// interface of two arguments.  The first argument is an if test
+// conditional that is expected to be true.  The second argument is a
+// message giving details specific to the failed test. In addition the
+// program reports information about the code location of the error
+// (possibly including a call stack).
+//
+// Checking conditionals that may be optionally compiled into the
+// program:
+//
+// * IONCH_ALWAYS : This test is non-optional and should be used to
+// verify conditions that are dependent on conditions while the progam
+// is running.  Ideally it should not be used as it indicates an error
+// in code that should have raised an exception for the error itself.
+// In practice it might may be used for such things as checking
+// C-library calls succeeded where you don't want to handle the error
+// cases yourself.
+//
+// * IONCH_INPUT : Check that runtime inputs to the program (from the
+// user) are within allowed values.  This is also used to check data
+// derived from input; for example to check that dividing some length
+// into intervals gives a number of segments below a program limit.
+// As input is never controlled by the program this test is always
+// available.  In addition to the information provided with
+// IONCH_ALWAYS, this method calls a locally defined input_helper
+// (std::ostream&,std::string) method.  This method can be used to
+// create a detailed feedback message describing the expected input
+// for the entire module or class in addition to the error-specific
+// message provided in the method call.
+// 
+// * IONCH_REQUIRE : Check the arguments to a method fit within the
+// method's advertised input domain. As we do not necessarily
+// completely know how the method will be called this is usually the
+// last test to be removed by conditional compilation.
+//
+// * IONCH_ENSURE : Test the programmer's logic has led to a method's
+// result within the domain advertised by the method (and so expected
+// by the method's caller). It should be used in any non-trivial
+// method to ensure the method's post-conditions are met. Ideally if
+// the method's input is within the advertised domain (as checked by
+// IONCH_REQUIRE) the results of a well-tested method should always be
+// correct, so this is conditionally removed before IONCH_REQUIRE
+// by conditional compilation.
+//
+// * IONCH_CHECK : Testing the programmer's logic.  This lets the
+// progammer assert what they think should be true is actually true!
+// It is intended to allow the programmer to insert a check of
+// intermediate results during the development of a method. As a
+// mainly developement test it is usually the first test to be
+// removed by conditional compilation.
+//
+// For those c-libraries that provide a means to inspect the current
+// call stack we use two methods 'backtrace' and 'backtrace_symbols'
+// to generate a messag containing this information.  We use the same
+// interface as the GNU libc methods.
+//

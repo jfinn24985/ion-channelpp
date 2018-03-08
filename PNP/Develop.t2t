@@ -1,0 +1,221 @@
+Developers Guide 
+pnp_project 
+2012
+
+= Introduction =
+
+Origin sources.
+
++ A Fortran 77 language version from Boda that used the PNP case
+as part of a Monte-Carlo simulation of ion-channels.  This is the
+base-line for the interface of PNP theory with an atomistic model.
+
++ A Fortran 2003 language version from Finnerty that refactored the
+code of Boda to use modules.  In this process code multiplicity was
+eliminated.  The ultimate development of this Fortran code within
+the GRS Ion Channel project was 'ionch' release 17.1
+
+= Compilation environment difference management =
+
+Two header files control adaptation to the user's compilation
+environment.  The content of these files is split depending
+on the type of adaptation required.  The 'config.hpp' file
+contains feature macros and helper macros to adapt code to
+legacy C/C++ environment.  The 'require.hpp' file contains
+code to assist in providing C++2011 features not yet included
+by the compiler.
+
+== The 'config.hpp' ==
+
+Note that this file also includes macros that control the
+inclusion of debugging and testing code.  These are discussed
+in the relevant sections of this document and are not included
+here.
+
+== Feature test macros ==
+
+These macros are to be used in user code to select alternative
+implementations based on the availability of some feature.  The
+user has to manually code the different implementations.  To change
+the default value the user should define the macro to 0 or 1
+on the compiler command line (ie ``-DHAVE_DEV_RANDOM=1``).
+
++ HAVE_DEV_RANDOM : default = 0 : If the system has a ``/dev/random``
+  file that provides high-quality random numbers.  Code that want to
+  use high-quality random numbers can then choose to use data from
+  this file or some other alternative.  Note that in my experience
+  the number of random numbers per second that can be obtained from
+  ``/dev/random`` is very low compared to a good random number
+  generation algorithm such as Mersenne Twister.  As such it might
+  be best used to obtain seed values for such an algorithm, rather
+  than being used directly.
+
++ HAVE_BACKTRACE : default = 1 : If the C-library provides a
+  ``backtrace`` function for examining the current call-stack setting
+  this to 1 will make backtrace information available to some of
+  the test macros.
+
+
+
+== Unifying macros ==
+
+These macros provide a unified way to use features that are
+implemented in different ways in different compilers.
+
++ IONCH_API and IONCH_LOCAL : These macros define the visibility
+  of symbols in dynamic libraries.  On Unix the default is to make
+  all symbols visible so the developer does not need to do anything
+  to generate a working dynamic library.  On other OSs the default
+  visibility is to hide all the symbols and the developer is expected
+  to explicitly define which symbols to make visible.  When these
+  macros are used they explicitly expose (IONCH_API) or hide
+  (IONCH_LOCAL) the symbol in the dynamic library regardless of the
+  default visibility of the OS.  They are currently unused in the
+  project but are provided for possible future development.
+
+
+
+== The 'require.hpp' file ==
+
+The code is written with all features of C++2011.
+|| C++2011 feature | How implemented ||
+| ``auto`` | required, no alternative
+| ``nullptr`` | replacement
+| ``shared_ptr`` | Use boost version to support serialization.
+
+
+== Macro mechanism ==
+
+The macro mechanism defines a preprocessor macro that substitutes
+an available alternative.  Such alternatives are less safe than the
+C++2011 feature which should be used whenever possible.  All these
+macros have a feature macro that must be defined if a feature is
+_not_ available.
+
++ nullptr : Feature macro ``NO_CPP2011_NULLPTR``.  Replaced with
+  the example workaround class from the C++ standard proposal
+  or if __GNUC__ is defined the GCC ``__null`` is used.
+
+
+== Global typedefs ==
+
+The bouml 'generation settings' allow us to specify which version
+of various types to use as a stereotype in automatically generated
+code.  To expose the same type in user writen code we provide
+meta-function classes in ``Config::Global typedefs`` that are defined
+in terms of the bouml 'generation settings' stereotype.  For example
+to use the same type that bouml uses for the ``auto_ptr`` stereotype
+you would have code such as:
+
+To modify the 'generation settings' for your C++ compiler suite the
+following tabs in these settings needs to be checked.  The alternatives are listed in their order of preference.
+
++ Stereotypes
+
+++ weak_ptr : set to std::weak_ptr or boost::weak_ptr
+
++ C++[5]::External types : add include files for these types.
+
+
+
+= Code division =
+
+The code is divided into a set of packages:
+
+: Application management : Classes that manage the simulation, from
+reading in the input files to executing the simulation steps/trials.
+
+: Configuration : Classes that manage the set of particles and
+their present positions within the simulation cell.
+
+: Evaluation : Classes that calculate the potential energy changes
+during a Monte Carlo step/trial.
+
+: Geometry : Classes that manage the geometric properties of
+the simulation cell.
+
+: Sample collection : Classes for collecting sample data from the
+simulation and for managing that data.
+
+: Step : Classes for determining and encapsulating the change in
+the configuration made in a single trial/step.
+
+
+
+
+= In-code testing =
+
+The design-by-contract pattern is used to help ensure the correctness
+and quality of the code.  (for more details of this pattern see
+"Object-Oriented Software Construction" by Bertrand Meyer)
+
+The system in use in this program consists of several checking
+conditionals and an input value conditional.  All have the same
+interface of two arguments.  The first argument is a boolean test
+conditional that is expected to be true.  The second argument is a
+message giving details specific to the failed test.  In addition
+the program reports information about the code location of the error
+(possibly including a call stack).
+
+The definitions for the macros and support code is in the
+``contract_error`` class within the ``Utility (BAL)/program
+verification`` class view and the class's corresponding ``contract``
+artifact
+
+Checking conditionals that may be optionally compiled into the
+program:
+
+: IONCH_ALWAYS : This test is non-optional and should be used to
+verify conditions that are dependent on conditions while the progam
+is running.  This should be rarely used as it indicates an error
+that should have been handled explicitly.  In practice it might may
+be used for such things as checking C-library calls succeeded where
+you don't want to handle the error cases yourself.
+
+: IONCH_INPUT : Check that runtime inputs to the program (from the
+user) are within allowed values.  This is also used to check data
+derived from input; for example to check that dividing some length
+into intervals gives a number of segments below some limit.  As
+input is never controlled by the program this test is always
+available.  In addition to the information provided with IONCH_ALWAYS,
+this method calls a locally defined input_helper
+(std::ostream&,std::string) method.  This method can be used to
+create a detailed feedback message describing the expected input
+for the entire module or class in addition to the error-specific
+message provided in the method call.
+
+: IONCH_REQUIRE : Check the arguments to a method fit within the
+method's advertised input domain.  As we do not necessarily completely
+know how the method will be called this is usually the last test
+to be removed by conditional compilation.
+
+: IONCH_ENSURE : Test the programmer's logic has led to a method's
+result within the domain advertised by the method (and so expected
+by the method's caller).  It should be used in any non-trivial
+method to ensure the method's post-conditions are met.  Ideally if
+the method's input is within the advertised domain (as checked by
+IONCH_REQUIRE) the results of a well-tested method should always
+be correct, so this is conditionally removed before IONCH_REQUIRE
+by conditional compilation.
+
+: IONCH_CHECK : Testing the programmer's logic.  This lets the
+progammer assert what they think should be true is actually true!
+It is intended to allow the programmer to insert a check of
+intermediate results during the development of a method.  As a
+mainly developement test it is usually the first test to be removed
+by conditional compilation.
+
+: IONCH_INDEX : Variant of IONCH_CHECK for testing an index value
+is within some [0,X) range.
+
+: IONCH_RANGE : Variant of IONCH_CHECK for testing a value value
+is within some [X,Y] range.
+
+For those c-libraries that provide a means to inspect the current
+call stack we use two methods 'backtrace' and 'backtrace_symbols'
+to generate a message containing this information.  We use the same
+interface as the GNU libc methods.
+
+
+
+

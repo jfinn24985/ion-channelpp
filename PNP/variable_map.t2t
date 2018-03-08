@@ -1,0 +1,306 @@
+Map of fortran IONCH variables into MC_sim
+Justin Finnerty
+February 2011
+
+= Common block translations =
+
+Note that the values in mc_sim and ionch are not necessarily 
+identical.  Where they differ is usually to do with splitting
+a value into a variable and non-variable part to make it more
+general in mc_sim.
+
+Meanings of symbols in tables:
++ --  Variable not used
++ name() Value calculated in named function
+
+
+== const ==
+
+Physical constants or derived constants
+
+|ionch  |mc_sim
+|pi	|constants::pi 
+|twopi	|--
+|tosi   |constants::to_SI
+|u0(4,4) |
+|eb(4)  |
+|beta	| 1/kT
+|dsi	|constants::Angstrom
+|mag	|-- Seed value for random number generator
+|flags(8) |
+|(tsi)	|mc_evalautor.temperature : Absolute temperature 
+|(eps0)	|constants::epsilon0
+|(ehg)	|constants::e0
+
+== conf ==
+
+The MC particle set
+
+|rx(ntotmx)	|position.x, mc_ion_instance.particles
+|ry(ntotmx)	|position.y, mc_ion_instance.particles
+|rz(ntotmx)	|position.z, mc_ion_instance.particles
+|r2(ntotmx)	|position.r, mc_ion_instance.particles
+|indspc(nspcmx,nionmx) | implicit as particles are stored by specie
+|rii(ntotmx,ntotmx)    | calculated on the fly
+|n(nspcmx)      |mc_ion_instance.size
+|ispcbk(ntotmx) |--
+
+
+== spec ==
+
+The particle type data set
+
+|d(nspcmx)	|mc_ion_instance.radius (==d/2)
+|dd(nspcmx,nspcmx) |mc_ion_instance.minimum_distance()
+|d2(nspcmx,nspcmx) |--
+|z(nspcmx)      |specie.valency
+|q(nspcmx)      |mc_ion_instance.q() [specie.valency /mc_evaluator.qstar()]
+|ratmov(nspcmx) |mc_ion_instance.rate_spherical_move_
+|ratexc(nspcmx) |mc_ion_instance.rate_exchange_
+|eps(nspcmx)    |mc_ion_instance.diffusion_coefficient
+|qstar          |mc_evaluator.qstar [constants::qstar_factor/[[temperature]]
+|itry(nspcmx)   |mc_ion_instance.rate_ion_moves_
+|chonly(nspcmx) |mc_ion_instance.channel_only
+|nspec          |mc_evaluator.species
+|nwh(ntrymx)    | (mc_ion_instance.rate_ion_moves_)
+|ntry           |-- (sum itry[..])
+|istr           |-- (index of first non-structural ion)
+
+
+== geom ==
+
+The region specifications
+
+|zl(6)
+|rl(6)
+|rlvest
+|rlcurv
+|epsw
+|epspr
+
+
+== patch ==
+
+The 'patches' that are placed on channel protein boundary and used
+to calculate PNP energy component
+
+|px(npchmx)	|mc_patch.location.x, mc_enironment.patches
+|py(npchmx)	|mc_patch.location.y, mc_enironment.patches
+|pz(npchmx)	|mc_patch.location.z, mc_enironment.patches
+|h(npchmx)	|mc_evaluator.h; mc_step.h
+|ux(npchmx)	|mc_patch.normal.x, mc_enironment.patches
+|uy(npchmx)	|mc_patch.normal.y, mc_enironment.patches
+|uz(npchmx)	|mc_patch.normal.z, mc_enironment.patches
+|a(npchmx)	|mc_patch.area, mc_enironment.patches
+|amx(npchmx,npchmx)
+|c(npchmx)      |mc_evaluator.c; mc_step.c
+|deps		|<<mc_evaluator.dielectric_factor>> == 2(epsw - epspr)/(epsw + epspr)
+|rip(ntotmx,npchmx) | ??
+|npatch		|mc_environment.patches
+|indx(npchmx)   |--
+|npch(10)       |--
+
+
+== moove ==
+
+Data used when moving particles in an MC step
+
+|drmax(2)	|mc_region.max_move
+|vin(nspcmx)	| calculated on the fly
+|vout(nspcmx)	| calculated on the fly
+|rljpin(nspcmx)	|mc_region.radius
+|zljpin(nspcmx) |mc_region.length
+
+
+== gc ==
+
+Data related to salts (particle type sets that are
+created and destroyed together.)
+
+|chemp(3)	|log(rtagi) + chex 
+|ctarg(3)
+|vgc(4,3)	| (Accessible Volume/particle)
+|riicrn(4,4)
+|rxnew(4)       | mc_create_destroy.particles_.x
+|rynew(4)       | mc_create_destroy.particles_.y
+|rznew(4)       | mc_create_destroy.particles_.z
+|r2new(4)       | mc_create_destroy.particles_.r
+|chex(3)	|Unit excess chemical potential (?)
+|ctrgcl
+|ratgr(3)	| mc_salt.rate_grow
+|ratgrt		| -- sum ratgr[..]
+|ratreg(4)	|<<mc_region.rate>>
+|zcr1(4,nspcmx)	|mc_region.start + mc_ion_instance.radius
+|zcr2(4,nspcmx)	|mc_region.length + mc_region.start - mc_ion_instance.radius
+|rcr(4,nspcmx)  |mc_region.radius - mc_ion_instance.radius
+|iout(4)
+|ispcin(3,4)	| mc_salt.components
+|igcval(3)
+|isalt(3)
+|ication(3)
+|nsalt		|mc_evaluator.salts_.size
+|ntot		|mc_evalautor.size()
+|niter
+|iter		|mc_evaluator.iter
+
+
+== names ==
+|fion(10)	|ionic_specie.name
+|fsalt(10)	|mc_salt.name()
+|fgz(10)
+|fgin(10)
+|fc
+|fout
+|fh
+|fnaca(10,4)
+|fdata
+|focc
+|frdf(10,10)
+
+
+== profl ==
+|athist
+|ataccu
+|dzg(10,nspcmx)
+|drg
+|vjz(nspcmx,nzgmx)
+|vjin(nspcmx,nrgmx,nrgmx)
+|rgz(nspcmx,nzgmx)
+|rgin(nspcmx,nrgmx)
+|gz(nspcmx,nzgmx)
+|gin(nspcmx,nrgmx,nrgmx)
+|zinlft
+|rinup
+|zzreg(0:10,nspcmx)
+|dzgi(nspcmx,nzgmx)
+|nzg(10,nspcmx)
+|nrg
+|nrgr
+|nrgz
+|nzgtot(nspcmx)
+|nzreg(nspcmx)
+|calgin
+
+
+== accu ==
+|an(nspcmx)
+|ah(npchmx)
+|anin(4,nspcmx)
+|zreg1(4,nspcmx)
+|zreg2(4,nspcmx)
+|rreg(4,nspcmx)
+|cbulk(nspcmx)
+|zocc
+|indreg(3,nspcmx,nionmx)
+|nin(4,nspcmx) 	| mc_ion_instance.size(mc_region)
+
+
+== adj ==
+|amove(2,nspcmx)
+|ajump(2,nspcmx)
+|ajin(2,nspcmx)
+|ajout(2,nspcmx)
+|acreat(4,3,2)
+|adest(4,3,2)
+
+
+== bufer ==
+
+Temporary data structures.
+
+|hold(npchmx)	| mc_step.h_old/mc_step.h
+|cold(npchmx)	| mc_step.c_old/mc_step.c
+|ripnew(nspcmx,npchmx) | (calc on fly)
+|riinew(nspcmx,ntotmx) | (calc on fly)
+|dc(npchmx)	| -- change in c
+|dh(npchmx)	| -- change in h
+|distin(4)
+
+
+== simp ==
+
+Simulation parameters
+
+|nstep	|mc_evaluator.nstep
+|naver	|mc_evaluator.naver
+|isave  |mc_evaluator.isave
+
+
+== bulk ==
+|zbulk1
+|zbulk2
+|rbulk
+|vbulk
+|anaca(nspcmx,4,20000)
+|asuba(nspcmx,4,20000)
+|ksub
+
+
+== occ ==
+|aocc(3,0:4,0:4,0:4,0:4)
+|nfree
+
+
+== radf ==
+|ardf(3,nspcmx,nspcmx)
+|rdf(3,nspcmx,nspcmx,nrgmx)
+|drdf
+|nrdf
+|calrdf
+
+
+
+!STRUCT
+!these vector sizes will have to change dynamically     
+!      common/geo/   za0(8)
+ra0(8)
+ra(8)
+ta1(8)
+ta2(8)
+zl1(6)
+rl1(6)
+
+!  zl2(6)
+rl2(6)
+qpr(12)
+al(6)
+bl(6)
+
+!  tgalfa(6)
+csalfa(6)
+alfa(6)
+ric
+      common/geo/   za0(nring1)
+ra0(nring1)
+ra(nring1)
+ta1(nring1)
+
+     :		  ta2(nring1)
+ 
+     :		  zl1(nring2)
+rl1(nring2)
+zl2(nring2)
+rl2(nring2)
+
+  qpr(12)
+
+  al(6)
+bl(6)
+
+  tgalfa(nring2)
+csalfa(nring2)
+alfa(nring2)
+ric
+
+     :		  ringal(nring1+nring2)
+irngno(nring1+nring2)
+
+     :		  ringsb(nring1+nring2
+2)
+uasign(nring1)
+
+     :		  ulsign(nring1)
+nline
+nwall
+narch
+nchg

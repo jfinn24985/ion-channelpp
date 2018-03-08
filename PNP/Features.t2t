@@ -1,0 +1,115 @@
+Program Features
+IONCH Design Team
+Version 1.0
+
++ Introduction +
+
+This document outlines the features of the IONCH Monte Carlo
+Simulatio program.
+
+
++ Initial Particle Configuration +
+
+The initial particle configuration can be read from the input file
+or automatically generated.  Some specis have specific
+properties that require that each particle be specified in the
+input file.  For all other types the program can use particle
+positions provided in the input file and/or generate the positions
+randomly itself.
+
+   NOTE: The program calculates a target particle count for each
+   specie. If a species has predefined particles the program 
+   will insert more particles to reach the target count.  However,
+   if there are more predefined particles than the target count
+   the program will not delete any, leading to excess particles
+   initially. This should not be a problem if the simulation includes
+   Grand Canonical, but is a problem for simulations with a fixed
+   particle count. The user must detect this error from the warning
+   message in the output.
+
+
+++ Simulation Generators ++
+
+The program reads the input file and calculates the number of
+particles for each specie.  For solute species this could be
+the target concentration and the total volume.  If no particles
+for a specie are defined in the input file then the program
+attempts to generate random positions for these particles.
+
+   NOTE: The concentration, particle number and volume
+   are related by '''number / volume = concentration'''.
+   The program uses this relation to calculate redundant values
+   not present in the input file.
+
+
+These positions can be generated using a uniform random
+distribution over the volume or using a grid.
+
+
++++ Grid-based initial particle configuration +++
+
+For each simulation cell shape type the program implements
+grid-based particle configuration generation. Randomly inserting
+particles to generate a starting particle configuration has
+two problems. The first problem is the formation of particle
+clusters with unrealistically low probabilities that lead
+to particle configuration far from the equilibrium states,
+leading to longer thermalization runs.  The second problem is
+particle-particle overlap which becomes more problematic as
+particle density increases.  Using a grid can minimise these
+problems. The minimum inter-node spacing of the grid can be
+defined to avoid particle overlap while maximising particle
+density.  Alternatively the inter-node spacing can be maximised
+to evenly distribute the particles over the simulation cell.
+While such a system has high initial order, the energy tends
+to be closer to the equilibrium leading to rapid thermalisation.
+
+TODO: REF
+
++ Evaluators +
+
+++ Hard-sphere Overlap ++
+
+This evaluator ensures that two particles can not be closer 
+than the sum of their hard-sphere radii.  It is only required
+for simulations with hard-sphere particles.
+
+++ Particle-Object Overlap ++
+
+This evaluator ensures that a particle can not overlap 
+an immobile object in the simulation.  It is only necessary
+if there are immobile objects (such as the membrane in the
+membrane-cell simulation) in the simulation.  This check is
+actually the responsibility of the ''system_region'' region
+object. 
+
+Even if there are immobile objects in the simulation
+there may be no need to include this evaluator as the trial
+generators check new positions are within some ''region''
+object.  The "move" and "jump" trial generators use the 
+''system_region'' when generating an new position which 
+automatically performs this check, therefore simulations
+with just these trials do not require this evaluator.
+However, the "jump-in", "jump-out" and "jump-about" trial 
+generators may not be using the ''system_region'' and
+so require this evaluator when immobile objects are
+present.
+
++ Glossary +
+
+: cell shape : Different simulations can have different
+overall cell geometry, for example cubic or cylindrical.
+
+: particle : A simulation element representing chemical
+entities in the simulation.  For example in the simulation 
+of an ionic solution these are solute ions.
+
+: region : Some volume within the simulation. This is
+represented in the program by a ''geometry::base_region''
+derived object. These objects are responsible for
+calculating inter-particle distances, generating new
+positions and testing a particle is in a valid position.
+
+: specie : A definition of a particle type. The definition
+contains properties common to all particles of the given
+type, for example charge.

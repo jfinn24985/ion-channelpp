@@ -1,0 +1,273 @@
+//----------------------------------------------------------------------
+//This source file is free software: you can redistribute it and/or modify
+//it under the terms of the GNU General Public License as published by
+//the Free Software Foundation, either version 3 of the License, or
+//(at your option) any later version.
+//
+//This program is distributed in the hope that it will be useful,
+//but WITHOUT ANY WARRANTY; without even the implied warranty of
+//MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//GNU General Public License for more details.
+//
+//You should have received a copy of the GNU General Public License
+//along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//----------------------------------------------------------------------
+
+
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
+#include "evaluator/evaluator_test/evaluator_fixture.hpp"
+#include "evaluator/icc_surface_grid.hpp"
+#include "geometry/coordinate.hpp"
+
+// -
+#include "core/constants.hpp"
+#include "utility/fuzzy_equals.hpp"
+#include "utility/utility.hpp"
+// -
+#include <array>
+// -
+namespace evaluator {
+
+//As change particle : change particle Coulomb interactions are calculated
+//in the same way as change particle : config particle, the __init__ method
+//makes _do_change_contribution an alias for _do_contribution. The
+//nspec argument is the number of interacting species.
+patch_matrix_fixture::patch_matrix_fixture()
+: alfa_()
+, dxf_( 4.0 )
+, dxw_( 4.0 )
+, epsw_( 80.0 )
+, epspr_( 10.0 )
+, expected_size_( 620 )
+, nsub_( 10 )
+, zl1_( 5.3 )
+, zl2_()
+, zl3_()
+, rl1_( 8.8 )
+, rl2_()
+, rl3_()
+, rl4_( 30.0 )
+, rlvest_( 10.0 )
+, rlmemb_( 5.0 )
+, temperature_( 300.0 )
+{
+   zl2_ = zl1_ + rlvest_;
+   zl3_ = zl2_ - rlmemb_;
+   rl2_ = rl1_ + rlvest_;
+   rl3_ = rl4_ - rlmemb_;
+   alfa_ = core::constants::electron_charge() / std::sqrt(4 * core::constants::pi() * temperature_ * core::constants::boltzmann_constant() * core::constants::epsilon_0() * core::constants::angstrom() );
+}
+
+
+// Defining the patch grid.
+//
+// \pre grid.empty
+
+void patch_matrix_fixture::define_grid(icc_surface_grid & grid)
+{
+UTILITY_CHECK( grid.empty(), "Cannot define grid twice");
+
+// Set patch division parameters on grid.
+grid.set_dxf( dxf_ );
+grid.set_dxw( dxw_ );
+grid.set_nsub0( nsub_ );
+
+//       |theta1 = pi/2
+// theta2|     theta0 = 0.0
+//  ---- z ----- theta4 = 2pi
+// = pi  |
+//       | theta3 = 3/2 pi
+// d_theta = pi/2
+const double theta0( 0.0);
+const double theta1( core::constants::pi() / 2);
+const double theta2( core::constants::pi() );
+const double theta3( core::constants::pi() * 3.0/2.0 );
+const double theta4( 2 * core::constants::pi() );
+
+// Get geometry data
+const double geom_zl1( zl1_ );
+const double geom_rl1( rl1_ );
+const double geom_rl2( rl2_ );
+const double geom_rlvest( rlvest_ );
+const double geom_zl2( zl2_ );
+const double geom_rl3( rl3_ );
+const double geom_zl3( zl3_ );
+const double geom_rl4( rl4_ );
+const double geom_rlcurv( rlmemb_ );
+
+// Minimum number of tiles along z dimension
+const int channel_min_z_tiles (10);
+const int outer_min_z_tiles (4);
+const int min_r_tiles (16);
+
+// Channel pore cylinder
+grid.add_line( -geom_zl1, geom_zl1, geom_rl1, epspr_, epsw_, channel_min_z_tiles, min_r_tiles, true );
+
+// Channel protein outer cylinder
+grid.add_line( -geom_zl3, geom_zl3, geom_rl4, epspr_, epsw_, outer_min_z_tiles, min_r_tiles, false );
+
+// Hi-z inner arc
+grid.add_arc( geom_zl1, geom_rl2, geom_rlvest, theta3, theta4, epspr_, epsw_, outer_min_z_tiles, min_r_tiles, true );
+
+// Hi-z outer arc
+grid.add_arc( geom_zl3, geom_rl3, geom_rlcurv, theta0, theta1, epspr_, epsw_, outer_min_z_tiles, min_r_tiles, true );
+
+// lo-z outer arc
+grid.add_arc( -geom_zl3, geom_rl3, geom_rlcurv, theta1, theta2, epspr_, epsw_, outer_min_z_tiles, min_r_tiles, true );
+
+// lo-z inner arc
+grid.add_arc( -geom_zl1, geom_rl2, geom_rlvest, theta2, theta3, epspr_, epsw_, outer_min_z_tiles, min_r_tiles, true );
+
+// hi-z wall
+grid.add_wall( geom_zl2, geom_rl2, geom_rl3, epspr_, epsw_, 0, 0, true );
+
+// lo-z wall
+grid.add_wall( -geom_zl2, geom_rl2, geom_rl3, epspr_, epsw_, 0, 0, false );
+
+}
+
+// The given XYZ position lies on the surface.
+bool patch_matrix_fixture::on_surface(double x, double y, double z) const
+{
+  const double r2{ x*x+y*y };
+  const double za{ std::abs( z ) };
+  // Check is in bounding cylinder
+  if( r2 < rl1_*rl1_ and not utility::feq( r2, rl1_*rl1_ ) )
+  {
+    return false;
+  }
+  if( r2 > rl4_*rl4_ and not utility::feq( r2, rl4_*rl4_ ) )
+  {
+    return false;
+  }
+  if( za > zl2_ and not utility::feq( za, zl2_ ) )
+  {
+    return false;
+  }
+  // Check simple surfaces.
+  if ( utility::feq( r2, rl4_*rl4_ ) )
+  {
+    // must be on outer cylinder surface
+    return ( za <= zl3_ or utility::feq( za, zl3_ ) );
+  }
+  if ( utility::feq( r2, rl1_*rl1_ ) )
+  {
+    // must be on inner cylinder surface
+    return ( za <= zl1_ or utility::feq( za, zl1_ ) );
+  }
+  if( r2 >= rl2_*rl2_ and r2 <= rl3_*rl3_ )
+  {
+    // must be on wall surface
+    return utility::feq( za, zl2_ );
+  }
+  if( r2 <= rl2_*rl2_ )
+  {
+    if( za < zl1_ ) return false;
+    // must be on lower arc
+    const double r{ std::sqrt( r2 ) };
+    const double dr{ rl2_ - r };
+    const double dz{ za - zl1_ };
+    return utility::feq( rlvest_*rlvest_, dr*dr + dz*dz );
+  }
+  if( r2 >= rl3_*rl3_ )
+  {
+    if( za < zl3_ ) return false;
+    // must be on lower arc
+    const double r{ std::sqrt( r2 ) };
+    const double dr{ rl3_ - r };
+    const double dz{ za - zl3_ };
+    return utility::feq( rlmemb_*rlmemb_, dr*dr + dz*dz );
+  }
+  return false;
+
+}
+
+double patch_matrix_fixture::surface_area() const
+{
+  double area{ 0.0 };
+  constexpr double pi_{ core::constants::pi() };
+  // inner cylinder.
+  area += 4 * pi_ * rl1_ * zl1_;
+  // outer cylinder.
+  area += 4 * pi_ * rl4_ * zl3_;
+  // walls
+  area += 2 * pi_ * ( rl3_*rl3_ - rl2_*rl2_ );
+  // arcs : vestibule using Pappus
+  //   arc centroid = R - 4r/3pi
+  //area += 2 * pi_ * (rl2_ - ((4*rlvest_)/(3*pi_))) * pi_ * rlvest_;
+  // my version = R - 2r/pi
+  area += 2 * pi_ * (rl2_ - ((2*rlvest_)/pi_)) * pi_ * rlvest_;
+  // arcs : membrane using Pappus
+  //   arc centroid = R + 4r/3pi
+  // my version = R - 2r/pi
+  //area += 2 * pi_ * (rl3_ + ((4*rlmemb_)/(3*pi_))) * pi_ * rlmemb_;
+  area += 2 * pi_ * (rl3_ + ((2*rlmemb_)/pi_)) * pi_ * rlmemb_;
+  return area;
+
+}
+
+// Test that the vector u at p is normal to the surface.
+bool patch_matrix_fixture::normal_test(const geometry::coordinate & p, const geometry::coordinate & u)
+{
+  // Test 1: All normals pass through z axis or are parallel
+  bool pass { false };
+  
+  // test for parallel
+  if( utility::feq( u.x, 0.0 ) )
+  {
+    pass = utility::feq( u.y, 0.0 );
+  }
+  else
+  {
+    // p.x/u.x == p.y/u.y
+    pass = utility::feq( p.x/u.x, p.y/u.y );
+  }
+  if( pass )
+  {
+    if( std::abs(u.z) == 1 )
+    {
+      // off walls
+      pass = ( std::abs(p.z) == zl2_ );
+    }
+    else if( u.z == 0 )
+    {
+      // off the cylinders
+      const double r2{ p.x*p.x + p.y*p.y };
+      pass = utility::feq( r2, rl1_*rl1_ ) or utility::feq( r2, rl4_*rl4_ );
+    }
+    else
+    {
+      // off arc
+      const double r2{ p.x*p.x + p.y*p.y };
+      if( r2 <= rl2_*rl2_ )
+      {
+        // lower arc
+        const double v{ ((p.z > 0.0 ? zl1_ : -zl1_ ) - p.z)/u.z };
+        const double x0{ v*u.x + p.x };
+        const double y0{ v*u.y + p.y };
+        pass = utility::feq( rl2_*rl2_, x0*x0+y0*y0 );
+      }
+      else if ( r2 >= rl3_*rl3_ )
+      {
+        // upper arc
+        const double v{ ((p.z > 0.0 ? zl3_ : -zl3_ ) - p.z)/u.z };
+        const double x0{ v*u.x + p.x };
+        const double y0{ v*u.y + p.y };
+        pass = utility::feq( rl3_*rl3_, x0*x0+y0*y0 );
+      }
+      else
+      {
+        pass = false;
+      }
+    }
+  }
+  
+  return pass;
+
+}
+
+
+} // namespace evaluator

@@ -1,6 +1,6 @@
 format 75
 "utility_build" // build_files::utility_build
-  revision 14
+  revision 15
   modified_by 48 "finnerty"
   // class settings
   //class diagram settings
@@ -91,7 +91,7 @@ InstallLib $(LIBDIR) : <src!utility>libionch_lapack$(SUFLIB) ;
 #Butter version 1.2beta.175
 ##END:version
 ##START:date
-#Mon Jun 13 18:44:05 2016
+#Thu Mar 8 17:25:49 2018
 ##END:date
 ##START:preamble
 include $(ROOTDIR)/M_sys.mk
@@ -99,13 +99,19 @@ include $(ROOTDIR)/M_sys.mk
 ##END:preamble
 ##START:target libionch_utility
 UTILITY_LIBIONCH_UTILITYSRC :=  \\
+	basic_histogram.cpp \\
+	basic_mean.cpp \\
+	binary_estimate.cpp \\
+	digitizer.cpp \\
+	estimate_array.cpp \\
 	estimater.cpp \\
-	mathutil.cpp \\
 	estimater_matrix.cpp \\
-	utility.cpp \\
-	memory_sink.cpp \\
+	histogram.cpp \\
+	machine.cpp \\
+	mathutil.cpp \\
+	mean_algorithm.cpp \\
 	random.cpp \\
-	machine.cpp
+	utility.cpp
 UTILITY_LIBIONCH_UTILITY_DINC := $(filter %$(sufdep), $(UTILITY_LIBIONCH_UTILITYSRC:.cpp=$(sufdep))) $(filter %$(sufdep), $(UTILITY_LIBIONCH_UTILITYSRC:.c=$(sufdep)))
 UTILITY_LIBIONCH_UTILITY_OBJ+=$(filter %$(sufobj), $(UTILITY_LIBIONCH_UTILITYSRC:.cpp=$(sufobj)))
 USEROBJ+=$(UTILITY_LIBIONCH_UTILITY_OBJ)
@@ -119,44 +125,15 @@ TARGETS+=libionch_utility$(suflib)
 $(eval $(call do_install,libionch_utility$(suflib),LIB))
 
 ##END:target libionch_utility
-##START:target libionch_zip_sink
-UTILITY_LIBIONCH_ZIP_SINKSRC :=  \\
-	archive_file.cpp
-UTILITY_LIBIONCH_ZIP_SINK_DINC := $(filter %$(sufdep), $(UTILITY_LIBIONCH_ZIP_SINKSRC:.cpp=$(sufdep))) $(filter %$(sufdep), $(UTILITY_LIBIONCH_ZIP_SINKSRC:.c=$(sufdep)))
-libionch_zip_sink$(suflib): LDFLAGS+= -lzip
-UTILITY_LIBIONCH_ZIP_SINK_OBJ+=$(filter %$(sufobj), $(UTILITY_LIBIONCH_ZIP_SINKSRC:.cpp=$(sufobj)))
-USEROBJ+=$(UTILITY_LIBIONCH_ZIP_SINK_OBJ)
-libionch_zip_sink$(suflib) : $(UTILITY_LIBIONCH_ZIP_SINK_SRC) $(UTILITY_LIBIONCH_ZIP_SINK_DINC)
--include $(UTILITY_LIBIONCH_ZIP_SINK_DINC)
-$(eval $(call do_archive,libionch_zip_sink$(suflib),$(UTILITY_LIBIONCH_ZIP_SINK_OBJ)))
-
-all :: libionch_zip_sink$(suflib)
-TARGETS+=libionch_zip_sink$(suflib)
-
-$(eval $(call do_install,libionch_zip_sink$(suflib),LIB))
-
-##END:target libionch_zip_sink
-##START:target libionch_gdbm_sink
-UTILITY_LIBIONCH_GDBM_SINKSRC :=  \\
-	gdbm_sink.cpp
-UTILITY_LIBIONCH_GDBM_SINK_DINC := $(filter %$(sufdep), $(UTILITY_LIBIONCH_GDBM_SINKSRC:.cpp=$(sufdep))) $(filter %$(sufdep), $(UTILITY_LIBIONCH_GDBM_SINKSRC:.c=$(sufdep)))
-libionch_gdbm_sink$(suflib): LDFLAGS+= -lgdbm
-UTILITY_LIBIONCH_GDBM_SINK_OBJ+=$(filter %$(sufobj), $(UTILITY_LIBIONCH_GDBM_SINKSRC:.cpp=$(sufobj)))
-USEROBJ+=$(UTILITY_LIBIONCH_GDBM_SINK_OBJ)
-libionch_gdbm_sink$(suflib) : $(UTILITY_LIBIONCH_GDBM_SINK_SRC) $(UTILITY_LIBIONCH_GDBM_SINK_DINC)
--include $(UTILITY_LIBIONCH_GDBM_SINK_DINC)
-$(eval $(call do_archive,libionch_gdbm_sink$(suflib),$(UTILITY_LIBIONCH_GDBM_SINK_OBJ)))
-
-all :: libionch_gdbm_sink$(suflib)
-TARGETS+=libionch_gdbm_sink$(suflib)
-
-$(eval $(call do_install,libionch_gdbm_sink$(suflib),LIB))
-
-##END:target libionch_gdbm_sink
 ##START:target libionch_lapack
 UTILITY_LIBIONCH_LAPACKSRC :=  \\
 	lapack.cpp
 UTILITY_LIBIONCH_LAPACK_DINC := $(filter %$(sufdep), $(UTILITY_LIBIONCH_LAPACKSRC:.cpp=$(sufdep))) $(filter %$(sufdep), $(UTILITY_LIBIONCH_LAPACKSRC:.c=$(sufdep)))
+libionch_lapack$(suflib): LDFLAGS+= $(LAPACKLIB)
+
+lapack$(sufobj) lapack$(sufdep) : CPPFLAGS+=$(LAPACKINC) 
+
+
 UTILITY_LIBIONCH_LAPACK_OBJ+=$(filter %$(sufobj), $(UTILITY_LIBIONCH_LAPACKSRC:.cpp=$(sufobj)))
 USEROBJ+=$(UTILITY_LIBIONCH_LAPACK_OBJ)
 libionch_lapack$(suflib) : $(UTILITY_LIBIONCH_LAPACK_SRC) $(UTILITY_LIBIONCH_LAPACK_DINC)

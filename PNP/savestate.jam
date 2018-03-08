@@ -1,0 +1,34 @@
+#
+# Rules to generate a source file that captures compilation information
+# 
+
+import type ;
+type.register SAVESTATE : template ;
+
+import generators ;
+generators.register-standard savestate.inline-file : SAVESTATE : CPP ;
+
+import toolset : flags ;
+flags verbatim
+
+rule inline-file ( filename : property-set : project name ? )
+{
+   local l_compname = compiler.name ;
+   local l_compver  = compiler.version ;
+   local l_maintarg = $(project) ;
+   local l_cflags   = $(cflags) $(cxxflags) ;
+   local l_ldflags  = $(linkflags) ;
+}
+
+actions inline-file
+{
+   cat $(<) $(>)
+   echo "namespace {" >> $(>)
+   echo "std::string comp_name{ \"" $(l_compname) "\" };" >> $(>)
+   echo "std::string comp_ver{ \"" $(l_compver) "\" };" >> $(>)
+   echo "std::string comp_target{ \"" $(l_maintarget) "\" };" >> $(>)
+   echo -n "std::string comp_date{ \"" >> $(>)
+   date "+%d-%m-%y-%H:%M:%S\" };" >> $(>)
+   echo "std::string comp_cflags{ \"" $(l_cflags) "\" };" >> $(>)
+   echo "std::string comp_ldflags{ \"" $(l_ldflags) "\" };" >> $(>)
+}

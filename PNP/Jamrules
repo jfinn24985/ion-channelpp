@@ -1,0 +1,163 @@
+#
+# Default Jamrules
+#
+
+if $(UNIX)  { SUFSHR ?= .so ; }
+else if $(NT) { SUFSHR ?= .dll ; }
+
+if $(JAM_TOOLSET) { TOOLSET ?= $(JAM_TOOLSET) ; }
+TOOLSET ?= GNU ;
+VARIANT ?= DEBUG ;
+
+# Attempt to override Jambase to use start/end group linker flags
+actions Link bind NEEDLIBS
+{
+	$(LINK) $(LINKFLAGS) -o $(<) -Wl,--start-group $(UNDEFS) $(>) $(NEEDLIBS) $(LINKLIBS) -Wl,--end-group
+}
+
+LAPACKINC = -DUSE_OPENBLAS -I/usr/local/openblas/include ;
+#LAPACKLIB = -L/usr/local/openblas/lib -lopenblas -pthread ;
+LAPACKLIB = /usr/local/openblas/lib/libopenblas.a -pthread ;
+
+
+#############################
+##
+##  Default install locations
+##
+#############################
+PREFIX = stage ;
+BINDIR = $(PREFIX)$(SLASH)bin ;
+DATADIR = $(PREFIX)$(SLASH)share ;
+DOCDIR = $(DATADIR)$(SLASH)doc ;
+HTMLDIR = $(DATADIR)$(SLASH)html ;
+INCDIR = $(PREFIX)$(SLASH)include ;
+LIBDIR = $(PREFIX)$(SLASH)lib ;
+MANDIR = $(DATADIR)$(SLASH)man ;
+
+######################################################
+##
+##  Example definitions for compiler suite (TOOLSETS)
+##  It is possible to add definitions here or in a
+##  separate file "$(TOOLSET).jam", the NOCARE rule
+##  tells jam not to worry if file does not exist.
+## 
+######################################################
+NOCARE $(TOOLSET).jam ;
+include $(TOOLSET).jam ;
+switch $(TOOLSET)
+{
+case GNUPORT :
+CC = gcc-mp-4.4 ;
+C++ = g++-mp-4.4 ;
+FORTRAN = gfortran-mp-4.4 ;
+LINK = $(C++) ;
+CCFLAGS += -Wall -std=c99 ; 
+# --param max-inline-insns-single=1800 --param inline-unit-growth=500 --param large-function-growth=900 ;
+C++FLAGS += -Wall -std=c++0x  -DHAVE_UNIQUE_PTR ; 
+# --param max-inline-insns-single=1800 --param inline-unit-growth=500 --param large-function-growth=900 ;
+SHRFLAGS = -fpic ;
+switch $(VARIANT)
+{
+case RELEASE :
+  OPTIM = -O2 -march=native -msse2 -DDEBUG=0 ;
+case * :
+  OPTIM = -O0 -gdwarf-2 -DDEBUG=1 ;
+  CCFLAGS += -pedantic ;
+  C++FLAGS += ; # -Weffc++ ;
+}
+FORTRANFLAGS += -Wall -c ;
+LINKFLAGS += $(OPTIM) ;
+OPENMP = -fopenmp ;
+FORTRANLIBS += -lgfortran ;
+
+case GNU :
+CC = gcc ;
+C++ = g++ ;
+FORTRAN = gfortran ;
+LINK = $(C++) ;
+CCFLAGS += -Wall -std=c99 --param max-inline-insns-single=1800 --param inline-unit-growth=500 --param large-function-growth=900 ;
+C++FLAGS += -Wall -std=c++0x --param max-inline-insns-single=1800 --param inline-unit-growth=500 --param large-function-growth=900 ;
+SHRFLAGS = -fpic ;
+switch $(VARIANT)
+{
+case RELEASE :
+  OPTIM = -O2 -march=native -msse2 -DDEBUG=0 ;
+case * :
+  OPTIM = -O0 -gdwarf-2 -DDEBUG=1 -rdynamic ;
+  CCFLAGS += -pedantic ;
+  C++FLAGS += ; # -Weffc++ ;
+}
+FORTRANFLAGS += -Wall -c ;
+LINKFLAGS += $(OPTIM) ;
+OPENMP = -fopenmp ;
+FORTRANLIBS += -lgfortran ;
+
+case INTEL :
+CC = icc ;
+C++ = icpc ;
+FORTRAN = gfortran ;
+LINK = $(C++) ;
+CCFLAGS += -Wall  -std=c99 -fp-model precise -fnon-call-exceptions -ansi-alias ;
+C++FLAGS += -Wall -std=c++0x -ansi-alias -fp-model precise -fexceptions -fnon-call-exceptions -DHAVE_NO_CSTDINT ;
+SHRFLAGS = -fpic ;
+switch $(VARIANT)
+{
+case RELEASE :
+  OPTIM = -O2 -xHost -mssse3 -DDEBUG=0  ;
+case * :
+  OPTIM = -O0 -gdwarf-2 -DDEBUG=1 -no-ip ;
+  CCFLAGS += -pedantic ;
+  C++FLAGS += ; # -Weffc++ ;
+}
+FORTRANFLAGS += -Wall -c ;
+LINKFLAGS += $(OPTIM) ;
+OPENMP = -fopenmp ;
+FORTRANLIBS += -lgfortran ;
+}
+
+rule UserObject
+{
+  switch $(2)
+  {
+    case *.F : Fortran $(1) : $(2) ;
+    case *.F95 : Fortran $(1) : $(2) ;
+    case *.F90 : Fortran $(1) : $(2) ;
+    case *.f95 : Fortran $(1) : $(2) ;
+    case *.f90 : Fortran $(1) : $(2) ;
+  }
+}
+##################################################
+##
+##  Example of how you might define a set of
+##  "standard" flags for libraries you use often.
+##
+##################################################
+
+MPI_INC = "`mpic++ --showme:compile`" ;
+MPI_LIB = "`mpic++ --showme:link`" ;
+
+##switch $(GUILIB)
+##{
+##case GTKMM :
+##  CCFLAGS += `pkg-config gtkmm-2.4 --cflags` ;
+##  C++FLAGS += `pkg-config gtkmm-2.4 --cflags` ;
+##  LINKFLAGS += `pkg-config gtkmm-2.4 --libs` ;
+##
+##case MOTIF :
+##  CCFLAGS += -I/usr/include ;
+##  C++FLAGS += -I/usr/include ;
+##  LINKFLAGS += -L/usr/lib -lXm -lXp -lXpm -lXmu -lXt -lXext -lX11 ;
+##
+##case QT3 :
+##  CCFLAGS += -I$(QTDIR)/include ;
+##  C++FLAGS += -I$(QTDIR)/include ;
+##  LINKFLAGS += -L$(QTDIR)/lib -lqt-mt -lXext -lX11 -lm ;
+##
+##case * :
+##}
+##
+
+# Set variable for variant-specific build-dir handling
+BASE_LOCATE_TARGET = $(BUILDDIR)$(SLASH)$(VARIANT) ;
+ALL_LOCATE_TARGET = $(BASE_LOCATE_TARGET) ;
+
